@@ -413,7 +413,7 @@ export async function writeTempFile(content: string, prefix = "iksir-fixture-"):
 import type { NiyyaMuhallala } from "./daemon/arraf.ts";
 
 export interface MockArraf {
-  resolve(text: string, context?: unknown): Promise<NiyyaMuhallala>;
+  halla(text: string, context?: unknown): Promise<NiyyaMuhallala>;
   _calls: Array<{ text: string; context?: unknown }>;
   _nextResult: NiyyaMuhallala | null;
 }
@@ -429,7 +429,7 @@ export function mockArraf(): MockArraf {
     _calls: calls,
     _nextResult: null,
 
-    async resolve(text, context) {
+    async halla(text, context) {
       calls.push({ text, context });
       if (this._nextResult) {
         const result = this._nextResult;
@@ -437,9 +437,9 @@ export function mockArraf(): MockArraf {
         return result;
       }
       return {
-        status: "not_found",
-        rawText: text,
-        method: "deterministic_search",
+        hala: "not_found",
+        nassKham: text,
+        tariqa: "deterministic_search",
       };
     },
   };

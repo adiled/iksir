@@ -162,17 +162,17 @@ Deno.test("smoke: dispatch message uses intent resolver for natural language", a
     const { dispatcher, intentResolver, opencode } = buildContext();
 
     intentResolver._nextResult = {
-      status: "resolved",
-      entity: {
+      hala: "resolved",
+      kiyan: {
         type: "ticket",
         id: "issue-abc",
         identifier: "TEAM-4000",
         title: "Majlis Refactor",
         url: "https://linear.app/team/issue/TEAM-XXX"
       },
-      rawText: "work on the majlis refactor",
-      method: "llm_search",
-      action: "proceed",
+      nassKham: "work on the majlis refactor",
+      tariqa: "llm_search",
+      fil: "proceed",
     } as NiyyaMuhallala;
 
     const result = await dispatcher.handleDispatchMessage({

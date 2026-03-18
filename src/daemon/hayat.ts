@@ -35,24 +35,24 @@ import type { MudirJalasat } from "./katib.ts";
  * Result of maintenance run for a single branch
  */
 export interface NatijaSeyana {
-  branch: string;
-  identifier: string;
-  success: boolean;
-  action: "merged" | "up-to-date" | "conflicts" | "error";
-  conflicts?: string[];
-  commitsBehind?: number;
-  message: string;
+  far: string;
+  huwiyya: string;
+  najah: boolean;
+  fil: "merged" | "up-to-date" | "conflicts" | "error";
+  taarudat?: string[];
+  iltizamatKhalfa?: number;
+  nass: string;
 }
 
 /**
  * Callbacks for keepalive events.
  * These feed information to the owning murshid session.
  */
-interface KeepAliveCallbacks {
+interface IstijabatHayat {
   /**
    * PR was merged - murshid can now disclose next dependent slice
    */
-  onPRMerged: (
+  indaDamjRisala: (
     session: JalsatMurshid,
     pr: RisalaMutaba
   ) => Promise<void>;
@@ -60,7 +60,7 @@ interface KeepAliveCallbacks {
   /**
    * PR was closed without merge
    */
-  onPRClosed: (
+  indaIghlaqRisala: (
     session: JalsatMurshid,
     pr: RisalaMutaba
   ) => Promise<void>;
@@ -68,7 +68,7 @@ interface KeepAliveCallbacks {
   /**
    * Al-Kimyawi left a command on a PR - execute immediately
    */
-  onAlKimyawiCommand: (
+  indaAmrAlKimyawi: (
     session: JalsatMurshid,
     raqamRisala: number,
     comment: TaaliqMuraja
@@ -77,7 +77,7 @@ interface KeepAliveCallbacks {
   /**
    * Other reviewers left comments - queue for muraja'at al-Kimyawi
    */
-  onNewTaaliqMurajas: (
+  indaTaaliqatJadida: (
     session: JalsatMurshid,
     raqamRisala: number,
     comments: TaaliqMuraja[]
@@ -86,7 +86,7 @@ interface KeepAliveCallbacks {
   /**
    * PR has merge conflicts
    */
-  onPRConflict: (
+  indaTaarudRisala: (
     session: JalsatMurshid,
     pr: RisalaMutaba
   ) => Promise<void>;
@@ -94,7 +94,7 @@ interface KeepAliveCallbacks {
   /**
    * PR CI checks failed
    */
-  onCIFailed: (
+  indaFashalFahs: (
     session: JalsatMurshid,
     pr: RisalaMutaba
   ) => Promise<void>;
@@ -103,48 +103,48 @@ interface KeepAliveCallbacks {
    * Request maintenance mode - daemon should ensure no murshid is active
    * Returns true if maintenance mode was granted
    */
-  requestMaintenanceMode: () => Promise<boolean>;
+  utlubWadaSeyana: () => Promise<boolean>;
 
   /**
    * Release maintenance mode - daemon can resume normal operations
    */
-  releaseMaintenanceMode: () => Promise<void>;
+  harrarWadaSeyana: () => Promise<void>;
 
   /**
    * Maintenance completed - report results to al-Kimyawi
    */
-  onMaintenanceComplete: (results: NatijaSeyana[]) => Promise<void>;
+  indaIktimalSeyana: (results: NatijaSeyana[]) => Promise<void>;
 }
 
-interface KeepAliveDeps {
+interface MutatallabatHayat {
   config: TasmimIksir;
   sessionManager: MudirJalasat;
   github: GitHubClient;
 }
 
-export class KeepAliveLoop {
-  #config: TasmimIksir;
-  #sessionManager: MudirJalasat;
+export class DawratHayat {
+  tasmim: TasmimIksir;
+  mudirJalasat: MudirJalasat;
   #github: GitHubClient;
-  #callbacks: KeepAliveCallbacks;
-  #lastMaintenanceDate: string | null = null;
-  #maintenanceInProgress = false;
-  #notifiedConflict: Set<number> = new Set();
-  #notifiedCIFail: Set<number> = new Set();
+  istijabat: IstijabatHayat;
+  tarikhAkhirSeyana: string | null = null;
+  seyanaJariya = false;
+  ublighaAnTaarud: Set<number> = new Set();
+  ublighaAnFashal: Set<number> = new Set();
 
-  constructor(deps: KeepAliveDeps, callbacks: KeepAliveCallbacks) {
-    this.#config = deps.config;
-    this.#sessionManager = deps.sessionManager;
+  constructor(deps: MutatallabatHayat, callbacks: IstijabatHayat) {
+    this.tasmim = deps.config;
+    this.mudirJalasat = deps.sessionManager;
     this.#github = deps.github;
-    this.#callbacks = callbacks;
+    this.istijabat = callbacks;
   }
 
   /**
    * Run a single keep-alive cycle.
    * Polls all tracked PRs across all murshid sessions.
    */
-  async cycle(): Promise<void> {
-    const trackedPRs = this.#sessionManager.getAllRisalaMutabas();
+  async dawra(): Promise<void> {
+    const trackedPRs = this.mudirJalasat.getAllRisalaMutabas();
 
     if (trackedPRs.length === 0) {
       await logger.debug("keepalive", "No PRs to monitor");
@@ -158,11 +158,11 @@ export class KeepAliveLoop {
         continue;
       }
 
-      await this.#pollPR(session, pr);
+      await this.raqabRisala(session, pr);
     }
 
-    if (this.#isQuietHours()) {
-      await this.#runMaintenance();
+    if (this.fiSaatHudu()) {
+      await this.naffadhSeyana();
     }
 
     await logger.debug("keepalive", "Cycle complete");
@@ -171,7 +171,7 @@ export class KeepAliveLoop {
   /**
    * Poll a single PR for status changes and comments
    */
-  async #pollPR(session: JalsatMurshid, trackedPR: RisalaMutaba): Promise<void> {
+  async raqabRisala(session: JalsatMurshid, trackedPR: RisalaMutaba): Promise<void> {
     const raqamRisala = trackedPR.raqamRisala;
     const now = new Date();
 
@@ -180,7 +180,7 @@ export class KeepAliveLoop {
      * Use persisted lastPolledAt from RisalaMutaba (survives daemon restarts)
      */
     const lastPoll = trackedPR.lastPolledAt ? new Date(trackedPR.lastPolledAt) : null;
-    if (lastPoll && now.getTime() - lastPoll.getTime() < this.#config.polling.prPollIntervalMs) {
+    if (lastPoll && now.getTime() - lastPoll.getTime() < this.tasmim.polling.prPollIntervalMs) {
       return;
     }
 
@@ -191,28 +191,28 @@ export class KeepAliveLoop {
         return;
       }
 
-      await this.#checkStatusChange(session, trackedPR, pr.state);
+      await this.fahasTaghayyurHala(session, trackedPR, pr.state);
 
       if (pr.mergeable === "CONFLICTING" && trackedPR.status !== "merged") {
-        if (!this.#notifiedConflict.has(raqamRisala)) {
+        if (!this.ublighaAnTaarud.has(raqamRisala)) {
           await logger.warn("keepalive", `PR #${raqamRisala} has conflicts`);
-          await this.#callbacks.onPRConflict(session, trackedPR);
-          this.#notifiedConflict.add(raqamRisala);
+          await this.istijabat.indaTaarudRisala(session, trackedPR);
+          this.ublighaAnTaarud.add(raqamRisala);
         }
       } else {
-        this.#notifiedConflict.delete(raqamRisala);
+        this.ublighaAnTaarud.delete(raqamRisala);
       }
 
       if (trackedPR.status === "draft") {
         const checksPassing = await this.#github.arePRChecksPassing(raqamRisala);
         if (!checksPassing) {
-          if (!this.#notifiedCIFail.has(raqamRisala)) {
+          if (!this.ublighaAnFashal.has(raqamRisala)) {
             await logger.warn("keepalive", `PR #${raqamRisala} CI failing`);
-            await this.#callbacks.onCIFailed(session, trackedPR);
-            this.#notifiedCIFail.add(raqamRisala);
+            await this.istijabat.indaFashalFahs(session, trackedPR);
+            this.ublighaAnFashal.add(raqamRisala);
           }
         } else {
-          this.#notifiedCIFail.delete(raqamRisala);
+          this.ublighaAnFashal.delete(raqamRisala);
         }
       }
 
@@ -223,10 +223,10 @@ export class KeepAliveLoop {
       const commentsSince = lastPoll ?? new Date(trackedPR.createdAt);
       const newComments = await this.#github.getNewComments(raqamRisala, commentsSince);
       if (newComments.length > 0) {
-        await this.#processNewComments(session, raqamRisala, newComments);
+        await this.aalajTaaliqatJadida(session, raqamRisala, newComments);
       }
 
-      await this.#sessionManager.updatePRLastPolled(raqamRisala);
+      await this.mudirJalasat.updatePRLastPolled(raqamRisala);
     } catch (error) {
       await logger.error("keepalive", `Failed to poll PR #${raqamRisala}`, {
         error: String(error),
@@ -238,7 +238,7 @@ export class KeepAliveLoop {
   /**
    * Check if PR status changed and update tracking
    */
-  async #checkStatusChange(
+  async fahasTaghayyurHala(
     session: JalsatMurshid,
     trackedPR: RisalaMutaba,
     githubState: string
@@ -267,12 +267,12 @@ export class KeepAliveLoop {
 
     if (newStatus) {
       /** Update tracking */
-      const result = await this.#sessionManager.updatePRStatus(raqamRisala, newStatus);
+      const result = await this.mudirJalasat.updatePRStatus(raqamRisala, newStatus);
 
       if (newStatus === "merged" && result) {
-        await this.#callbacks.onPRMerged(result.session, trackedPR);
+        await this.istijabat.indaDamjRisala(result.session, trackedPR);
       } else if (newStatus === "closed" && result) {
-        await this.#callbacks.onPRClosed(result.session, trackedPR);
+        await this.istijabat.indaIghlaqRisala(result.session, trackedPR);
       }
     }
   }
@@ -280,12 +280,12 @@ export class KeepAliveLoop {
   /**
    * Process new PR comments - mayyiz and route
    */
-  async #processNewComments(
+  async aalajTaaliqatJadida(
     session: JalsatMurshid,
     raqamRisala: number,
     comments: TaaliqMuraja[]
   ): Promise<void> {
-    const ismKimyawi = this.#config.github.ismKimyawi;
+    const ismKimyawi = this.tasmim.github.ismKimyawi;
     const awamirAlKimyawi: TaaliqMuraja[] = [];
     const taaliqatUkhra: TaaliqMuraja[] = [];
 
@@ -301,14 +301,14 @@ export class KeepAliveLoop {
       await logger.info("keepalive", `amr al-Kimyawi on PR #${raqamRisala}`, {
         body: cmd.body.slice(0, 100),
       });
-      await this.#callbacks.onAlKimyawiCommand(session, raqamRisala, cmd);
+      await this.istijabat.indaAmrAlKimyawi(session, raqamRisala, cmd);
     }
 
     if (taaliqatUkhra.length > 0) {
       await logger.info("keepalive", `${taaliqatUkhra.length} new comments on PR #${raqamRisala}`, {
         authors: [...new Set(taaliqatUkhra.map((c) => c.author))],
       });
-      await this.#callbacks.onNewTaaliqMurajas(session, raqamRisala, taaliqatUkhra);
+      await this.istijabat.indaTaaliqatJadida(session, raqamRisala, taaliqatUkhra);
     }
   }
 
@@ -316,18 +316,18 @@ export class KeepAliveLoop {
   /**
    * Check if currently in quiet hours (delegates to shared time utils)
    */
-  #isQuietHours(): boolean {
-    if (!this.#config.quietHours.enabled) return false;
-    const { timezone, start, end } = this.#config.quietHours;
+  fiSaatHudu(): boolean {
+    if (!this.tasmim.quietHours.enabled) return false;
+    const { timezone, start, end } = this.tasmim.quietHours;
     return fiNitaqAlWaqt(timezone, start, end);
   }
 
   /**
    * Check if we're in the maintenance window (last N minutes of quiet hours).
    */
-  #isLastQuietHour(): boolean {
-    if (!this.#isQuietHours()) return false;
-    const { timezone, end, maintenanceWindowMinutes } = this.#config.quietHours;
+  fiAkhirSaatHudu(): boolean {
+    if (!this.fiSaatHudu()) return false;
+    const { timezone, end, maintenanceWindowMinutes } = this.tasmim.quietHours;
     const remaining = minutesUntil(timezone, end);
     return remaining <= maintenanceWindowMinutes && remaining > 0;
   }
@@ -339,37 +339,37 @@ export class KeepAliveLoop {
    * - Merge main into all tracked epic branches
    * - Report conflicts (don't auto-resolve)
    */
-  async #runMaintenance(): Promise<void> {
-    if (!this.#isLastQuietHour()) {
+  async naffadhSeyana(): Promise<void> {
+    if (!this.fiAkhirSaatHudu()) {
       return;
     }
 
     /** Only run once per day (using configured timezone, not UTC) */
-    const today = todayInTz(this.#config.quietHours.timezone);
-    if (this.#lastMaintenanceDate === today) {
+    const today = todayInTz(this.tasmim.quietHours.timezone);
+    if (this.tarikhAkhirSeyana === today) {
       return;
     }
 
-    if (this.#maintenanceInProgress) {
+    if (this.seyanaJariya) {
       return;
     }
 
     await logger.info("keepalive", "Starting overnight maintenance");
-    this.#maintenanceInProgress = true;
+    this.seyanaJariya = true;
 
     /** Request maintenance mode (no active murshid) */
-    const granted = await this.#callbacks.requestMaintenanceMode();
+    const granted = await this.istijabat.utlubWadaSeyana();
     if (!granted) {
       await logger.warn("keepalive", "Maintenance mode denied - murshid active");
-      this.#maintenanceInProgress = false;
+      this.seyanaJariya = false;
       return;
     }
 
-    this.#sessionManager.setGitFence(true);
+    this.mudirJalasat.setGitFence(true);
 
     try {
       const results: NatijaSeyana[] = [];
-      const sessions = this.#sessionManager.wajadaJalasatMurshid();
+      const sessions = this.mudirJalasat.wajadaJalasatMurshid();
 
       /** Save current branch to istarjaa later */
       const originalBranch = await git.farAlHali();
@@ -377,7 +377,7 @@ export class KeepAliveLoop {
       await git.fetch();
 
       for (const session of sessions) {
-        const result = await this.#maintainBranch(session);
+        const result = await this.sayanFar(session);
         results.push(result);
       }
 
@@ -396,55 +396,55 @@ export class KeepAliveLoop {
         await logger.warn("keepalive", "Code-intel index build failed", { error: String(error) });
       }
 
-      await this.#callbacks.onMaintenanceComplete(results);
+      await this.istijabat.indaIktimalSeyana(results);
 
-      this.#lastMaintenanceDate = today;
+      this.tarikhAkhirSeyana = today;
       await logger.info("keepalive", "Overnight maintenance complete", {
         branches: results.length,
-        merged: results.filter(r => r.action === "merged").length,
-        conflicts: results.filter(r => r.action === "conflicts").length,
+        merged: results.filter(r => r.fil === "merged").length,
+        conflicts: results.filter(r => r.fil === "conflicts").length,
       });
     } catch (error) {
       await logger.error("keepalive", "Maintenance failed", { error: String(error) });
     } finally {
-      this.#sessionManager.setGitFence(false);
-      await this.#callbacks.releaseMaintenanceMode();
-      this.#maintenanceInProgress = false;
+      this.mudirJalasat.setGitFence(false);
+      await this.istijabat.harrarWadaSeyana();
+      this.seyanaJariya = false;
     }
   }
 
   /**
    * Maintain a single epic branch - merge main into it
    */
-  async #maintainBranch(session: JalsatMurshid): Promise<NatijaSeyana> {
-    const branch = session.branch;
-    const identifier = session.identifier;
+  async sayanFar(session: JalsatMurshid): Promise<NatijaSeyana> {
+    const far = session.branch;
+    const huwiyya = session.identifier;
 
-    await logger.info("keepalive", `Maintaining branch ${branch}`);
+    await logger.info("keepalive", `Maintaining branch ${far}`);
 
     try {
       /** Checkout the branch */
-      const checkedOut = await git.intaqalaIla(branch);
+      const checkedOut = await git.intaqalaIla(far);
       if (!checkedOut) {
         return {
-          branch,
-          identifier,
-          success: false,
-          action: "error",
-          message: `Failed to intaqalaIla ${branch}`,
+          far,
+          huwiyya,
+          najah: false,
+          fil: "error",
+          nass: `Failed to intaqalaIla ${far}`,
         };
       }
 
       /** Check how far behind we are */
-      const behind = await git.commitsBehindMain(branch);
+      const behind = await git.commitsBehindMain(far);
       if (behind === 0) {
         return {
-          branch,
-          identifier,
-          success: true,
-          action: "up-to-date",
-          commitsBehind: 0,
-          message: "Already up to date with main",
+          far,
+          huwiyya,
+          najah: true,
+          fil: "up-to-date",
+          iltizamatKhalfa: 0,
+          nass: "Already up to date with main",
         };
       }
 
@@ -452,34 +452,34 @@ export class KeepAliveLoop {
       const mergeResult = await git.mergeMain();
 
       if (mergeResult.success) {
-        await git.push(branch);
+        await git.push(far);
 
         return {
-          branch,
-          identifier,
-          success: true,
-          action: "merged",
-          commitsBehind: behind,
-          message: `Merged ${behind} commit(s) from main`,
+          far,
+          huwiyya,
+          najah: true,
+          fil: "merged",
+          iltizamatKhalfa: behind,
+          nass: `Merged ${behind} commit(s) from main`,
         };
       }
 
       return {
-        branch,
-        identifier,
-        success: false,
-        action: "conflicts",
-        conflicts: mergeResult.conflicts,
-        commitsBehind: behind,
-        message: mergeResult.message,
+        far,
+        huwiyya,
+        najah: false,
+        fil: "conflicts",
+        taarudat: mergeResult.conflicts,
+        iltizamatKhalfa: behind,
+        nass: mergeResult.message,
       };
     } catch (error) {
       return {
-        branch,
-        identifier,
-        success: false,
-        action: "error",
-        message: String(error),
+        far,
+        huwiyya,
+        najah: false,
+        fil: "error",
+        nass: String(error),
       };
     }
   }
@@ -489,8 +489,8 @@ export class KeepAliveLoop {
  * Create a keep-alive loop instance
  */
 export function awqadaHayat(
-  deps: KeepAliveDeps,
-  callbacks: KeepAliveCallbacks
-): KeepAliveLoop {
-  return new KeepAliveLoop(deps, callbacks);
+  deps: MutatallabatHayat,
+  callbacks: IstijabatHayat
+): DawratHayat {
+  return new DawratHayat(deps, callbacks);
 }

@@ -76,7 +76,7 @@ interface DispatchResult {
 /** Pending disambiguation state */
 interface PendingDisambiguation {
   source: InboundSource;
-  candidates: NonNullable<NiyyaMuhallala["candidates"]>;
+  candidates: NonNullable<NiyyaMuhallala["murashshahun"]>;
   originalText: string;
   expiresAt: Date;
 }
@@ -84,8 +84,8 @@ interface PendingDisambiguation {
 /** Pending parent suggestion state */
 interface PendingParentSuggestion {
   source: InboundSource;
-  ticket: NonNullable<NiyyaMuhallala["entity"]>;
-  parent: NonNullable<NiyyaMuhallala["parentEpic"]>;
+  ticket: NonNullable<NiyyaMuhallala["kiyan"]>;
+  parent: NonNullable<NiyyaMuhallala["kitabAb"]>;
   parentIsEpic: boolean;
   expiresAt: Date;
 }
@@ -440,7 +440,7 @@ export class Munadi {
   /**
    * Set the focus entity (most recently resolved entity)
    */
-  #setFocusEntity(entity: NonNullable<NiyyaMuhallala["entity"]>): void {
+  #setFocusEntity(entity: NonNullable<NiyyaMuhallala["kiyan"]>): void {
     this.#context.focusEntity = {
       ...entity,
       resolvedAt: new Date(),
@@ -542,11 +542,11 @@ export class Munadi {
     }
 
     /** Use intent resolver for smart entity lookup, passing conversation context */
-    const resolved = await this.#intentResolver.resolve(msg.text, this.#context);
+    const resolved = await this.#intentResolver.halla(msg.text, this.#context);
 
-    await logger.info("dispatcher", `Intent resolved: status=${resolved.status}, method=${resolved.method}`);
+    await logger.info("dispatcher", `Intent resolved: status=${resolved.hala}, method=${resolved.tariqa}`);
 
-    switch (resolved.status) {
+    switch (resolved.hala) {
       case "resolved":
         return this.#handleNiyyaMuhallala(msg, resolved, basicIntent);
 
@@ -559,13 +559,13 @@ export class Munadi {
       case "not_found":
         return {
           handled: true,
-          response: resolved.error ?? "Could not find the entity you're referring to.",
+          response: resolved.khata ?? "Could not find the entity you're referring to.",
         };
 
       case "error":
         return {
           handled: true,
-          error: resolved.error ?? "Failed to resolve intent.",
+          error: resolved.khata ?? "Failed to resolve intent.",
         };
 
       case "needs_llm":
@@ -577,7 +577,7 @@ export class Munadi {
    * Handle a list result (filtered query that returns multiple items)
    */
   #handleListResult(resolved: NiyyaMuhallala): DispatchResult {
-    const candidates = resolved.candidates ?? [];
+    const candidates = resolved.murashshahun ?? [];
 
     if (candidates.length === 0) {
       return {
@@ -607,7 +607,7 @@ export class Munadi {
     resolved: NiyyaMuhallala,
     basicIntent: Intent
   ): Promise<DispatchResult> {
-    const entity = resolved.entity!;
+    const entity = resolved.kiyan!;
 
     this.#setFocusEntity(entity);
 
@@ -623,8 +623,8 @@ export class Munadi {
       return this.#routeToSession(existingSession, msg);
     }
 
-    if (resolved.parentEpic) {
-      const parentId = resolved.parentEpic.identifier;
+    if (resolved.kitabAb) {
+      const parentId = resolved.kitabAb.identifier;
       const parentSession = this.#sessionManager.wajadaJalasatMurshid().find(
         (s) => s.identifier === parentId
       );
@@ -635,7 +635,7 @@ export class Munadi {
       }
 
       if (entity.type === "ticket") {
-        return this.#startParentSuggestion(msg, entity, resolved.parentEpic);
+        return this.#startParentSuggestion(msg, entity, resolved.kitabAb);
       }
     }
 
@@ -643,7 +643,7 @@ export class Munadi {
      * Need to start a new murshid
      * Check if this is a "proceed" action from context (e.g., "ok", "work on it")
      */
-    const isProceeding = resolved.action === "proceed";
+    const isProceeding = resolved.fil === "proceed";
 
     if (basicIntent.type === "query" && !isProceeding) {
       return {
@@ -662,7 +662,7 @@ export class Munadi {
     msg: InboundMessage,
     resolved: NiyyaMuhallala
   ): Promise<DispatchResult> {
-    const candidates = resolved.candidates!;
+    const candidates = resolved.murashshahun!;
 
     this.#pendingDisambiguation = {
       source: msg.source,
@@ -767,8 +767,8 @@ export class Munadi {
    */
   async #startParentSuggestion(
     msg: InboundMessage,
-    ticket: NonNullable<NiyyaMuhallala["entity"]>,
-    parent: NonNullable<NiyyaMuhallala["parentEpic"]>
+    ticket: NonNullable<NiyyaMuhallala["kiyan"]>,
+    parent: NonNullable<NiyyaMuhallala["kitabAb"]>
   ): Promise<DispatchResult> {
     this.#pendingParentSuggestion = {
       source: msg.source,
@@ -1034,7 +1034,7 @@ Work on the parent instead?`;
    */
   async #badaaMurshidLiKiyan(
     _msg: InboundMessage,
-    entity: NonNullable<NiyyaMuhallala["entity"]>
+    entity: NonNullable<NiyyaMuhallala["kiyan"]>
   ): Promise<DispatchResult> {
     const identifier = entity.identifier ?? entity.id;
 

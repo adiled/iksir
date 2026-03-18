@@ -609,7 +609,7 @@ async function keepAliveCycle(ctx: DaemonContext): Promise<void> {
   await logger.debug("main", "Running keep-alive cycle");
 
   try {
-    await ctx.keepAlive.cycle();
+    await ctx.keepAlive.dawra();
   } catch (error) {
     await logger.error("main", "Keep-alive cycle error", { error: String(error) });
   }
@@ -800,22 +800,22 @@ async function handleMaintenanceComplete(
 ): Promise<void> {
   await logger.info("main", "Maintenance complete", {
     total: results.length,
-    merged: results.filter((r) => r.action === "merged").length,
-    conflicts: results.filter((r) => r.action === "conflicts").length,
+    merged: results.filter((r) => r.fil === "merged").length,
+    conflicts: results.filter((r) => r.fil === "conflicts").length,
   });
 
   /** Build summary */
-  const merged = results.filter((r) => r.action === "merged");
-  const upToDate = results.filter((r) => r.action === "up-to-date");
-  const conflicts = results.filter((r) => r.action === "conflicts");
-  const errors = results.filter((r) => r.action === "error");
+  const merged = results.filter((r) => r.fil === "merged");
+  const upToDate = results.filter((r) => r.fil === "up-to-date");
+  const conflicts = results.filter((r) => r.fil === "conflicts");
+  const errors = results.filter((r) => r.fil === "error");
 
   let summary = "## Overnight Maintenance Complete\n\n";
 
   if (merged.length > 0) {
     summary += `**Merged main into ${merged.length} branch(es):**\n`;
     for (const r of merged) {
-      summary += `- \`${r.branch}\`: ${r.message}\n`;
+      summary += `- \`${r.far}\`: ${r.nass}\n`;
     }
     summary += "\n";
   }
@@ -827,10 +827,10 @@ async function handleMaintenanceComplete(
   if (conflicts.length > 0) {
     summary += `**Conflicts detected in ${conflicts.length} branch(es):**\n`;
     for (const r of conflicts) {
-      summary += `\n### ${r.identifier} (\`${r.branch}\`)\n`;
-      summary += `${r.commitsBehind} commit(s) behind main\n`;
+      summary += `\n### ${r.huwiyya} (\`${r.far}\`)\n`;
+      summary += `${r.iltizamatKhalfa} commit(s) behind main\n`;
       summary += `\n**Conflicting files:**\n`;
-      for (const f of r.conflicts ?? []) {
+      for (const f of r.taarudat ?? []) {
         summary += `- \`${f}\`\n`;
       }
       summary += `\n**Suggestion:** Resolve manually when active, then \`mun_istihal\` to refresh risalat.\n`;
@@ -841,7 +841,7 @@ async function handleMaintenanceComplete(
   if (errors.length > 0) {
     summary += `**Errors in ${errors.length} branch(es):**\n`;
     for (const r of errors) {
-      summary += `- \`${r.branch}\`: ${r.message}\n`;
+      summary += `- \`${r.far}\`: ${r.nass}\n`;
     }
     summary += "\n";
   }
@@ -854,7 +854,7 @@ async function handleMaintenanceComplete(
     if (conflicts.length > 0) {
       telegramMsg += `⚠️ Conflicts: ${conflicts.length}\n`;
       for (const r of conflicts) {
-        telegramMsg += `  - ${r.identifier}: ${r.conflicts?.length ?? 0} file(s)\n`;
+        telegramMsg += `  - ${r.huwiyya}: ${r.taarudat?.length ?? 0} file(s)\n`;
       }
     }
     if (errors.length > 0) telegramMsg += `❌ Errors: ${errors.length}\n`;
@@ -865,16 +865,16 @@ async function handleMaintenanceComplete(
   for (const r of conflicts) {
     const conflictMsg = `## Overnight Maintenance: Conflicts Detected
 
-Your branch \`${r.branch}\` has conflicts with main.
+Your branch \`${r.far}\` has conflicts with main.
 
-**${r.commitsBehind} commit(s) behind main**
+**${r.iltizamatKhalfa} commit(s) behind main**
 
 **Conflicting files:**
-${(r.conflicts ?? []).map((f) => `- \`${f}\``).join("\n")}
+${(r.taarudat ?? []).map((f) => `- \`${f}\``).join("\n")}
 
 **Action required:** When you become active, resolve these conflicts manually, then use \`mun_istihal\` to refresh any open risalat.`;
 
-    await ctx.sessionManager.arsalaIlaMurshidById(r.identifier, conflictMsg);
+    await ctx.sessionManager.arsalaIlaMurshidById(r.huwiyya, conflictMsg);
   }
 }
 
@@ -1000,31 +1000,31 @@ export async function startDaemon(opts: { check?: boolean } = {}): Promise<void>
       github,
     },
     {
-      onPRMerged: async (session, pr) => {
+      indaDamjRisala: async (session, pr) => {
         await handlePRMerged(ctx, session, pr);
       },
-      onPRClosed: async (session, pr) => {
+      indaIghlaqRisala: async (session, pr) => {
         await handlePRClosed(ctx, session, pr);
       },
-      onAlKimyawiCommand: async (session, raqamRisala, comment) => {
+      indaAmrAlKimyawi: async (session, raqamRisala, comment) => {
         await handleAlKimyawiCommand(ctx, session, raqamRisala, comment);
       },
-      onNewTaaliqMurajas: async (session, raqamRisala, comments) => {
+      indaTaaliqatJadida: async (session, raqamRisala, comments) => {
         await handleNewTaaliqMurajas(ctx, session, raqamRisala, comments);
       },
-      onPRConflict: async (session, pr) => {
+      indaTaarudRisala: async (session, pr) => {
         await handlePRConflict(ctx, session, pr);
       },
-      onCIFailed: async (session, pr) => {
+      indaFashalFahs: async (session, pr) => {
         await handleCIFailed(ctx, session, pr);
       },
-      requestMaintenanceMode: async () => {
+      utlubWadaSeyana: async () => {
         return await handleMaintenanceModeRequest(ctx);
       },
-      releaseMaintenanceMode: async () => {
+      harrarWadaSeyana: async () => {
         await handleMaintenanceModeRelease(ctx);
       },
-      onMaintenanceComplete: async (results) => {
+      indaIktimalSeyana: async (results) => {
         await handleMaintenanceComplete(ctx, results);
       },
     }

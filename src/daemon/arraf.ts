@@ -32,10 +32,10 @@ export type { NawKiyan } from "../types.ts";
 /** Result of intent resolution */
 export interface NiyyaMuhallala {
   /** Resolution status */
-  status: "resolved" | "needs_disambiguation" | "needs_llm" | "not_found" | "error" | "list";
+  hala: "resolved" | "needs_disambiguation" | "needs_llm" | "not_found" | "error" | "list";
 
   /** The identified entity (if resolved) */
-  entity?: {
+  kiyan?: {
     type: NawKiyan;
     id: string;
     identifier?: string;
@@ -44,7 +44,7 @@ export interface NiyyaMuhallala {
   };
 
   /** Parent epic if entity is a child ticket */
-  parentEpic?: {
+  kitabAb?: {
     id: string;
     identifier: string;
     title: string;
@@ -52,7 +52,7 @@ export interface NiyyaMuhallala {
   };
 
   /** Multiple matches requiring user selection */
-  candidates?: Array<{
+  murashshahun?: Array<{
     type: NawKiyan;
     id: string;
     identifier?: string;
@@ -62,37 +62,37 @@ export interface NiyyaMuhallala {
   }>;
 
   /** Original raw text */
-  rawText: string;
+  nassKham: string;
 
   /** How it was resolved */
-  method: "url" | "huwiyat_wasfa" | "llm_search" | "deterministic_search";
+  tariqa: "url" | "huwiyat_wasfa" | "llm_search" | "deterministic_search";
 
   /** Error message if status is "error" */
-  error?: string;
+  khata?: string;
 
   /** Action to perform (from context-aware resolution) */
-  action?: "proceed" | "query" | "cancel" | null;
+  fil?: "proceed" | "query" | "cancel" | null;
 }
 
 /** LLM-extracted intent structure */
-interface LLMIntent {
-  entityType: NawKiyan;
-  searchTerms: string[];
+interface NiyyaMustakhraja {
+  nawKiyan: NawKiyan;
+  kalimatBahth: string[];
   huwiyyatWasfa?: string;
-  projectHint?: string;
-  milestoneHint?: string;
-  assignee?: "me" | null;
-  status?: "todo" | "in_progress" | "done" | "backlog" | null;
-  cycle?: "current" | "next" | null;
-  referencesFocus?: boolean;
-  action?: "proceed" | "query" | "cancel" | null;
+  talmiMashru?: string;
+  talmiMarhala?: string;
+  musnad?: "me" | null;
+  hala?: "todo" | "in_progress" | "done" | "backlog" | null;
+  dawra?: "current" | "next" | null;
+  yushirIlaTarkiz?: boolean;
+  fil?: "proceed" | "query" | "cancel" | null;
 }
 
 
-const TICKET_ID_PATTERN = /\b([A-Z]+-\d+)\b/i;
+const NAMAT_HUWIYYAT_WASFA = /\b([A-Z]+-\d+)\b/i;
 
 /** Keywords that hint at entity type */
-const TYPE_KEYWORDS: Record<NawKiyan, string[]> = {
+const KALIMAT_NAW: Record<NawKiyan, string[]> = {
   ticket: ["ticket", "issue"],
   epic: ["epic"],
   milestone: ["milestone", "sprint", "cycle"],
@@ -102,160 +102,160 @@ const TYPE_KEYWORDS: Record<NawKiyan, string[]> = {
 
 
 export class Arraf {
-  #issueTracker: MutabiWasfa;
+  mutabiWasfa: MutabiWasfa;
   #opencode: OpenCodeClient;
-  #intentSessionId: string | null = null;
+  huwiyyatJalsatNiyya: string | null = null;
 
   constructor(deps: { issueTracker: MutabiWasfa; opencode: OpenCodeClient }) {
-    this.#issueTracker = deps.issueTracker;
+    this.mutabiWasfa = deps.issueTracker;
     this.#opencode = deps.opencode;
   }
 
   /**
    * Resolve user intent to a Linear entity
    */
-  async resolve(text: string, context?: SiyaqMuhadatha): Promise<NiyyaMuhallala> {
+  async halla(text: string, context?: SiyaqMuhadatha): Promise<NiyyaMuhallala> {
     const trimmed = text.trim();
 
     /** Step 1: Try deterministic parsing */
-    const deterministic = await this.#tryDeterministic(trimmed);
-    if (deterministic.status === "resolved" || deterministic.status === "needs_disambiguation") {
+    const deterministic = await this.jarrabHatmi(trimmed);
+    if (deterministic.hala === "resolved" || deterministic.hala === "needs_disambiguation") {
       return deterministic;
     }
 
     /** Step 2: Check for type keywords that might help narrow search */
-    const typeHint = this.#extractTypeHint(trimmed);
+    const typeHint = this.istakhrajTalmihNaw(trimmed);
 
     /** Step 3: Use LLM to extract structured intent (with conversation context) */
-    const llmIntent = await this.#extractIntentWithLLM(trimmed, context);
+    const llmIntent = await this.istakhrajNiyyaBiLLM(trimmed, context);
     if (!llmIntent) {
       return {
-        status: "error",
-        rawText: trimmed,
-        method: "llm_search",
-        error: "Failed to extract intent from message",
+        hala: "error",
+        nassKham: trimmed,
+        tariqa: "llm_search",
+        khata: "Failed to extract intent from message",
       };
     }
 
-    if (llmIntent.referencesFocus && context?.focusEntity) {
+    if (llmIntent.yushirIlaTarkiz && context?.focusEntity) {
       await logger.info("intent-resolver", "Using focus entity from context", {
         focusEntity: context.focusEntity.identifier,
-        action: llmIntent.action,
+        action: llmIntent.fil,
       });
       return {
-        status: "resolved",
-        entity: {
+        hala: "resolved",
+        kiyan: {
           type: context.focusEntity.type,
           id: context.focusEntity.id,
           identifier: context.focusEntity.identifier,
           title: context.focusEntity.title,
           url: context.focusEntity.url,
         },
-        rawText: trimmed,
-        method: "llm_search",
-        action: llmIntent.action,
+        nassKham: trimmed,
+        tariqa: "llm_search",
+        fil: llmIntent.fil,
       };
     }
 
-    return await this.#searchEntities(trimmed, llmIntent, typeHint);
+    return await this.bahathaKiyanat(trimmed, llmIntent, typeHint);
   }
 
   /**
    * Try deterministic parsing (URLs, ticket IDs)
    */
-  async #tryDeterministic(text: string): Promise<NiyyaMuhallala> {
+  async jarrabHatmi(text: string): Promise<NiyyaMuhallala> {
     /** Check for issue tracker URL */
-    const urlMatch = text.match(this.#issueTracker.getUrlPattern());
+    const urlMatch = text.match(this.mutabiWasfa.getUrlPattern());
     if (urlMatch) {
-      const parsed = this.#issueTracker.parseUrl(urlMatch[0]);
+      const parsed = this.mutabiWasfa.parseUrl(urlMatch[0]);
       if (parsed) {
-        return await this.#resolveFromParsedUrl(text, parsed, urlMatch[0]);
+        return await this.hallaMinRabit(text, parsed, urlMatch[0]);
       }
     }
 
     /** Check for ticket ID */
-    const ticketMatch = text.match(TICKET_ID_PATTERN);
+    const ticketMatch = text.match(NAMAT_HUWIYYAT_WASFA);
     if (ticketMatch) {
       const identifier = ticketMatch[1].toUpperCase();
-      return await this.#resolveTicketId(text, identifier);
+      return await this.hallaHuwiyyatWasfa(text, identifier);
     }
 
     return {
-      status: "needs_llm",
-      rawText: text,
-      method: "deterministic_search",
+      hala: "needs_llm",
+      nassKham: text,
+      tariqa: "deterministic_search",
     };
   }
 
   /**
    * Resolve from a parsed ticket URL
    */
-  async #resolveFromParsedUrl(
+  async hallaMinRabit(
     text: string,
     parsed: { type: string; id: string },
     url: string
   ): Promise<NiyyaMuhallala> {
     if (parsed.type === "ticket" || parsed.type === "issue") {
-      return await this.#resolveTicketId(text, parsed.id);
+      return await this.hallaHuwiyyatWasfa(text, parsed.id);
     }
 
     if (parsed.type === "project") {
-      const project = await this.#issueTracker.getProject(parsed.id);
+      const project = await this.mutabiWasfa.getProject(parsed.id);
       if (project) {
         return {
-          status: "resolved",
-          entity: {
+          hala: "resolved",
+          kiyan: {
             type: "project",
             id: project.id,
             title: project.name,
             url: project.url ?? "",
           },
-          rawText: text,
-          method: "url",
+          nassKham: text,
+          tariqa: "url",
         };
       }
     }
 
     return {
-      status: "not_found",
-      rawText: text,
-      method: "url",
-      error: `Could not find entity at ${url}`,
+      hala: "not_found",
+      nassKham: text,
+      tariqa: "url",
+      khata: `Could not find entity at ${url}`,
     };
   }
 
   /**
    * Resolve a ticket ID (e.g., "TEAM-200")
    */
-  async #resolveTicketId(text: string, identifier: string): Promise<NiyyaMuhallala> {
-    const issue = await this.#issueTracker.getIssue(identifier);
+  async hallaHuwiyyatWasfa(text: string, identifier: string): Promise<NiyyaMuhallala> {
+    const issue = await this.mutabiWasfa.getIssue(identifier);
 
     if (!issue) {
       return {
-        status: "not_found",
-        rawText: text,
-        method: "huwiyat_wasfa",
-        error: `Ticket ${identifier} not found`,
+        hala: "not_found",
+        nassKham: text,
+        tariqa: "huwiyat_wasfa",
+        khata: `Ticket ${identifier} not found`,
       };
     }
 
     const result: NiyyaMuhallala = {
-      status: "resolved",
-      entity: {
+      hala: "resolved",
+      kiyan: {
         type: this.#mayyazaNawWasfa(issue),
         id: issue.id,
         identifier: issue.identifier,
         title: issue.title,
         url: issue.url ?? "",
       },
-      rawText: text,
-      method: "huwiyat_wasfa",
+      nassKham: text,
+      tariqa: "huwiyat_wasfa",
     };
 
     if (issue.parent) {
-      const parent = await this.#issueTracker.getIssue(issue.parent.identifier);
+      const parent = await this.mutabiWasfa.getIssue(issue.parent.identifier);
       if (parent) {
-        result.parentEpic = {
+        result.kitabAb = {
           id: parent.id,
           identifier: parent.identifier,
           title: parent.title,
@@ -283,10 +283,10 @@ export class Arraf {
   /**
    * Extract type hint from keywords in text
    */
-  #extractTypeHint(text: string): NawKiyan | null {
+  istakhrajTalmihNaw(text: string): NawKiyan | null {
     const lower = text.toLowerCase();
 
-    for (const [type, keywords] of Object.entries(TYPE_KEYWORDS)) {
+    for (const [type, keywords] of Object.entries(KALIMAT_NAW)) {
       for (const keyword of keywords) {
         if (lower.includes(keyword)) {
           return type as NawKiyan;
@@ -300,7 +300,7 @@ export class Arraf {
   /**
    * System prompt for intent extraction (stable across calls, benefits from caching)
    */
-  static readonly INTENT_SYSTEM_PROMPT = `You are a JSON extraction tool for project management. Return ONLY valid JSON, no explanations.
+  static readonly TAWJIHAT_NIZAM_NIYYA = `You are a JSON extraction tool for project management. Return ONLY valid JSON, no explanations.
 
 Output format:
 {
@@ -337,9 +337,9 @@ Examples:
   /**
    * Use LLM to extract structured intent from vague text
    */
-  async #extractIntentWithLLM(text: string, context?: SiyaqMuhadatha): Promise<LLMIntent | null> {
+  async istakhrajNiyyaBiLLM(text: string, context?: SiyaqMuhadatha): Promise<NiyyaMustakhraja | null> {
     /** Get or create intent extraction session */
-    const sessionId = await this.#getIntentSession();
+    const sessionId = await this.wajadaJalsatNiyya();
     if (!sessionId) {
       await logger.error("intent-resolver", "Failed to get intent session");
       return null;
@@ -365,10 +365,10 @@ Examples:
 
 MESSAGE: "${text}"${contextSection}
 
-${Arraf.INTENT_SYSTEM_PROMPT}`;
+${Arraf.TAWJIHAT_NIZAM_NIYYA}`;
 
     const response = await this.#opencode.sendPrompt(sessionId, userPrompt, {
-      system: Arraf.INTENT_SYSTEM_PROMPT,
+      system: Arraf.TAWJIHAT_NIZAM_NIYYA,
       model: { providerID: "anthropic", modelID: "claude-sonnet-4-20250514" },
       timeoutMs: 15_000,
     });
@@ -387,7 +387,7 @@ ${Arraf.INTENT_SYSTEM_PROMPT}`;
         return null;
       }
 
-      const parsed = JSON.parse(jsonMatch[0]) as LLMIntent;
+      const parsed = JSON.parse(jsonMatch[0]) as NiyyaMustakhraja;
       await logger.info("intent-resolver", "LLM extracted intent", { intent: parsed });
       return parsed;
     } catch (error) {
@@ -402,13 +402,13 @@ ${Arraf.INTENT_SYSTEM_PROMPT}`;
   /**
    * Get or create the intent extraction session
    */
-  async #getIntentSession(): Promise<string | null> {
-    if (this.#intentSessionId) {
-      const session = await this.#opencode.jalabJalsa(this.#intentSessionId);
+  async wajadaJalsatNiyya(): Promise<string | null> {
+    if (this.huwiyyatJalsatNiyya) {
+      const session = await this.#opencode.jalabJalsa(this.huwiyyatJalsatNiyya);
       if (session) {
-        return this.#intentSessionId;
+        return this.huwiyyatJalsatNiyya;
       }
-      this.#intentSessionId = null;
+      this.huwiyyatJalsatNiyya = null;
     }
 
     /** Create new session */
@@ -421,33 +421,33 @@ ${Arraf.INTENT_SYSTEM_PROMPT}`;
       return null;
     }
 
-    this.#intentSessionId = session.id;
+    this.huwiyyatJalsatNiyya = session.id;
     return session.id;
   }
 
   /**
    * Search issue tracker based on LLM-extracted intent
    */
-  async #searchEntities(
+  async bahathaKiyanat(
     text: string,
-    intent: LLMIntent,
+    intent: NiyyaMustakhraja,
     typeHint: NawKiyan | null
   ): Promise<NiyyaMuhallala> {
-    const effectiveType = intent.entityType !== "unknown" ? intent.entityType : typeHint;
-    const searchQuery = intent.searchTerms.join(" ");
-    const hasFilters = intent.assignee || intent.status || intent.cycle;
+    const effectiveType = intent.nawKiyan !== "unknown" ? intent.nawKiyan : typeHint;
+    const searchQuery = intent.kalimatBahth.join(" ");
+    const hasFilters = intent.musnad || intent.hala || intent.dawra;
 
     if (!searchQuery && !intent.huwiyyatWasfa && !hasFilters) {
       return {
-        status: "not_found",
-        rawText: text,
-        method: "llm_search",
-        error: "Could not extract search terms or filters from message",
+        hala: "not_found",
+        nassKham: text,
+        tariqa: "llm_search",
+        khata: "Could not extract search terms or filters from message",
       };
     }
 
     if (intent.huwiyyatWasfa) {
-      return await this.#resolveTicketId(text, intent.huwiyyatWasfa);
+      return await this.hallaHuwiyyatWasfa(text, intent.huwiyyatWasfa);
     }
 
     /**
@@ -455,13 +455,13 @@ ${Arraf.INTENT_SYSTEM_PROMPT}`;
      * Always search tickets/issues since they're the most common
      * Also search the specified type if different
      */
-    const candidates: NiyyaMuhallala["candidates"] = [];
+    const candidates: NiyyaMuhallala["murashshahun"] = [];
 
     if (hasFilters) {
       /** Get current cycle ID if needed */
       let cycleId: string | undefined;
-      if (intent.cycle === "current") {
-        const activeMilestone = await this.#issueTracker.getActiveMilestone?.();
+      if (intent.dawra === "current") {
+        const activeMilestone = await this.mutabiWasfa.getActiveMilestone?.();
         if (activeMilestone) {
           cycleId = activeMilestone.id;
           await logger.info("intent-resolver", `Using active milestone: ${activeMilestone.name}`);
@@ -470,9 +470,9 @@ ${Arraf.INTENT_SYSTEM_PROMPT}`;
         }
       }
 
-      const filteredIssues = await this.#issueTracker.getFilteredIssues?.({
-        assigneeId: intent.assignee === "me" ? "me" : undefined,
-        status: intent.status ?? undefined,
+      const filteredIssues = await this.mutabiWasfa.getFilteredIssues?.({
+        assigneeId: intent.musnad === "me" ? "me" : undefined,
+        status: intent.hala ?? undefined,
         cycleId,
       }, 15) ?? [];
 
@@ -489,7 +489,7 @@ ${Arraf.INTENT_SYSTEM_PROMPT}`;
       }
     } else {
       /** Text-based search (original behavior) */
-      const issues = await this.#issueTracker.searchIssues(searchQuery, 10);
+      const issues = await this.mutabiWasfa.searchIssues(searchQuery, 10);
       for (const issue of issues) {
         const type = this.#mayyazaNawWasfa(issue);
         candidates.push({
@@ -498,25 +498,25 @@ ${Arraf.INTENT_SYSTEM_PROMPT}`;
           identifier: issue.identifier,
           title: issue.title,
           url: issue.url ?? "",
-          score: this.#calculateScore(issue.title, intent.searchTerms),
+          score: this.hasabaDaraja(issue.title, intent.kalimatBahth),
         });
       }
     }
 
     if (!hasFilters && (effectiveType === "milestone" || !effectiveType)) {
-      const milestones = await this.#searchMilestones(searchQuery);
+      const milestones = await this.bahathaMarahim(searchQuery);
       candidates.push(...milestones);
     }
 
     if (!hasFilters && (effectiveType === "project" || !effectiveType)) {
-      const projects = await this.#issueTracker.searchProjects(searchQuery);
+      const projects = await this.mutabiWasfa.searchProjects(searchQuery);
       for (const p of projects) {
         candidates.push({
           type: "project",
           id: p.id,
           title: p.name,
           url: p.url ?? "",
-          score: this.#calculateScore(p.name, intent.searchTerms),
+          score: this.hasabaDaraja(p.name, intent.kalimatBahth),
         });
       }
     }
@@ -526,43 +526,43 @@ ${Arraf.INTENT_SYSTEM_PROMPT}`;
     if (candidates.length === 0) {
       const filterDesc = hasFilters ? "matching filters" : `matching "${searchQuery}"`;
       return {
-        status: "not_found",
-        rawText: text,
-        method: "llm_search",
-        error: `No ${effectiveType ?? "tickets"} found ${filterDesc}`,
+        hala: "not_found",
+        nassKham: text,
+        tariqa: "llm_search",
+        khata: `No ${effectiveType ?? "tickets"} found ${filterDesc}`,
       };
     }
 
     if (hasFilters) {
       return {
-        status: "list",
-        candidates: candidates.slice(0, 15),
-        rawText: text,
-        method: "llm_search",
+        hala: "list",
+        murashshahun: candidates.slice(0, 15),
+        nassKham: text,
+        tariqa: "llm_search",
       };
     }
 
     if (candidates.length === 1) {
       const match = candidates[0];
       const result: NiyyaMuhallala = {
-        status: "resolved",
-        entity: {
+        hala: "resolved",
+        kiyan: {
           type: match.type,
           id: match.id,
           identifier: match.identifier,
           title: match.title,
           url: match.url,
         },
-        rawText: text,
-        method: "llm_search",
+        nassKham: text,
+        tariqa: "llm_search",
       };
 
       if (match.type === "ticket" && match.identifier) {
-        const issue = await this.#issueTracker.getIssue(match.identifier);
+        const issue = await this.mutabiWasfa.getIssue(match.identifier);
         if (issue?.parent) {
-          const parent = await this.#issueTracker.getIssue(issue.parent.identifier);
+          const parent = await this.mutabiWasfa.getIssue(issue.parent.identifier);
           if (parent) {
-            result.parentEpic = {
+            result.kitabAb = {
               id: parent.id,
               identifier: parent.identifier,
               title: parent.title,
@@ -576,18 +576,18 @@ ${Arraf.INTENT_SYSTEM_PROMPT}`;
     }
 
     return {
-      status: "needs_disambiguation",
-      candidates: candidates.slice(0, 5),
-      rawText: text,
-      method: "llm_search",
+      hala: "needs_disambiguation",
+      murashshahun: candidates.slice(0, 5),
+      nassKham: text,
+      tariqa: "llm_search",
     };
   }
 
   /**
    * Search milestones via the issue tracker interface
    */
-  async #searchMilestones(query: string): Promise<NonNullable<NiyyaMuhallala["candidates"]>> {
-    const milestones = await this.#issueTracker.searchMilestones?.(query);
+  async bahathaMarahim(query: string): Promise<NonNullable<NiyyaMuhallala["murashshahun"]>> {
+    const milestones = await this.mutabiWasfa.searchMilestones?.(query);
     if (!milestones || milestones.length === 0) {
       return [];
     }
@@ -597,14 +597,14 @@ ${Arraf.INTENT_SYSTEM_PROMPT}`;
       id: m.id,
       title: m.name,
       url: m.url ?? "",
-      score: this.#calculateScore(m.name, query.split(" ")),
+      score: this.hasabaDaraja(m.name, query.split(" ")),
     }));
   }
 
   /**
    * Calculate relevance score for a title against search terms
    */
-  #calculateScore(title: string, terms: string[]): number {
+  hasabaDaraja(title: string, terms: string[]): number {
     const titleLower = title.toLowerCase();
     let matches = 0;
 
