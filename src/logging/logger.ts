@@ -9,7 +9,7 @@ import { ensureDir } from "jsr:@std/fs";
 import { join } from "jsr:@std/path";
 import type { DecisionMudkhalSijill, MudkhalTaghyirKhariji, MudkhalSijill, MustawaSijill } from "../types.ts";
 
-function getLogDir(): string {
+function masarSijillAhdaq(): string {
   return Deno.env.get("IKSIR_LOG_DIR") ??
     join(Deno.env.get("XDG_STATE_HOME") ?? join(Deno.env.get("HOME") ?? "/root", ".local", "state"), "iksir");
 }
@@ -21,9 +21,9 @@ const LOG_FILES = {
   notifications: "notifications.log",
 } as const;
 
-type LogFile = keyof typeof LOG_FILES;
+type MilafSijill = keyof typeof LOG_FILES;
 
-class Logger {
+class Musjil {
   private tahyiad = false;
   private logLevel: MustawaSijill = "info";
 
@@ -34,9 +34,9 @@ class Logger {
     error: 3,
   };
 
-  async init(): Promise<void> {
+  async baddaa(): Promise<void> {
     if (this.tahyiad) return;
-    await ensureDir(getLogDir());
+    await ensureDir(masarSijillAhdaq());
     this.tahyiad = true;
 
     const level = Deno.env.get("IKSIR_LOG_LEVEL") as MustawaSijill | undefined;
@@ -45,15 +45,15 @@ class Logger {
     }
   }
 
-  private shouldLog(level: MustawaSijill): boolean {
+  private yajibuTasjil(level: MustawaSijill): boolean {
     return this.levelPriority[level] >= this.levelPriority[this.logLevel];
   }
 
-  private formatTimestamp(date: Date): string {
+  private nassiqWaqt(date: Date): string {
     return date.toISOString();
   }
 
-  private formatForConsole(entry: MudkhalSijill): string {
+  private nassiqLiWajiha(entry: MudkhalSijill): string {
     const levelColors: Record<MustawaSijill, string> = {
       debug: "\x1b[90m",
       info: "\x1b[36m",
@@ -64,7 +64,7 @@ class Logger {
     const color = levelColors[entry.level];
     const level = entry.level.toUpperCase().padEnd(5);
 
-    let line = `${color}[${this.formatTimestamp(entry.timestamp)}] [${level}] [${entry.category}]${reset} ${entry.message}`;
+    let line = `${color}[${this.nassiqWaqt(entry.timestamp)}] [${level}] [${entry.category}]${reset} ${entry.message}`;
 
     if (entry.context && Object.keys(entry.context).length > 0) {
       line += `\n  ${JSON.stringify(entry.context)}`;
@@ -73,30 +73,30 @@ class Logger {
     return line;
   }
 
-  private formatForFile(entry: MudkhalSijill): string {
+  private nassiqLiMilaf(entry: MudkhalSijill): string {
     return JSON.stringify({
       ...entry,
-      timestamp: this.formatTimestamp(entry.timestamp),
+      timestamp: this.nassiqWaqt(entry.timestamp),
     });
   }
 
-  private async appendToFile(file: LogFile, content: string): Promise<void> {
-    if (!this.tahyiad) await this.init();
-    const path = join(getLogDir(), LOG_FILES[file]);
+  private async adhifIlaMilaf(file: MilafSijill, content: string): Promise<void> {
+    if (!this.tahyiad) await this.baddaa();
+    const path = join(masarSijillAhdaq(), LOG_FILES[file]);
     await Deno.writeTextFile(path, content + "\n", { append: true });
   }
 
-  private async writeEntry(file: LogFile, entry: MudkhalSijill): Promise<void> {
-    if (!this.shouldLog(entry.level)) return;
+  private async uktubQayd(file: MilafSijill, entry: MudkhalSijill): Promise<void> {
+    if (!this.yajibuTasjil(entry.level)) return;
 
-    console.log(this.formatForConsole(entry));
+    console.log(this.nassiqLiWajiha(entry));
 
-    await this.appendToFile(file, this.formatForFile(entry));
+    await this.adhifIlaMilaf(file, this.nassiqLiMilaf(entry));
   }
 
   /** Main logger methods */
-  async debug(category: string, message: string, context?: Record<string, unknown>): Promise<void> {
-    await this.writeEntry("main", {
+  async tatbeeq(category: string, message: string, context?: Record<string, unknown>): Promise<void> {
+    await this.uktubQayd("main", {
       timestamp: new Date(),
       level: "debug",
       category,
@@ -105,8 +105,8 @@ class Logger {
     });
   }
 
-  async info(category: string, message: string, context?: Record<string, unknown>): Promise<void> {
-    await this.writeEntry("main", {
+  async akhbar(category: string, message: string, context?: Record<string, unknown>): Promise<void> {
+    await this.uktubQayd("main", {
       timestamp: new Date(),
       level: "info",
       category,
@@ -115,8 +115,8 @@ class Logger {
     });
   }
 
-  async warn(category: string, message: string, context?: Record<string, unknown>): Promise<void> {
-    await this.writeEntry("main", {
+  async haDHHir(category: string, message: string, context?: Record<string, unknown>): Promise<void> {
+    await this.uktubQayd("main", {
       timestamp: new Date(),
       level: "warn",
       category,
@@ -126,7 +126,7 @@ class Logger {
   }
 
   async error(category: string, message: string, context?: Record<string, unknown>): Promise<void> {
-    await this.writeEntry("main", {
+    await this.uktubQayd("main", {
       timestamp: new Date(),
       level: "error",
       category,
@@ -136,7 +136,7 @@ class Logger {
   }
 
   /** Decision audit log */
-  async decision(entry: Omit<DecisionMudkhalSijill, "timestamp" | "level" | "category">): Promise<void> {
+  async sajjalQarar(entry: Omit<DecisionMudkhalSijill, "timestamp" | "level" | "category">): Promise<void> {
     const fullEntry: DecisionMudkhalSijill = {
       ...entry,
       timestamp: new Date(),
@@ -144,18 +144,18 @@ class Logger {
       category: "decisions",
     };
 
-    await this.info("decisions", entry.message, {
+    await this.akhbar("decisions", entry.message, {
       event: entry.event,
       interpretation: entry.interpretation,
       action: entry.action,
       reasoning: entry.reasoning,
     });
 
-    await this.appendToFile("decisions", this.formatForFile(fullEntry));
+    await this.adhifIlaMilaf("decisions", this.nassiqLiMilaf(fullEntry));
   }
 
   /** External changes log */
-  async externalChange(
+  async sajjalTaghyirKhariji(
     entry: Omit<MudkhalTaghyirKhariji, "timestamp" | "level" | "category" | "message">
   ): Promise<void> {
     const message = `External change from ${entry.source}: ${entry.entityType} ${entry.entityId} by ${entry.author}`;
@@ -167,7 +167,7 @@ class Logger {
       message,
     };
 
-    await this.info("external_changes", message, {
+    await this.akhbar("external_changes", message, {
       source: entry.source,
       entityType: entry.entityType,
       entityId: entry.entityId,
@@ -176,10 +176,10 @@ class Logger {
       impact: entry.impact,
     });
 
-    await this.appendToFile("externalChanges", this.formatForFile(fullEntry));
+    await this.adhifIlaMilaf("externalChanges", this.nassiqLiMilaf(fullEntry));
   }
 
-  async notification(
+  async sajjalIshara(
     channel: "ntfy" | "telegram",
     category: string,
     recipient: string,
@@ -194,7 +194,7 @@ class Logger {
       context: { channel, category, recipient, message, success },
     };
 
-    await this.appendToFile("notifications", this.formatForFile(entry));
+    await this.adhifIlaMilaf("notifications", this.nassiqLiMilaf(entry));
 
     if (!success) {
       await this.error("notifications", `Failed to send ${channel} notification`, { category, message });
@@ -202,9 +202,9 @@ class Logger {
   }
 
   /** Read recent logs (for /log command) */
-  async readRecent(file: LogFile = "main", lines = 50): Promise<MudkhalSijill[]> {
-    if (!this.tahyiad) await this.init();
-    const path = join(getLogDir(), LOG_FILES[file]);
+  async iqraAkhiran(file: MilafSijill = "main", lines = 50): Promise<MudkhalSijill[]> {
+    if (!this.tahyiad) await this.baddaa();
+    const path = join(masarSijillAhdaq(), LOG_FILES[file]);
 
     try {
       const content = await Deno.readTextFile(path);
@@ -223,14 +223,14 @@ class Logger {
           };
         }
       });
-    } catch (error) {
-      if (error instanceof Deno.errors.NotFound) {
+    } catch (sajjalKhata) {
+      if (sajjalKhata instanceof Deno.errors.NotFound) {
         return [];
       }
-      throw error;
+      throw sajjalKhata;
     }
   }
 }
 
 /** Singleton instance */
-export const logger = new Logger();
+export const logger = new Musjil();

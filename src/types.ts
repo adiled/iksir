@@ -6,29 +6,29 @@
 
 
 export interface TasmimIksir {
-  polling: TasmimIstiftaa;
-  quietHours: TasmimSaatSukun;
-  notifications: TasmimIsharat;
-  issueTracker: TasmimMutabiWasfa;
+  istiftaa: TasmimIstiftaa;
+  saatSukun: TasmimSaatSukun;
+  isharat: TasmimIsharat;
+  mutabiWasfa: TasmimMutabiWasfa;
   github: TasmimGitHub;
   opencode: TasmimOpenCode;
-  prompts: TasmimHaththat;
+  hafazat: TasmimHaththat;
 }
 
 export interface TasmimIstiftaa {
-  defaultIntervalMs: number;
+  fajwatZamaniyya: number;
   /** Minimum interval between polls of the same PR (ms). Default: 60000 */
-  prPollIntervalMs: number;
+  fajwatRaqabaRisala: number;
 }
 
 export interface TasmimSaatSukun {
-  enabled: boolean;
-  start: string;
-  end: string;
-  timezone: string;
-  blockersPassthrough: boolean;
+  mufattah: boolean;
+  bidaya: string;
+  nihaya: string;
+  mintaqaZamaniyya: string;
+  tanaqqulMasdud: boolean;
   /** How many minutes before quiet hours end to run maintenance. Default: 60 */
-  maintenanceWindowMinutes: number;
+  daqaiqNafizhaSeyana: number;
 }
 
 export interface TasmimIsharat {
@@ -37,30 +37,30 @@ export interface TasmimIsharat {
 }
 
 export interface TasmimNtfy {
-  enabled: boolean;
+  mufattah: boolean;
   topic: string;
   server: string;
 }
 
 export interface TasmimTelegram {
-  enabled: boolean;
-  botToken: string;
-  chatId: string;
+  mufattah: boolean;
+  ramzBot: string;
+  huwiyyatMuhadatha: string;
   /** Forum-enabled supergroup for Iksir operations */
-  groupId?: string;
+  huwiyyatMajmuua?: string;
   /** Dispatch topic ID in the group (for spawning murshids) */
-  dispatchTopicId?: number;
+  huwiyyatMawduuIrsal?: number;
   /** SOCKS5 proxy URL (e.g., "socks5://localhost:1080") */
   proxy?: string;
 }
 
 export interface TasmimMutabiWasfa {
   /** Provider name: "linear" | "jira" | "github" */
-  provider?: string;
-  apiKey: string;
-  teamId: string;
+  muqaddim?: string;
+  miftahApi: string;
+  huwiyyatFareeq: string;
   /** Regex pattern for ticket identifiers. Default: "[A-Z]+-\\d+" */
-  ticketPattern?: string;
+  namatWasfa?: string;
 }
 
 
@@ -146,8 +146,8 @@ export interface MutabiWasfa {
 }
 
 export interface TasmimGitHub {
-  owner: string;
-  repo: string;
+  sahib: string;
+  makhzan: string;
   ismKimyawi: string;
 }
 

@@ -133,14 +133,14 @@ export class MudirJalasat {
       /** Verify session still exists in OpenCode */
       const existing = await this.#opencode.jalabJalsa(session.id);
       if (existing) {
-        await logger.info("session-manager", `Resuming tracked murshid session for ${identifier}`, {
+        await logger.akhbar("session-manager", `Resuming tracked murshid session for ${identifier}`, {
           sessionId: session.id,
         });
         this.#murshidFaailId = identifier;
         await this.takkadMinQanat(session);
         return { session, isNew: false, wasResumed: true, previousActive };
       }
-      await logger.warn("session-manager", `Tracked session ${session.id} no longer exists in OpenCode`);
+      await logger.haDHHir("session-manager", `Tracked session ${session.id} no longer exists in OpenCode`);
       this.#murshidSessions.delete(identifier);
     }
 
@@ -150,7 +150,7 @@ export class MudirJalasat {
      */
     const existingSession = await this.#bahathaAnJalsatMurshid(identifier);
     if (existingSession) {
-      await logger.info("session-manager", `Found existing murshid session in OpenCode for ${identifier}`, {
+      await logger.akhbar("session-manager", `Found existing murshid session in OpenCode for ${identifier}`, {
         sessionId: existingSession.id,
       });
 
@@ -177,7 +177,7 @@ export class MudirJalasat {
       return { session, isNew: false, wasResumed: true, previousActive };
     }
 
-    await logger.info("session-manager", `Creating new murshid session for ${identifier}`);
+    await logger.akhbar("session-manager", `Creating new murshid session for ${identifier}`);
 
     const sessionTitle = `[Murshid] ${identifier}: ${title}`;
     const openCodeSession = await this.#opencode.khalaqaJalsa(identifier, sessionTitle);
@@ -237,7 +237,7 @@ export class MudirJalasat {
     const match = matches[0];
 
     if (matches.length > 1) {
-      await logger.warn("session-manager", `Found ${matches.length} murshid sessions for ${epicId}, using most recent`, {
+      await logger.haDHHir("session-manager", `Found ${matches.length} murshid sessions for ${epicId}, using most recent`, {
         sessionIds: matches.map((m) => m.id),
       });
     }
@@ -331,7 +331,7 @@ export class MudirJalasat {
   ): Promise<boolean> {
     const session = this.#murshidSessions.get(epicId);
     if (!session) {
-      await logger.warn("session-manager", `Cannot update status - no session for ${epicId}`);
+      await logger.haDHHir("session-manager", `Cannot update status - no session for ${epicId}`);
       return false;
     }
 
@@ -343,7 +343,7 @@ export class MudirJalasat {
     }
 
     await this.hafizaHala();
-    await logger.info("session-manager", `Updated ${epicId} status to ${status}`, {
+    await logger.akhbar("session-manager", `Updated ${epicId} status to ${status}`, {
       blockedReason,
     });
 
@@ -361,14 +361,14 @@ export class MudirJalasat {
   ): Promise<boolean> {
     const session = this.#murshidSessions.get(epicId);
     if (!session) {
-      await logger.warn("session-manager", `Cannot register PR - no session for ${epicId}`);
+      await logger.haDHHir("session-manager", `Cannot register PR - no session for ${epicId}`);
       return false;
     }
 
     /** Check if PR already tracked */
     const existing = session.activePRs.find((p) => p.raqamRisala === pr.raqamRisala);
     if (existing) {
-      await logger.warn("session-manager", `PR #${pr.raqamRisala} already tracked for ${epicId}`);
+      await logger.haDHHir("session-manager", `PR #${pr.raqamRisala} already tracked for ${epicId}`);
       return false;
     }
 
@@ -382,7 +382,7 @@ export class MudirJalasat {
     session.activePRs.push(trackedPR);
     await this.hafizaHala();
 
-    await logger.info("session-manager", `Registered PR #${pr.raqamRisala} for ${epicId}`, {
+    await logger.akhbar("session-manager", `Registered PR #${pr.raqamRisala} for ${epicId}`, {
       huwiyyatWasfa: pr.huwiyyatWasfa,
       branch: pr.far,
     });
@@ -423,7 +423,7 @@ export class MudirJalasat {
         pr.ghuyiratHalaFi = new Date().toISOString();
         await this.hafizaHala();
 
-        await logger.info("session-manager", `Updated PR #${raqamRisala} status: ${previousStatus} → ${status}`, {
+        await logger.akhbar("session-manager", `Updated PR #${raqamRisala} status: ${previousStatus} → ${status}`, {
           identifier: session.huwiyya,
           huwiyyatWasfa: pr.huwiyyatWasfa,
         });
@@ -478,7 +478,7 @@ export class MudirJalasat {
   async arsalaIlaMurshidById(epicId: string, message: string): Promise<boolean> {
     const session = this.#murshidSessions.get(epicId);
     if (!session) {
-      await logger.warn("session-manager", `No murshid session for ${epicId}`);
+      await logger.haDHHir("session-manager", `No murshid session for ${epicId}`);
       return false;
     }
 
@@ -497,7 +497,7 @@ export class MudirJalasat {
   async arsalaIlaMurshid(message: string): Promise<boolean> {
     const session = this.wajadaMurshidFaail();
     if (!session) {
-      await logger.warn("session-manager", "No active murshid session");
+      await logger.haDHHir("session-manager", "No active murshid session");
       return false;
     }
 
@@ -582,7 +582,7 @@ Awaiting direction from al-Kimyawi...`;
     const session = this.wajadaMurshidBiHuwiyyatJalsa(sessionId);
     if (!session) return;
 
-    await logger.info("session-manager", `Post-compaction diary reload for ${session.huwiyya}`, {
+    await logger.akhbar("session-manager", `Post-compaction diary reload for ${session.huwiyya}`, {
       sessionId,
     });
 
@@ -691,7 +691,7 @@ Call pm_read_diary for full decision history with reasoning.
         }
       }
 
-      await logger.info("session-manager", "Saved session state", {
+      await logger.akhbar("session-manager", "Saved session state", {
         murshidun: this.#murshidSessions.size,
       });
     } catch (error) {
@@ -710,7 +710,7 @@ Call pm_read_diary for full decision history with reasoning.
       const dbSessions = jalabaKullJalasat();
       
       if (dbSessions.length === 0) {
-        await logger.info("session-manager", "No existing session state found");
+        await logger.akhbar("session-manager", "No existing session state found");
         return;
       }
 
@@ -742,9 +742,9 @@ Call pm_read_diary for full decision history with reasoning.
           };
 
           murshidunṢalihun.push(session);
-          await logger.info("session-manager", `Restored murshid session for ${session.huwiyya}`);
+          await logger.akhbar("session-manager", `Restored murshid session for ${session.huwiyya}`);
         } else {
-          await logger.warn("session-manager", `Murshid session ${dbSession.id} no longer exists, skipping`);
+          await logger.haDHHir("session-manager", `Murshid session ${dbSession.id} no longer exists, skipping`);
         }
       }
 
@@ -758,7 +758,7 @@ Call pm_read_diary for full decision history with reasoning.
         this.#murshidFaailId = activeSession.huwiyya;
       }
 
-      await logger.info("session-manager", "Loaded session state from SQLite", {
+      await logger.akhbar("session-manager", "Loaded session state from SQLite", {
         murshidun: murshidunṢalihun.length,
         active: this.#murshidFaailId,
       });

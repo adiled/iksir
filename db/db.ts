@@ -53,7 +53,7 @@ export async function baddaaQaidatBayanat(): Promise<void> {
 
   tatbiqSchema(db);
 
-  await logger.info("sijill", `SQLite tahyiad at ${masarSijill}`);
+  await logger.akhbar("sijill", `SQLite tahyiad at ${masarSijill}`);
 }
 
 /**
@@ -408,11 +408,11 @@ export function adkhalaSual(args: HujajIdkhalSual): void {
 
 interface SualGhairMujabSijill {
   id: string;
-  session_id: string;
-  question: string;
-  options: string | null;
-  telegram_message_id: number | null;
-  created_at: string;
+  huwiyyatJalsa: string;
+  sual: string;
+  khiyarat: string | null;
+  huwiyyatRisala: number | null;
+  unshiaFi: string;
 }
 
 /**
@@ -422,7 +422,7 @@ export function jalabaAseilaGhairMujaba(): SualGhairMujabSijill[] {
   const d = jalabSijill();
   return d
     .prepare(
-      "SELECT id, huwiyat_jalsa AS session_id, sual AS question, khiyarat AS options, huwiyat_risala AS telegram_message_id, unshia_fi AS created_at FROM asila WHERE ujiba_fi IS NULL",
+      "SELECT id, huwiyat_jalsa AS huwiyyatJalsa, sual, khiyarat, huwiyat_risala AS huwiyyatRisala, unshia_fi AS unshiaFi FROM asila WHERE ujiba_fi IS NULL",
     )
     .all() as SualGhairMujabSijill[];
 }

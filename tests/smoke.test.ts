@@ -41,7 +41,7 @@ function buildContext() {
     sessionManager,
     intentResolver: intentResolver as never,
     messenger,
-    ticketPattern: config.issueTracker?.ticketPattern,
+    ticketPattern: config.mutabiWasfa?.namatWasfa,
   });
 
   const questionHandler = new Sail({

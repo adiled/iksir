@@ -106,7 +106,7 @@ export class Munaffidh {
    * With SQLite, there's no offset to load - processed state is in the DB.
    */
   async hammalaHala(): Promise<void> {
-    await logger.info("tool-executor", "State managed by SQLite (no offset to load)");
+    await logger.akhbar("tool-executor", "State managed by SQLite (no offset to load)");
   }
 
   /**
@@ -161,7 +161,7 @@ export class Munaffidh {
         await this.aalajHadath(event);
         allamaHadathMuaalaj(dbEvent.id);
       } catch (error) {
-        await logger.warn("tool-executor", "Failed to process event", { 
+        await logger.haDHHir("tool-executor", "Failed to process event", { 
           error: String(error),
           eventId: dbEvent.id,
         });
@@ -179,7 +179,7 @@ export class Munaffidh {
   ]);
 
   async aalajHadath(event: MunToolCall): Promise<void> {
-    await logger.debug("tool-executor", `Processing: ${event.tool}`);
+    await logger.tatbeeq("tool-executor", `Processing: ${event.tool}`);
 
     if (Munaffidh.GIT_TOOLS.has(event.tool) && this.#sessionManager.huwaGitMasdud()) {
       const msg = `Git operation blocked: a session switch is in progress. Try again in a few seconds.`;
@@ -416,7 +416,7 @@ Updated fields: ${Object.keys(call.updates).join(", ")}`;
    * Handle pm_set_relations
    */
   async aalajAlaqat(call: NidaWadaaAlaqat): Promise<string> {
-    await logger.info("tool-executor", "Setting relations", {
+    await logger.akhbar("tool-executor", "Setting relations", {
       huwiyyatWasfa: call.huwiyyatWasfa,
       blocks: call.yahjub,
       blockedBy: call.mahjoubBi,
@@ -474,7 +474,7 @@ ${call.mahjoubBi?.length ? `**Blocked by:** ${call.mahjoubBi.join(", ")}` : ""}`
         ghuyiratHalaFi: new Date().toISOString(),
       });
     } else {
-      await logger.warn("tool-executor", `PR #${result.number} created but no active murshid to track it`);
+      await logger.haDHHir("tool-executor", `PR #${result.number} created but no active murshid to track it`);
     }
 
     return `Draft PR created successfully!
@@ -518,7 +518,7 @@ ${comparison.behind > 0 ? "⚠️ Branch is behind - consider rebasing before PR
     const tamyiz = await mayyazaTanbih(this.#opencode, call.risala);
 
     if (!tamyiz.dhahab) {
-      await logger.info("tool-executor", "Ishara rejected as khabath", {
+      await logger.akhbar("tool-executor", "Ishara rejected as khabath", {
         reason: tamyiz.reason,
         messagePreview: call.risala.slice(0, 100),
       });
@@ -530,7 +530,7 @@ Your message was not forwarded to al-Kimyawi. This appears to be within your aut
 Reason: ${tamyiz.reason}`;
     }
 
-    await logger.info("tool-executor", "Ishara approved", {
+    await logger.akhbar("tool-executor", "Ishara approved", {
       reason: tamyiz.reason,
       messagePreview: call.risala.slice(0, 100),
     });
@@ -589,7 +589,7 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
         call.risala,
       );
 
-      await logger.info("tool-executor", "Reply sent to al-Kimyawi", {
+      await logger.akhbar("tool-executor", "Reply sent to al-Kimyawi", {
         huwiyyatMurshid: call.huwiyyatMurshid,
         messagePreview: call.risala.slice(0, 100),
       });
@@ -615,7 +615,7 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
     const activeEpicId = this.#iksir.hawiyyaFaila();
 
     if (yielderId !== activeEpicId) {
-      await logger.warn("tool-executor", `Non-active murshid ${yielderId} tried to yield (active: ${activeEpicId})`);
+      await logger.haDHHir("tool-executor", `Non-active murshid ${yielderId} tried to yield (active: ${activeEpicId})`);
       return `Cannot yield: you (${yielderId}) are not the active murshid. Active: ${activeEpicId ?? "none"}.`;
     }
 
@@ -623,7 +623,7 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
     const newStatus = call.sabab === "masdud" ? "masdud" : "muntazir";
     await this.#sessionManager.jaddadaḤalatMurshid(yielderId, newStatus, call.tafasil);
 
-    await logger.info("tool-executor", `Murshid ${yielderId} yielded: ${call.sabab}`, {
+    await logger.akhbar("tool-executor", `Murshid ${yielderId} yielded: ${call.sabab}`, {
       details: call.tafasil,
       suggestNext: call.iqtarahTali,
     });
@@ -633,7 +633,7 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
     if (demands.length > 0) {
       const demand = demands[0];
       mahaqaMatlabMuallaq(demand.huwiyat_murshid);
-      await logger.info("tool-executor", `Processing pending demand from ${demand.huwiyat_murshid}`, {
+      await logger.akhbar("tool-executor", `Processing pending demand from ${demand.huwiyat_murshid}`, {
         reason: demand.reason,
       });
 
@@ -689,7 +689,7 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
 
     const activeEpicId = this.#iksir.hawiyyaFaila();
 
-    await logger.info("tool-executor", `Murshid ${demanderId} demands control`, {
+    await logger.akhbar("tool-executor", `Murshid ${demanderId} demands control`, {
       reason: call.sabab,
       awwaliyya: call.awwaliyya,
       currentActive: activeEpicId,
@@ -720,7 +720,7 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
     haddathaAwAdkhalaMatlabMuallaq(demanderId, call.sabab, call.awwaliyya);
 
     const queueLength = jalabaMatalebMuallaq().length;
-    await logger.info("tool-executor", `Queued demand from ${demanderId}`, {
+    await logger.akhbar("tool-executor", `Queued demand from ${demanderId}`, {
       queueLength,
     });
 
@@ -742,7 +742,7 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
   async aalajKhalqFar(call: NidaKhalqFar): Promise<string> {
     const branchName = generateBranchName(call.huwiyya, call.naw, call.kunya);
 
-    await logger.info("tool-executor", `Creating branch: ${branchName}`);
+    await logger.akhbar("tool-executor", `Creating branch: ${branchName}`);
 
     if (await git.huwaWasikh()) {
       return `Error: Working directory is dirty. Cannot create branch.
@@ -847,7 +847,7 @@ Remote: origin`;
    * Handle mun_istihal - transmute ahjar from buwtaqa into jawhar
    */
   async #handleIstihal(call: NidaIstihal): Promise<string> {
-    await logger.info("tool-executor", `Istihal for ${call.huwiyyatWasfa}`, {
+    await logger.akhbar("tool-executor", `Istihal for ${call.huwiyyatWasfa}`, {
       ahjar: call.ahjar.length,
     });
 
@@ -884,7 +884,7 @@ Next: Use mun_fasl to create the risala.`;
    * Handle mun_istihal_mutabaqq - layered istihal targeting parent jawhar
    */
   async #handleIstihalMutabaqq(call: NidaIstihalMutabaqq): Promise<string> {
-    await logger.info("tool-executor", `Layered istihal for ${call.huwiyyatWasfa}`, {
+    await logger.akhbar("tool-executor", `Layered istihal for ${call.huwiyyatWasfa}`, {
       parentTicketId: call.huwiyyatAbWasfa,
       ahjar: call.ahjar.length,
     });

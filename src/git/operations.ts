@@ -68,7 +68,7 @@ export async function khalaqaIltizamMuaqqat(identifier: string): Promise<boolean
     return false;
   }
 
-  await logger.info("git", `Created WIP commit for ${identifier}`);
+  await logger.akhbar("git", `Created WIP commit for ${identifier}`);
   return true;
 }
 
@@ -87,7 +87,7 @@ export async function intaqalaIla(branch: string): Promise<boolean> {
       result = await exec(["checkout", "-b", branch]);
       
       if (result.success) {
-        await logger.info("git", `Created and checked out new branch: ${branch}`);
+        await logger.akhbar("git", `Created and checked out new branch: ${branch}`);
         return true;
       }
     }
@@ -96,7 +96,7 @@ export async function intaqalaIla(branch: string): Promise<boolean> {
     return false;
   }
 
-  await logger.info("git", `Checked out branch: ${branch}`);
+  await logger.akhbar("git", `Checked out branch: ${branch}`);
   return true;
 }
 
@@ -109,7 +109,7 @@ export async function pull(branch: string): Promise<boolean> {
   
   if (!result.success) {
     if (result.stderr.includes("Couldn't find remote ref")) {
-      await logger.info("git", `Branch ${branch} not on remote yet, skipping pull`);
+      await logger.akhbar("git", `Branch ${branch} not on remote yet, skipping pull`);
       return true;
     }
     await logger.error("git", `Failed to pull ${branch}`, { stderr: result.stderr });
@@ -136,7 +136,7 @@ export async function push(branch: string, setUpstream = false): Promise<boolean
     return false;
   }
 
-  await logger.info("git", `Pushed branch: ${branch}`);
+  await logger.akhbar("git", `Pushed branch: ${branch}`);
   return true;
 }
 
@@ -180,7 +180,7 @@ export async function commit(
   const hashMatch = result.stdout.match(/\[[\w/-]+ ([a-f0-9]+)\]/);
   const hash = hashMatch ? hashMatch[1] : undefined;
 
-  await logger.info("git", `Created commit ${hash ?? "unknown"}: ${message.slice(0, 60)}`);
+  await logger.akhbar("git", `Created commit ${hash ?? "unknown"}: ${message.slice(0, 60)}`);
   return { success: true, hash };
 }
 

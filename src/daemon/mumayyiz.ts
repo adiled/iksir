@@ -34,7 +34,7 @@ async function hammalWakala(): Promise<string | null> {
     muhtawaWakala = await Deno.readTextFile(masarWakala());
     return muhtawaWakala;
   } catch {
-    await logger.warn("mumayyiz", "Failed to read AGENTS.md");
+    await logger.haDHHir("mumayyiz", "Failed to read AGENTS.md");
     return null;
   }
 }
@@ -53,10 +53,10 @@ async function hammalQalib(
   const path = masarQalib(envVar, defaultFilename);
   try {
     const content = await Deno.readTextFile(path);
-    await logger.info("mumayyiz", `Loaded prompt template from ${path}`);
+    await logger.akhbar("mumayyiz", `Loaded prompt template from ${path}`);
     return content;
   } catch {
-    await logger.info("mumayyiz", `Prompt template not found at ${path}, using inline fallback`);
+    await logger.akhbar("mumayyiz", `Prompt template not found at ${path}, using inline fallback`);
     return fallback;
   }
 }
@@ -179,7 +179,7 @@ export async function mayyazaTanbih(
   try {
     const result = await opencode.mayyaza(prompt);
     if (!result.success || !result.response) {
-      await logger.warn("mumayyiz", "Ishara tamyiz failed, allowing", {
+      await logger.haDHHir("mumayyiz", "Ishara tamyiz failed, allowing", {
         error: result.error,
       });
       return { dhahab: true, reason: "Tamyiz failed", rejection: null };
@@ -193,7 +193,7 @@ export async function mayyazaTanbih(
       rejection: isDhahab ? null : (parsed.rejection ?? "Handle this autonomously."),
     };
   } catch (error) {
-    await logger.warn("mumayyiz", "Ishara tamyiz error, allowing", {
+    await logger.haDHHir("mumayyiz", "Ishara tamyiz error, allowing", {
       error: String(error),
     });
     return { dhahab: true, reason: "Tamyiz error", rejection: null };
@@ -234,7 +234,7 @@ export async function mayyazaSual(
   try {
     const result = await opencode.mayyaza(prompt);
     if (!result.success || !result.response) {
-      await logger.warn("mumayyiz", "Question tamyiz failed, allowing", {
+      await logger.haDHHir("mumayyiz", "Question tamyiz failed, allowing", {
         error: result.error,
       });
       return { tamyiz: "DHAHAB", reason: "Tamyiz failed", rejection: null, autoAnswer: null };
@@ -265,7 +265,7 @@ export async function mayyazaSual(
       autoAnswer: parsed.tamyiz === "KHABATH" ? autoAnswer : null,
     };
   } catch (error) {
-    await logger.warn("mumayyiz", "Question tamyiz error, allowing", {
+    await logger.haDHHir("mumayyiz", "Question tamyiz error, allowing", {
       error: String(error),
     });
     return { tamyiz: "DHAHAB", reason: "Tamyiz error", rejection: null, autoAnswer: null };

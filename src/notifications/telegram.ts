@@ -169,12 +169,12 @@ export class TelegramClient {
   private callbackHandlers: CallbackHandler[] = [];
 
   constructor(config: TasmimIksir) {
-    this.botToken = config.notifications.telegram.botToken;
-    this.chatId = config.notifications.telegram.chatId;
-    this.groupId = config.notifications.telegram.groupId;
-    this.dispatchTopicId = config.notifications.telegram.dispatchTopicId;
-    this.enabled = config.notifications.telegram.enabled;
-    this.proxy = config.notifications.telegram.proxy ?? "";
+    this.botToken = config.isharat.telegram.ramzBot;
+    this.chatId = config.isharat.telegram.huwiyyatMuhadatha;
+    this.groupId = config.isharat.telegram.huwiyyatMajmuua;
+    this.dispatchTopicId = config.isharat.telegram.huwiyyatMawduuIrsal;
+    this.enabled = config.isharat.telegram.mufattah;
+    this.proxy = config.isharat.telegram.proxy ?? "";
     this.baseUrl = `${TELEGRAM_API_BASE}/bot${this.botToken}`;
   }
 
@@ -261,7 +261,7 @@ export class TelegramClient {
     }
   ): Promise<number | null> {
     if (!this.enabled) {
-      await logger.warn("telegram", "Telegram notifications are disabled, skipping");
+      await logger.haDHHir("telegram", "Telegram notifications are disabled, skipping");
       return null;
     }
 
@@ -297,16 +297,16 @@ export class TelegramClient {
 
       if (data.ok) {
         const topicInfo = options?.topicId ? ` [topic:${options.topicId}]` : "";
-        await logger.notification("telegram", "message", targetChatId, text.slice(0, 50) + topicInfo, true);
+        await logger.sajjalIshara("telegram", "message", targetChatId, text.slice(0, 50) + topicInfo, true);
         return data.result.message_id;
       }
 
       await logger.error("telegram", "Failed to send message", { error: data.description });
-      await logger.notification("telegram", "message", targetChatId, text.slice(0, 50), false);
+      await logger.sajjalIshara("telegram", "message", targetChatId, text.slice(0, 50), false);
       return null;
     } catch (error) {
       await logger.error("telegram", "Network error sending message", { error: String(error) });
-      await logger.notification("telegram", "message", targetChatId, text.slice(0, 50), false);
+      await logger.sajjalIshara("telegram", "message", targetChatId, text.slice(0, 50), false);
       return null;
     }
   }
@@ -334,7 +334,7 @@ export class TelegramClient {
       return result;
     }
 
-    await logger.warn("telegram", "Markdown failed, retrying as plain text");
+    await logger.haDHHir("telegram", "Markdown failed, retrying as plain text");
     return this.arsalaRisala(text, {
       ...options,
       parseMode: undefined,
@@ -398,7 +398,7 @@ export class TelegramClient {
   ): Promise<ForumTopic | null> {
     if (!this.enabled) return null;
     if (!this.groupId) {
-      await logger.warn("telegram", "Cannot create forum topic: no groupId configured");
+      await logger.haDHHir("telegram", "Cannot create forum topic: no groupId configured");
       return null;
     }
 
@@ -424,7 +424,7 @@ export class TelegramClient {
       const data = await response.json();
 
       if (data.ok) {
-        await logger.info("telegram", `Created forum topic: ${name}`, {
+        await logger.akhbar("telegram", `Created forum topic: ${name}`, {
           topicId: data.result.message_thread_id,
         });
         return data.result as ForumTopic;
@@ -456,7 +456,7 @@ export class TelegramClient {
 
       const data = await response.json();
       if (data.ok) {
-        await logger.info("telegram", `Closed forum topic: ${topicId}`);
+        await logger.akhbar("telegram", `Closed forum topic: ${topicId}`);
       }
       return data.ok === true;
     } catch {
@@ -505,7 +505,7 @@ export class TelegramClient {
 
       const data = await response.json();
       if (data.ok) {
-        await logger.info("telegram", `Deleted forum topic: ${topicId}`);
+        await logger.akhbar("telegram", `Deleted forum topic: ${topicId}`);
       }
       return data.ok === true;
     } catch {
@@ -782,18 +782,18 @@ Overall: ${percent}% complete`;
    */
   async startPolling(): Promise<void> {
     if (!this.enabled) {
-      await logger.warn("telegram", "Telegram is disabled, not starting polling");
+      await logger.haDHHir("telegram", "Telegram is disabled, not starting polling");
       return;
     }
 
     if (this.isPolling) {
-      await logger.warn("telegram", "Already polling");
+      await logger.haDHHir("telegram", "Already polling");
       return;
     }
 
     this.isPolling = true;
     this.pollAbortController = new AbortController();
-    await logger.info("telegram", "Starting Telegram polling");
+    await logger.akhbar("telegram", "Starting Telegram polling");
 
     while (this.isPolling) {
       try {
@@ -820,7 +820,7 @@ Overall: ${percent}% complete`;
       }
     }
 
-    await logger.info("telegram", "Stopped Telegram polling");
+    await logger.akhbar("telegram", "Stopped Telegram polling");
   }
 
   /**
@@ -848,7 +848,7 @@ Overall: ${percent}% complete`;
     );
     
     if (chatId && !isAuthorized) {
-      await logger.warn("telegram", "Received update from unauthorized chat", { chatId });
+      await logger.haDHHir("telegram", "Received update from unauthorized chat", { chatId });
       return;
     }
 

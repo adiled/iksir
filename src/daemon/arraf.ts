@@ -138,7 +138,7 @@ export class Arraf {
     }
 
     if (llmIntent.yushirIlaTarkiz && context?.focusEntity) {
-      await logger.info("intent-resolver", "Using focus entity from context", {
+      await logger.akhbar("intent-resolver", "Using focus entity from context", {
         focusEntity: context.focusEntity.identifier,
         action: llmIntent.fil,
       });
@@ -388,7 +388,7 @@ ${Arraf.TAWJIHAT_NIZAM_NIYYA}`;
       }
 
       const parsed = JSON.parse(jsonMatch[0]) as NiyyaMustakhraja;
-      await logger.info("intent-resolver", "LLM extracted intent", { intent: parsed });
+      await logger.akhbar("intent-resolver", "LLM extracted intent", { intent: parsed });
       return parsed;
     } catch (error) {
       await logger.error("intent-resolver", "Failed to parse LLM response", {
@@ -464,9 +464,9 @@ ${Arraf.TAWJIHAT_NIZAM_NIYYA}`;
         const activeMilestone = await this.mutabiWasfa.getActiveMilestone?.();
         if (activeMilestone) {
           cycleId = activeMilestone.id;
-          await logger.info("intent-resolver", `Using active milestone: ${activeMilestone.name}`);
+          await logger.akhbar("intent-resolver", `Using active milestone: ${activeMilestone.name}`);
         } else {
-          await logger.warn("intent-resolver", "No active milestone found");
+          await logger.haDHHir("intent-resolver", "No active milestone found");
         }
       }
 

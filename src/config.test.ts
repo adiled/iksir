@@ -64,36 +64,36 @@ async function withTestConfig(
 Deno.test("config: defaults when no config file exists", async () => {
   await withTestConfig(null, {}, (config) => {
     assertEquals(config.opencode.server, DEFAULT_OPENCODE_URL);
-    assertEquals(config.polling.defaultIntervalMs, 300000);
-    assertEquals(config.polling.prPollIntervalMs, 60000);
-    assertEquals(config.quietHours.enabled, true);
-    assertEquals(config.quietHours.start, "22:00");
-    assertEquals(config.quietHours.end, "07:00");
-    assertEquals(config.quietHours.timezone, "UTC");
-    assertEquals(config.quietHours.maintenanceWindowMinutes, 60);
-    assertEquals(config.notifications.telegram.enabled, false);
-    assertEquals(config.notifications.ntfy.enabled, false);
+    assertEquals(config.istiftaa.fajwatZamaniyya, 300000);
+    assertEquals(config.istiftaa.fajwatRaqabaRisala, 60000);
+    assertEquals(config.saatSukun.mufattah, true);
+    assertEquals(config.saatSukun.bidaya, "22:00");
+    assertEquals(config.saatSukun.nihaya, "07:00");
+    assertEquals(config.saatSukun.mintaqaZamaniyya, "UTC");
+    assertEquals(config.saatSukun.daqaiqNafizhaSeyana, 60);
+    assertEquals(config.isharat.telegram.mufattah, false);
+    assertEquals(config.isharat.ntfy.mufattah, false);
   });
 });
 
 
 Deno.test("config: loads values from JSON", async () => {
   const json = JSON.stringify({
-    quietHours: {
-      timezone: "Asia/Karachi",
-      start: "23:00",
-      end: "08:00",
+    saatSukun: {
+      mintaqaZamaniyya: "Asia/Karachi",
+      bidaya: "23:00",
+      nihaya: "08:00",
     },
     opencode: {
       server: TEST_OPENCODE_URL
     },
   });
   await withTestConfig(json, {}, (config) => {
-    assertEquals(config.quietHours.timezone, "Asia/Karachi");
-    assertEquals(config.quietHours.start, "23:00");
+    assertEquals(config.saatSukun.mintaqaZamaniyya, "Asia/Karachi");
+    assertEquals(config.saatSukun.bidaya, "23:00");
     assertEquals(config.opencode.server, TEST_OPENCODE_URL);
-    assertEquals(config.quietHours.enabled, true);
-    assertEquals(config.polling.defaultIntervalMs, 300000);
+    assertEquals(config.saatSukun.mufattah, true);
+    assertEquals(config.istiftaa.fajwatZamaniyya, 300000);
   });
 });
 
@@ -109,9 +109,9 @@ Deno.test("config: TELEGRAM_BOT_TOKEN enables telegram", async () => {
     TELEGRAM_BOT_TOKEN: "test-token-123",
     TELEGRAM_CHAT_ID: "12345",
   }, (config) => {
-    assertEquals(config.notifications.telegram.enabled, true);
-    assertEquals(config.notifications.telegram.botToken, "test-token-123");
-    assertEquals(config.notifications.telegram.chatId, "12345");
+    assertEquals(config.isharat.telegram.mufattah, true);
+    assertEquals(config.isharat.telegram.ramzBot, "test-token-123");
+    assertEquals(config.isharat.telegram.huwiyyatMuhadatha, "12345");
   });
 });
 
@@ -119,14 +119,14 @@ Deno.test("config: TELEGRAM_PROXY env override", async () => {
   await withTestConfig(null, {
     TELEGRAM_PROXY: TEST_PROXY_URL
   }, (config) => {
-    assertEquals(config.notifications.telegram.proxy, TEST_PROXY_URL);
+    assertEquals(config.isharat.telegram.proxy, TEST_PROXY_URL);
   });
 });
 
 Deno.test("config: NTFY_TOPIC enables ntfy", async () => {
   await withTestConfig(null, { NTFY_TOPIC: "my-topic" }, (config) => {
-    assertEquals(config.notifications.ntfy.enabled, true);
-    assertEquals(config.notifications.ntfy.topic, "my-topic");
+    assertEquals(config.isharat.ntfy.mufattah, true);
+    assertEquals(config.isharat.ntfy.topic, "my-topic");
   });
 });
 
@@ -142,12 +142,12 @@ Deno.test("config: env overrides take precedence over JSON", async () => {
 
 Deno.test("config: deep merge preserves nested defaults", async () => {
   const json = JSON.stringify({
-    quietHours: { timezone: "Asia/Karachi" },
+    saatSukun: { mintaqaZamaniyya: "Asia/Karachi" },
   });
   await withTestConfig(json, {}, (config) => {
-    assertEquals(config.quietHours.timezone, "Asia/Karachi");
-    assertEquals(config.quietHours.enabled, true);
-    assertEquals(config.quietHours.start, "22:00");
-    assertEquals(config.quietHours.blockersPassthrough, true);
+    assertEquals(config.saatSukun.mintaqaZamaniyya, "Asia/Karachi");
+    assertEquals(config.saatSukun.mufattah, true);
+    assertEquals(config.saatSukun.bidaya, "22:00");
+    assertEquals(config.saatSukun.tanaqqulMasdud, true);
   });
 });

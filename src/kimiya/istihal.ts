@@ -194,7 +194,7 @@ export async function istihal(
 
     await rajaaIlaButwaqa();
 
-    await logger.info("kimiya", `Istihal complete: ${jawharBranch}`, {
+    await logger.akhbar("kimiya", `Istihal complete: ${jawharBranch}`, {
       buwtaqa,
       adadAhjar: ahjar.length,
     });

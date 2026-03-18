@@ -361,7 +361,7 @@ export class Munadi {
     }
 
     const basicIntent = hallalNiyyaAsasiyya(msg.text, this.namatWasfa);
-    await logger.info("dispatcher", `${label} intent: type=${basicIntent.type}, epic=${basicIntent.identifier ?? "none"}`);
+    await logger.akhbar("dispatcher", `${label} intent: type=${basicIntent.type}, epic=${basicIntent.identifier ?? "none"}`);
 
     if (basicIntent.type === "command") {
       const result = await this.aalajAmr(msg, basicIntent);
@@ -409,7 +409,7 @@ export class Munadi {
         (s) => s.huwiyya === this.huwiyyaFaila
       );
       if (session) {
-        await logger.info("dispatcher", `Routing to active murshid: ${this.huwiyyaFaila}`);
+        await logger.akhbar("dispatcher", `Routing to active murshid: ${this.huwiyyaFaila}`);
         const result = await this.wajjahIlaJalsa(session, msg);
         this.tatabbaRisala(msg.text, result.response);
         return result;
@@ -544,7 +544,7 @@ export class Munadi {
     /** Use intent resolver for smart entity lookup, passing conversation context */
     const resolved = await this.arraf.halla(msg.text, this.siyaq);
 
-    await logger.info("dispatcher", `Intent resolved: status=${resolved.hala}, method=${resolved.tariqa}`);
+    await logger.akhbar("dispatcher", `Intent resolved: status=${resolved.hala}, method=${resolved.tariqa}`);
 
     switch (resolved.hala) {
       case "resolved":
@@ -630,7 +630,7 @@ export class Munadi {
       );
 
       if (parentSession) {
-        await logger.info("dispatcher", `Routing to parent murshid: ${parentId}`);
+        await logger.akhbar("dispatcher", `Routing to parent murshid: ${parentId}`);
         return this.wajjahIlaJalsa(parentSession, msg);
       }
 
@@ -854,7 +854,7 @@ Work on the parent instead?`;
   ): Promise<NatijaIrsal> {
     const { identifier, title, type, initMessage, url } = params;
 
-    await logger.info("dispatcher", `Creating/activating murshid: ${identifier}`, { type, title });
+    await logger.akhbar("dispatcher", `Creating/activating murshid: ${identifier}`, { type, title });
 
     /** Step 1: Get or create session */
     const result = await this.mudirJalasat.wajadaAwKhalaqa(identifier, title, type);
@@ -947,7 +947,7 @@ Work on the parent instead?`;
       return { handled: true };
     }
 
-    await logger.info("dispatcher", `Executing switchover: ${previousActive ?? "none"} → ${identifier}`);
+    await logger.akhbar("dispatcher", `Executing switchover: ${previousActive ?? "none"} → ${identifier}`);
 
     this.mudirJalasat.wadaaQuflGit(true);
 
@@ -961,7 +961,7 @@ Work on the parent instead?`;
     /** Step 2: WIP commit if dirty */
     const huwaWasikh = await git.huwaWasikh();
     if (huwaWasikh && previousActive) {
-      await logger.info("dispatcher", `Working directory dirty, creating WIP commit for ${previousActive}`);
+      await logger.akhbar("dispatcher", `Working directory dirty, creating WIP commit for ${previousActive}`);
       wipCommitted = await git.khalaqaIltizamMuaqqat(previousActive);
     }
 
@@ -1020,7 +1020,7 @@ Work on the parent instead?`;
       void logger.error("dispatcher", `Failed to send dispatch notification`, { error: String(err) });
     }
 
-    await logger.info("dispatcher", `Control switched to ${identifier}`);
+    await logger.akhbar("dispatcher", `Control switched to ${identifier}`);
 
     return { handled: true };
 
@@ -1203,7 +1203,7 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
 
     this.tabur.push(op);
 
-    await logger.info("dispatcher", `Queued operation for ${identifier}`, {
+    await logger.akhbar("dispatcher", `Queued operation for ${identifier}`, {
       queueLength: this.tabur.length,
     });
 
@@ -1219,7 +1219,7 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
     this.huwiyyaFaila = identifier;
     this.failMundhu = identifier ? new Date() : null;
     this.mudirJalasat.wadaaMurshidFaail(identifier);
-    void logger.info("dispatcher", `Active session set to ${identifier ?? "none"}`);
+    void logger.akhbar("dispatcher", `Active session set to ${identifier ?? "none"}`);
   }
 
   hawiyyaFaila(): string | null {
@@ -1234,17 +1234,17 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
   async istarjaaIndaNashaat(): Promise<void> {
     const activeId = this.mudirJalasat.wajadaMurshidFaailId();
     if (!activeId) {
-      await logger.info("dispatcher", "No active murshid on startup");
+      await logger.akhbar("dispatcher", "No active murshid on startup");
       return;
     }
 
     const session = this.mudirJalasat.jalabMurshid(activeId);
     if (!session) {
-      await logger.warn("dispatcher", `Active murshid ${activeId} not found in session manager`);
+      await logger.haDHHir("dispatcher", `Active murshid ${activeId} not found in session manager`);
       return;
     }
 
-    await logger.info("dispatcher", `Restoring active murshid on startup: ${activeId}`);
+    await logger.akhbar("dispatcher", `Restoring active murshid on startup: ${activeId}`);
 
     await this.#naffadhaTahwilMurshid(activeId, session, null, false);
   }

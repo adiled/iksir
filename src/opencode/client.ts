@@ -65,7 +65,7 @@ export class OpenCodeClient {
         lastMessageAt: new Date(response.data.time.updated),
       };
 
-      await logger.info("opencode", `Created session ${session.id} for ${huwiyyatWasfa}`);
+      await logger.akhbar("opencode", `Created session ${session.id} for ${huwiyyatWasfa}`);
       return session;
     } catch (error) {
       await logger.error("opencode", "Failed to create session", {
@@ -204,7 +204,7 @@ export class OpenCodeClient {
       });
 
       if (response.data !== undefined) {
-        await logger.info("opencode", `Sent async prompt to session ${sessionId}`);
+        await logger.akhbar("opencode", `Sent async prompt to session ${sessionId}`);
         return true;
       }
 
@@ -369,7 +369,7 @@ export class OpenCodeClient {
       }
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
-        await logger.info("opencode", "Event subscription cancelled");
+        await logger.akhbar("opencode", "Event subscription cancelled");
       } else {
         await logger.error("opencode", "Event subscription error", { error: String(error) });
       }
@@ -421,7 +421,7 @@ export class OpenCodeClient {
       });
 
       if (response.data) {
-        await logger.info("opencode", `Replied to question ${questionId}`);
+        await logger.akhbar("opencode", `Replied to question ${questionId}`);
         return true;
       }
 
@@ -453,7 +453,7 @@ export class OpenCodeClient {
       });
 
       if (response.data) {
-        await logger.info("opencode", `Rejected question ${questionId}`);
+        await logger.akhbar("opencode", `Rejected question ${questionId}`);
         return true;
       }
 
@@ -572,7 +572,7 @@ export class OpenCodeClient {
       });
 
       if (response.data) {
-        await logger.info("opencode", `Summarized session ${sessionId}`);
+        await logger.akhbar("opencode", `Summarized session ${sessionId}`);
         return true;
       }
 

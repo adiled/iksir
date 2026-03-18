@@ -77,8 +77,8 @@ export class LinearClient implements MutabiWasfa {
   private stateCache: Map<string, { id: string; name: string; type: string }> = new Map();
 
   constructor(config: TasmimIksir) {
-    this.apiKey = config.issueTracker.apiKey;
-    this.teamId = config.issueTracker.teamId;
+    this.apiKey = config.mutabiWasfa.miftahApi;
+    this.teamId = config.mutabiWasfa.huwiyyatFareeq;
   }
 
   /**
@@ -524,7 +524,7 @@ export class LinearClient implements MutabiWasfa {
     );
 
     if (result?.issueCreate?.success) {
-      await logger.info("linear", `Created issue ${result.issueCreate.issue.identifier}`);
+      await logger.akhbar("linear", `Created issue ${result.issueCreate.issue.identifier}`);
       return this.toWasfaMutaba(result.issueCreate.issue);
     }
 
@@ -638,7 +638,7 @@ export class LinearClient implements MutabiWasfa {
     );
 
     if (result?.issueRelationCreate?.success) {
-      await logger.info("linear", `Created ${type} relation: ${issueId} -> ${relatedIssueId}`);
+      await logger.akhbar("linear", `Created ${type} relation: ${issueId} -> ${relatedIssueId}`);
       return true;
     }
 
@@ -815,7 +815,7 @@ export class LinearClient implements MutabiWasfa {
       }
     }
 
-    await logger.info("linear", `Set relations for ${identifier}`, {
+    await logger.akhbar("linear", `Set relations for ${identifier}`, {
       added,
       removed,
       errors,

@@ -84,7 +84,7 @@ export class Raqib {
   badaa(signal: AbortSignal): void {
     if (this.muwaqqitNaqra) return;
 
-    void logger.info("health-monitor", "Starting health monitor");
+    void logger.akhbar("health-monitor", "Starting health monitor");
 
     this.naqra().catch(async (e) =>
       await logger.error("health-monitor", "Tick error", { error: String(e) })
@@ -110,7 +110,7 @@ export class Raqib {
     if (this.muwaqqitNaqra) {
       clearInterval(this.muwaqqitNaqra);
       this.muwaqqitNaqra = null;
-      void logger.info("health-monitor", "Stopped health monitor");
+      void logger.akhbar("health-monitor", "Stopped health monitor");
     }
   }
 
@@ -184,7 +184,7 @@ export class Raqib {
       const stuckMinutes = Math.round((now - lastMsg.createdAt) / 60000);
 
       if (!state.alertedStuck) {
-        await logger.warn("health-monitor", `Session ${identifier} appears stuck`, {
+        await logger.haDHHir("health-monitor", `Session ${identifier} appears stuck`, {
           sessionId,
           stuckMinutes,
           lastMsgTokensOut: lastMsg.tokensOutput,
@@ -201,7 +201,7 @@ export class Raqib {
       }
 
       if (state.alertedStuck && !state.aborted) {
-        await logger.warn("health-monitor", `Auto-aborting stuck session ${identifier}`, {
+        await logger.haDHHir("health-monitor", `Auto-aborting stuck session ${identifier}`, {
           sessionId,
           stuckMinutes,
         });
@@ -251,7 +251,7 @@ export class Raqib {
     if (!counts) return;
 
     if (counts.total >= HADD_DAMJ) {
-      await logger.info("health-monitor", `Session ${identifier} has ${counts.total} messages, compacting`, {
+      await logger.akhbar("health-monitor", `Session ${identifier} has ${counts.total} messages, compacting`, {
         sessionId,
         threshold: HADD_DAMJ,
       });
@@ -265,7 +265,7 @@ export class Raqib {
           `Auto-compacted session **${identifier}** (${counts.total} messages → summarized)`
         );
       } else {
-        await logger.warn("health-monitor", `Failed to compact session ${identifier}`, {
+        await logger.haDHHir("health-monitor", `Failed to compact session ${identifier}`, {
           sessionId,
         });
       }

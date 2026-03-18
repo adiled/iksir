@@ -73,7 +73,7 @@ async function tahaqqaqIttisaal(ctx: SiyaqKhadim): Promise<boolean> {
     allGood = false;
   }
 
-  if (ctx.tasmim.notifications.telegram.enabled) {
+  if (ctx.tasmim.isharat.telegram.mufattah) {
     process.stdout.write("  Telegram bot... ");
     const telegramValid = await ctx.telegram.tahaqqaqToken();
     if (telegramValid) {
@@ -86,10 +86,10 @@ async function tahaqqaqIttisaal(ctx: SiyaqKhadim): Promise<boolean> {
     console.log("  Telegram bot... (disabled)");
   }
 
-  if (ctx.tasmim.notifications.ntfy.enabled) {
+  if (ctx.tasmim.isharat.ntfy.mufattah) {
     process.stdout.write("  ntfy server... ");
     try {
-      const response = await fetch(ctx.tasmim.notifications.ntfy.server);
+      const response = await fetch(ctx.tasmim.isharat.ntfy.server);
       if (response.ok) {
         console.log("✓");
       } else {
@@ -104,7 +104,7 @@ async function tahaqqaqIttisaal(ctx: SiyaqKhadim): Promise<boolean> {
     console.log("  ntfy server... (disabled)");
   }
 
-  if (ctx.tasmim.issueTracker.apiKey) {
+  if (ctx.tasmim.mutabiWasfa.miftahApi) {
     process.stdout.write("  Issue tracker... ");
     const authenticated = await ctx.mutabiWasfa.isAuthenticated();
     if (authenticated) {
@@ -138,7 +138,7 @@ async function naffadhFahs(ctx: SiyaqKhadim): Promise<void> {
   console.log("\nConfiguration:");
   console.log(`  OpenCode server: ${ctx.tasmim.opencode.server}`);
 
-  console.log(`  Quiet hours: ${ctx.tasmim.quietHours.start} - ${ctx.tasmim.quietHours.end} (${ctx.tasmim.quietHours.timezone})`);
+  console.log(`  Quiet hours: ${ctx.tasmim.saatSukun.bidaya} - ${ctx.tasmim.saatSukun.nihaya} (${ctx.tasmim.saatSukun.mintaqaZamaniyya})`);
 
   const allGood = await tahaqqaqIttisaal(ctx);
 
@@ -152,14 +152,14 @@ async function naffadhFahs(ctx: SiyaqKhadim): Promise<void> {
 
 async function addaIsharat(ctx: SiyaqKhadim): Promise<void> {
   const ighlaaq = async (signal: string) => {
-    await logger.info("main", `Received ${signal}, shutting down...`);
+    await logger.akhbar("main", `Received ${signal}, shutting down...`);
 
     ctx.mutahakkimIlgha.abort();
     ctx.telegram.stopPolling();
     ctx.munaffidh.awqafMuaalaja();
     ctx.raqib.awqaf();
 
-    await logger.info("main", "Saving state...");
+    await logger.akhbar("main", "Saving state...");
     await Promise.all([
       ctx.mudirJalasat.hafizaHala(),
       ctx.munaffidh.hafizaHala(),
@@ -168,7 +168,7 @@ async function addaIsharat(ctx: SiyaqKhadim): Promise<void> {
 
     aghlaaqQaidatBayanat();
 
-    await logger.info("main", "Shutdown complete");
+    await logger.akhbar("main", "Shutdown complete");
     Deno.exit(0);
   };
 
@@ -187,7 +187,7 @@ async function addaIsharat(ctx: SiyaqKhadim): Promise<void> {
  * Subscribe to OpenCode SSE events and route question events to handler.
  */
 async function ishtarakAhdath(ctx: SiyaqKhadim): Promise<void> {
-  await logger.info("sse", "Starting OpenCode SSE subscription");
+  await logger.akhbar("sse", "Starting OpenCode SSE subscription");
 
   let backoffMs = INITIAL_BACKOFF_MS;
   
@@ -218,7 +218,7 @@ async function ishtarakAhdath(ctx: SiyaqKhadim): Promise<void> {
       if (ctx.mutahakkimIlgha.signal.aborted) {
         break;
       }
-      await logger.warn("sse", `SSE connection lost, reconnecting in ${backoffMs / 1000}s`, {
+      await logger.haDHHir("sse", `SSE connection lost, reconnecting in ${backoffMs / 1000}s`, {
         error: String(error),
       });
       await new Promise((r) => setTimeout(r, backoffMs));
@@ -226,12 +226,12 @@ async function ishtarakAhdath(ctx: SiyaqKhadim): Promise<void> {
     }
   }
 
-  await logger.info("sse", "OpenCode SSE subscription stopped");
+  await logger.akhbar("sse", "OpenCode SSE subscription stopped");
 }
 
 async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
-  await logger.info("main", `Iksir v${VERSION} starting`);
-  await logger.info("main", `Config loaded from ${masarMilafAlTasmim()}`);
+  await logger.akhbar("main", `Iksir v${VERSION} starting`);
+  await logger.akhbar("main", `Config loaded from ${masarMilafAlTasmim()}`);
 
   /** Check OpenCode connectivity */
   const healthy = await ctx.opencode.isHealthy();
@@ -241,11 +241,11 @@ async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
   }
 
   const version = await ctx.opencode.getVersion();
-  await logger.info("main", `Connected to OpenCode v${version}`);
+  await logger.akhbar("main", `Connected to OpenCode v${version}`);
 
   await addaIsharat(ctx);
 
-  if (ctx.tasmim.notifications.telegram.enabled) {
+  if (ctx.tasmim.isharat.telegram.mufattah) {
     addaMualijatTelegram(ctx);
     ctx.telegram.startPolling().catch(async (error) => {
       await logger.error("telegram", "Polling error", { error: String(error) });
@@ -262,7 +262,7 @@ async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
 
   ctx.raqib.badaa(ctx.mutahakkimIlgha.signal);
 
-  await logger.info("main", "Entering main loop (Proactive Game)");
+  await logger.akhbar("main", "Entering main loop (Proactive Game)");
 
   while (!ctx.mutahakkimIlgha.signal.aborted) {
     try {
@@ -271,7 +271,7 @@ async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
       await logger.error("main", "Keep-alive cycle error", { error: String(error) });
     }
 
-    await new Promise((resolve) => setTimeout(resolve, ctx.tasmim.polling.defaultIntervalMs));
+    await new Promise((resolve) => setTimeout(resolve, ctx.tasmim.istiftaa.fajwatZamaniyya));
   }
 }
 
@@ -285,7 +285,7 @@ function addaMualijatTelegram(ctx: SiyaqKhadim): void {
     const isPrivateMessage = ctx.telegram.isPrivateMessage(message);
     const isDispatchTopic = ctx.telegram.isDispatchTopic(message);
 
-    await logger.info("telegram", `Received: ${text.slice(0, 100)}`, {
+    await logger.akhbar("telegram", `Received: ${text.slice(0, 100)}`, {
       topicId,
       isGroupMessage,
       isPrivateMessage,
@@ -298,7 +298,7 @@ function addaMualijatTelegram(ctx: SiyaqKhadim): void {
     }
 
     if (!isGroupMessage) {
-      await logger.warn("telegram", "Message from unknown chat type");
+      await logger.haDHHir("telegram", "Message from unknown chat type");
       return;
     }
 
@@ -320,7 +320,7 @@ function addaMualijatTelegram(ctx: SiyaqKhadim): void {
       }
       
       if (murshid) {
-        await logger.info("telegram", `Routing to murshid ${murshid.huwiyya} via topic ${topicId}`);
+        await logger.akhbar("telegram", `Routing to murshid ${murshid.huwiyya} via topic ${topicId}`);
         
         const success = await ctx.mudirJalasat.arsalaIlaMurshidById(murshid.huwiyya, text);
         if (!success) {
@@ -346,11 +346,11 @@ function addaMualijatTelegram(ctx: SiyaqKhadim): void {
       return;
     }
 
-    await logger.warn("telegram", "Group message without topic ID");
+    await logger.haDHHir("telegram", "Group message without topic ID");
   });
 
   ctx.telegram.onCallback(async (query) => {
-    await logger.info("telegram", `Callback: ${query.data}`);
+    await logger.akhbar("telegram", `Callback: ${query.data}`);
 
     if (query.data && ctx.sail.huwaIstijabaZirrSual(query.data)) {
       const parsed = ctx.sail.hallalIstijabaZirrSual(query.data);
@@ -606,7 +606,7 @@ async function aalajRabitWasfa(ctx: SiyaqKhadim, url: string, additionalContext:
 }
 
 async function dawraHayat(ctx: SiyaqKhadim): Promise<void> {
-  await logger.debug("main", "Running keep-alive cycle");
+  await logger.tatbeeq("main", "Running keep-alive cycle");
 
   try {
     await ctx.hayat.dawra();
@@ -621,7 +621,7 @@ async function aalajDamjRisala(
   session: JalsatMurshid,
   pr: RisalaMutaba
 ): Promise<void> {
-  await logger.info("main", `PR #${pr.raqamRisala} merged for ${pr.huwiyyatWasfa}`, {
+  await logger.akhbar("main", `PR #${pr.raqamRisala} merged for ${pr.huwiyyatWasfa}`, {
     epicId: session.huwiyya,
   });
 
@@ -674,7 +674,7 @@ async function aalajIghlaqRisala(
   session: JalsatMurshid,
   pr: RisalaMutaba
 ): Promise<void> {
-  await logger.info("main", `PR #${pr.raqamRisala} closed without merge`, {
+  await logger.akhbar("main", `PR #${pr.raqamRisala} closed without merge`, {
     epicId: session.huwiyya,
     huwiyyatWasfa: pr.huwiyyatWasfa,
   });
@@ -696,7 +696,7 @@ async function aalajAmrAlKimyawi(
   raqamRisala: number,
   comment: TaaliqMuraja
 ): Promise<void> {
-  await logger.info("main", `Al-Kimyawi command on PR #${raqamRisala}`, {
+  await logger.akhbar("main", `Al-Kimyawi command on PR #${raqamRisala}`, {
     epicId: session.huwiyya,
     body: comment.body.slice(0, 100),
   });
@@ -714,7 +714,7 @@ async function aalajTaaliqatJadida(
   raqamRisala: number,
   comments: TaaliqMuraja[]
 ): Promise<void> {
-  await logger.info("main", `${comments.length} new review comments on PR #${raqamRisala}`, {
+  await logger.akhbar("main", `${comments.length} new review comments on PR #${raqamRisala}`, {
     epicId: session.huwiyya,
     authors: [...new Set(comments.map((c) => c.author))],
   });
@@ -739,7 +739,7 @@ async function aalajTaarudRisala(
   session: JalsatMurshid,
   pr: RisalaMutaba
 ): Promise<void> {
-  await logger.warn("main", `PR #${pr.raqamRisala} has conflicts`, {
+  await logger.haDHHir("main", `PR #${pr.raqamRisala} has conflicts`, {
     epicId: session.huwiyya,
     huwiyyatWasfa: pr.huwiyyatWasfa,
   });
@@ -760,7 +760,7 @@ async function aalajFashalFahs(
   session: JalsatMurshid,
   pr: RisalaMutaba
 ): Promise<void> {
-  await logger.warn("main", `PR #${pr.raqamRisala} CI failing`, {
+  await logger.haDHHir("main", `PR #${pr.raqamRisala} CI failing`, {
     epicId: session.huwiyya,
     huwiyyatWasfa: pr.huwiyyatWasfa,
   });
@@ -782,23 +782,23 @@ async function aalajTalabSeyana(ctx: SiyaqKhadim): Promise<boolean> {
   const activeId = ctx.munadi.hawiyyaFaila();
 
   if (activeId) {
-    await logger.info("main", `Maintenance mode denied - ${activeId} is active`);
+    await logger.akhbar("main", `Maintenance mode denied - ${activeId} is active`);
     return false;
   }
 
-  await logger.info("main", "Maintenance mode granted");
+  await logger.akhbar("main", "Maintenance mode granted");
   return true;
 }
 
 async function aalajTahrirSeyana(_ctx: SiyaqKhadim): Promise<void> {
-  await logger.info("main", "Maintenance mode released");
+  await logger.akhbar("main", "Maintenance mode released");
 }
 
 async function aalajIktimalSeyana(
   ctx: SiyaqKhadim,
   results: NatijaSeyana[]
 ): Promise<void> {
-  await logger.info("main", "Maintenance complete", {
+  await logger.akhbar("main", "Maintenance complete", {
     total: results.length,
     merged: results.filter((r) => r.fil === "merged").length,
     conflicts: results.filter((r) => r.fil === "conflicts").length,
@@ -895,7 +895,7 @@ function banaLawhatSual(
 export const VERSION = "0.2.0";
 
 export async function abda(opts: { check?: boolean } = {}): Promise<void> {
-  await logger.init();
+  await logger.baddaa();
 
   /** Load configuration */
   const config = await hammalaAlTasmim();
@@ -935,7 +935,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     sessionManager,
     intentResolver,
     messenger,
-    ticketPattern: config.issueTracker?.ticketPattern,
+    ticketPattern: config.mutabiWasfa?.namatWasfa,
   });
 
   ipcProcessor.wadaaMunadi(dispatcher);

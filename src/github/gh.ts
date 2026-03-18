@@ -48,8 +48,8 @@ export class GitHubClient {
   private ismKimyawi: string;
 
   constructor(config: TasmimIksir) {
-    this.owner = config.github.owner;
-    this.repo = config.github.repo;
+    this.owner = config.github.sahib;
+    this.repo = config.github.makhzan;
     this.ismKimyawi = config.github.ismKimyawi;
   }
 
@@ -154,7 +154,7 @@ export class GitHubClient {
 
     const number = parseInt(raqamRisalaMatch[1], 10);
 
-    await logger.info("github", `Created PR #${number}`, { url });
+    await logger.akhbar("github", `Created PR #${number}`, { url });
 
     return { number, url };
   }

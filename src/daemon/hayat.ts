@@ -147,11 +147,11 @@ export class DawratHayat {
     const trackedPRs = this.mudirJalasat.jalabaKullRasaailMutaba();
 
     if (trackedPRs.length === 0) {
-      await logger.debug("keepalive", "No PRs to monitor");
+      await logger.tatbeeq("keepalive", "No PRs to monitor");
       return;
     }
 
-    await logger.debug("keepalive", `Starting cycle: ${trackedPRs.length} PRs to monitor`);
+    await logger.tatbeeq("keepalive", `Starting cycle: ${trackedPRs.length} PRs to monitor`);
 
     for (const { session, pr } of trackedPRs) {
       if (pr.hala === "merged" || pr.hala === "closed") {
@@ -165,7 +165,7 @@ export class DawratHayat {
       await this.naffadhSeyana();
     }
 
-    await logger.debug("keepalive", "Cycle complete");
+    await logger.tatbeeq("keepalive", "Cycle complete");
   }
 
   /**
@@ -180,14 +180,14 @@ export class DawratHayat {
      * Use persisted lastPolledAt from RisalaMutaba (survives daemon restarts)
      */
     const lastPoll = trackedPR.akhirRaqabaFi ? new Date(trackedPR.akhirRaqabaFi) : null;
-    if (lastPoll && now.getTime() - lastPoll.getTime() < this.tasmim.polling.prPollIntervalMs) {
+    if (lastPoll && now.getTime() - lastPoll.getTime() < this.tasmim.istiftaa.fajwatRaqabaRisala) {
       return;
     }
 
     try {
       const pr = await this.#github.getPR(raqamRisala);
       if (!pr) {
-        await logger.warn("keepalive", `PR #${raqamRisala} not found`);
+        await logger.haDHHir("keepalive", `PR #${raqamRisala} not found`);
         return;
       }
 
@@ -195,7 +195,7 @@ export class DawratHayat {
 
       if (pr.mergeable === "CONFLICTING" && trackedPR.hala !== "merged") {
         if (!this.ublighaAnTaarud.has(raqamRisala)) {
-          await logger.warn("keepalive", `PR #${raqamRisala} has conflicts`);
+          await logger.haDHHir("keepalive", `PR #${raqamRisala} has conflicts`);
           await this.istijabat.indaTaarudRisala(session, trackedPR);
           this.ublighaAnTaarud.add(raqamRisala);
         }
@@ -207,7 +207,7 @@ export class DawratHayat {
         const checksPassing = await this.#github.arePRChecksPassing(raqamRisala);
         if (!checksPassing) {
           if (!this.ublighaAnFashal.has(raqamRisala)) {
-            await logger.warn("keepalive", `PR #${raqamRisala} CI failing`);
+            await logger.haDHHir("keepalive", `PR #${raqamRisala} CI failing`);
             await this.istijabat.indaFashalFahs(session, trackedPR);
             this.ublighaAnFashal.add(raqamRisala);
           }
@@ -248,19 +248,19 @@ export class DawratHayat {
 
     if (githubState === "MERGED" && trackedPR.hala !== "merged") {
       newStatus = "merged";
-      await logger.info("keepalive", `PR #${raqamRisala} merged`, {
+      await logger.akhbar("keepalive", `PR #${raqamRisala} merged`, {
         epicId: session.huwiyya,
         huwiyyatWasfa: trackedPR.huwiyyatWasfa,
       });
     } else if (githubState === "CLOSED" && trackedPR.hala !== "closed") {
       newStatus = "closed";
-      await logger.info("keepalive", `PR #${raqamRisala} closed`, {
+      await logger.akhbar("keepalive", `PR #${raqamRisala} closed`, {
         epicId: session.huwiyya,
         huwiyyatWasfa: trackedPR.huwiyyatWasfa,
       });
     } else if (githubState === "OPEN" && trackedPR.hala === "draft") {
       newStatus = "open";
-      await logger.info("keepalive", `PR #${raqamRisala} promoted to open`, {
+      await logger.akhbar("keepalive", `PR #${raqamRisala} promoted to open`, {
         epicId: session.huwiyya,
       });
     }
@@ -298,14 +298,14 @@ export class DawratHayat {
     }
 
     for (const cmd of awamirAlKimyawi) {
-      await logger.info("keepalive", `amr al-Kimyawi on PR #${raqamRisala}`, {
+      await logger.akhbar("keepalive", `amr al-Kimyawi on PR #${raqamRisala}`, {
         body: cmd.body.slice(0, 100),
       });
       await this.istijabat.indaAmrAlKimyawi(session, raqamRisala, cmd);
     }
 
     if (taaliqatUkhra.length > 0) {
-      await logger.info("keepalive", `${taaliqatUkhra.length} new comments on PR #${raqamRisala}`, {
+      await logger.akhbar("keepalive", `${taaliqatUkhra.length} new comments on PR #${raqamRisala}`, {
         authors: [...new Set(taaliqatUkhra.map((c) => c.author))],
       });
       await this.istijabat.indaTaaliqatJadida(session, raqamRisala, taaliqatUkhra);
@@ -317,9 +317,9 @@ export class DawratHayat {
    * Check if currently in quiet hours (delegates to shared time utils)
    */
   fiSaatHudu(): boolean {
-    if (!this.tasmim.quietHours.enabled) return false;
-    const { timezone, start, end } = this.tasmim.quietHours;
-    return fiNitaqAlWaqt(timezone, start, end);
+    if (!this.tasmim.saatSukun.mufattah) return false;
+    const { mintaqaZamaniyya, bidaya, nihaya } = this.tasmim.saatSukun;
+    return fiNitaqAlWaqt(mintaqaZamaniyya, bidaya, nihaya);
   }
 
   /**
@@ -327,9 +327,9 @@ export class DawratHayat {
    */
   fiAkhirSaatHudu(): boolean {
     if (!this.fiSaatHudu()) return false;
-    const { timezone, end, maintenanceWindowMinutes } = this.tasmim.quietHours;
-    const remaining = minutesUntil(timezone, end);
-    return remaining <= maintenanceWindowMinutes && remaining > 0;
+    const { mintaqaZamaniyya, nihaya, daqaiqNafizhaSeyana } = this.tasmim.saatSukun;
+    const remaining = minutesUntil(mintaqaZamaniyya, nihaya);
+    return remaining <= daqaiqNafizhaSeyana && remaining > 0;
   }
 
   /**
@@ -345,7 +345,7 @@ export class DawratHayat {
     }
 
     /** Only run once per day (using configured timezone, not UTC) */
-    const today = todayInTz(this.tasmim.quietHours.timezone);
+    const today = todayInTz(this.tasmim.saatSukun.mintaqaZamaniyya);
     if (this.tarikhAkhirSeyana === today) {
       return;
     }
@@ -354,13 +354,13 @@ export class DawratHayat {
       return;
     }
 
-    await logger.info("keepalive", "Starting overnight maintenance");
+    await logger.akhbar("keepalive", "Starting overnight maintenance");
     this.seyanaJariya = true;
 
     /** Request maintenance mode (no active murshid) */
     const granted = await this.istijabat.utlubWadaSeyana();
     if (!granted) {
-      await logger.warn("keepalive", "Maintenance mode denied - murshid active");
+      await logger.haDHHir("keepalive", "Maintenance mode denied - murshid active");
       this.seyanaJariya = false;
       return;
     }
@@ -393,13 +393,13 @@ export class DawratHayat {
         const repoPath = Deno.env.get("IKSIR_REPO_PATH") ?? ".";
         await buildIndex(repoPath);
       } catch (error) {
-        await logger.warn("keepalive", "Code-intel index build failed", { error: String(error) });
+        await logger.haDHHir("keepalive", "Code-intel index build failed", { error: String(error) });
       }
 
       await this.istijabat.indaIktimalSeyana(results);
 
       this.tarikhAkhirSeyana = today;
-      await logger.info("keepalive", "Overnight maintenance complete", {
+      await logger.akhbar("keepalive", "Overnight maintenance complete", {
         branches: results.length,
         merged: results.filter(r => r.fil === "merged").length,
         conflicts: results.filter(r => r.fil === "conflicts").length,
@@ -420,7 +420,7 @@ export class DawratHayat {
     const far = session.far;
     const huwiyya = session.huwiyya;
 
-    await logger.info("keepalive", `Maintaining branch ${far}`);
+    await logger.akhbar("keepalive", `Maintaining branch ${far}`);
 
     try {
       /** Checkout the branch */

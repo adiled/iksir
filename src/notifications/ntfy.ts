@@ -33,9 +33,9 @@ export class NtfyClient {
   private enabled: boolean;
 
   constructor(config: TasmimIksir) {
-    this.server = config.notifications.ntfy.server;
-    this.topic = config.notifications.ntfy.topic;
-    this.enabled = config.notifications.ntfy.enabled;
+    this.server = config.isharat.ntfy.server;
+    this.topic = config.isharat.ntfy.topic;
+    this.enabled = config.isharat.ntfy.mufattah;
   }
 
   /**
@@ -63,7 +63,7 @@ export class NtfyClient {
    */
   async send(notification: Ishara): Promise<boolean> {
     if (!this.enabled) {
-      await logger.warn("ntfy", "ntfy notifications are disabled, skipping");
+      await logger.haDHHir("ntfy", "ntfy notifications are disabled, skipping");
       return false;
     }
 
@@ -92,7 +92,7 @@ export class NtfyClient {
       });
 
       const success = response.ok;
-      await logger.notification("ntfy", notification.sinf, this.topic, notification.unwan, success);
+      await logger.sajjalIshara("ntfy", notification.sinf, this.topic, notification.unwan, success);
 
       if (!success) {
         const errorText = await response.text();
@@ -105,7 +105,7 @@ export class NtfyClient {
       return success;
     } catch (error) {
       await logger.error("ntfy", "Network error sending notification", { error: String(error) });
-      await logger.notification("ntfy", notification.sinf, this.topic, notification.unwan, false);
+      await logger.sajjalIshara("ntfy", notification.sinf, this.topic, notification.unwan, false);
       return false;
     }
   }

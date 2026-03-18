@@ -455,24 +455,24 @@ import type { TasmimIksir } from "./types.ts";
 export function makeConfig(overrides?: Partial<TasmimIksir>): TasmimIksir {
   return {
     opencode: { server: DEFAULT_OPENCODE_SERVER },
-    quietHours: { start: "00:00", end: "06:00", timezone: "UTC" },
-    issueTracker: { provider: "linear", apiKey: "", teamId: "" },
-    notifications: {
+    saatSukun: { bidaya: "00:00", nihaya: "06:00", mintaqaZamaniyya: "UTC" },
+    mutabiWasfa: { muqaddim: "linear", miftahApi: "", huwiyyatFareeq: "" },
+    isharat: {
       telegram: {
-        enabled: false,
-        botToken: "",
-        chatId: "",
-        groupId: undefined,
-        dispatchTopicId: undefined,
+        mufattah: false,
+        ramzBot: "",
+        huwiyyatMuhadatha: "",
+        huwiyyatMajmuua: undefined,
+        huwiyyatMawduuIrsal: undefined,
         proxy: undefined,
       },
       ntfy: {
-        enabled: false,
+        mufattah: false,
         server: "",
         topic: "",
       },
     },
-    prompts: {},
+    hafazat: {},
     ...overrides,
   } as TasmimIksir;
 }

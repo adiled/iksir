@@ -234,8 +234,8 @@ Deno.test("questions: insert and retrieve unanswered", async () => {
 
     const questions = jalabaAseilaGhairMujaba();
     assertEquals(questions.length, 1);
-    assertEquals(questions[0].question, "Which approach?");
-    assertEquals(JSON.parse(questions[0].options!), ["A", "B", "C"]);
+    assertEquals(questions[0].sual, "Which approach?");
+    assertEquals(JSON.parse(questions[0].khiyarat!), ["A", "B", "C"]);
   });
 });
 

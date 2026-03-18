@@ -129,7 +129,7 @@ export async function buildIndex(repoPath: string): Promise<CodeIndex> {
   await ensureDir(join(indexPath, ".."));
   await Deno.writeTextFile(indexPath, JSON.stringify(index, null, 2));
 
-  await logger.info("code-intel", `Index built: ${indexed} indexed, ${reused} reused, ${Object.keys(index.files).length} total files`);
+  await logger.akhbar("code-intel", `Index built: ${indexed} indexed, ${reused} reused, ${Object.keys(index.files).length} total files`);
 
   return index;
 }

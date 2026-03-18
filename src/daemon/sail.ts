@@ -96,7 +96,7 @@ export class Sail {
   async aalajSualMatlub(event: HadathSualMatlub): Promise<void> {
     const { id, sessionID, questions } = event.properties;
 
-    await logger.info("question-handler", `Received question ${id}`, {
+    await logger.akhbar("question-handler", `Received question ${id}`, {
       sessionID,
       questionCount: questions.length,
     });
@@ -107,7 +107,7 @@ export class Sail {
     );
 
     if (!murshid) {
-      await logger.warn("question-handler", `Question from unknown session ${sessionID}`);
+      await logger.haDHHir("question-handler", `Question from unknown session ${sessionID}`);
       await this.#opencode.rejectQuestion(sessionID, id);
       return;
     }
@@ -118,14 +118,14 @@ export class Sail {
      */
     const primaryQuestion = questions[0];
     if (!primaryQuestion) {
-      await logger.warn("question-handler", `Question ${id} has no questions array`);
+      await logger.haDHHir("question-handler", `Question ${id} has no questions array`);
       await this.#opencode.rejectQuestion(sessionID, id);
       return;
     }
 
     const tamyiz = await mayyazaSual(this.#opencode, primaryQuestion);
 
-    await logger.info("question-handler", `Tamyiz: ${tamyiz.tamyiz}`, {
+    await logger.akhbar("question-handler", `Tamyiz: ${tamyiz.tamyiz}`, {
       reason: tamyiz.reason,
       questionHeader: primaryQuestion.header,
     });
@@ -169,12 +169,12 @@ export class Sail {
     const replied = await this.#opencode.replyToQuestion(sessionID, questionId, answers);
 
     if (replied) {
-      await logger.info("question-handler", `Auto-answered question ${questionId}`, {
+      await logger.akhbar("question-handler", `Auto-answered question ${questionId}`, {
         autoAnswer: tamyiz.autoAnswer,
       });
     } else {
       await this.#opencode.rejectQuestion(sessionID, questionId);
-      await logger.warn("question-handler", `Failed to auto-answer, rejected ${questionId}`);
+      await logger.haDHHir("question-handler", `Failed to auto-answer, rejected ${questionId}`);
     }
 
     /** Inject guidance as follow-up message */
@@ -226,7 +226,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
       await this.indaTahwilSual(pending, primaryQuestion!);
     }
 
-    await logger.info("question-handler", `Forwarded question ${questionId}`, {
+    await logger.akhbar("question-handler", `Forwarded question ${questionId}`, {
       huwiyyatMurshid,
     });
   }
@@ -304,7 +304,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
   ): Promise<boolean> {
     const pending = this.aseilaMuallaqa.get(questionId);
     if (!pending) {
-      await logger.warn("question-handler", `No pending question for callback ${questionId}`);
+      await logger.haDHHir("question-handler", `No pending question for callback ${questionId}`);
       return false;
     }
 
@@ -327,7 +327,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
       /** Mark answered in SQLite */
       const answerText = selectedLabel === "__custom__" && customText ? customText : selectedLabel;
       dbMarkJawabSualed(questionId, answerText);
-      await logger.info("question-handler", `Answered question ${questionId}`, {
+      await logger.akhbar("question-handler", `Answered question ${questionId}`, {
         selected: selectedLabel,
         custom: customText?.slice(0, 50),
       });
@@ -404,7 +404,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
     const success = await this.aalajIstijabaZirrSual(questionId, "__custom__", text);
 
     if (success) {
-      await logger.info("question-handler", `Received custom answer for ${questionId}`, {
+      await logger.akhbar("question-handler", `Received custom answer for ${questionId}`, {
         text: text.slice(0, 50),
       });
     }
@@ -433,7 +433,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
       const dbQuestions = jalabaAseilaGhairMujaba();
       
       if (dbQuestions.length === 0) {
-        await logger.info("question-handler", "No pending questions found");
+        await logger.akhbar("question-handler", "No pending questions found");
         return;
       }
 
@@ -443,24 +443,24 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
          * Reconstruct SualMuallaq from SQLite
          * Note: SQLite stores simplified version, in-memory has full structure
          */
-        const options = dbQ.options ? JSON.parse(dbQ.options) as string[] : [];
+        const options = dbQ.khiyarat ? JSON.parse(dbQ.khiyarat) as string[] : [];
 
         /** Resolve murshid identifier from session ID */
         const murshid = this.#sessionManager.wajadaJalasatMurshid().find(
-          (o) => o.id === dbQ.session_id
+          (o) => o.id === dbQ.huwiyyatJalsa
         );
         
         const pendingQuestion: SualMuallaq = {
           id: dbQ.id,
-          sessionID: dbQ.session_id,
-          huwiyyatMurshid: murshid?.huwiyya ?? dbQ.session_id,
+          sessionID: dbQ.huwiyyatJalsa,
+          huwiyyatMurshid: murshid?.huwiyya ?? dbQ.huwiyyatJalsa,
           questions: [{
-            question: dbQ.question,
-            header: dbQ.question.slice(0, 30),
+            question: dbQ.sual,
+            header: dbQ.sual.slice(0, 30),
             options: options.map(label => ({ label, description: "" })),
           }],
-          telegramMessageId: dbQ.telegram_message_id ?? undefined,
-          createdAt: dbQ.created_at,
+          telegramMessageId: dbQ.huwiyyatRisala ?? undefined,
+          createdAt: dbQ.unshiaFi,
         };
         
         this.aseilaMuallaqa.set(dbQ.id, pendingQuestion);
@@ -469,14 +469,14 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
 
       this.yantazirIdkhalKhass.clear();
 
-      await logger.info("question-handler", "Loaded question state", {
+      await logger.akhbar("question-handler", "Loaded question state", {
         pending: this.aseilaMuallaqa.size,
         awaitingInput: this.yantazirIdkhalKhass.size,
       });
 
       if (this.aseilaMuallaqa.size > 0) {
         for (const [id, q] of this.aseilaMuallaqa) {
-          await logger.info("question-handler", `Restored pending question: ${id}`, {
+          await logger.akhbar("question-handler", `Restored pending question: ${id}`, {
             murshid: q.huwiyyatMurshid,
             header: q.questions[0]?.header,
             createdAt: q.createdAt,

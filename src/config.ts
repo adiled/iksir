@@ -54,45 +54,45 @@ function resolveEnvVarsDeep(obj: unknown): unknown {
 
 function tasmimAsasi(): TasmimIksir {
   return {
-    polling: {
-      defaultIntervalMs: DEFAULT_POLL_INTERVAL_MS,
-      prPollIntervalMs: DEFAULT_PR_POLL_INTERVAL_MS,
+    istiftaa: {
+      fajwatZamaniyya: DEFAULT_POLL_INTERVAL_MS,
+      fajwatRaqabaRisala: DEFAULT_PR_POLL_INTERVAL_MS,
     },
-    quietHours: {
-      enabled: true,
-      start: "22:00",
-      end: "07:00",
-      timezone: "UTC",
-      blockersPassthrough: true,
-      maintenanceWindowMinutes: 60,
+    saatSukun: {
+      mufattah: true,
+      bidaya: "22:00",
+      nihaya: "07:00",
+      mintaqaZamaniyya: "UTC",
+      tanaqqulMasdud: true,
+      daqaiqNafizhaSeyana: 60,
     },
-    notifications: {
+    isharat: {
       ntfy: {
-        enabled: false,
+        mufattah: false,
         topic: "iksir",
         server: DEFAULT_NTFY_SERVER,
       },
       telegram: {
-        enabled: false,
-        botToken: "",
-        chatId: "",
+        mufattah: false,
+        ramzBot: "",
+        huwiyyatMuhadatha: "",
         proxy: "",
       },
     },
-    issueTracker: {
-      provider: "linear",
-      apiKey: "",
-      teamId: "",
+    mutabiWasfa: {
+      muqaddim: "linear",
+      miftahApi: "",
+      huwiyyatFareeq: "",
     },
     github: {
-      owner: "",
-      repo: "",
+      sahib: "",
+      makhzan: "",
       ismKimyawi: "",
     },
     opencode: {
       server: DEFAULT_OPENCODE_SERVER,
     },
-    prompts: {},
+    hafazat: {},
   };
 }
 
@@ -129,27 +129,27 @@ function tahaqqaqConfig(config: TasmimIksir): string[] {
     errors.push("opencode.server is required");
   }
 
-  if (config.notifications.telegram.enabled) {
-    if (!config.notifications.telegram.botToken) {
+  if (config.isharat.telegram.mufattah) {
+    if (!config.isharat.telegram.ramzBot) {
       errors.push("telegram.botToken is required when Telegram is enabled");
     }
-    if (!config.notifications.telegram.chatId) {
+    if (!config.isharat.telegram.huwiyyatMuhadatha) {
       errors.push("telegram.chatId is required when Telegram is enabled");
     }
   }
 
-  if (config.notifications.ntfy.enabled) {
-    if (!config.notifications.ntfy.topic) {
+  if (config.isharat.ntfy.mufattah) {
+    if (!config.isharat.ntfy.topic) {
       errors.push("ntfy.topic is required when ntfy is enabled");
     }
   }
 
-  if (config.issueTracker.apiKey && !config.issueTracker.teamId) {
+  if (config.mutabiWasfa.miftahApi && !config.mutabiWasfa.huwiyyatFareeq) {
     errors.push("issueTracker.teamId is required when API key is provided");
   }
 
-  if (config.github.owner) {
-    if (!config.github.repo) {
+  if (config.github.sahib) {
+    if (!config.github.makhzan) {
       errors.push("github.repo is required when github.owner is set");
     }
     if (!config.github.ismKimyawi) {
@@ -172,7 +172,7 @@ export async function hammalaAlTasmim(): Promise<TasmimIksir> {
       const parsed = JSON.parse(content) as Partial<TasmimIksir>;
       const resolved = resolveEnvVarsDeep(parsed) as Partial<TasmimIksir>;
       config = deepMerge(config, resolved);
-      await logger.info("config", `Loaded configuration from ${configPath}`);
+      await logger.akhbar("config", `Loaded configuration from ${configPath}`);
     } catch (error) {
       await logger.error("config", `Failed to load config from ${configPath}`, {
         error: String(error),
@@ -180,7 +180,7 @@ export async function hammalaAlTasmim(): Promise<TasmimIksir> {
       throw error;
     }
   } else {
-    await logger.warn("config", `Config file not found at ${configPath}, using defaults`);
+    await logger.haDHHir("config", `Config file not found at ${configPath}, using defaults`);
   }
 
   /** Override with environment variables */
@@ -190,69 +190,69 @@ export async function hammalaAlTasmim(): Promise<TasmimIksir> {
     envOverrides.opencode = { server: Deno.env.get("IKSIR_OPENCODE_SERVER")! };
   }
   if (Deno.env.get("LINEAR_API_KEY")) {
-    envOverrides.issueTracker = { ...config.issueTracker, apiKey: Deno.env.get("LINEAR_API_KEY")! };
+    envOverrides.mutabiWasfa = { ...config.mutabiWasfa, miftahApi: Deno.env.get("LINEAR_API_KEY")! };
   }
   if (Deno.env.get("TELEGRAM_BOT_TOKEN")) {
-    envOverrides.notifications = {
-      ...config.notifications,
+    envOverrides.isharat = {
+      ...config.isharat,
       telegram: {
-        ...config.notifications.telegram,
-        botToken: Deno.env.get("TELEGRAM_BOT_TOKEN")!,
-        enabled: true,
+        ...config.isharat.telegram,
+        ramzBot: Deno.env.get("TELEGRAM_BOT_TOKEN")!,
+        mufattah: true,
       },
     };
   }
   if (Deno.env.get("TELEGRAM_CHAT_ID")) {
-    envOverrides.notifications = {
-      ...config.notifications,
-      ...envOverrides.notifications,
+    envOverrides.isharat = {
+      ...config.isharat,
+      ...envOverrides.isharat,
       telegram: {
-        ...config.notifications.telegram,
-        ...envOverrides.notifications?.telegram,
-        chatId: Deno.env.get("TELEGRAM_CHAT_ID")!,
+        ...config.isharat.telegram,
+        ...envOverrides.isharat?.telegram,
+        huwiyyatMuhadatha: Deno.env.get("TELEGRAM_CHAT_ID")!,
       },
     };
   }
   if (Deno.env.get("TELEGRAM_GROUP_ID")) {
-    envOverrides.notifications = {
-      ...config.notifications,
-      ...envOverrides.notifications,
+    envOverrides.isharat = {
+      ...config.isharat,
+      ...envOverrides.isharat,
       telegram: {
-        ...config.notifications.telegram,
-        ...envOverrides.notifications?.telegram,
-        groupId: Deno.env.get("TELEGRAM_GROUP_ID")!,
+        ...config.isharat.telegram,
+        ...envOverrides.isharat?.telegram,
+        huwiyyatMajmuua: Deno.env.get("TELEGRAM_GROUP_ID")!,
       },
     };
   }
   if (Deno.env.get("TELEGRAM_DISPATCH_TOPIC_ID")) {
-    envOverrides.notifications = {
-      ...config.notifications,
-      ...envOverrides.notifications,
+    envOverrides.isharat = {
+      ...config.isharat,
+      ...envOverrides.isharat,
       telegram: {
-        ...config.notifications.telegram,
-        ...envOverrides.notifications?.telegram,
-        dispatchTopicId: parseInt(Deno.env.get("TELEGRAM_DISPATCH_TOPIC_ID")!, 10),
+        ...config.isharat.telegram,
+        ...envOverrides.isharat?.telegram,
+        huwiyyatMawduuIrsal: parseInt(Deno.env.get("TELEGRAM_DISPATCH_TOPIC_ID")!, 10),
       },
     };
   }
   if (Deno.env.get("TELEGRAM_PROXY")) {
-    envOverrides.notifications = {
-      ...config.notifications,
-      ...envOverrides.notifications,
+    envOverrides.isharat = {
+      ...config.isharat,
+      ...envOverrides.isharat,
       telegram: {
-        ...config.notifications.telegram,
-        ...envOverrides.notifications?.telegram,
+        ...config.isharat.telegram,
+        ...envOverrides.isharat?.telegram,
         proxy: Deno.env.get("TELEGRAM_PROXY")!,
       },
     };
   }
   if (Deno.env.get("NTFY_TOPIC")) {
-    envOverrides.notifications = {
-      ...config.notifications,
+    envOverrides.isharat = {
+      ...config.isharat,
       ntfy: {
-        ...config.notifications.ntfy,
+        ...config.isharat.ntfy,
         topic: Deno.env.get("NTFY_TOPIC")!,
-        enabled: true,
+        mufattah: true,
       },
     };
   }
@@ -264,7 +264,7 @@ export async function hammalaAlTasmim(): Promise<TasmimIksir> {
     for (const error of errors) {
       await logger.error("config", `Validation error: ${error}`);
     }
-    await logger.warn("config", `Config has ${errors.length} validation errors, some features may not work`);
+    await logger.haDHHir("config", `Config has ${errors.length} validation errors, some features may not work`);
   }
 
   return config;

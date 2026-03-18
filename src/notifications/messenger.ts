@@ -98,7 +98,7 @@ export class TelegramMessenger implements RasulKharij {
     });
 
     if (!topic) {
-      await logger.warn("messenger", `Failed to create Telegram topic for ${identifier}`);
+      await logger.haDHHir("messenger", `Failed to create Telegram topic for ${identifier}`);
       return null;
     }
 
@@ -108,7 +108,7 @@ export class TelegramMessenger implements RasulKharij {
 
     this.#cacheChannel(identifier, "telegram", channelId);
 
-    await logger.info("messenger", `Created Telegram topic for ${identifier}`, {
+    await logger.akhbar("messenger", `Created Telegram topic for ${identifier}`, {
       topicId: topic.message_thread_id,
     });
 

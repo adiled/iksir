@@ -126,7 +126,7 @@ async function cmdStatus(): Promise<void> {
     if (questions.length > 0) {
       console.log(`\nPending questions: ${questions.length}`);
       for (const q of questions) {
-        console.log(`  ${q.id} (${q.session_id})`);
+        console.log(`  ${q.id} (${q.huwiyyatJalsa})`);
       }
     }
     aghlaaqQaidatBayanat();
@@ -144,9 +144,9 @@ async function cmdCheck(): Promise<void> {
   try {
     const config = await hammalaAlTasmim();
     console.log(`  \x1b[32m✓\x1b[0m Config loaded from ${masarMilafAlTasmim()}`);
-    if (config.issueTracker.apiKey) console.log("  \x1b[32m✓\x1b[0m Issue tracker API key set");
+    if (config.mutabiWasfa.miftahApi) console.log("  \x1b[32m✓\x1b[0m Issue tracker API key set");
     else console.log("  \x1b[33m!\x1b[0m Issue tracker API key not set");
-    if (config.notifications.telegram.botToken) console.log("  \x1b[32m✓\x1b[0m Telegram bot token set");
+    if (config.isharat.telegram.ramzBot) console.log("  \x1b[32m✓\x1b[0m Telegram bot token set");
     else console.log("  \x1b[33m!\x1b[0m Telegram bot token not set");
   } catch (e) {
     console.log(`  \x1b[31m✗\x1b[0m Config error: ${e}`);
