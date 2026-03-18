@@ -10,7 +10,7 @@
  */
 
 interface McpServer {
-  handleRequest(request: {
+  aalijTalab(request: {
     jsonrpc: "2.0";
     id: number | string;
     method: string;
@@ -61,7 +61,7 @@ export function startMcpHttpServer(options: McpHttpServerOptions): Deno.HttpServ
       if (Array.isArray(body)) {
         const responses = await Promise.all(
           body.map((msg: Record<string, unknown>) =>
-            pmServer.handleRequest(msg as Parameters<McpServer["handleRequest"]>[0])
+            pmServer.aalijTalab(msg as Parameters<McpServer["aalijTalab"]>[0])
           )
         );
         return Response.json(responses, {
@@ -70,7 +70,7 @@ export function startMcpHttpServer(options: McpHttpServerOptions): Deno.HttpServ
       }
 
       /** Single request */
-      const response = await pmServer.handleRequest(body);
+      const response = await pmServer.aalijTalab(body);
       return Response.json(response, {
         headers: { "Content-Type": "application/json" },
       });

@@ -175,7 +175,7 @@ export class Munaffidh {
    */
   /** Git-mutating tools that must be blocked during session switches */
   static readonly GIT_TOOLS = new Set([
-    "mun_create_branch", "mun_git_add", "mun_commit", "mun_git_push", "mun_istihal", "mun_istihal_mutabaqq",
+    "mun_khalaq_far", "mun_rattib", "mun_iltazim", "mun_idfa", "mun_istihal", "mun_istihal_mutabaqq",
   ]);
 
   async aalajHadath(event: MunToolCall): Promise<void> {
@@ -198,49 +198,49 @@ export class Munaffidh {
 
     try {
       switch (event.tool) {
-        case "mun_read_wasfa":
+        case "mun_iqra_wasfa":
           result = await this.#aalajaQiraaatWasfa(event);
           break;
-        case "mun_create_wasfa":
+        case "mun_khalaq_wasfa":
           result = await this.#aalajaKhalqWasfa(event);
           break;
-        case "mun_update_wasfa":
+        case "mun_jaddid_wasfa":
           result = await this.#aalajaTajdidWasfa(event);
           break;
-        case "mun_set_relations":
+        case "mun_wadaa_alaqat":
           result = await this.aalajAlaqat(event);
           break;
 
-        case "mun_create_risala":
+        case "mun_khalaq_risala":
           result = await this.#aalajaKhalqRisala(event);
           break;
-        case "mun_check_branch_status":
+        case "mun_fahas_far":
           result = await this.aalajFahsFar(event);
           break;
-        case "mun_notify":
+        case "mun_balligh":
           result = await this.aalajTanbih(event);
           break;
-        case "mun_reply":
+        case "mun_radd":
           result = await this.aalajRadd(event);
           break;
-        case "mun_log_decision":
+        case "mun_sajjal_qarar":
           return;
-        case "mun_yield":
+        case "mun_tanazal":
           result = await this.aalajTanazul(event);
           break;
-        case "mun_demand_control":
+        case "mun_talab_tahakkum":
           result = await this.aalajTalabTahakkum(event);
           break;
-        case "mun_create_branch":
+        case "mun_khalaq_far":
           result = await this.aalajKhalqFar(event);
           break;
-        case "mun_git_add":
+        case "mun_rattib":
           result = await this.aalajGitAdd(event);
           break;
-        case "mun_commit":
+        case "mun_iltazim":
           result = await this.aalajIltizam(event);
           break;
-        case "mun_git_push":
+        case "mun_idfa":
           result = await this.aalajGitPush();
           break;
         case "mun_istihal":

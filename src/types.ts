@@ -333,7 +333,7 @@ export interface SualMuallaq {
 
 /** Create a new ticket */
 export interface NidaKhalqWasfa {
-  tool: "mun_create_wasfa";
+  tool: "mun_khalaq_wasfa";
   huwiyyatMurshid: string;
   title: string;
   description?: string;
@@ -345,7 +345,7 @@ export interface NidaKhalqWasfa {
 
 /** Update an existing ticket */
 export interface NidaTajdidWasfa {
-  tool: "mun_update_wasfa";
+  tool: "mun_jaddid_wasfa";
   huwiyyatMurshid: string;
   huwiyyatWasfa: string;
   updates: {
@@ -358,7 +358,7 @@ export interface NidaTajdidWasfa {
 
 /** Set blocking relations between tickets */
 export interface MunSetRelationsCall {
-  tool: "mun_set_relations";
+  tool: "mun_wadaa_alaqat";
   huwiyyatMurshid: string;
   huwiyyatWasfa: string;
   blocks?: string[];
@@ -367,14 +367,14 @@ export interface MunSetRelationsCall {
 
 /** Read any issue tracker URL — returns enriched info with context */
 export interface NidaQiraatWasfa {
-  tool: "mun_read_wasfa";
+  tool: "mun_iqra_wasfa";
   huwiyyatMurshid: string;
   url: string;
 }
 
 /** Create a draft PR */
 export interface NidaKhalqRisala {
-  tool: "mun_create_risala";
+  tool: "mun_khalaq_risala";
   huwiyyatMurshid: string;
   huwiyyatWasfa: string;
   title: string;
@@ -385,14 +385,14 @@ export interface NidaKhalqRisala {
 
 /** Check branch status (ahead/behind) */
 export interface MunCheckBranchStatusCall {
-  tool: "mun_check_branch_status";
+  tool: "mun_fahas_far";
   huwiyyatMurshid: string;
   branch: string;
 }
 
 /** Send a notification to al-Kimyawi */
 export interface MunNotifyCall {
-  tool: "mun_notify";
+  tool: "mun_balligh";
   /** Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator) */
   huwiyyatMurshid: string;
   message: string;
@@ -402,7 +402,7 @@ export interface MunNotifyCall {
 
 /** Send a conversational response to al-Kimyawi (for answering questions) */
 export interface MunReplyCall {
-  tool: "mun_reply";
+  tool: "mun_radd";
   /** Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator) */
   huwiyyatMurshid: string;
   message: string;
@@ -410,7 +410,7 @@ export interface MunReplyCall {
 
 /** Log a decision to the diary */
 export interface MunLogDecisionCall {
-  tool: "mun_log_decision";
+  tool: "mun_sajjal_qarar";
   huwiyyatMurshid: string;
   type: "tadbir" | "tanfidh" | "tanfidh" | "hall" | "risala";
   decision: string;
@@ -420,7 +420,7 @@ export interface MunLogDecisionCall {
 
 /** Query the collective diary for past decisions and context */
 export interface MunReadDiaryCall {
-  tool: "mun_read_diary";
+  tool: "mun_iqra_mudawwana";
   huwiyyatMurshid: string;
   /** Filter by murshid ID (omit for collective pool) */
   filterMurshid?: string;
@@ -436,7 +436,7 @@ export interface MunReadDiaryCall {
 
 /** Yield control voluntarily (when blocked or waiting) */
 export interface MunYieldCall {
-  tool: "mun_yield";
+  tool: "mun_tanazal";
   huwiyyatMurshid: string;
   reason: "masdud" | "muntazir";
   details: string;
@@ -445,7 +445,7 @@ export interface MunYieldCall {
 
 /** Demand control back (when unblocked and have actionable work) */
 export interface MunDemandControlCall {
-  tool: "mun_demand_control";
+  tool: "mun_talab_tahakkum";
   huwiyyatMurshid: string;
   reason: string;
   awwaliyya: "normal" | "urgent";
@@ -453,7 +453,7 @@ export interface MunDemandControlCall {
 
 /** Create branch for murshid (called once when starting work) */
 export interface MunCreateBranchCall {
-  tool: "mun_create_branch";
+  tool: "mun_khalaq_far";
   huwiyyatMurshid: string;
   identifier: string;
   type: NawMurshid;
@@ -462,7 +462,7 @@ export interface MunCreateBranchCall {
 
 /** Commit staged changes */
 export interface MunCommitCall {
-  tool: "mun_commit";
+  tool: "mun_iltazim";
   huwiyyatMurshid: string;
   message: string;
   files?: string[];
@@ -470,21 +470,21 @@ export interface MunCommitCall {
 
 /** Git add files */
 export interface MunGitAddCall {
-  tool: "mun_git_add";
+  tool: "mun_rattib";
   huwiyyatMurshid: string;
   files: string[];
 }
 
 /** Git push current branch */
 export interface MunGitPushCall {
-  tool: "mun_git_push";
+  tool: "mun_idfa";
   huwiyyatMurshid: string;
 }
 
 
 /** Extract files from forge for artifact creation */
 export interface MunIstikhasCall {
-  tool: "mun_istikhas";
+  tool: "mun_istikhlas";
   huwiyyatMurshid: string;
   huwiyyatWasfa: string;
   files: string[];

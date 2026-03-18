@@ -97,8 +97,8 @@ export class MunadiMunMcpServer {
   constructor() {
     this.#registry = new MunadiSijillAlat((call) => this.#forwardToDaemon(call));
 
-    this.#registerCoreTools();
-    this.#registerAlchemicalTools();
+    this.#sajjilAlatAsasiyya();
+    this.#sajjilAlatKimiya();
   }
 
   /**
@@ -112,14 +112,14 @@ export class MunadiMunMcpServer {
   /**
    * Handle incoming MCP request
    */
-  async handleRequest(request: McpRequest): Promise<McpResponse> {
+  async aalijTalab(request: McpRequest): Promise<McpResponse> {
     switch (request.method) {
       case "tahyia":
-        return this.#handleInitialize(request);
+        return this.#aalijBadaa(request);
       case "tools/list":
-        return this.#handleToolsList(request);
+        return this.#aalijQaaimalAlat(request);
       case "tools/call":
-        return this.#handleToolsCall(request);
+        return this.#aalijNidaAlat(request);
       default:
         return {
           jsonrpc: "2.0",
@@ -132,7 +132,7 @@ export class MunadiMunMcpServer {
   /**
    * Handle tahyia request
    */
-  #handleInitialize(request: McpRequest): McpResponse {
+  #aalijBadaa(request: McpRequest): McpResponse {
     return {
       jsonrpc: "2.0",
       id: request.id,
@@ -152,7 +152,7 @@ export class MunadiMunMcpServer {
   /**
    * Handle tools/list request
    */
-  #handleToolsList(request: McpRequest): McpResponse {
+  #aalijQaaimalAlat(request: McpRequest): McpResponse {
     return {
       jsonrpc: "2.0",
       id: request.id,
@@ -166,7 +166,7 @@ export class MunadiMunMcpServer {
    * Validate required arguments are present and non-null.
    * Throws with a clear message if validation fails.
    */
-  #tahaqqaqArgs(
+  #tahaqqaqHujaj(
     toolName: string,
     args: Record<string, unknown>,
   ): void {
@@ -188,7 +188,7 @@ export class MunadiMunMcpServer {
   /**
    * Handle tools/call request
    */
-  async #handleToolsCall(request: McpRequest): Promise<McpResponse> {
+  async #aalijNidaAlat(request: McpRequest): Promise<McpResponse> {
     const params = request.params as {
       name: string;
       arguments: Record<string, unknown>;
@@ -197,7 +197,7 @@ export class MunadiMunMcpServer {
     const args = params?.arguments ?? {};
 
     try {
-      this.#tahaqqaqArgs(toolName, args);
+      this.#tahaqqaqHujaj(toolName, args);
 
       const handler = this.#registry.muaallijLi(toolName);
       if (!handler) {
@@ -230,11 +230,11 @@ export class MunadiMunMcpServer {
   /**
    * Register all 16 core PM-MCP tools.
    */
-  #registerCoreTools(): void {
+  #sajjilAlatAsasiyya(): void {
 
     this.#registry.register(
       {
-        name: "mun_create_wasfa",
+        name: "mun_khalaq_wasfa",
         description:
           "Create a new wasfa (وصفة) - a formula for transformation. Each wasfa describes work to be transmuted.",
         inputSchema: {
@@ -280,7 +280,7 @@ export class MunadiMunMcpServer {
 
     this.#registry.register(
       {
-        name: "mun_update_wasfa",
+        name: "mun_jaddid_wasfa",
         description:
           "Update an existing ticket. Use for grooming, refining estimates, or changing status.",
         inputSchema: {
@@ -313,7 +313,7 @@ export class MunadiMunMcpServer {
 
     this.#registry.register(
       {
-        name: "mun_set_relations",
+        name: "mun_wadaa_alaqat",
         description:
           "Set blocking relations between tickets. Primary mechanism for guiding execution order.",
         inputSchema: {
@@ -341,12 +341,12 @@ export class MunadiMunMcpServer {
           required: ["huwiyyatMurshid", "huwiyyatWasfa"],
         },
       },
-      (args) => this.#handleSetRelations(args),
+      (args) => this.#aalijWadaaAlaqat(args),
     );
 
     this.#registry.register(
       {
-        name: "mun_read_wasfa",
+        name: "mun_iqra_wasfa",
         description: `Read any issue tracker URL (Linear, Jira, GitHub) and get enriched information with Iksir context.
 
 Returns:
@@ -379,7 +379,7 @@ Use this as your primary way to understand ticket entities.`,
 
     this.#registry.register(
       {
-        name: "mun_create_risala",
+        name: "mun_khalaq_risala",
         description:
           "Create a draft pull request. Daemon handles gh CLI interaction.",
         inputSchema: {
@@ -418,7 +418,7 @@ Use this as your primary way to understand ticket entities.`,
 
     this.#registry.register(
       {
-        name: "mun_check_branch_status",
+        name: "mun_fahas_far",
         description:
           "Check branch status (ahead/behind relative to main, files changed).",
         inputSchema: {
@@ -436,13 +436,13 @@ Use this as your primary way to understand ticket entities.`,
           required: ["huwiyyatMurshid", "branch"],
         },
       },
-      (args) => this.#handleCheckBranchStatus(args),
+      (args) => this.#aalijFahasFar(args),
     );
 
 
     this.#registry.register(
       {
-        name: "mun_notify",
+        name: "mun_balligh",
         description:
           "Send a notification to al-Kimyawi. Use for blockers, decisions needed, and milestones.",
         inputSchema: {
@@ -477,12 +477,12 @@ Use this as your primary way to understand ticket entities.`,
           required: ["huwiyyatMurshid", "message", "awwaliyya"],
         },
       },
-      (args) => this.#handleNotify(args),
+      (args) => this.#aalijTabligh(args),
     );
 
     this.#registry.register(
       {
-        name: "mun_reply",
+        name: "mun_radd",
         description:
           "Send a conversational response to al-Kimyawi. Use this when al-Kimyawi asks a question (not a command). Questions seek information; commands direct action.",
         inputSchema: {
@@ -500,12 +500,12 @@ Use this as your primary way to understand ticket entities.`,
           required: ["huwiyyatMurshid", "message"],
         },
       },
-      (args) => this.#handleReply(args),
+      (args) => this.#aalijRadd(args),
     );
 
     this.#registry.register(
       {
-        name: "mun_log_decision",
+        name: "mun_sajjal_qarar",
         description:
           "Log a decision to the diary. Creates persistent record of planning, execution, and learning.",
         inputSchema: {
@@ -542,12 +542,12 @@ Use this as your primary way to understand ticket entities.`,
           required: ["huwiyyatMurshid", "type", "decision", "reasoning"],
         },
       },
-      (args) => this.#handleLogDecision(args),
+      (args) => this.#aalijTasjilQarar(args),
     );
 
     this.#registry.register(
       {
-        name: "mun_read_diary",
+        name: "mun_iqra_mudawwana",
         description: `Query the collective diary for past decisions, learnings, and context.
 
 The diary is a shared knowledge pool across all murshidun. Use it to:
@@ -587,13 +587,13 @@ The diary is a shared knowledge pool across all murshidun. Use it to:
           required: ["huwiyyatMurshid"],
         },
       },
-      (args) => this.#handleReadDiary(args),
+      (args) => this.#aalijQiraatMudawwana(args),
     );
 
 
     this.#registry.register(
       {
-        name: "mun_yield",
+        name: "mun_tanazal",
         description: `Yield control voluntarily when blocked or waiting.
 
 Use this when:
@@ -626,12 +626,12 @@ You will continue receiving issue tracker/GitHub updates even while idle.`,
           required: ["huwiyyatMurshid", "reason", "details"],
         },
       },
-      (args) => this.#handleYield(args),
+      (args) => this.#aalijTanazal(args),
     );
 
     this.#registry.register(
       {
-        name: "mun_demand_control",
+        name: "mun_talab_tahakkum",
         description: `Demand control back when you have actionable work.
 
 Use this when:
@@ -662,13 +662,13 @@ If another murshid is working, Al-Kimyawi will be asked to approve the switch.`,
           required: ["huwiyyatMurshid", "reason", "awwaliyya"],
         },
       },
-      (args) => this.#handleDemandControl(args),
+      (args) => this.#aalijTalabTahakkum(args),
     );
 
 
     this.#registry.register(
       {
-        name: "mun_create_branch",
+        name: "mun_khalaq_far",
         description: `Create the branch for a new murshid. Called once when starting work.
 
 The daemon will:
@@ -707,13 +707,13 @@ You should only call this once per murshid, at the start.`,
           required: ["huwiyyatMurshid", "identifier", "type"],
         },
       },
-      (args) => this.#handleCreateBranch(args),
+      (args) => this.#aalijKhalqFar(args),
     );
 
     this.#registry.register(
       {
-        name: "mun_git_add",
-        description: "Stage files for commit. Use before mun_commit.",
+        name: "mun_rattib",
+        description: "Stage files for commit. Use before mun_iltazim.",
         inputSchema: {
           type: "object",
           properties: {
@@ -730,12 +730,12 @@ You should only call this once per murshid, at the start.`,
           required: ["huwiyyatMurshid", "files"],
         },
       },
-      (args) => this.#handleGitAdd(args),
+      (args) => this.#aalijRattib(args),
     );
 
     this.#registry.register(
       {
-        name: "mun_commit",
+        name: "mun_iltazim",
         description: "Commit staged changes with a message.",
         inputSchema: {
           type: "object",
@@ -757,12 +757,12 @@ You should only call this once per murshid, at the start.`,
           required: ["huwiyyatMurshid", "message"],
         },
       },
-      (args) => this.#handleCommit(args),
+      (args) => this.#aalijIltazim(args),
     );
 
     this.#registry.register(
       {
-        name: "mun_git_push",
+        name: "mun_idfa",
         description: "Push current branch to origin.",
         inputSchema: {
           type: "object",
@@ -775,13 +775,13 @@ You should only call this once per murshid, at the start.`,
           required: ["huwiyyatMurshid"],
         },
       },
-      (args) => this.#handleGitPush(args),
+      (args) => this.#aalijIdfa(args),
     );
 
 
     this.#registry.register(
       {
-        name: "code_query",
+        name: "mun_istifsar",
         description:
           "Query the codebase index for symbol locations, dependencies, impact analysis, and search. " +
           "Use this BEFORE grepping or globbing — it's faster and gives structured results. " +
@@ -803,10 +803,10 @@ You should only call this once per murshid, at the start.`,
   }
 
 
-  #registerAlchemicalTools(): void {
+  #sajjilAlatKimiya(): void {
     this.#registry.register(
       {
-        name: "mun_istikhas",
+        name: "mun_istikhlas",
         description: 
           "Extract rune stones from the crucible for transmutation. " +
           "Identifies which stones contain the runes needed for this essence. " +
@@ -840,7 +840,7 @@ You should only call this once per murshid, at the start.`,
         description:
           "Attune the extracted rune stones — discover summoning circles, contract dependencies, " +
           "missing incantations required for stability. Returns which additional stones must be included. " +
-          "Call after mun_istikhas to ensure the runes will function in isolation.",
+          "Call after mun_istikhlas to ensure the runes will function in isolation.",
         inputSchema: {
           type: "object",
           properties: {
@@ -969,7 +969,7 @@ You should only call this once per murshid, at the start.`,
 
   async #aalajaKhalqWasfa(args: Record<string, unknown>): Promise<string> {
     const call: NidaKhalqWasfa = {
-      tool: "mun_create_wasfa",
+      tool: "mun_khalaq_wasfa",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       title: args.title as string,
       description: args.description as string | undefined,
@@ -992,7 +992,7 @@ Daemon will create the ticket and return the ticket ID.`;
 
   async #aalajaTajdidWasfa(args: Record<string, unknown>): Promise<string> {
     const call: NidaTajdidWasfa = {
-      tool: "mun_update_wasfa",
+      tool: "mun_jaddid_wasfa",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       huwiyyatWasfa: args.huwiyyatWasfa as string,
       updates: args.updates as NidaTajdidWasfa["updates"],
@@ -1012,9 +1012,9 @@ Updates:
 ${updatesList}`;
   }
 
-  async #handleSetRelations(args: Record<string, unknown>): Promise<string> {
+  async #aalijWadaaAlaqat(args: Record<string, unknown>): Promise<string> {
     const call: MunSetRelationsCall = {
-      tool: "mun_set_relations",
+      tool: "mun_wadaa_alaqat",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       huwiyyatWasfa: args.huwiyyatWasfa as string,
       blocks: args.blocks as string[] | undefined,
@@ -1039,7 +1039,7 @@ Relations control execution order: blocked tickets wait for blockers to complete
 
   async #aalajaQiraaatWasfa(args: Record<string, unknown>): Promise<string> {
     const call: NidaQiraatWasfa = {
-      tool: "mun_read_wasfa",
+      tool: "mun_iqra_wasfa",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       url: args.url as string,
     };
@@ -1081,7 +1081,7 @@ Awaiting daemon response...`;
 
   async #aalajaKhalqRisala(args: Record<string, unknown>): Promise<string> {
     const call: NidaKhalqRisala = {
-      tool: "mun_create_risala",
+      tool: "mun_khalaq_risala",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       huwiyyatWasfa: args.huwiyyatWasfa as string,
       title: args.title as string,
@@ -1106,9 +1106,9 @@ Daemon will:
 4. Update diary with PR info`;
   }
 
-  async #handleCheckBranchStatus(args: Record<string, unknown>): Promise<string> {
+  async #aalijFahasFar(args: Record<string, unknown>): Promise<string> {
     const call: MunCheckBranchStatusCall = {
-      tool: "mun_check_branch_status",
+      tool: "mun_fahas_far",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       branch: args.branch as string,
     };
@@ -1126,9 +1126,9 @@ Daemon will return:
   }
 
 
-  async #handleNotify(args: Record<string, unknown>): Promise<string> {
+  async #aalijTabligh(args: Record<string, unknown>): Promise<string> {
     const call: MunNotifyCall = {
-      tool: "mun_notify",
+      tool: "mun_balligh",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       message: args.message as string,
       awwaliyya: args.awwaliyya as MunNotifyCall["awwaliyya"],
@@ -1149,9 +1149,9 @@ Message: ${call.message}${actionsText}
 Al-Kimyawi will receive this via Telegram/ntfy.`;
   }
 
-  async #handleReply(args: Record<string, unknown>): Promise<string> {
+  async #aalijRadd(args: Record<string, unknown>): Promise<string> {
     const call: MunReplyCall = {
-      tool: "mun_reply",
+      tool: "mun_radd",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       message: args.message as string,
     };
@@ -1163,9 +1163,9 @@ Al-Kimyawi will receive this via Telegram/ntfy.`;
 ${call.message}`;
   }
 
-  async #handleLogDecision(args: Record<string, unknown>): Promise<string> {
+  async #aalijTasjilQarar(args: Record<string, unknown>): Promise<string> {
     const call: MunLogDecisionCall = {
-      tool: "mun_log_decision",
+      tool: "mun_sajjal_qarar",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       type: args.type as MunLogDecisionCall["type"],
       decision: args.decision as string,
@@ -1195,9 +1195,9 @@ Reasoning: ${call.reasoning}
 This decision is now part of the persistent record.`;
   }
 
-  #handleReadDiary(args: Record<string, unknown>): string {
+  #aalijQiraatMudawwana(args: Record<string, unknown>): string {
     const call: MunReadDiaryCall = {
-      tool: "mun_read_diary",
+      tool: "mun_iqra_mudawwana",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       filterMurshid: args.filterMurshid as string | undefined,
       type: args.type as MunReadDiaryCall["type"],
@@ -1243,9 +1243,9 @@ This decision is now part of the persistent record.`;
   }
 
 
-  async #handleYield(args: Record<string, unknown>): Promise<string> {
+  async #aalijTanazal(args: Record<string, unknown>): Promise<string> {
     const call: MunYieldCall = {
-      tool: "mun_yield",
+      tool: "mun_tanazal",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       reason: args.reason as "masdud" | "muntazir",
       details: args.details as string,
@@ -1272,12 +1272,12 @@ What happens next:
 - If nobody has work → system idles until external event
 
 You will continue receiving issue tracker/GitHub updates.
-Use \`mun_demand_control\` when you have actionable work again.`;
+Use \`mun_talab_tahakkum\` when you have actionable work again.`;
   }
 
-  async #handleDemandControl(args: Record<string, unknown>): Promise<string> {
+  async #aalijTalabTahakkum(args: Record<string, unknown>): Promise<string> {
     const call: MunDemandControlCall = {
-      tool: "mun_demand_control",
+      tool: "mun_talab_tahakkum",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       reason: args.reason as string,
       awwaliyya: args.awwaliyya as "normal" | "urgent",
@@ -1301,10 +1301,10 @@ You will be notified when control is granted.`;
   }
 
 
-  async #handleCreateBranch(args: Record<string, unknown>): Promise<string> {
+  async #aalijKhalqFar(args: Record<string, unknown>): Promise<string> {
     const murshidType = args.type as NawMurshid;
     const call: MunCreateBranchCall = {
-      tool: "mun_create_branch",
+      tool: "mun_khalaq_far",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       identifier: args.identifier as string,
       type: murshidType,
@@ -1329,9 +1329,9 @@ Daemon will:
 You will be notified when the branch is ready.`;
   }
 
-  async #handleGitAdd(args: Record<string, unknown>): Promise<string> {
+  async #aalijRattib(args: Record<string, unknown>): Promise<string> {
     const call: MunGitAddCall = {
-      tool: "mun_git_add",
+      tool: "mun_rattib",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       files: args.files as string[],
     };
@@ -1346,9 +1346,9 @@ ${call.files.map((f) => `  - ${f}`).join("\n")}
 Daemon will stage these files.`;
   }
 
-  async #handleCommit(args: Record<string, unknown>): Promise<string> {
+  async #aalijIltazim(args: Record<string, unknown>): Promise<string> {
     const call: MunCommitCall = {
-      tool: "mun_commit",
+      tool: "mun_iltazim",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       message: args.message as string,
       files: args.files as string[] | undefined,
@@ -1364,9 +1364,9 @@ ${call.files ? `Files: ${call.files.join(", ")}` : "Files: all staged"}
 Daemon will create the commit.`;
   }
 
-  async #handleGitPush(args: Record<string, unknown>): Promise<string> {
+  async #aalijIdfa(args: Record<string, unknown>): Promise<string> {
     const call: MunGitPushCall = {
-      tool: "mun_git_push",
+      tool: "mun_idfa",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
     };
 
@@ -1483,12 +1483,12 @@ Note: CI may fail if parent PR is unmerged. This is expected for incremental rev
   }
 
   async #handleDecant(args: Record<string, unknown>): Promise<string> {
-    /** This is essentially mun_create_risala with better terminology */
+    /** This is essentially mun_khalaq_risala with better terminology */
     const huwiyyatWasfa = args.huwiyyatWasfa as string;
     const essenceBranch = generateBranchName(huwiyyatWasfa, "chore");
 
     const call: NidaKhalqRisala = {
-      tool: "mun_create_risala",
+      tool: "mun_khalaq_risala",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       huwiyyatWasfa: huwiyyatWasfa,
       title: args.title as string,
