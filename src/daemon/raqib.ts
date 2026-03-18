@@ -129,7 +129,7 @@ export class Raqib {
         const status = statuses[orch.id];
         if (!status) continue;
 
-        await this.fahasJalsa(orch.id, orch.identifier, status);
+        await this.fahasJalsa(orch.id, orch.huwiyya, status);
       }
 
       /** Clean up health state for sessions that no longer exist */

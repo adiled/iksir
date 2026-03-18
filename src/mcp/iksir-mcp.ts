@@ -27,6 +27,7 @@ import type {
   MunCommitCall,
   MunGitAddCall,
   MunGitPushCall,
+  MunNaqshCall,
   MunToolCall,
   QararSijill,
   NawMurshid,
@@ -964,6 +965,35 @@ You should only call this once per murshid, at the start.`,
       },
       (args) => this.#aalijFasl(args),
     );
+
+    this.#sijillAlat.sajjil(
+      {
+        name: "mun_naqsh",
+        description:
+          "Inscribe the proven formula into the codex. " +
+          "Naqsh (نقش) is the final alchemical phase — merging the risala into the eternal kitab. " +
+          "The work becomes reproducible truth. Use after mun_fasl when the essence has been examined and approved.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            huwiyyatMurshid: {
+              type: "string",
+              description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
+            },
+            huwiyyatWasfa: {
+              type: "string",
+              description: "Ticket whose risala is being inscribed",
+            },
+            raqamRisala: {
+              type: "number",
+              description: "PR number to merge",
+            },
+          },
+          required: ["huwiyyatMurshid", "huwiyyatWasfa", "raqamRisala"],
+        },
+      },
+      (args) => this.#aalijNaqsh(args),
+    );
   }
 
 
@@ -1509,6 +1539,23 @@ Daemon will create a ${args.draft !== false ? "draft " : ""}pull request.
 You will be notified with the PR URL once created.`;
   }
 
+
+  async #aalijNaqsh(args: Record<string, unknown>): Promise<string> {
+    const call: MunNaqshCall = {
+      tool: "mun_naqsh",
+      huwiyyatMurshid: args.huwiyyatMurshid as string,
+      huwiyyatWasfa: args.huwiyyatWasfa as string,
+      raqamRisala: args.raqamRisala as number,
+    };
+
+    void call; // suppress unused warning — naqsh is not yet implemented in the daemon
+
+    throw new Error(
+      "mun_naqsh (النقش) is not yet implemented. " +
+      "The inscription phase — merging the risala into the codex — is planned. " +
+      "For now, complete the merge manually via the GitHub interface."
+    );
+  }
 
   /**
    * Forward a tool call to the Iksir daemon via SQLite

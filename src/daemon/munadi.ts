@@ -406,7 +406,7 @@ export class Munadi {
 
     if (this.huwiyyaFaila && !basicIntent.identifier) {
       const session = this.mudirJalasat.wajadaJalasatMurshid().find(
-        (s) => s.identifier === this.huwiyyaFaila
+        (s) => s.huwiyya === this.huwiyyaFaila
       );
       if (session) {
         await logger.info("dispatcher", `Routing to active murshid: ${this.huwiyyaFaila}`);
@@ -616,7 +616,7 @@ export class Munadi {
 
     /** Check if murshid already exists for this ticket */
     const existingSession = this.mudirJalasat.wajadaJalasatMurshid().find(
-      (s) => s.identifier === epicId
+      (s) => s.huwiyya === epicId
     );
 
     if (existingSession) {
@@ -626,7 +626,7 @@ export class Munadi {
     if (resolved.kitabAb) {
       const parentId = resolved.kitabAb.identifier;
       const parentSession = this.mudirJalasat.wajadaJalasatMurshid().find(
-        (s) => s.identifier === parentId
+        (s) => s.huwiyya === parentId
       );
 
       if (parentSession) {
@@ -896,7 +896,7 @@ Work on the parent instead?`;
     if (isNew) {
       response = `**New murshid started for ${identifier}**\n\n`;
       response += `Title: ${escapeMarkdown(title)}\n`;
-      response += `Branch: \`${session.branch}\`\n`;
+      response += `Branch: \`${session.far}\`\n`;
       response += `Session: \`${session.id.slice(0, 16)}...\`\n`;
       if (url) {
         response += `URL: ${url}\n`;
@@ -904,9 +904,9 @@ Work on the parent instead?`;
     } else if (wasResumed) {
       response = `**Resumed murshid for ${identifier}**\n\n`;
       response += `Title: ${escapeMarkdown(title)}\n`;
-      response += `Branch: \`${session.branch}\`\n`;
+      response += `Branch: \`${session.far}\`\n`;
       response += `Session: \`${session.id.slice(0, 16)}...\` (existing)\n`;
-      response += `Last active: ${session.lastMessageAt}\n`;
+      response += `Last active: ${session.akhirRisalaFi}\n`;
     } else {
       response = `Murshid active for ${identifier}`;
     }
@@ -971,19 +971,19 @@ Work on the parent instead?`;
     }
 
     /** Step 4: Checkout target branch (creates if doesn't exist for new murshidun) */
-    const intaqalaIlaSuccess = await git.intaqalaIla(session.branch);
+    const intaqalaIlaSuccess = await git.intaqalaIla(session.far);
     if (!intaqalaIlaSuccess) {
       if (previousSession) {
         await this.mudirJalasat.jaddadaḤalatMurshid(previousActive!, "fail");
       }
       return {
         handled: true,
-        error: `Failed to intaqalaIla branch ${session.branch}. Switch aborted.`,
+        error: `Failed to intaqalaIla branch ${session.far}. Switch aborted.`,
       };
     }
 
     if (!isNew) {
-      await git.pull(session.branch);
+      await git.pull(session.far);
     }
 
     try {
@@ -1142,7 +1142,7 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
     }
 
     const session = this.mudirJalasat.wajadaJalasatMurshid().find(
-      (s) => s.identifier === targetId
+      (s) => s.huwiyya === targetId
     );
 
     if (!session) {
@@ -1175,18 +1175,18 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
       : "Al-Kimyawi says:\n\n";
 
     const success = await this.mudirJalasat.arsalaIlaMurshidById(
-      session.identifier,
+      session.huwiyya,
       `${prefix}${msg.text}`
     );
 
     if (success) {
       return {
         handled: true,
-        response: msg.source === "cli" ? undefined : `Message sent to ${session.identifier}.`,
+        response: msg.source === "cli" ? undefined : `Message sent to ${session.huwiyya}.`,
       };
     }
 
-    return { handled: true, error: `Failed to send message to ${session.identifier}.` };
+    return { handled: true, error: `Failed to send message to ${session.huwiyya}.` };
   }
 
   /**
@@ -1266,7 +1266,7 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
     if (previousEpicId === epicId) {
       return {
         handled: true,
-        response: `✅ Already active: ${epicId}\n\nBranch: ${tarjalabJalsa.branch}\nSession: ${tarjalabJalsa.id.slice(0, 16)}...`,
+        response: `✅ Already active: ${epicId}\n\nBranch: ${tarjalabJalsa.far}\nSession: ${tarjalabJalsa.id.slice(0, 16)}...`,
       };
     }
 
@@ -1297,7 +1297,7 @@ Do NOT invoke any more sanis.
 
 You will be notified when you are IDLE.`;
 
-    await this.mudirJalasat.arsalaIlaMurshidById(session.identifier, interruptMsg);
+    await this.mudirJalasat.arsalaIlaMurshidById(session.huwiyya, interruptMsg);
 
     await new Promise((r) => setTimeout(r, 500));
   }
@@ -1308,13 +1308,13 @@ You will be notified when you are IDLE.`;
   async ablaghaJalsaSabiqa(session: JalsatMurshid, wipCommitted: boolean): Promise<void> {
     const msg = `CONTROL TRANSFERRED: You are now IDLE.
 
-Branch: ${session.branch} (no longer checked out)
+Branch: ${session.far} (no longer checked out)
 WIP: ${wipCommitted ? "committed" : "clean"}
 
 You will continue to receive issue tracker/GitHub updates.
 Use \`pm_demand_control\` when you have actionable work.`;
 
-    await this.mudirJalasat.arsalaIlaMurshidById(session.identifier, msg);
+    await this.mudirJalasat.arsalaIlaMurshidById(session.huwiyya, msg);
   }
 
   /**
@@ -1323,12 +1323,12 @@ Use \`pm_demand_control\` when you have actionable work.`;
   async ablaghaJalsaJadida(session: JalsatMurshid, previousId: string | null): Promise<void> {
     const msg = `✅ CONTROL GRANTED: You are now ACTIVE.
 
-Branch: ${session.branch} (checked out)
+Branch: ${session.far} (checked out)
 Previous active: ${previousId ?? "none"}
 
 You may now perform git operations.`;
 
-    await this.mudirJalasat.arsalaIlaMurshidById(session.identifier, msg);
+    await this.mudirJalasat.arsalaIlaMurshidById(session.huwiyya, msg);
   }
 
   async naffadhTaburLiKitab(epicId: string): Promise<void> {
@@ -1359,7 +1359,7 @@ You may now perform git operations.`;
     let response = "**Status**\n\n";
 
     if (active) {
-      const activeSession = murshidun.find((o) => o.identifier === active);
+      const activeSession = murshidun.find((o) => o.huwiyya === active);
       response += `✅ **Active: ${active}**\n`;
       if (activeSession) {
         response += `   Session: ${activeSession.id.slice(0, 16)}...\n`;
@@ -1375,11 +1375,11 @@ You may now perform git operations.`;
     response += `Queue: ${queueLen} operation(s)\n`;
 
     /** List other murshidun (if any) */
-    const others = murshidun.filter((o) => o.identifier !== active);
+    const others = murshidun.filter((o) => o.huwiyya !== active);
     if (others.length > 0) {
       response += `\n**Other murshidun (idle):**\n`;
       for (const o of others) {
-        response += `  - ${o.identifier}\n`;
+        response += `  - ${o.huwiyya}\n`;
       }
     }
 
@@ -1412,22 +1412,22 @@ You may now perform git operations.`;
       response += "No murshidun.\n";
     } else {
       for (const o of murshidun) {
-        const yakunuFail = o.identifier === this.huwiyyaFaila;
+        const yakunuFail = o.huwiyya === this.huwiyyaFaila;
         if (yakunuFail) {
-          response += `→ **${o.identifier}** (active)\n`;
-          response += `  ${escapeMarkdown(o.title)}\n\n`;
+          response += `→ **${o.huwiyya}** (active)\n`;
+          response += `  ${escapeMarkdown(o.unwan)}\n\n`;
         } else {
-          response += `  ${o.identifier} (idle)\n`;
-          response += `  ${escapeMarkdown(o.title)}\n\n`;
+          response += `  ${o.huwiyya} (idle)\n`;
+          response += `  ${escapeMarkdown(o.unwan)}\n\n`;
         }
       }
     }
 
     /** Build buttons for idle sessions */
-    const idleSessions = murshidun.filter((o) => o.identifier !== this.huwiyyaFaila);
+    const idleSessions = murshidun.filter((o) => o.huwiyya !== this.huwiyyaFaila);
     const buttons = idleSessions.map((o) => ({
-      text: `Switch to ${o.identifier}`,
-      data: `switch:${o.identifier}`,
+      text: `Switch to ${o.huwiyya}`,
+      data: `switch:${o.huwiyya}`,
     }));
 
     return { handled: true, response, buttons: buttons.length > 0 ? buttons : undefined };
@@ -1435,7 +1435,7 @@ You may now perform git operations.`;
 
   aradhMuntaqiTahwil(): NatijaIrsal {
     const murshidun = this.mudirJalasat.wajadaJalasatMurshid();
-    const idleSessions = murshidun.filter((o) => o.identifier !== this.huwiyyaFaila);
+    const idleSessions = murshidun.filter((o) => o.huwiyya !== this.huwiyyaFaila);
 
     if (murshidun.length === 0) {
       return { handled: true, response: "No murshidun to switch to." };
@@ -1452,10 +1452,10 @@ You may now perform git operations.`;
     let response = "**Switch Active Session**\n\n";
 
     if (this.huwiyyaFaila) {
-      const activeSession = murshidun.find((o) => o.identifier === this.huwiyyaFaila);
+      const activeSession = murshidun.find((o) => o.huwiyya === this.huwiyyaFaila);
       response += `Current: **${this.huwiyyaFaila}**\n`;
       if (activeSession) {
-        response += `${escapeMarkdown(activeSession.title)}\n`;
+        response += `${escapeMarkdown(activeSession.unwan)}\n`;
       }
       response += "\n";
     }
@@ -1463,13 +1463,13 @@ You may now perform git operations.`;
     response += "Choose:\n";
     for (let i = 0; i < idleSessions.length; i++) {
       const o = idleSessions[i];
-      response += `[${i + 1}] ${o.identifier} - ${escapeMarkdown(o.title)}\n`;
+      response += `[${i + 1}] ${o.huwiyya} - ${escapeMarkdown(o.unwan)}\n`;
     }
 
     /** Build buttons */
     const buttons = idleSessions.map((o, i) => ({
-      text: `[${i + 1}] ${o.identifier}`,
-      data: `switch:${o.identifier}`,
+      text: `[${i + 1}] ${o.huwiyya}`,
+      data: `switch:${o.huwiyya}`,
     }));
     buttons.push({ text: "Cancel", data: "cancel" });
 

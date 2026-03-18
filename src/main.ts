@@ -311,22 +311,22 @@ function addaMualijatTelegram(ctx: SiyaqKhadim): void {
       /** Resolve murshid from channel */
       const murshid = ctx.mudirJalasat.wajadaMurshidBiQanat("telegram", String(topicId));
 
-      if (murshid && ctx.sail.huwaYantazirIdkhal(murshid.identifier)) {
-        const handled = await ctx.sail.aalajJawabKhass(murshid.identifier, text);
+      if (murshid && ctx.sail.huwaYantazirIdkhal(murshid.huwiyya)) {
+        const handled = await ctx.sail.aalajJawabKhass(murshid.huwiyya, text);
         if (handled) {
-          await ctx.rasul.send({ murshid: murshid.identifier }, "Answer submitted.");
+          await ctx.rasul.send({ murshid: murshid.huwiyya }, "Answer submitted.");
           return;
         }
       }
       
       if (murshid) {
-        await logger.info("telegram", `Routing to murshid ${murshid.identifier} via topic ${topicId}`);
+        await logger.info("telegram", `Routing to murshid ${murshid.huwiyya} via topic ${topicId}`);
         
-        const success = await ctx.mudirJalasat.arsalaIlaMurshidById(murshid.identifier, text);
+        const success = await ctx.mudirJalasat.arsalaIlaMurshidById(murshid.huwiyya, text);
         if (!success) {
           await ctx.telegram.arsalaIlaMurshidTopic(
             topicId,
-            `Failed to send message to murshid ${murshid.identifier}.`
+            `Failed to send message to murshid ${murshid.huwiyya}.`
           );
         }
         return;
@@ -362,7 +362,7 @@ function addaMualijatTelegram(ctx: SiyaqKhadim): void {
             ? ctx.mudirJalasat.wajadaMurshidBiQanat("telegram", String(topicId))
             : null;
           if (murshid) {
-            await ctx.sail.allamIntizarIdkhal(murshid.identifier, parsed.questionId);
+            await ctx.sail.allamIntizarIdkhal(murshid.huwiyya, parsed.questionId);
             await ctx.telegram.answerCallback(query.id, "Type your answer as a reply...");
           } else {
             await ctx.telegram.answerCallback(query.id, "Cannot resolve murshid for custom input");
@@ -439,11 +439,11 @@ async function aalajRisalaKhassa(
     response += "No active murshid sessions.\n\n";
   } else {
     for (const session of sessions) {
-      const statusEmoji = session.status === "fail" ? "🟢" : 
-                          session.status === "masdud" ? "🔴" : 
-                          session.status === "muntazir" ? "🟡" : "⚪";
-      response += `${statusEmoji} **${session.identifier}** (${session.type})\n`;
-      response += `   ${session.title}\n`;
+      const statusEmoji = session.hala === "fail" ? "🟢" : 
+                          session.hala === "masdud" ? "🔴" : 
+                          session.hala === "muntazir" ? "🟡" : "⚪";
+      response += `${statusEmoji} **${session.huwiyya}** (${session.naw})\n`;
+      response += `   ${session.unwan}\n`;
       if (Object.keys(session.channels).length > 0) {
         const channelStr = Object.entries(session.channels).map(([p, id]) => `${p}:${id}`).join(", ");
         response += `   Channels: ${channelStr}\n`;
@@ -622,14 +622,14 @@ async function aalajDamjRisala(
   pr: RisalaMutaba
 ): Promise<void> {
   await logger.info("main", `PR #${pr.raqamRisala} merged for ${pr.huwiyyatWasfa}`, {
-    epicId: session.identifier,
+    epicId: session.huwiyya,
   });
 
   /**
    * Check if any other PRs were stacked on this one (early push / pressure mode)
    * Those PRs need to be re-transmuted via mun_istihal onto codex
    */
-  const activePRs = ctx.mudirJalasat.wajadaRasaailFaailaLiMurshid(session.identifier);
+  const activePRs = ctx.mudirJalasat.wajadaRasaailFaailaLiMurshid(session.huwiyya);
   const stackedPRs = activePRs.filter(
     (p) => p.status === "draft" || p.status === "open"
   );
@@ -646,7 +646,7 @@ ${stackedPRs.map((p) => `- ${p.huwiyyatWasfa} (PR #${p.raqamRisala}): Use \`mun_
 Re-pushing will fix CI (now that base is on main).`;
   }
 
-  await ctx.mudirJalasat.arsalaIlaMurshidById(session.identifier, `## PR Merged - Ready for Next Slice
+  await ctx.mudirJalasat.arsalaIlaMurshidById(session.huwiyya, `## PR Merged - Ready for Next Slice
 
 **PR:** #${pr.raqamRisala}
 **Ticket:** ${pr.huwiyyatWasfa}
@@ -664,7 +664,7 @@ Query Linear for the ticket's blocking relations to determine next slice.`);
       ? `\n\n${stackedPRs.length} stacked PR(s) may need re-push.`
       : "";
     await ctx.telegram.arsalaRisala(
-      `✅ PR #${pr.raqamRisala} merged\n\nTicket: ${pr.huwiyyatWasfa}\nEpic: ${session.identifier}\n\nNext slice may now be disclosed.${stackedMsg}`
+      `✅ PR #${pr.raqamRisala} merged\n\nTicket: ${pr.huwiyyatWasfa}\nEpic: ${session.huwiyya}\n\nNext slice may now be disclosed.${stackedMsg}`
     );
   }
 }
@@ -675,11 +675,11 @@ async function aalajIghlaqRisala(
   pr: RisalaMutaba
 ): Promise<void> {
   await logger.info("main", `PR #${pr.raqamRisala} closed without merge`, {
-    epicId: session.identifier,
+    epicId: session.huwiyya,
     huwiyyatWasfa: pr.huwiyyatWasfa,
   });
 
-  await ctx.mudirJalasat.arsalaIlaMurshidById(session.identifier, `## PR Closed Without Merge
+  await ctx.mudirJalasat.arsalaIlaMurshidById(session.huwiyya, `## PR Closed Without Merge
 
 **PR:** #${pr.raqamRisala}
 **Ticket:** ${pr.huwiyyatWasfa}
@@ -697,11 +697,11 @@ async function aalajAmrAlKimyawi(
   comment: TaaliqMuraja
 ): Promise<void> {
   await logger.info("main", `Al-Kimyawi command on PR #${raqamRisala}`, {
-    epicId: session.identifier,
+    epicId: session.huwiyya,
     body: comment.body.slice(0, 100),
   });
 
-  await ctx.mudirJalasat.arsalaIlaMurshidById(session.identifier, `## Al-Kimyawi command on PR #${raqamRisala}
+  await ctx.mudirJalasat.arsalaIlaMurshidById(session.huwiyya, `## Al-Kimyawi command on PR #${raqamRisala}
 
 ${comment.body}
 
@@ -715,7 +715,7 @@ async function aalajTaaliqatJadida(
   comments: TaaliqMuraja[]
 ): Promise<void> {
   await logger.info("main", `${comments.length} new review comments on PR #${raqamRisala}`, {
-    epicId: session.identifier,
+    epicId: session.huwiyya,
     authors: [...new Set(comments.map((c) => c.author))],
   });
 
@@ -724,7 +724,7 @@ async function aalajTaaliqatJadida(
     .map((c) => `- @${c.author}: "${c.body.slice(0, 100)}${c.body.length > 100 ? "..." : ""}"`)
     .join("\n");
 
-  await ctx.mudirJalasat.arsalaIlaMurshidById(session.identifier, `## New Review Comments on PR #${raqamRisala}
+  await ctx.mudirJalasat.arsalaIlaMurshidById(session.huwiyya, `## New Review Comments on PR #${raqamRisala}
 
 ${commentText}
 
@@ -740,11 +740,11 @@ async function aalajTaarudRisala(
   pr: RisalaMutaba
 ): Promise<void> {
   await logger.warn("main", `PR #${pr.raqamRisala} has conflicts`, {
-    epicId: session.identifier,
+    epicId: session.huwiyya,
     huwiyyatWasfa: pr.huwiyyatWasfa,
   });
 
-  await ctx.mudirJalasat.arsalaIlaMurshidById(session.identifier, `## PR Has Merge Conflicts
+  await ctx.mudirJalasat.arsalaIlaMurshidById(session.huwiyya, `## PR Has Merge Conflicts
 
 **PR:** #${pr.raqamRisala}
 **Ticket:** ${pr.huwiyyatWasfa}
@@ -761,11 +761,11 @@ async function aalajFashalFahs(
   pr: RisalaMutaba
 ): Promise<void> {
   await logger.warn("main", `PR #${pr.raqamRisala} CI failing`, {
-    epicId: session.identifier,
+    epicId: session.huwiyya,
     huwiyyatWasfa: pr.huwiyyatWasfa,
   });
 
-  await ctx.mudirJalasat.arsalaIlaMurshidById(session.identifier, `## CI Checks Failing
+  await ctx.mudirJalasat.arsalaIlaMurshidById(session.huwiyya, `## CI Checks Failing
 
 **PR:** #${pr.raqamRisala}
 **Ticket:** ${pr.huwiyyatWasfa}

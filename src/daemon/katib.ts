@@ -156,13 +156,13 @@ export class MudirJalasat {
 
       session = {
         id: existingSession.id,
-        identifier,
-        title: existingSession.title,
-        type,
-        branch: generateBranchName(identifier, type, undefined, existingSession.title),
-        status: "fail",
-        createdAt: existingSession.createdAt.toISOString(),
-        lastMessageAt: existingSession.lastMessageAt.toISOString(),
+        huwiyya: identifier,
+        unwan: existingSession.title,
+        naw: type,
+        far: generateBranchName(identifier, type, undefined, existingSession.title),
+        hala: "fail",
+        unshiaFi: existingSession.createdAt.toISOString(),
+        akhirRisalaFi: existingSession.lastMessageAt.toISOString(),
         activePRs: [],
         channels: this.#messenger.hammalQanawatLilJalsa(identifier),
       };
@@ -189,13 +189,13 @@ export class MudirJalasat {
 
     session = {
       id: openCodeSession.id,
-      identifier,
-      title,
-      type,
-      branch: generateBranchName(identifier, type, undefined, title),
-      status: "fail",
-      createdAt: new Date().toISOString(),
-      lastMessageAt: new Date().toISOString(),
+      huwiyya: identifier,
+      unwan: title,
+      naw: type,
+      far: generateBranchName(identifier, type, undefined, title),
+      hala: "fail",
+      unshiaFi: new Date().toISOString(),
+      akhirRisalaFi: new Date().toISOString(),
       activePRs: [],
       channels: {},
     };
@@ -280,13 +280,13 @@ export class MudirJalasat {
    * Creates one if missing. Called automatically when murshid starts.
    */
   async takkadMinQanat(session: JalsatMurshid): Promise<void> {
-    if (this.#messenger.yamlikQanatMurshid(session.identifier)) {
+    if (this.#messenger.yamlikQanatMurshid(session.huwiyya)) {
       return;
     }
 
     const channelId = await this.#messenger.khalaqaQanatMurshid(
-      session.identifier,
-      session.title,
+      session.huwiyya,
+      session.unwan,
     );
 
     if (channelId) {
@@ -294,8 +294,8 @@ export class MudirJalasat {
       await this.hafizaHala();
 
       await this.#messenger.send(
-        { murshid: session.identifier },
-        `Murshid session started for ${session.identifier}.\n\nAll messages for this epic will appear here.`,
+        { murshid: session.huwiyya },
+        `Murshid session started for ${session.huwiyya}.\n\nAll messages for this epic will appear here.`,
       );
 
       await this.#opencode.sendPromptAsync(
@@ -326,7 +326,7 @@ export class MudirJalasat {
    */
   async jaddadaḤalatMurshid(
     epicId: string,
-    status: JalsatMurshid["status"],
+    status: JalsatMurshid["hala"],
     blockedReason?: string
   ): Promise<boolean> {
     const session = this.#murshidSessions.get(epicId);
@@ -335,11 +335,11 @@ export class MudirJalasat {
       return false;
     }
 
-    session.status = status;
+    session.hala = status;
     if (blockedReason !== undefined) {
-      session.blockedReason = blockedReason;
+      session.illa = blockedReason;
     } else if (status !== "masdud" && status !== "muntazir") {
-      session.blockedReason = undefined;
+      session.illa = undefined;
     }
 
     await this.hafizaHala();
@@ -424,7 +424,7 @@ export class MudirJalasat {
         await this.hafizaHala();
 
         await logger.info("session-manager", `Updated PR #${raqamRisala} status: ${previousStatus} → ${status}`, {
-          identifier: session.identifier,
+          identifier: session.huwiyya,
           huwiyyatWasfa: pr.huwiyyatWasfa,
         });
 
@@ -485,7 +485,7 @@ export class MudirJalasat {
     const messageWithReminder = this.maaTadhkirNizam(session, message);
     const success = await this.#opencode.sendPromptAsync(session.id, messageWithReminder);
     if (success) {
-      session.lastMessageAt = new Date().toISOString();
+      session.akhirRisalaFi = new Date().toISOString();
     }
     return success;
   }
@@ -504,7 +504,7 @@ export class MudirJalasat {
     const messageWithReminder = this.maaTadhkirNizam(session, message);
     const success = await this.#opencode.sendPromptAsync(session.id, messageWithReminder);
     if (success) {
-      session.lastMessageAt = new Date().toISOString();
+      session.akhirRisalaFi = new Date().toISOString();
     }
     return success;
   }
@@ -516,7 +516,7 @@ export class MudirJalasat {
     return `${message}
 
 <system-reminder>
-Your murshid ID is: ${session.identifier}
+Your murshid ID is: ${session.huwiyya}
 IMPORTANT: This message is from al-Kimyawi via Telegram. You MUST use pm_reply to respond.
 Do NOT output text directly - Al-Kimyawi cannot see your text output, only pm_reply messages.
 </system-reminder>`;
@@ -527,12 +527,12 @@ Do NOT output text directly - Al-Kimyawi cannot see your text output, only pm_re
    * Uses iksir-murshid agent which has the full system prompt
    */
   async #arsalaTasisMurshid(session: JalsatMurshid): Promise<void> {
-    const prompt = session.type === "epic" 
+    const prompt = session.naw === "epic" 
       ? `# Epic Assignment
 
 ## Epic Details
-- **ID**: ${session.identifier}
-- **Title**: ${session.title}
+- **ID**: ${session.huwiyya}
+- **Title**: ${session.unwan}
 
 Please use \`pm_read_ticket\` to fetch the full epic details and begin planning.
 
@@ -540,8 +540,8 @@ Awaiting direction from al-Kimyawi...`
       : `# Chore Assignment
 
 ## Chore Details
-- **ID**: ${session.identifier}
-- **Title**: ${session.title}
+- **ID**: ${session.huwiyya}
+- **Title**: ${session.unwan}
 
 This is a standalone task (chore), not an epic. No sub-tickets needed.
 
@@ -582,13 +582,13 @@ Awaiting direction from al-Kimyawi...`;
     const session = this.wajadaMurshidBiHuwiyyatJalsa(sessionId);
     if (!session) return;
 
-    await logger.info("session-manager", `Post-compaction diary reload for ${session.identifier}`, {
+    await logger.info("session-manager", `Post-compaction diary reload for ${session.huwiyya}`, {
       sessionId,
     });
 
     /** Fetch diary entries for this murshid */
     const entries = jalabaQararatSijill({
-      huwiyyatMurshid: session.identifier,
+      huwiyyatMurshid: session.huwiyya,
       limit: 15,
     });
 
@@ -596,7 +596,7 @@ Awaiting direction from al-Kimyawi...`;
       await this.#opencode.sendPromptAsync(session.id,
         `<system-reminder>
 Context compaction occurred. Your conversation history was summarized.
-Your murshid ID is: ${session.identifier}
+Your murshid ID is: ${session.huwiyya}
 Use pm_reply to respond to al-Kimyawi — direct text output is invisible.
 Use pm_read_diary to reload full decision history if needed.
 </system-reminder>`
@@ -618,7 +618,7 @@ Context compaction occurred. Key diary decisions for your reference:
 
 ${diaryBlock}
 
-Your murshid ID is: ${session.identifier}
+Your murshid ID is: ${session.huwiyya}
 Use pm_reply to respond to al-Kimyawi — direct text output is invisible.
 Call pm_read_diary for full decision history with reasoning.
 </system-reminder>`
@@ -654,7 +654,7 @@ Call pm_read_diary for full decision history with reasoning.
   }): void {
     if (state.murshidun) {
       for (const session of state.murshidun) {
-        this.#murshidSessions.set(session.identifier, session);
+        this.#murshidSessions.set(session.huwiyya, session);
       }
     }
 
@@ -671,25 +671,25 @@ Call pm_read_diary for full decision history with reasoning.
     try {
       for (const session of this.#murshidSessions.values()) {
         /** Handle legacy sessions that might have epicTitle instead of title */
-        const title = session.title || (session as unknown as { epicTitle?: string }).epicTitle || "";
+        const title = session.unwan || (session as unknown as { epicTitle?: string }).epicTitle || "";
         
         haddathaAwAdkhalaJalsa({
           id: session.id,
-          identifier: session.identifier,
+          identifier: session.huwiyya,
           title,
-          type: session.type,
-          status: session.status,
-          branch: session.branch || "",
-          blockedReason: session.blockedReason,
-          createdAt: session.createdAt,
-          lastMessageAt: session.lastMessageAt,
+          type: session.naw,
+          status: session.hala,
+          branch: session.far || "",
+          blockedReason: session.illa,
+          createdAt: session.unshiaFi,
+          lastMessageAt: session.akhirRisalaFi,
           metadata: {
             activePRs: session.activePRs || [],
           },
         });
 
         for (const [provider, channelId] of Object.entries(session.channels)) {
-          haddathaAwAdkhalaQanat(session.identifier, provider, channelId);
+          haddathaAwAdkhalaQanat(session.huwiyya, provider, channelId);
         }
       }
 
@@ -731,20 +731,20 @@ Call pm_read_diary for full decision history with reasoning.
 
           const session: JalsatMurshid = {
             id: dbSession.id,
-            identifier: dbSession.huwiyya,
-            title: dbSession.unwan ?? "",
-            type: dbSession.naw as NawMurshid,
-            status: dbSession.hala as JalsatMurshid["status"],
-            branch: dbSession.far ?? "",
-            blockedReason: dbSession.illa ?? undefined,
-            createdAt: dbSession.unshia_fi,
-            lastMessageAt: dbSession.akhir_risala_fi ?? "",
+            huwiyya: dbSession.huwiyya,
+            unwan: dbSession.unwan ?? "",
+            naw: dbSession.naw as NawMurshid,
+            hala: dbSession.hala as JalsatMurshid["hala"],
+            far: dbSession.far ?? "",
+            illa: dbSession.illa ?? undefined,
+            unshiaFi: dbSession.unshia_fi,
+            akhirRisalaFi: dbSession.akhir_risala_fi ?? "",
             channels,
             activePRs: metadata.activePRs ?? [],
           };
 
           murshidunṢalihun.push(session);
-          await logger.info("session-manager", `Restored murshid session for ${session.identifier}`);
+          await logger.info("session-manager", `Restored murshid session for ${session.huwiyya}`);
         } else {
           await logger.warn("session-manager", `Murshid session ${dbSession.id} no longer exists, skipping`);
         }
@@ -755,9 +755,9 @@ Call pm_read_diary for full decision history with reasoning.
       });
 
       /** Find active murshid (one with status="fail") */
-      const activeSession = murshidunṢalihun.find(s => s.status === "fail");
+      const activeSession = murshidunṢalihun.find(s => s.hala === "fail");
       if (activeSession) {
-        this.#murshidFaailId = activeSession.identifier;
+        this.#murshidFaailId = activeSession.huwiyya;
       }
 
       await logger.info("session-manager", "Loaded session state from SQLite", {

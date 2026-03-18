@@ -367,13 +367,13 @@ export function mockMudirJalasat(sessions: JalsatMurshid[] = []): MockMudirJalas
 export function makeSession(overrides?: Partial<JalsatMurshid>): JalsatMurshid {
   return {
     id: "session-001",
-    identifier: "TEAM-1234",
-    title: "Test session",
-    type: "epic",
-    branch: "epic/stay-1234-test",
-    status: "fail",
-    createdAt: new Date().toISOString(),
-    lastMessageAt: new Date().toISOString(),
+    huwiyya: "TEAM-1234",
+    unwan: "Test session",
+    naw: "epic",
+    far: "epic/stay-1234-test",
+    hala: "fail",
+    unshiaFi: new Date().toISOString(),
+    akhirRisalaFi: new Date().toISOString(),
     activePRs: [],
     channels: {},
     ...overrides,
@@ -388,13 +388,13 @@ export function seedSession(overrides?: Partial<JalsatMurshid>): void {
   const s = makeSession(overrides);
   haddathaAwAdkhalaJalsa({
     id: s.id,
-    identifier: s.identifier,
-    title: s.title,
-    type: s.type,
-    status: s.status,
-    branch: s.branch,
-    createdAt: s.createdAt,
-    lastMessageAt: s.lastMessageAt,
+    identifier: s.huwiyya,
+    title: s.unwan,
+    type: s.naw,
+    status: s.hala,
+    branch: s.far,
+    createdAt: s.unshiaFi,
+    lastMessageAt: s.akhirRisalaFi,
     metadata: {},
   });
 }

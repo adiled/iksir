@@ -525,6 +525,14 @@ export interface MunFaslCall {
   draft?: boolean;
 }
 
+/** Naqsh (نقش — inscription): merge the risala into the codex */
+export interface MunNaqshCall {
+  tool: "mun_naqsh";
+  huwiyyatMurshid: string;
+  huwiyyatWasfa: string;
+  raqamRisala: number;
+}
+
 export type MunToolCall =
   | NidaKhalqWasfa
   | NidaTajdidWasfa
@@ -546,7 +554,8 @@ export type MunToolCall =
   | MunTalaumCall
   | MunIstihalCall
   | MunIstihalMutabaqqCall
-  | MunFaslCall;
+  | MunFaslCall
+  | MunNaqshCall;
 
 
 /** MCP tool definition (JSON Schema for tool input) */
@@ -683,18 +692,18 @@ export type NawMurshid = "epic" | "chore" | "sandbox";
 export interface JalsatMurshid {
   id: string;
   /** Linear ticket identifier (e.g., TEAM-200, TEAM-300) */
-  identifier: string;
-  title: string;
+  huwiyya: string;
+  unwan: string;
   /** Epic = multi-ticket work, Chore = standalone task */
-  type: NawMurshid;
+  naw: NawMurshid;
   /** Primary branch for this murshid */
-  branch: string;
+  far: string;
   /** Control status: idle/active/blocked/waiting */
-  status: HalatMurshid;
+  hala: HalatMurshid;
   /** Reason if blocked or waiting */
-  blockedReason?: string;
-  createdAt: string;
-  lastMessageAt: string;
+  illa?: string;
+  unshiaFi: string;
+  akhirRisalaFi: string;
   /**
    * Risālāt created via istihal for tracking.
    * Hayāt monitors these for:

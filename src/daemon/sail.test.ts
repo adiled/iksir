@@ -387,8 +387,8 @@ Deno.test("handlePotentialCustomAnswer: returns false when not awaiting", async 
 
 Deno.test("loadState: rebuilds pendingQuestions from DB", async () => {
   await withTestDb(async () => {
-    const session = makeSession({ id: "sess-abc", identifier: "TEAM-900" });
-    seedSession({ id: "sess-abc", identifier: "TEAM-900" });
+    const session = makeSession({ id: "sess-abc", huwiyya: "TEAM-900" });
+    seedSession({ id: "sess-abc", huwiyya: "TEAM-900" });
     const oc = mockOpenCodeClient();
 
     const qh = new Sail({
@@ -418,8 +418,8 @@ Deno.test("loadState: rebuilds pendingQuestions from DB", async () => {
 
 Deno.test("loadState: rebuilds callbackIdMap (parseQuestionCallback works after load)", async () => {
   await withTestDb(async () => {
-    const session = makeSession({ id: "sess-xyz", identifier: "TEAM-950" });
-    seedSession({ id: "sess-xyz", identifier: "TEAM-950" });
+    const session = makeSession({ id: "sess-xyz", huwiyya: "TEAM-950" });
+    seedSession({ id: "sess-xyz", huwiyya: "TEAM-950" });
     const oc = mockOpenCodeClient();
 
     const qh = new Sail({
@@ -467,7 +467,7 @@ Deno.test("loadState: no questions -> no-op", async () => {
 
 Deno.test("loadState: unknown session -> uses sessionId as huwiyyatMurshid fallback", async () => {
   await withTestDb(async () => {
-    seedSession({ id: "sess-unknown", identifier: "ORPHAN" });
+    seedSession({ id: "sess-unknown", huwiyya: "ORPHAN" });
 
     const qh = new Sail({
       opencode: mockOpenCodeClient() as never,

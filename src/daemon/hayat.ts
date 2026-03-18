@@ -230,7 +230,7 @@ export class DawratHayat {
     } catch (error) {
       await logger.error("keepalive", `Failed to poll PR #${raqamRisala}`, {
         error: String(error),
-        epicId: session.identifier,
+        epicId: session.huwiyya,
       });
     }
   }
@@ -249,19 +249,19 @@ export class DawratHayat {
     if (githubState === "MERGED" && trackedPR.status !== "merged") {
       newStatus = "merged";
       await logger.info("keepalive", `PR #${raqamRisala} merged`, {
-        epicId: session.identifier,
+        epicId: session.huwiyya,
         huwiyyatWasfa: trackedPR.huwiyyatWasfa,
       });
     } else if (githubState === "CLOSED" && trackedPR.status !== "closed") {
       newStatus = "closed";
       await logger.info("keepalive", `PR #${raqamRisala} closed`, {
-        epicId: session.identifier,
+        epicId: session.huwiyya,
         huwiyyatWasfa: trackedPR.huwiyyatWasfa,
       });
     } else if (githubState === "OPEN" && trackedPR.status === "draft") {
       newStatus = "open";
       await logger.info("keepalive", `PR #${raqamRisala} promoted to open`, {
-        epicId: session.identifier,
+        epicId: session.huwiyya,
       });
     }
 
@@ -417,8 +417,8 @@ export class DawratHayat {
    * Maintain a single epic branch - merge main into it
    */
   async sayanFar(session: JalsatMurshid): Promise<NatijaSeyana> {
-    const far = session.branch;
-    const huwiyya = session.identifier;
+    const far = session.far;
+    const huwiyya = session.huwiyya;
 
     await logger.info("keepalive", `Maintaining branch ${far}`);
 

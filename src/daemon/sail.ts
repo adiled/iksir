@@ -133,7 +133,7 @@ export class Sail {
     if (tamyiz.tamyiz === "KHABATH") {
       await this.aalajKhabath(sessionID, id, questions, tamyiz);
     } else {
-      await this.hawwalIlaKhadim(sessionID, id, questions, murshid.identifier);
+      await this.hawwalIlaKhadim(sessionID, id, questions, murshid.huwiyya);
     }
   }
 
@@ -453,7 +453,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
         const pendingQuestion: SualMuallaq = {
           id: dbQ.id,
           sessionID: dbQ.session_id,
-          huwiyyatMurshid: murshid?.identifier ?? dbQ.session_id,
+          huwiyyatMurshid: murshid?.huwiyya ?? dbQ.session_id,
           questions: [{
             question: dbQ.question,
             header: dbQ.question.slice(0, 30),

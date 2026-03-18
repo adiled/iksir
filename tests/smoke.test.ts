@@ -91,8 +91,8 @@ Deno.test("smoke: activateForTicketUrl creates session + topic", async () => {
     /** Session manager should track the session */
     const sessions = sessionManager.wajadaJalasatMurshid();
     assertEquals(sessions.length, 1);
-    assertEquals(sessions[0].identifier, "TEAM-1000");
-    assertEquals(sessions[0].status, "fail");
+    assertEquals(sessions[0].huwiyya, "TEAM-1000");
+    assertEquals(sessions[0].hala, "fail");
 
     assertEquals(telegram._calls.createForumTopic.length, 1);
     assertStringIncludes(telegram._calls.createForumTopic[0].name, "TEAM-1000");
@@ -120,7 +120,7 @@ Deno.test("smoke: message routed to active murshid via sendPromptAsync", async (
     /** Step 2: Send a message to the active murshid */
     const session = sessionManager.wajadaJalasatMurshid()[0];
     const success = await sessionManager.arsalaIlaMurshidById(
-      session.identifier,
+      session.huwiyya,
       "implement the null safety checks",
     );
 
@@ -211,12 +211,12 @@ Deno.test("smoke: murshid topic message routes to correct session", async () => 
     /** Step 3: Simulate main.ts topic routing */
     const resolvedMurshid = sessionManager.wajadaMurshidBiQanat("telegram", topicId);
     assertExists(resolvedMurshid);
-    assertEquals(resolvedMurshid!.identifier, "TEAM-5000");
+    assertEquals(resolvedMurshid!.huwiyya, "TEAM-5000");
 
     /** Step 4: Route the message */
     const initPromptCount = opencode._calls.sendPromptAsync.length;
     const success = await sessionManager.arsalaIlaMurshidById(
-      resolvedMurshid!.identifier,
+      resolvedMurshid!.huwiyya,
       "add the GET /users endpoint",
     );
 

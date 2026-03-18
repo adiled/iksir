@@ -454,7 +454,7 @@ ${call.blockedBy?.length ? `**Blocked by:** ${call.blockedBy.join(", ")}` : ""}`
     const activeOrch = this.#sessionManager.wajadaMurshidFaail();
     naqshStatus({
       huwiyyatWasfa: call.huwiyyatWasfa,
-      huwiyyatMurshid: activeOrch?.identifier ?? "unknown",
+      huwiyyatMurshid: activeOrch?.huwiyya ?? "unknown",
       status: "complete",
       summary: `PR #${result.number}`,
     });
@@ -465,7 +465,7 @@ ${call.blockedBy?.length ? `**Blocked by:** ${call.blockedBy.join(", ")}` : ""}`
      */
     const murshidFaail = this.#sessionManager.wajadaMurshidFaail();
     if (murshidFaail) {
-      await this.#sessionManager.sajjalRisala(murshidFaail.identifier, {
+      await this.#sessionManager.sajjalRisala(murshidFaail.huwiyya, {
         huwiyyatWasfa: call.huwiyyatWasfa,
         raqamRisala: result.number,
         branch: call.head,
@@ -643,8 +643,8 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
 
     if (call.suggestNext) {
       const murshidun = this.#sessionManager.wajadaJalasatMurshid();
-      const suggested = murshidun.find((o) => o.identifier === call.suggestNext);
-      if (suggested && suggested.status === "sakin") {
+      const suggested = murshidun.find((o) => o.huwiyya === call.suggestNext);
+      if (suggested && suggested.hala === "sakin") {
         await this.#iksir.aalajIstijabaZirr("cli", `switch:${call.suggestNext}`);
         return `Yielded control. Switching to suggested: ${call.suggestNext}.`;
       }
@@ -653,12 +653,12 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
     /** Check for idle sessions */
     const murshidun = this.#sessionManager.wajadaJalasatMurshid();
     const idleSessions = murshidun.filter(
-      (o) => o.identifier !== yielderId && o.status === "sakin"
+      (o) => o.huwiyya !== yielderId && o.hala === "sakin"
     );
 
     if (idleSessions.length > 0) {
       /** Notify al-Kimyawi */
-      const msg = `${yielderId} yielded (${call.reason}). ${idleSessions.length} idle session(s) available:\n${idleSessions.map(s => `• ${s.identifier}`).join("\n")}`;
+      const msg = `${yielderId} yielded (${call.reason}). ${idleSessions.length} idle session(s) available:\n${idleSessions.map(s => `• ${s.huwiyya}`).join("\n")}`;
       await this.#messenger.send("dispatch", msg);
       return `Yielded control. ${idleSessions.length} idle session(s) available. Al-Kimyawi can /switch to one.`;
     }
@@ -707,10 +707,10 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
 
     /** Case 3: Current active is blocked/waiting — graceful snatch */
     const currentActive = this.#sessionManager.jalabMurshid(activeEpicId);
-    if (currentActive && (currentActive.status === "masdud" || currentActive.status === "muntazir")) {
+    if (currentActive && (currentActive.hala === "masdud" || currentActive.hala === "muntazir")) {
       const result = await this.#iksir.aalajIstijabaZirr("cli", `switch:${demanderId}`);
       if (result.handled) {
-        return `Control granted (${activeEpicId} was ${currentActive.status}). You are now ACTIVE.\n\nReason: ${call.reason}`;
+        return `Control granted (${activeEpicId} was ${currentActive.hala}). You are now ACTIVE.\n\nReason: ${call.reason}`;
       }
       return "Failed to grant control.";
     }
@@ -776,7 +776,7 @@ Try: git push -u origin ${branchName}`;
     /** Update session with branch name */
     const session = this.#sessionManager.jalabMurshid(call.identifier);
     if (session) {
-      session.branch = branchName;
+      session.far = branchName;
       await this.#sessionManager.hafizaHala();
     }
 
