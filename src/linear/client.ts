@@ -99,7 +99,7 @@ export class LinearClient implements MutabiWasfa {
       });
 
       if (!response.ok) {
-        await logger.error("linear", `HTTP error: ${response.status}`, {
+        await logger.sajjalKhata("linear", `HTTP error: ${response.status}`, {
           statusText: response.statusText,
         });
         return null;
@@ -108,7 +108,7 @@ export class LinearClient implements MutabiWasfa {
       const result = (await response.json()) as GraphQLResponse<T>;
 
       if (result.errors && result.errors.length > 0) {
-        await logger.error("linear", "GraphQL errors", {
+        await logger.sajjalKhata("linear", "GraphQL errors", {
           errors: result.errors.map((e) => e.message),
         });
         return null;
@@ -116,7 +116,7 @@ export class LinearClient implements MutabiWasfa {
 
       return result.data ?? null;
     } catch (error) {
-      await logger.error("linear", "Query failed", { error: String(error) });
+      await logger.sajjalKhata("linear", "Query failed", { error: String(error) });
       return null;
     }
   }
@@ -578,7 +578,7 @@ export class LinearClient implements MutabiWasfa {
       await this.updateIssue(issueId, { status: statusName });
       return true;
     } catch {
-      await logger.error("linear", `Failed to update status to: ${statusName}`);
+      await logger.sajjalKhata("linear", `Failed to update status to: ${statusName}`);
       return false;
     }
   }
@@ -915,22 +915,22 @@ export class LinearClient implements MutabiWasfa {
       /** /issue/TEAM-123 or /TEAM/issue/TEAM-123 */
       const issueIndex = pathParts.indexOf("issue");
       if (issueIndex !== -1 && pathParts[issueIndex + 1]) {
-        return { type: "ticket" as NawKiyan, id: pathParts[issueIndex + 1] };
+        return { naw: "wasfa" as NawKiyan, id: pathParts[issueIndex + 1] };
       }
 
       /** /project/uuid */
       const projectIndex = pathParts.indexOf("project");
       if (projectIndex !== -1 && pathParts[projectIndex + 1]) {
-        return { type: "project" as NawKiyan, id: pathParts[projectIndex + 1] };
+        return { naw: "mashru" as NawKiyan, id: pathParts[projectIndex + 1] };
       }
 
       /** Direct identifier like /TEAM-123 */
       const identifierMatch = pathParts.find((p) => /^[A-Z]+-\d+$/.test(p));
       if (identifierMatch) {
-        return { type: "ticket" as NawKiyan, id: identifierMatch };
+        return { naw: "wasfa" as NawKiyan, id: identifierMatch };
       }
 
-      return { type: "unknown" as NawKiyan, id: pathParts.join("/") };
+      return { naw: "majhul" as NawKiyan, id: pathParts.join("/") };
     } catch {
       return null;
     }

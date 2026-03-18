@@ -128,7 +128,7 @@ export class Munaffidh {
         await this.aalajAhdath();
       } catch (error) {
         if (!(error instanceof Deno.errors.NotFound)) {
-          await logger.error("tool-executor", "Event processing error", {
+          await logger.sajjalKhata("tool-executor", "Event processing error", {
             error: String(error),
           });
         }
@@ -264,7 +264,7 @@ export class Munaffidh {
       }
     } catch (error) {
       const errorMsg = `Error executing ${event.tool}: ${error}`;
-      await logger.error("tool-executor", errorMsg);
+      await logger.sajjalKhata("tool-executor", errorMsg);
       const targetId = ("huwiyyatMurshid" in event && event.huwiyyatMurshid)
         ? event.huwiyyatMurshid as string
         : null;
@@ -289,11 +289,11 @@ export class Munaffidh {
 
     const parts: string[] = [];
     parts.push(`## Entity`);
-    parts.push(`**Type:** ${parsed.type}`);
+    parts.push(`**Type:** ${parsed.naw}`);
     parts.push(`**ID:** ${parsed.id}`);
     parts.push("");
 
-    if (parsed.type === "ticket") {
+    if (parsed.naw === "wasfa") {
       const issue = await this.mutabiWasfa.getIssue(parsed.id);
 
       if (!issue) {
@@ -339,7 +339,7 @@ export class Munaffidh {
       }
       parts.push("");
 
-    } else if (parsed.type === "project") {
+    } else if (parsed.naw === "mashru") {
       const project = await this.mutabiWasfa.getProject(parsed.id);
 
       if (!project) {
@@ -545,7 +545,7 @@ Reason: ${tamyiz.reason}`;
         );
         sent.push("messenger");
       } catch (err) {
-        await logger.error("tool-executor", "Failed to send notification via messenger", {
+        await logger.sajjalKhata("tool-executor", "Failed to send notification via messenger", {
           error: String(err),
         });
       }
@@ -595,7 +595,7 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
       });
       return `Reply sent to al-Kimyawi (${call.huwiyyatMurshid}).`;
     } catch (err) {
-      await logger.error("tool-executor", "Failed to send reply to al-Kimyawi", {
+      await logger.sajjalKhata("tool-executor", "Failed to send reply to al-Kimyawi", {
         huwiyyatMurshid: call.huwiyyatMurshid,
         error: String(err),
       });

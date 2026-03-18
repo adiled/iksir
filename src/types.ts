@@ -64,7 +64,7 @@ export interface TasmimMutabiWasfa {
 }
 
 
-export type NawKiyan = "ticket" | "epic" | "milestone" | "project" | "unknown";
+export type NawKiyan = "wasfa" | "malhamat" | "marhala" | "mashru" | "majhul";
 
 export interface WasfaMutaba {
   id: string;
@@ -96,7 +96,7 @@ export interface MaalimMutabi {
 }
 
 export interface RabitWasfaMuhallal {
-  type: NawKiyan;
+  naw: NawKiyan;
   id: string;
 }
 

@@ -96,7 +96,7 @@ export class NtfyClient {
 
       if (!success) {
         const errorText = await response.text();
-        await logger.error("ntfy", "Failed to send notification", {
+        await logger.sajjalKhata("ntfy", "Failed to send notification", {
           status: response.status,
           error: errorText,
         });
@@ -104,7 +104,7 @@ export class NtfyClient {
 
       return success;
     } catch (error) {
-      await logger.error("ntfy", "Network error sending notification", { error: String(error) });
+      await logger.sajjalKhata("ntfy", "Network error sending notification", { error: String(error) });
       await logger.sajjalIshara("ntfy", notification.sinf, this.topic, notification.unwan, false);
       return false;
     }

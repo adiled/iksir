@@ -206,7 +206,7 @@ async function ishtarakAhdath(ctx: SiyaqKhadim): Promise<void> {
           const sessionId = (event.properties as { sessionID?: string })?.sessionID;
           if (sessionId) {
             ctx.mudirJalasat.aalajaDamj(sessionId).catch(async (e) =>
-              await logger.error("sse", "Failed to handle compaction event", {
+              await logger.sajjalKhata("sse", "Failed to handle compaction event", {
                 sessionId,
                 error: String(e),
               })
@@ -236,7 +236,7 @@ async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
   /** Check OpenCode connectivity */
   const healthy = await ctx.opencode.isHealthy();
   if (!healthy) {
-    await logger.error("main", "OpenCode server is not reachable, aborting");
+    await logger.sajjalKhata("main", "OpenCode server is not reachable, aborting");
     Deno.exit(1);
   }
 
@@ -248,16 +248,16 @@ async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
   if (ctx.tasmim.isharat.telegram.mufattah) {
     addaMualijatTelegram(ctx);
     ctx.telegram.startPolling().catch(async (error) => {
-      await logger.error("telegram", "Polling error", { error: String(error) });
+      await logger.sajjalKhata("telegram", "Polling error", { error: String(error) });
     });
   }
 
   ctx.munaffidh.badaaMuaalaja(ctx.mutahakkimIlgha.signal).catch(async (error) => {
-    await logger.error("tool-executor", "Processing error", { error: String(error) });
+    await logger.sajjalKhata("tool-executor", "Processing error", { error: String(error) });
   });
 
   ishtarakAhdath(ctx).catch(async (error) => {
-    await logger.error("sse", "Event subscription error", { error: String(error) });
+    await logger.sajjalKhata("sse", "Event subscription error", { error: String(error) });
   });
 
   ctx.raqib.badaa(ctx.mutahakkimIlgha.signal);
@@ -268,7 +268,7 @@ async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
     try {
       await dawraHayat(ctx);
     } catch (error) {
-      await logger.error("main", "Keep-alive cycle error", { error: String(error) });
+      await logger.sajjalKhata("main", "Keep-alive cycle error", { error: String(error) });
     }
 
     await new Promise((resolve) => setTimeout(resolve, ctx.tasmim.istiftaa.fajwatZamaniyya));
@@ -513,7 +513,7 @@ async function aalajRisalaMawduu(
       "Send a ticket URL to spawn an murshid, or use /help for commands."
     );
   }).catch(async (error) => {
-    await logger.error("main", "Dispatch handler failed", { error: String(error) });
+    await logger.sajjalKhata("main", "Dispatch handler failed", { error: String(error) });
     await ctx.telegram.sendToDispatch("Internal error processing your message.");
   });
 }
@@ -580,7 +580,7 @@ async function aalajRabitWasfa(ctx: SiyaqKhadim, url: string, additionalContext:
 
   /** Resolve title from issue tracker */
   let title = parsed.id;
-  if (parsed.type === "ticket") {
+  if (parsed.naw === "wasfa") {
     const issue = await ctx.mutabiWasfa.getIssue(parsed.id);
     if (issue) {
       title = issue.title;
@@ -611,7 +611,7 @@ async function dawraHayat(ctx: SiyaqKhadim): Promise<void> {
   try {
     await ctx.hayat.dawra();
   } catch (error) {
-    await logger.error("main", "Keep-alive cycle error", { error: String(error) });
+    await logger.sajjalKhata("main", "Keep-alive cycle error", { error: String(error) });
   }
 }
 
@@ -928,7 +928,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   await ipcProcessor.hammalaHala();
 
   /** Initialize intent resolver */
-  const intentResolver = istadaaArraf({ issueTracker, opencode });
+  const intentResolver = istadaaArraf({ mutabiWasfa: issueTracker, opencode });
 
   /** Initialize dispatcher */
   const dispatcher = istadaaMunadi({
@@ -1043,7 +1043,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
 if (import.meta.main) {
   const check = Deno.args.includes("--check");
   abda({ check }).catch(async (error) => {
-    await logger.error("main", "Fatal error", { error: String(error) });
+    await logger.sajjalKhata("main", "Fatal error", { error: String(error) });
     console.error("Fatal error:", error);
     Deno.exit(1);
   });

@@ -28,7 +28,7 @@ export function exec(args: string[]): Promise<ExecResult> {
 export async function huwaWasikh(): Promise<boolean> {
   const result = await exec(["status", "--porcelain"]);
   if (!result.success) {
-    await logger.error("git", "Failed to check status", { stderr: result.stderr });
+    await logger.sajjalKhata("git", "Failed to check status", { stderr: result.stderr });
     return false;
   }
   return result.stdout.trim().length > 0;
@@ -40,7 +40,7 @@ export async function huwaWasikh(): Promise<boolean> {
 export async function farAlHali(): Promise<string | null> {
   const result = await exec(["rev-parse", "--abbrev-ref", "HEAD"]);
   if (!result.success) {
-    await logger.error("git", "Failed to get current branch", { stderr: result.stderr });
+    await logger.sajjalKhata("git", "Failed to get current branch", { stderr: result.stderr });
     return null;
   }
   return result.stdout.trim();
@@ -54,7 +54,7 @@ export async function khalaqaIltizamMuaqqat(identifier: string): Promise<boolean
   /** Stage all changes */
   const addResult = await exec(["add", "-A"]);
   if (!addResult.success) {
-    await logger.error("git", "Failed to stage changes", { stderr: addResult.stderr });
+    await logger.sajjalKhata("git", "Failed to stage changes", { stderr: addResult.stderr });
     return false;
   }
 
@@ -64,7 +64,7 @@ export async function khalaqaIltizamMuaqqat(identifier: string): Promise<boolean
     if (commitResult.stdout.includes("nothing to commit")) {
       return false;
     }
-    await logger.error("git", "Failed to create WIP commit", { stderr: commitResult.stderr });
+    await logger.sajjalKhata("git", "Failed to create WIP commit", { stderr: commitResult.stderr });
     return false;
   }
 
@@ -92,7 +92,7 @@ export async function intaqalaIla(branch: string): Promise<boolean> {
       }
     }
     
-    await logger.error("git", `Failed to intaqalaIla ${branch}`, { stderr: result.stderr });
+    await logger.sajjalKhata("git", `Failed to intaqalaIla ${branch}`, { stderr: result.stderr });
     return false;
   }
 
@@ -112,7 +112,7 @@ export async function pull(branch: string): Promise<boolean> {
       await logger.akhbar("git", `Branch ${branch} not on remote yet, skipping pull`);
       return true;
     }
-    await logger.error("git", `Failed to pull ${branch}`, { stderr: result.stderr });
+    await logger.sajjalKhata("git", `Failed to pull ${branch}`, { stderr: result.stderr });
     return false;
   }
 
@@ -132,7 +132,7 @@ export async function push(branch: string, setUpstream = false): Promise<boolean
   const result = await exec(args);
   
   if (!result.success) {
-    await logger.error("git", `Failed to push ${branch}`, { stderr: result.stderr });
+    await logger.sajjalKhata("git", `Failed to push ${branch}`, { stderr: result.stderr });
     return false;
   }
 
@@ -146,7 +146,7 @@ export async function push(branch: string, setUpstream = false): Promise<boolean
 export async function gitAdd(files: string[]): Promise<{ success: boolean; error?: string }> {
   const result = await exec(["add", ...files]);
   if (!result.success) {
-    await logger.error("git", "Failed to stage files", { stderr: result.stderr, files });
+    await logger.sajjalKhata("git", "Failed to stage files", { stderr: result.stderr, files });
     return { success: false, error: result.stderr };
   }
   return { success: true };
@@ -172,7 +172,7 @@ export async function commit(
     if (result.stdout.includes("nothing to commit")) {
       return { success: false, error: "nothing to commit" };
     }
-    await logger.error("git", "Failed to create commit", { stderr: result.stderr });
+    await logger.sajjalKhata("git", "Failed to create commit", { stderr: result.stderr });
     return { success: false, error: result.stderr };
   }
 
@@ -190,7 +190,7 @@ export async function commit(
 export async function fetch(remote = "origin"): Promise<boolean> {
   const result = await exec(["fetch", remote]);
   if (!result.success) {
-    await logger.error("git", `Failed to fetch ${remote}`, { stderr: result.stderr });
+    await logger.sajjalKhata("git", `Failed to fetch ${remote}`, { stderr: result.stderr });
     return false;
   }
   return true;
@@ -204,7 +204,7 @@ export async function commitsBehindMain(branch: string): Promise<number> {
   const defaultBranch = await farAlAsasi();
   const result = await exec(["rev-list", "--count", `${branch}..origin/${defaultBranch}`]);
   if (!result.success) {
-    await logger.error("git", `Failed to check commits behind for ${branch}`, { stderr: result.stderr });
+    await logger.sajjalKhata("git", `Failed to check commits behind for ${branch}`, { stderr: result.stderr });
     return -1;
   }
   return parseInt(result.stdout.trim(), 10);

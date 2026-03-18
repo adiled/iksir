@@ -1,23 +1,23 @@
 /**
- * Arraf (عرّاف) - The Diviner
- * 
- * One of the sacred Khuddām (خدّام - Servants) of the alchemical workshop.
- * Arraf divines intent from the messages that arrive, determining whether
- * they speak of waṣfa (formulae/tickets), risāla (treatises/PRs), or
- * other matters of the Great Work.
- */
-
-/**
- * Intent Resolver
+ * Arraf (عرّاف) — The Diviner
  *
- * Hybrid deterministic + LLM intent parsing for user messages.
+ * One of the sacred Khuddām (خدّام) of the alchemical workshop.
  *
- * Flow:
- * 1. Deterministic parsing (fast) - URLs, ticket IDs, commands
- * 2. LLM fallback (smart) - vague references, natural language
- * 3. Issue tracker API search - find matching entities
- * 4. Epic association - suggest parent epics for child tickets
- * 5. Disambiguation - ask user to pick when multiple matches
+ * When a word arrives from al-Kimyawi, it arrives raw — a trembling utterance
+ * still warm from the tongue. Arraf receives it. Arraf turns it over in the
+ * light of the athanor, reads the hidden marks, consults the oracle when the
+ * marks are faint, and returns a NiyyaMuhallala — the intent made clear,
+ * the hidden made manifest.
+ *
+ * Three paths of divination:
+ *   I.  Al-Qat'i (القطعي) — the certain: URLs and formula identifiers speak
+ *       for themselves. No oracle needed. The mark is plain.
+ *   II. Al-Fikri (الفكري) — the thoughtful: when words are vague, the oracle
+ *       is summoned. It extracts the structured niyya from the flow of speech.
+ *   III. Al-Bahth (البحث) — the search: armed with structured intent, Arraf
+ *       searches the sijill al-wasfāt for the matching kiyan.
+ *
+ * Arraf does not execute. Arraf does not inscribe. Arraf only sees.
  */
 
 import { logger } from "../logging/logger.ts";
@@ -26,270 +26,291 @@ import type { SiyaqMuhadatha } from "./munadi.ts";
 import type { MutabiWasfa, NawKiyan, WasfaMutaba } from "../types.ts";
 
 
-/** Re-export NawKiyan for backwards compatibility */
+/** Re-export NawKiyan for those who summon through arraf */
 export type { NawKiyan } from "../types.ts";
 
-/** Result of intent resolution */
+/**
+ * NiyyaMuhallala — The Resolved Intent
+ *
+ * What Arraf returns after the divination is complete.
+ * The raw utterance has been transmuted into knowledge.
+ */
 export interface NiyyaMuhallala {
-  /** Resolution status */
-  hala: "resolved" | "needs_disambiguation" | "needs_llm" | "not_found" | "error" | "list";
+  /** The state of divination */
+  hala: "muhallala" | "tahtajuTawdih" | "tahtajuTafkir" | "lam_tujad" | "khata" | "qaima";
 
-  /** The identified entity (if resolved) */
+  /** The identified kiyan, if the divination succeeded */
   kiyan?: {
-    type: NawKiyan;
+    naw: NawKiyan;
     id: string;
-    identifier?: string;
-    title: string;
+    huwiyya?: string;
+    unwan: string;
     url: string;
   };
 
-  /** Parent epic if entity is a child ticket */
+  /** The parent malhamat, if the kiyan is a child wasfa */
   kitabAb?: {
     id: string;
-    identifier: string;
-    title: string;
+    huwiyya: string;
+    unwan: string;
     url: string;
   };
 
-  /** Multiple matches requiring user selection */
+  /** Multiple kiyānat requiring al-Kimyawi to choose */
   murashshahun?: Array<{
-    type: NawKiyan;
+    naw: NawKiyan;
     id: string;
-    identifier?: string;
-    title: string;
+    huwiyya?: string;
+    unwan: string;
     url: string;
-    score: number;
+    daraja: number;
   }>;
 
-  /** Original raw text */
+  /** The original utterance, untouched */
   nassKham: string;
 
-  /** How it was resolved */
-  tariqa: "url" | "huwiyat_wasfa" | "llm_search" | "deterministic_search";
+  /** The path taken to reach this divination */
+  tariqa: "rabit" | "huwiyat_wasfa" | "bahth_fikri" | "bahth_hatmi";
 
-  /** Error message if status is "error" */
+  /** The wound in the divination, if hala is khata */
   khata?: string;
 
-  /** Action to perform (from context-aware resolution) */
-  fil?: "proceed" | "query" | "cancel" | null;
+  /** The fil al-Kimyawi intends, if discernible */
+  fil?: "taqaddam" | "istifsar" | "ilgha" | null;
 }
 
-/** LLM-extracted intent structure */
+/**
+ * NiyyaMustakhraja — The Extracted Intent
+ *
+ * The structured form that the oracle returns from the raw utterance.
+ * A bridge between the spoken word and the searchable sijill.
+ */
 interface NiyyaMustakhraja {
   nawKiyan: NawKiyan;
   kalimatBahth: string[];
   huwiyyatWasfa?: string;
   talmiMashru?: string;
   talmiMarhala?: string;
-  musnad?: "me" | null;
+  mukalaf?: "me" | null;
   hala?: "todo" | "in_progress" | "done" | "backlog" | null;
   dawra?: "current" | "next" | null;
   yushirIlaTarkiz?: boolean;
-  fil?: "proceed" | "query" | "cancel" | null;
+  fil?: "taqaddam" | "istifsar" | "ilgha" | null;
 }
 
 
-const NAMAT_HUWIYYAT_WASFA = /\b([A-Z]+-\d+)\b/i;
+/** The seal of a formula identifier — e.g. TEAM-1234 */
+const KHATIM_HUWIYYAT_WASFA = /\b([A-Z]+-\d+)\b/i;
 
-/** Keywords that hint at entity type */
+/** Words that betray the naw of the kiyan sought */
 const KALIMAT_NAW: Record<NawKiyan, string[]> = {
-  ticket: ["ticket", "issue"],
-  epic: ["epic"],
-  milestone: ["milestone", "sprint", "cycle"],
-  project: ["project"],
-  unknown: [],
+  wasfa:    ["ticket", "issue", "wasfa"],
+  malhamat: ["epic", "malhamat"],
+  marhala:  ["milestone", "sprint", "cycle", "marhala"],
+  mashru:   ["project", "mashru"],
+  majhul:   [],
 };
 
 
 export class Arraf {
-  mutabiWasfa: MutabiWasfa;
+  #mutabiWasfa: MutabiWasfa;
   #opencode: OpenCodeClient;
-  huwiyyatJalsatNiyya: string | null = null;
+  #huwiyyatJalsatNiyya: string | null = null;
 
-  constructor(deps: { issueTracker: MutabiWasfa; opencode: OpenCodeClient }) {
-    this.mutabiWasfa = deps.issueTracker;
+  constructor(deps: { mutabiWasfa: MutabiWasfa; opencode: OpenCodeClient }) {
+    this.#mutabiWasfa = deps.mutabiWasfa;
     this.#opencode = deps.opencode;
   }
 
   /**
-   * Resolve user intent to a Linear entity
+   * Halla — the act of divination
+   *
+   * Receive the raw utterance. Return the NiyyaMuhallala.
+   * Three paths, tried in order of certainty.
    */
   async halla(text: string, context?: SiyaqMuhadatha): Promise<NiyyaMuhallala> {
-    const trimmed = text.trim();
+    const nassKham = text.trim();
 
-    /** Step 1: Try deterministic parsing */
-    const deterministic = await this.jarrabHatmi(trimmed);
-    if (deterministic.hala === "resolved" || deterministic.hala === "needs_disambiguation") {
-      return deterministic;
+    /** Path I — Al-Qat'i: the mark is plain */
+    const qatiyya = await this.jarrabHatmi(nassKham);
+    if (qatiyya.hala === "muhallala" || qatiyya.hala === "tahtajuTawdih") {
+      return qatiyya;
     }
 
-    /** Step 2: Check for type keywords that might help narrow search */
-    const typeHint = this.istakhrajTalmihNaw(trimmed);
+    /** Extract naw hint from keywords before summoning the oracle */
+    const talmihNaw = this.istakhrajTalmihNaw(nassKham);
 
-    /** Step 3: Use LLM to extract structured intent (with conversation context) */
-    const llmIntent = await this.istakhrajNiyyaBiLLM(trimmed, context);
-    if (!llmIntent) {
+    /** Path II — Al-Fikri: summon the oracle */
+    const niyyaMustakhraja = await this.istakhrajNiyyaBiLLM(nassKham, context);
+    if (!niyyaMustakhraja) {
       return {
-        hala: "error",
-        nassKham: trimmed,
-        tariqa: "llm_search",
-        khata: "Failed to extract intent from message",
+        hala: "khata",
+        nassKham,
+        tariqa: "bahth_fikri",
+        khata: "الأوراق لم تُفصح — the oracle returned silence",
       };
     }
 
-    if (llmIntent.yushirIlaTarkiz && context?.focusEntity) {
-      await logger.akhbar("intent-resolver", "Using focus entity from context", {
-        focusEntity: context.focusEntity.identifier,
-        action: llmIntent.fil,
+    /** If the oracle sees a reference to the focus kiyan, return it directly */
+    if (niyyaMustakhraja.yushirIlaTarkiz && context?.focusEntity) {
+      await logger.akhbar("arraf", "Tarkiz yushir — returning focus kiyan", {
+        focusEntity: context.focusEntity.huwiyya,
+        fil: niyyaMustakhraja.fil,
       });
       return {
-        hala: "resolved",
+        hala: "muhallala",
         kiyan: {
-          type: context.focusEntity.type,
+          naw: context.focusEntity.naw,
           id: context.focusEntity.id,
-          identifier: context.focusEntity.identifier,
-          title: context.focusEntity.title,
+          huwiyya: context.focusEntity.huwiyya,
+          unwan: context.focusEntity.unwan,
           url: context.focusEntity.url,
         },
-        nassKham: trimmed,
-        tariqa: "llm_search",
-        fil: llmIntent.fil,
+        nassKham,
+        tariqa: "bahth_fikri",
+        fil: niyyaMustakhraja.fil,
       };
     }
 
-    return await this.bahathaKiyanat(trimmed, llmIntent, typeHint);
+    /** Path III — Al-Bahth: search the sijill */
+    return await this.bahathaKiyanat(nassKham, niyyaMustakhraja, talmihNaw);
   }
 
   /**
-   * Try deterministic parsing (URLs, ticket IDs)
+   * Al-Qat'i — the certain path
+   *
+   * If the utterance contains a URL or a formula seal,
+   * the kiyan is known without consultation.
    */
-  async jarrabHatmi(text: string): Promise<NiyyaMuhallala> {
-    /** Check for issue tracker URL */
-    const urlMatch = text.match(this.mutabiWasfa.getUrlPattern());
+  async jarrabHatmi(nassKham: string): Promise<NiyyaMuhallala> {
+    /** A URL speaks its own identity */
+    const urlMatch = nassKham.match(this.#mutabiWasfa.getUrlPattern());
     if (urlMatch) {
-      const parsed = this.mutabiWasfa.parseUrl(urlMatch[0]);
+      const parsed = this.#mutabiWasfa.parseUrl(urlMatch[0]);
       if (parsed) {
-        return await this.hallaMinRabit(text, parsed, urlMatch[0]);
+        return await this.hallaMinRabit(nassKham, parsed, urlMatch[0]);
       }
     }
 
-    /** Check for ticket ID */
-    const ticketMatch = text.match(NAMAT_HUWIYYAT_WASFA);
-    if (ticketMatch) {
-      const identifier = ticketMatch[1].toUpperCase();
-      return await this.hallaHuwiyyatWasfa(text, identifier);
+    /** A formula seal is equally unambiguous */
+    const khatimMatch = nassKham.match(KHATIM_HUWIYYAT_WASFA);
+    if (khatimMatch) {
+      return await this.hallaHuwiyyatWasfa(nassKham, khatimMatch[1].toUpperCase());
     }
 
+    /** The marks are faint — the oracle must be summoned */
     return {
-      hala: "needs_llm",
-      nassKham: text,
-      tariqa: "deterministic_search",
+      hala: "tahtajuTafkir",
+      nassKham,
+      tariqa: "bahth_hatmi",
     };
   }
 
   /**
-   * Resolve from a parsed ticket URL
+   * Halla from a parsed URL — the rabit reveals its kiyan
    */
   async hallaMinRabit(
-    text: string,
-    parsed: { type: string; id: string },
-    url: string
+    nassKham: string,
+    parsed: { naw: string; id: string },
+    url: string,
   ): Promise<NiyyaMuhallala> {
-    if (parsed.type === "ticket" || parsed.type === "issue") {
-      return await this.hallaHuwiyyatWasfa(text, parsed.id);
+    if (parsed.naw === "wasfa") {
+      return await this.hallaHuwiyyatWasfa(nassKham, parsed.id);
     }
 
-    if (parsed.type === "project") {
-      const project = await this.mutabiWasfa.getProject(parsed.id);
-      if (project) {
+    if (parsed.naw === "mashru") {
+      const mashru = await this.#mutabiWasfa.getProject(parsed.id);
+      if (mashru) {
         return {
-          hala: "resolved",
+          hala: "muhallala",
           kiyan: {
-            type: "project",
-            id: project.id,
-            title: project.name,
-            url: project.url ?? "",
+            naw: "mashru",
+            id: mashru.id,
+            unwan: mashru.name,
+            url: mashru.url ?? "",
           },
-          nassKham: text,
-          tariqa: "url",
+          nassKham,
+          tariqa: "rabit",
         };
       }
     }
 
     return {
-      hala: "not_found",
-      nassKham: text,
-      tariqa: "url",
-      khata: `Could not find entity at ${url}`,
+      hala: "lam_tujad",
+      nassKham,
+      tariqa: "rabit",
+      khata: `لا يوجد كيان في هذا الرابط — ${url}`,
     };
   }
 
   /**
-   * Resolve a ticket ID (e.g., "TEAM-200")
+   * Halla from a formula identifier — e.g. "TEAM-200"
+   * The seal is read. The sijill is consulted.
    */
-  async hallaHuwiyyatWasfa(text: string, identifier: string): Promise<NiyyaMuhallala> {
-    const issue = await this.mutabiWasfa.getIssue(identifier);
+  async hallaHuwiyyatWasfa(nassKham: string, huwiyya: string): Promise<NiyyaMuhallala> {
+    const wasfa = await this.#mutabiWasfa.getIssue(huwiyya);
 
-    if (!issue) {
+    if (!wasfa) {
       return {
-        hala: "not_found",
-        nassKham: text,
+        hala: "lam_tujad",
+        nassKham,
         tariqa: "huwiyat_wasfa",
-        khata: `Ticket ${identifier} not found`,
+        khata: `الوصفة ${huwiyya} غير موجودة في السجل`,
       };
     }
 
-    const result: NiyyaMuhallala = {
-      hala: "resolved",
+    const niyyaMuhallala: NiyyaMuhallala = {
+      hala: "muhallala",
       kiyan: {
-        type: this.#mayyazaNawWasfa(issue),
-        id: issue.id,
-        identifier: issue.identifier,
-        title: issue.title,
-        url: issue.url ?? "",
+        naw: this.#mayyazaNawWasfa(wasfa),
+        id: wasfa.id,
+        huwiyya: wasfa.identifier,
+        unwan: wasfa.title,
+        url: wasfa.url ?? "",
       },
-      nassKham: text,
+      nassKham,
       tariqa: "huwiyat_wasfa",
     };
 
-    if (issue.parent) {
-      const parent = await this.mutabiWasfa.getIssue(issue.parent.identifier);
-      if (parent) {
-        result.kitabAb = {
-          id: parent.id,
-          identifier: parent.identifier,
-          title: parent.title,
-          url: parent.url ?? "",
+    /** If the wasfa has a parent, reveal the malhamat above it */
+    if (wasfa.parent) {
+      const ab = await this.#mutabiWasfa.getIssue(wasfa.parent.identifier);
+      if (ab) {
+        niyyaMuhallala.kitabAb = {
+          id: ab.id,
+          huwiyya: ab.identifier,
+          unwan: ab.title,
+          url: ab.url ?? "",
         };
       }
     }
 
-    return result;
+    return niyyaMuhallala;
   }
 
   /**
-   * Mayyiz whether a ticket is an epic or regular ticket
+   * Read the naw of a wasfa from its labels.
+   * A wasfa bearing the seal "epic" is a malhamat.
    */
-  #mayyazaNawWasfa(issue: WasfaMutaba): NawKiyan {
-    /** Has "epic" label */
-    const labels = issue.labels ?? [];
-    if (labels.some((l) => l.toLowerCase() === "epic")) {
-      return "epic";
+  #mayyazaNawWasfa(wasfa: WasfaMutaba): NawKiyan {
+    const wasamat = wasfa.labels ?? [];
+    if (wasamat.some((w) => w.toLowerCase() === "epic")) {
+      return "malhamat";
     }
-
-    return "ticket";
+    return "wasfa";
   }
 
   /**
-   * Extract type hint from keywords in text
+   * Read the keywords in the utterance for a naw hint.
+   * Mere suggestion — the oracle may disagree.
    */
-  istakhrajTalmihNaw(text: string): NawKiyan | null {
-    const lower = text.toLowerCase();
+  istakhrajTalmihNaw(nassKham: string): NawKiyan | null {
+    const asfal = nassKham.toLowerCase();
 
-    for (const [type, keywords] of Object.entries(KALIMAT_NAW)) {
-      for (const keyword of keywords) {
-        if (lower.includes(keyword)) {
-          return type as NawKiyan;
+    for (const [naw, kalimat] of Object.entries(KALIMAT_NAW)) {
+      for (const kalima of kalimat) {
+        if (asfal.includes(kalima)) {
+          return naw as NawKiyan;
         }
       }
     }
@@ -298,7 +319,10 @@ export class Arraf {
   }
 
   /**
-   * System prompt for intent extraction (stable across calls, benefits from caching)
+   * The oracle's standing incantation — stable across calls, benefits from caching.
+   *
+   * The wire format is in the tongue of the stink world — the LLM speaks English.
+   * But the name of this incantation is sacred.
    */
   static readonly TAWJIHAT_NIZAM_NIYYA = `You are a JSON extraction tool for project management. Return ONLY valid JSON, no explanations.
 
@@ -335,294 +359,314 @@ Examples:
 - "my todo tickets in current cycle" → {"entityType":"ticket","searchTerms":[],"huwiyyatWasfa":null,"projectHint":null,"milestoneHint":null,"assignee":"me","status":"todo","cycle":"current","referencesFocus":false,"action":null}`;
 
   /**
-   * Use LLM to extract structured intent from vague text
+   * Summon the oracle to extract structured niyya from the utterance.
+   *
+   * The oracle is given a standing vessel — reused across divinations
+   * for warmth and efficiency. If the vessel has gone cold, a new one is lit.
    */
-  async istakhrajNiyyaBiLLM(text: string, context?: SiyaqMuhadatha): Promise<NiyyaMustakhraja | null> {
-    /** Get or create intent extraction session */
-    const sessionId = await this.wajadaJalsatNiyya();
-    if (!sessionId) {
-      await logger.error("intent-resolver", "Failed to get intent session");
+  async istakhrajNiyyaBiLLM(nassKham: string, context?: SiyaqMuhadatha): Promise<NiyyaMustakhraja | null> {
+    const jalsaId = await this.wajadaJalsatNiyya();
+    if (!jalsaId) {
+      await logger.sajjalKhata("arraf", "الجلسة لم توجد — oracle vessel unavailable");
       return null;
     }
 
-    /** Build context section */
-    let contextSection = "";
+    /** Weave context into the utterance if present */
+    let siyaqNass = "";
     if (context && (context.focusEntity || context.recentMessages.length > 0)) {
-      contextSection = "\n\nCONTEXT:";
+      siyaqNass = "\n\nCONTEXT:";
       if (context.focusEntity) {
-        contextSection += `\nFocus: ${context.focusEntity.identifier ?? context.focusEntity.id} - "${context.focusEntity.title}" (${context.focusEntity.type})`;
+        siyaqNass += `\nFocus: ${context.focusEntity.huwiyya ?? context.focusEntity.id} - "${context.focusEntity.unwan}" (${context.focusEntity.naw})`;
       }
       if (context.recentMessages.length > 0) {
-        contextSection += "\nRecent:";
-        for (const msg of context.recentMessages.slice(-3)) {
-          contextSection += `\n- "${msg.text}"`;
+        siyaqNass += "\nRecent:";
+        for (const risala of context.recentMessages.slice(-3)) {
+          siyaqNass += `\n- "${risala.text}"`;
         }
       }
     }
 
-    /** User prompt includes full instruction since system prompt may be overridden by OpenCode */
-    const userPrompt = `TASK: Extract intent as JSON. Return ONLY the JSON object, nothing else. No explanation, no markdown, no code blocks.
+    const talabOracle = `TASK: Extract intent as JSON. Return ONLY the JSON object, nothing else. No explanation, no markdown, no code blocks.
 
-MESSAGE: "${text}"${contextSection}
+MESSAGE: "${nassKham}"${siyaqNass}
 
 ${Arraf.TAWJIHAT_NIZAM_NIYYA}`;
 
-    const response = await this.#opencode.sendPrompt(sessionId, userPrompt, {
+    const radd = await this.#opencode.sendPrompt(jalsaId, talabOracle, {
       system: Arraf.TAWJIHAT_NIZAM_NIYYA,
       model: { providerID: "anthropic", modelID: "claude-sonnet-4-20250514" },
       timeoutMs: 15_000,
     });
 
-    if (!response.success || !response.response) {
-      await logger.error("intent-resolver", "LLM extraction failed", { error: response.error });
+    if (!radd.success || !radd.response) {
+      await logger.sajjalKhata("arraf", "الأوراق لم تُفصح — oracle extraction failed", { khata: radd.error });
       return null;
     }
 
     try {
-      const jsonMatch = response.response.match(/\{[\s\S]*\}/);
+      const jsonMatch = radd.response.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
-        await logger.error("intent-resolver", "No JSON in LLM response", {
-          response: response.response,
+        await logger.sajjalKhata("arraf", "لا رموز في رد الأوراق — no JSON in oracle response", {
+          radd: radd.response,
         });
         return null;
       }
 
-      const parsed = JSON.parse(jsonMatch[0]) as NiyyaMustakhraja;
-      await logger.akhbar("intent-resolver", "LLM extracted intent", { intent: parsed });
-      return parsed;
-    } catch (error) {
-      await logger.error("intent-resolver", "Failed to parse LLM response", {
-        response: response.response,
-        error: String(error),
+      /** Translate stink world oracle response into sacred NiyyaMustakhraja */
+      const khamm = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+
+      const nawKiyanMap: Record<string, NawKiyan> = {
+        ticket: "wasfa", epic: "malhamat", milestone: "marhala",
+        project: "mashru", unknown: "majhul",
+      };
+      const filMap: Record<string, NiyyaMustakhraja["fil"]> = {
+        proceed: "taqaddam", query: "istifsar", cancel: "ilgha",
+      };
+
+      const niyya: NiyyaMustakhraja = {
+        nawKiyan: nawKiyanMap[khamm.entityType as string] ?? "majhul",
+        kalimatBahth: (khamm.searchTerms as string[]) ?? [],
+        huwiyyatWasfa: (khamm.huwiyyatWasfa as string) ?? undefined,
+        talmiMashru: (khamm.projectHint as string) ?? undefined,
+        talmiMarhala: (khamm.milestoneHint as string) ?? undefined,
+        mukalaf: khamm.assignee === "me" ? "me" : null,
+        hala: (khamm.status as NiyyaMustakhraja["hala"]) ?? null,
+        dawra: (khamm.cycle as NiyyaMustakhraja["dawra"]) ?? null,
+        yushirIlaTarkiz: Boolean(khamm.referencesFocus),
+        fil: filMap[khamm.action as string] ?? null,
+      };
+
+      await logger.akhbar("arraf", "النية استُخرجت — intent extracted", { niyya });
+      return niyya;
+    } catch (khata) {
+      await logger.sajjalKhata("arraf", "فشل تحليل رد الأوراق — failed to parse oracle response", {
+        radd: radd.response,
+        khata: String(khata),
       });
       return null;
     }
   }
 
   /**
-   * Get or create the intent extraction session
+   * The oracle's vessel — a reusable jalsa for all divinations.
+   * If the vessel has gone cold it is relit.
    */
   async wajadaJalsatNiyya(): Promise<string | null> {
-    if (this.huwiyyatJalsatNiyya) {
-      const session = await this.#opencode.jalabJalsa(this.huwiyyatJalsatNiyya);
-      if (session) {
-        return this.huwiyyatJalsatNiyya;
-      }
-      this.huwiyyatJalsatNiyya = null;
+    if (this.#huwiyyatJalsatNiyya) {
+      const jalsa = await this.#opencode.jalabJalsa(this.#huwiyyatJalsatNiyya);
+      if (jalsa) return this.#huwiyyatJalsatNiyya;
+      this.#huwiyyatJalsatNiyya = null;
     }
 
-    /** Create new session */
-    const session = await this.#opencode.khalaqaJalsa(
-      "iksir-intent",
-      "Intent Extraction (reusable)"
+    const jalsa = await this.#opencode.khalaqaJalsa(
+      "iksir-arraf",
+      "Arraf — vessel for divination (reusable)",
     );
 
-    if (!session) {
-      return null;
-    }
+    if (!jalsa) return null;
 
-    this.huwiyyatJalsatNiyya = session.id;
-    return session.id;
+    this.#huwiyyatJalsatNiyya = jalsa.id;
+    return jalsa.id;
   }
 
   /**
-   * Search issue tracker based on LLM-extracted intent
+   * Al-Bahth — search the sijill al-wasfāt for the matching kiyan.
+   *
+   * Armed with the NiyyaMustakhraja from the oracle, Arraf queries
+   * the issue tracker and returns candidates for consideration.
    */
   async bahathaKiyanat(
-    text: string,
-    intent: NiyyaMustakhraja,
-    typeHint: NawKiyan | null
+    nassKham: string,
+    niyya: NiyyaMustakhraja,
+    talmihNaw: NawKiyan | null,
   ): Promise<NiyyaMuhallala> {
-    const effectiveType = intent.nawKiyan !== "unknown" ? intent.nawKiyan : typeHint;
-    const searchQuery = intent.kalimatBahth.join(" ");
-    const hasFilters = intent.musnad || intent.hala || intent.dawra;
+    const nawFaail = niyya.nawKiyan !== "majhul" ? niyya.nawKiyan : talmihNaw;
+    const kalimatBahth = niyya.kalimatBahth.join(" ");
+    const ladayhaMusaffiyat = niyya.mukalaf || niyya.hala || niyya.dawra;
 
-    if (!searchQuery && !intent.huwiyyatWasfa && !hasFilters) {
+    if (!kalimatBahth && !niyya.huwiyyatWasfa && !ladayhaMusaffiyat) {
       return {
-        hala: "not_found",
-        nassKham: text,
-        tariqa: "llm_search",
-        khata: "Could not extract search terms or filters from message",
+        hala: "lam_tujad",
+        nassKham,
+        tariqa: "bahth_fikri",
+        khata: "لم تُستخرج كلمات بحث من الرسالة — no search terms extracted",
       };
     }
 
-    if (intent.huwiyyatWasfa) {
-      return await this.hallaHuwiyyatWasfa(text, intent.huwiyyatWasfa);
+    /** If a formula seal was extracted, resolve directly */
+    if (niyya.huwiyyatWasfa) {
+      return await this.hallaHuwiyyatWasfa(nassKham, niyya.huwiyyatWasfa);
     }
 
-    /**
-     * Search based on entity type
-     * Always search tickets/issues since they're the most common
-     * Also search the specified type if different
-     */
-    const candidates: NiyyaMuhallala["murashshahun"] = [];
+    /** Gather murashshahun */
+    const murashshahun: NiyyaMuhallala["murashshahun"] = [];
 
-    if (hasFilters) {
-      /** Get current cycle ID if needed */
-      let cycleId: string | undefined;
-      if (intent.dawra === "current") {
-        const activeMilestone = await this.mutabiWasfa.getActiveMilestone?.();
-        if (activeMilestone) {
-          cycleId = activeMilestone.id;
-          await logger.akhbar("intent-resolver", `Using active milestone: ${activeMilestone.name}`);
+    if (ladayhaMusaffiyat) {
+      /** Filtered search — musaffiyat override text search */
+      let dawraId: string | undefined;
+      if (niyya.dawra === "current") {
+        const marhalaNashita = await this.#mutabiWasfa.getActiveMilestone?.();
+        if (marhalaNashita) {
+          dawraId = marhalaNashita.id;
+          await logger.akhbar("arraf", `مرحلة نشطة — ${marhalaNashita.name}`);
         } else {
-          await logger.haDHHir("intent-resolver", "No active milestone found");
+          await logger.haDHHir("arraf", "لا مرحلة نشطة — no active milestone");
         }
       }
 
-      const filteredIssues = await this.mutabiWasfa.getFilteredIssues?.({
-        assigneeId: intent.musnad === "me" ? "me" : undefined,
-        status: intent.hala ?? undefined,
-        cycleId,
+      const wasfatMusaffah = await this.#mutabiWasfa.getFilteredIssues?.({
+        assigneeId: niyya.mukalaf === "me" ? "me" : undefined,
+        status: niyya.hala ?? undefined,
+        cycleId: dawraId,
       }, 15) ?? [];
 
-      for (const issue of filteredIssues) {
-        const type = this.#mayyazaNawWasfa(issue);
-        candidates.push({
-          type,
-          id: issue.id,
-          identifier: issue.identifier,
-          title: issue.title,
-          url: issue.url ?? "",
-          score: 1.0,
+      for (const wasfa of wasfatMusaffah) {
+        murashshahun.push({
+          naw: this.#mayyazaNawWasfa(wasfa),
+          id: wasfa.id,
+          huwiyya: wasfa.identifier,
+          unwan: wasfa.title,
+          url: wasfa.url ?? "",
+          daraja: 1.0,
         });
       }
     } else {
-      /** Text-based search (original behavior) */
-      const issues = await this.mutabiWasfa.searchIssues(searchQuery, 10);
-      for (const issue of issues) {
-        const type = this.#mayyazaNawWasfa(issue);
-        candidates.push({
-          type,
-          id: issue.id,
-          identifier: issue.identifier,
-          title: issue.title,
-          url: issue.url ?? "",
-          score: this.hasabaDaraja(issue.title, intent.kalimatBahth),
+      /** Text-based search */
+      const wasfat = await this.#mutabiWasfa.searchIssues(kalimatBahth, 10);
+      for (const wasfa of wasfat) {
+        murashshahun.push({
+          naw: this.#mayyazaNawWasfa(wasfa),
+          id: wasfa.id,
+          huwiyya: wasfa.identifier,
+          unwan: wasfa.title,
+          url: wasfa.url ?? "",
+          daraja: this.hasabaDaraja(wasfa.title, niyya.kalimatBahth),
         });
       }
     }
 
-    if (!hasFilters && (effectiveType === "milestone" || !effectiveType)) {
-      const milestones = await this.bahathaMarahim(searchQuery);
-      candidates.push(...milestones);
+    /** Search marahim if naw permits */
+    if (!ladayhaMusaffiyat && (nawFaail === "marhala" || !nawFaail)) {
+      const marahim = await this.bahathaMarahim(kalimatBahth);
+      murashshahun.push(...marahim);
     }
 
-    if (!hasFilters && (effectiveType === "project" || !effectiveType)) {
-      const projects = await this.mutabiWasfa.searchProjects(searchQuery);
-      for (const p of projects) {
-        candidates.push({
-          type: "project",
-          id: p.id,
-          title: p.name,
-          url: p.url ?? "",
-          score: this.hasabaDaraja(p.name, intent.kalimatBahth),
+    /** Search mashari if naw permits */
+    if (!ladayhaMusaffiyat && (nawFaail === "mashru" || !nawFaail)) {
+      const mashari = await this.#mutabiWasfa.searchProjects(kalimatBahth);
+      for (const mashru of mashari) {
+        murashshahun.push({
+          naw: "mashru",
+          id: mashru.id,
+          unwan: mashru.name,
+          url: mashru.url ?? "",
+          daraja: this.hasabaDaraja(mashru.name, niyya.kalimatBahth),
         });
       }
     }
 
-    candidates.sort((a, b) => b.score - a.score);
+    murashshahun.sort((a, b) => b.daraja - a.daraja);
 
-    if (candidates.length === 0) {
-      const filterDesc = hasFilters ? "matching filters" : `matching "${searchQuery}"`;
+    if (murashshahun.length === 0) {
+      const wasf = ladayhaMusaffiyat ? "المسافيات المطلوبة" : `"${kalimatBahth}"`;
       return {
-        hala: "not_found",
-        nassKham: text,
-        tariqa: "llm_search",
-        khata: `No ${effectiveType ?? "tickets"} found ${filterDesc}`,
+        hala: "lam_tujad",
+        nassKham,
+        tariqa: "bahth_fikri",
+        khata: `لا ${nawFaail ?? "كيان"} يطابق ${wasf}`,
       };
     }
 
-    if (hasFilters) {
+    /** Filtered results are presented as a qaima for al-Kimyawi to browse */
+    if (ladayhaMusaffiyat) {
       return {
-        hala: "list",
-        murashshahun: candidates.slice(0, 15),
-        nassKham: text,
-        tariqa: "llm_search",
+        hala: "qaima",
+        murashshahun: murashshahun.slice(0, 15),
+        nassKham,
+        tariqa: "bahth_fikri",
       };
     }
 
-    if (candidates.length === 1) {
-      const match = candidates[0];
-      const result: NiyyaMuhallala = {
-        hala: "resolved",
+    /** Single match — the divination is complete */
+    if (murashshahun.length === 1) {
+      const murashshah = murashshahun[0];
+      const niyyaMuhallala: NiyyaMuhallala = {
+        hala: "muhallala",
         kiyan: {
-          type: match.type,
-          id: match.id,
-          identifier: match.identifier,
-          title: match.title,
-          url: match.url,
+          naw: murashshah.naw,
+          id: murashshah.id,
+          huwiyya: murashshah.huwiyya,
+          unwan: murashshah.unwan,
+          url: murashshah.url,
         },
-        nassKham: text,
-        tariqa: "llm_search",
+        nassKham,
+        tariqa: "bahth_fikri",
       };
 
-      if (match.type === "ticket" && match.identifier) {
-        const issue = await this.mutabiWasfa.getIssue(match.identifier);
-        if (issue?.parent) {
-          const parent = await this.mutabiWasfa.getIssue(issue.parent.identifier);
-          if (parent) {
-            result.kitabAb = {
-              id: parent.id,
-              identifier: parent.identifier,
-              title: parent.title,
-              url: parent.url ?? "",
+      /** Reveal the parent malhamat if this is a child wasfa */
+      if (murashshah.naw === "wasfa" && murashshah.huwiyya) {
+        const wasfa = await this.#mutabiWasfa.getIssue(murashshah.huwiyya);
+        if (wasfa?.parent) {
+          const ab = await this.#mutabiWasfa.getIssue(wasfa.parent.identifier);
+          if (ab) {
+            niyyaMuhallala.kitabAb = {
+              id: ab.id,
+              huwiyya: ab.identifier,
+              unwan: ab.title,
+              url: ab.url ?? "",
             };
           }
         }
       }
 
-      return result;
+      return niyyaMuhallala;
     }
 
+    /** Multiple matches — al-Kimyawi must choose */
     return {
-      hala: "needs_disambiguation",
-      murashshahun: candidates.slice(0, 5),
-      nassKham: text,
-      tariqa: "llm_search",
+      hala: "tahtajuTawdih",
+      murashshahun: murashshahun.slice(0, 5),
+      nassKham,
+      tariqa: "bahth_fikri",
     };
   }
 
   /**
-   * Search milestones via the issue tracker interface
+   * Search the marahim (milestones) of the sijill
    */
-  async bahathaMarahim(query: string): Promise<NonNullable<NiyyaMuhallala["murashshahun"]>> {
-    const milestones = await this.mutabiWasfa.searchMilestones?.(query);
-    if (!milestones || milestones.length === 0) {
-      return [];
-    }
+  async bahathaMarahim(bahth: string): Promise<NonNullable<NiyyaMuhallala["murashshahun"]>> {
+    const marahim = await this.#mutabiWasfa.searchMilestones?.(bahth);
+    if (!marahim || marahim.length === 0) return [];
 
-    return milestones.map((m) => ({
-      type: "milestone" as const,
+    return marahim.map((m) => ({
+      naw: "marhala" as const,
       id: m.id,
-      title: m.name,
+      unwan: m.name,
       url: m.url ?? "",
-      score: this.hasabaDaraja(m.name, query.split(" ")),
+      daraja: this.hasabaDaraja(m.name, bahth.split(" ")),
     }));
   }
 
   /**
-   * Calculate relevance score for a title against search terms
+   * Calculate the daraja (degree of relevance) of a title against search terms
    */
-  hasabaDaraja(title: string, terms: string[]): number {
-    const titleLower = title.toLowerCase();
-    let matches = 0;
+  hasabaDaraja(unwan: string, kalimat: string[]): number {
+    const asfal = unwan.toLowerCase();
+    let mutabiqa = 0;
 
-    for (const term of terms) {
-      if (titleLower.includes(term.toLowerCase())) {
-        matches++;
-      }
+    for (const kalima of kalimat) {
+      if (asfal.includes(kalima.toLowerCase())) mutabiqa++;
     }
 
-    return terms.length > 0 ? matches / terms.length : 0;
+    return kalimat.length > 0 ? mutabiqa / kalimat.length : 0;
   }
 }
 
 /**
- * Create an intent resolver instance
+ * Summon an Arraf — light the vessel, bind the spirit
  */
 export function istadaaArraf(deps: {
-  issueTracker: MutabiWasfa;
+  mutabiWasfa: MutabiWasfa;
   opencode: OpenCodeClient;
 }): Arraf {
   return new Arraf(deps);

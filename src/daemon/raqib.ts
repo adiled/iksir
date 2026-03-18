@@ -87,7 +87,7 @@ export class Raqib {
     void logger.akhbar("health-monitor", "Starting health monitor");
 
     this.naqra().catch(async (e) =>
-      await logger.error("health-monitor", "Tick error", { error: String(e) })
+      await logger.sajjalKhata("health-monitor", "Tick error", { error: String(e) })
     );
 
     this.muwaqqitNaqra = setInterval(() => {
@@ -96,7 +96,7 @@ export class Raqib {
         return;
       }
       this.naqra().catch(async (e) =>
-        await logger.error("health-monitor", "Tick error", { error: String(e) })
+        await logger.sajjalKhata("health-monitor", "Tick error", { error: String(e) })
       );
     }, FATRA_NAQRA_MS);
 
@@ -142,7 +142,7 @@ export class Raqib {
         }
       }
     } catch (error) {
-      await logger.error("health-monitor", "Tick failed", { error: String(error) });
+      await logger.sajjalKhata("health-monitor", "Tick failed", { error: String(error) });
     }
   }
 

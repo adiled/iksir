@@ -301,11 +301,11 @@ export class TelegramClient {
         return data.result.message_id;
       }
 
-      await logger.error("telegram", "Failed to send message", { error: data.description });
+      await logger.sajjalKhata("telegram", "Failed to send message", { error: data.description });
       await logger.sajjalIshara("telegram", "message", targetChatId, text.slice(0, 50), false);
       return null;
     } catch (error) {
-      await logger.error("telegram", "Network error sending message", { error: String(error) });
+      await logger.sajjalKhata("telegram", "Network error sending message", { error: String(error) });
       await logger.sajjalIshara("telegram", "message", targetChatId, text.slice(0, 50), false);
       return null;
     }
@@ -430,10 +430,10 @@ export class TelegramClient {
         return data.result as ForumTopic;
       }
 
-      await logger.error("telegram", "Failed to create forum topic", { error: data.description });
+      await logger.sajjalKhata("telegram", "Failed to create forum topic", { error: data.description });
       return null;
     } catch (error) {
-      await logger.error("telegram", "Network error creating forum topic", { error: String(error) });
+      await logger.sajjalKhata("telegram", "Network error creating forum topic", { error: String(error) });
       return null;
     }
   }
@@ -815,7 +815,7 @@ Overall: ${percent}% complete`;
         if (error instanceof DOMException && error.name === "AbortError") {
           break;
         }
-        await logger.error("telegram", "Polling error", { error: String(error) });
+        await logger.sajjalKhata("telegram", "Polling error", { error: String(error) });
         await new Promise((resolve) => setTimeout(resolve, 5000));
       }
     }
@@ -857,7 +857,7 @@ Overall: ${percent}% complete`;
         try {
           await handler(update.message);
         } catch (error) {
-          await logger.error("telegram", "Message handler error", { error: String(error) });
+          await logger.sajjalKhata("telegram", "Message handler error", { error: String(error) });
         }
       }
     }
@@ -867,7 +867,7 @@ Overall: ${percent}% complete`;
         try {
           await handler(update.callback_query);
         } catch (error) {
-          await logger.error("telegram", "Callback handler error", { error: String(error) });
+          await logger.sajjalKhata("telegram", "Callback handler error", { error: String(error) });
         }
       }
     }

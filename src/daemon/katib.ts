@@ -183,7 +183,7 @@ export class MudirJalasat {
     const openCodeSession = await this.#opencode.khalaqaJalsa(identifier, sessionTitle);
 
     if (!openCodeSession) {
-      await logger.error("session-manager", `Failed to create murshid session for ${identifier}`);
+      await logger.sajjalKhata("session-manager", `Failed to create murshid session for ${identifier}`);
       return null;
     }
 
@@ -695,7 +695,7 @@ Call pm_read_diary for full decision history with reasoning.
         murshidun: this.#murshidSessions.size,
       });
     } catch (error) {
-      await logger.error("session-manager", "Failed to save session state", {
+      await logger.sajjalKhata("session-manager", "Failed to save session state", {
         error: String(error),
       });
     }
@@ -767,7 +767,7 @@ Call pm_read_diary for full decision history with reasoning.
         await this.takkadMinQanat(session);
       }
     } catch (error) {
-      await logger.error("session-manager", "Failed to load session state", {
+      await logger.sajjalKhata("session-manager", "Failed to load session state", {
         error: String(error),
       });
     }

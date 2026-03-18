@@ -125,7 +125,7 @@ class Musjil {
     });
   }
 
-  async error(category: string, message: string, context?: Record<string, unknown>): Promise<void> {
+  async sajjalKhata(category: string, message: string, context?: Record<string, unknown>): Promise<void> {
     await this.uktubQayd("main", {
       timestamp: new Date(),
       level: "error",
@@ -197,7 +197,7 @@ class Musjil {
     await this.adhifIlaMilaf("notifications", this.nassiqLiMilaf(entry));
 
     if (!success) {
-      await this.error("notifications", `Failed to send ${channel} notification`, { category, message });
+      await this.sajjalKhata("notifications", `Failed to send ${channel} notification`, { category, message });
     }
   }
 

@@ -437,9 +437,9 @@ export function mockArraf(): MockArraf {
         return result;
       }
       return {
-        hala: "not_found",
+        hala: "lam_tujad",
         nassKham: text,
-        tariqa: "deterministic_search",
+        tariqa: "bahth_hatmi",
       };
     },
   };

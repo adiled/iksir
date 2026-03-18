@@ -174,7 +174,7 @@ export async function hammalaAlTasmim(): Promise<TasmimIksir> {
       config = deepMerge(config, resolved);
       await logger.akhbar("config", `Loaded configuration from ${configPath}`);
     } catch (error) {
-      await logger.error("config", `Failed to load config from ${configPath}`, {
+      await logger.sajjalKhata("config", `Failed to load config from ${configPath}`, {
         error: String(error),
       });
       throw error;
@@ -262,7 +262,7 @@ export async function hammalaAlTasmim(): Promise<TasmimIksir> {
   const errors = tahaqqaqConfig(config);
   if (errors.length > 0) {
     for (const error of errors) {
-      await logger.error("config", `Validation error: ${error}`);
+      await logger.sajjalKhata("config", `Validation error: ${error}`);
     }
     await logger.haDHHir("config", `Config has ${errors.length} validation errors, some features may not work`);
   }

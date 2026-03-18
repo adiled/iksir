@@ -228,7 +228,7 @@ export class DawratHayat {
 
       await this.mudirJalasat.jaddadaAkhirRaqaba(raqamRisala);
     } catch (error) {
-      await logger.error("keepalive", `Failed to poll PR #${raqamRisala}`, {
+      await logger.sajjalKhata("keepalive", `Failed to poll PR #${raqamRisala}`, {
         error: String(error),
         epicId: session.huwiyya,
       });
@@ -384,7 +384,7 @@ export class DawratHayat {
       if (originalBranch) {
         const istarjaad = await git.intaqalaIla(originalBranch);
         if (!istarjaad) {
-          await logger.error("keepalive", `Failed to istarjaa branch ${originalBranch}, falling back to main`);
+          await logger.sajjalKhata("keepalive", `Failed to istarjaa branch ${originalBranch}, falling back to main`);
           await git.intaqalaIla("main");
         }
       }
@@ -405,7 +405,7 @@ export class DawratHayat {
         conflicts: results.filter(r => r.fil === "conflicts").length,
       });
     } catch (error) {
-      await logger.error("keepalive", "Maintenance failed", { error: String(error) });
+      await logger.sajjalKhata("keepalive", "Maintenance failed", { error: String(error) });
     } finally {
       this.mudirJalasat.wadaaQuflGit(false);
       await this.istijabat.harrarWadaSeyana();

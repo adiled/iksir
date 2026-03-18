@@ -334,7 +334,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
       return true;
     }
 
-    await logger.error("question-handler", `Failed to reply to question ${questionId}`);
+    await logger.sajjalKhata("question-handler", `Failed to reply to question ${questionId}`);
     return false;
   }
 
@@ -484,7 +484,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
         }
       }
     } catch (error) {
-      await logger.error("question-handler", "Failed to load question state", {
+      await logger.sajjalKhata("question-handler", "Failed to load question state", {
         error: String(error),
       });
     }

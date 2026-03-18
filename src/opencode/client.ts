@@ -29,7 +29,7 @@ export class OpenCodeClient {
       const response = await this.client.session.list();
       return response.data !== undefined;
     } catch (error) {
-      await logger.error("opencode", "Health check failed", { error: String(error) });
+      await logger.sajjalKhata("opencode", "Health check failed", { error: String(error) });
       return false;
     }
   }
@@ -51,7 +51,7 @@ export class OpenCodeClient {
       });
 
       if (!response.data) {
-        await logger.error("opencode", "Failed to create session - no data returned");
+        await logger.sajjalKhata("opencode", "Failed to create session - no data returned");
         return null;
       }
 
@@ -68,7 +68,7 @@ export class OpenCodeClient {
       await logger.akhbar("opencode", `Created session ${session.id} for ${huwiyyatWasfa}`);
       return session;
     } catch (error) {
-      await logger.error("opencode", "Failed to create session", {
+      await logger.sajjalKhata("opencode", "Failed to create session", {
         huwiyyatWasfa,
         error: String(error),
       });
@@ -97,7 +97,7 @@ export class OpenCodeClient {
         lastMessageAt: new Date(response.data.time.updated),
       };
     } catch (error) {
-      await logger.error("opencode", "Failed to get session", {
+      await logger.sajjalKhata("opencode", "Failed to get session", {
         sessionId,
         error: String(error),
       });
@@ -123,7 +123,7 @@ export class OpenCodeClient {
         lastMessageAt: new Date(s.time.updated),
       }));
     } catch (error) {
-      await logger.error("opencode", "Failed to list sessions", { error: String(error) });
+      await logger.sajjalKhata("opencode", "Failed to list sessions", { error: String(error) });
       return [];
     }
   }
@@ -178,7 +178,7 @@ export class OpenCodeClient {
         response: text,
       };
     } catch (error) {
-      await logger.error("opencode", "Failed to send prompt", {
+      await logger.sajjalKhata("opencode", "Failed to send prompt", {
         sessionId,
         error: String(error),
       });
@@ -208,13 +208,13 @@ export class OpenCodeClient {
         return true;
       }
 
-      await logger.error("opencode", "Async prompt failed", {
+      await logger.sajjalKhata("opencode", "Async prompt failed", {
         sessionId,
         error: response.error,
       });
       return false;
     } catch (error) {
-      await logger.error("opencode", "Failed to send async prompt", {
+      await logger.sajjalKhata("opencode", "Failed to send async prompt", {
         sessionId,
         error: String(error),
       });
@@ -232,7 +232,7 @@ export class OpenCodeClient {
       });
       return response.data ?? false;
     } catch (error) {
-      await logger.error("opencode", "Failed to abort session", {
+      await logger.sajjalKhata("opencode", "Failed to abort session", {
         sessionId,
         error: String(error),
       });
@@ -250,7 +250,7 @@ export class OpenCodeClient {
       });
       return response.data ?? false;
     } catch (error) {
-      await logger.error("opencode", "Failed to delete session", {
+      await logger.sajjalKhata("opencode", "Failed to delete session", {
         sessionId,
         error: String(error),
       });
@@ -272,7 +272,7 @@ export class OpenCodeClient {
       }
       return result;
     } catch (error) {
-      await logger.error("opencode", "Failed to get session statuses", { error: String(error) });
+      await logger.sajjalKhata("opencode", "Failed to get session statuses", { error: String(error) });
       return {};
     }
   }
@@ -335,7 +335,7 @@ export class OpenCodeClient {
       });
 
       if (!response.ok || !response.body) {
-        await logger.error("opencode", "Failed to subscribe to events", {
+        await logger.sajjalKhata("opencode", "Failed to subscribe to events", {
           status: response.status,
         });
         return;
@@ -371,7 +371,7 @@ export class OpenCodeClient {
       if (error instanceof DOMException && error.name === "AbortError") {
         await logger.akhbar("opencode", "Event subscription cancelled");
       } else {
-        await logger.error("opencode", "Event subscription error", { error: String(error) });
+        await logger.sajjalKhata("opencode", "Event subscription error", { error: String(error) });
       }
     } finally {
       this.eventAbortController = null;
@@ -425,13 +425,13 @@ export class OpenCodeClient {
         return true;
       }
 
-      await logger.error("opencode", "Failed to reply to question", {
+      await logger.sajjalKhata("opencode", "Failed to reply to question", {
         questionId,
         error: response.error,
       });
       return false;
     } catch (error) {
-      await logger.error("opencode", "Error replying to question", {
+      await logger.sajjalKhata("opencode", "Error replying to question", {
         questionId,
         error: String(error),
       });
@@ -457,13 +457,13 @@ export class OpenCodeClient {
         return true;
       }
 
-      await logger.error("opencode", "Failed to reject question", {
+      await logger.sajjalKhata("opencode", "Failed to reject question", {
         questionId,
         error: response.error,
       });
       return false;
     } catch (error) {
-      await logger.error("opencode", "Error rejecting question", {
+      await logger.sajjalKhata("opencode", "Error rejecting question", {
         questionId,
         error: String(error),
       });
@@ -497,7 +497,7 @@ export class OpenCodeClient {
 
       return { total: response.data.length, assistant, user };
     } catch (error) {
-      await logger.error("opencode", "Failed to get message count", {
+      await logger.sajjalKhata("opencode", "Failed to get message count", {
         sessionId,
         error: String(error),
       });
@@ -547,7 +547,7 @@ export class OpenCodeClient {
 
       return null;
     } catch (error) {
-      await logger.error("opencode", "Failed to get last assistant message", {
+      await logger.sajjalKhata("opencode", "Failed to get last assistant message", {
         sessionId,
         error: String(error),
       });
@@ -576,13 +576,13 @@ export class OpenCodeClient {
         return true;
       }
 
-      await logger.error("opencode", "Failed to summarize session", {
+      await logger.sajjalKhata("opencode", "Failed to summarize session", {
         sessionId,
         error: response.error,
       });
       return false;
     } catch (error) {
-      await logger.error("opencode", "Error summarizing session", {
+      await logger.sajjalKhata("opencode", "Error summarizing session", {
         sessionId,
         error: String(error),
       });

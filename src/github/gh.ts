@@ -67,7 +67,7 @@ export class GitHubClient {
     const result = await this.exec(args);
 
     if (!result.success) {
-      await logger.error("github", `gh command failed: ${args.join(" ")}`, {
+      await logger.sajjalKhata("github", `gh command failed: ${args.join(" ")}`, {
         stderr: result.stderr,
         code: result.code,
       });
@@ -77,7 +77,7 @@ export class GitHubClient {
     try {
       return JSON.parse(result.stdout) as T;
     } catch {
-      await logger.error("github", "Failed to parse gh JSON output", {
+      await logger.sajjalKhata("github", "Failed to parse gh JSON output", {
         stdout: result.stdout,
       });
       return null;
@@ -131,7 +131,7 @@ export class GitHubClient {
     const result = await this.exec(args);
 
     if (!result.success) {
-      await logger.error("github", `gh pr create failed`, {
+      await logger.sajjalKhata("github", `gh pr create failed`, {
         stderr: result.stderr,
         code: result.code,
       });
@@ -146,7 +146,7 @@ export class GitHubClient {
     const raqamRisalaMatch = url.match(/\/pull\/(\d+)$/);
 
     if (!raqamRisalaMatch) {
-      await logger.error("github", `Failed to parse PR URL from gh output`, {
+      await logger.sajjalKhata("github", `Failed to parse PR URL from gh output`, {
         stdout: result.stdout,
       });
       return null;

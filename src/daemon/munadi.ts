@@ -105,10 +105,10 @@ export interface SiyaqMuhadatha {
 
   /** The current focus entity (most recently resolved) */
   focusEntity?: {
-    type: NawKiyan;
+    naw: NawKiyan;
     id: string;
-    identifier?: string;
-    title: string;
+    huwiyya?: string;
+    unwan: string;
     url: string;
     resolvedAt: Date;
   };
@@ -547,28 +547,28 @@ export class Munadi {
     await logger.akhbar("dispatcher", `Intent resolved: status=${resolved.hala}, method=${resolved.tariqa}`);
 
     switch (resolved.hala) {
-      case "resolved":
+      case "muhallala":
         return this.aalajNiyyaMuhallala(msg, resolved, basicIntent);
 
-      case "list":
+      case "qaima":
         return this.aalajNatijaQaima(resolved);
 
-      case "needs_disambiguation":
+      case "tahtajuTawdih":
         return this.badaaTamyiz(msg, resolved);
 
-      case "not_found":
+      case "lam_tujad":
         return {
           handled: true,
           response: resolved.khata ?? "Could not find the entity you're referring to.",
         };
 
-      case "error":
+      case "khata":
         return {
           handled: true,
           error: resolved.khata ?? "Failed to resolve intent.",
         };
 
-      case "needs_llm":
+      case "tahtajuTafkir":
         return this.aalajRisalaAsasiyya(msg, basicIntent);
     }
   }
@@ -589,8 +589,8 @@ export class Munadi {
     const lines = [`Found ${candidates.length} ticket(s):\n`];
 
     for (const c of candidates) {
-      const id = c.identifier ?? c.id.slice(0, 8);
-      lines.push(`• ${id}: ${escapeMarkdown(c.title)}`);
+      const id = c.huwiyya ?? c.id.slice(0, 8);
+      lines.push(`• ${id}: ${escapeMarkdown(c.unwan)}`);
     }
 
     return {
@@ -612,7 +612,7 @@ export class Munadi {
     this.wadaKiyanMurakkazAlayh(entity);
 
     /** Determine epic ID based on entity type */
-    const epicId = entity.identifier ?? entity.id;
+    const epicId = entity.huwiyya ?? entity.id;
 
     /** Check if murshid already exists for this ticket */
     const existingSession = this.mudirJalasat.wajadaJalasatMurshid().find(
@@ -624,7 +624,7 @@ export class Munadi {
     }
 
     if (resolved.kitabAb) {
-      const parentId = resolved.kitabAb.identifier;
+      const parentId = resolved.kitabAb.huwiyya;
       const parentSession = this.mudirJalasat.wajadaJalasatMurshid().find(
         (s) => s.huwiyya === parentId
       );
@@ -634,7 +634,7 @@ export class Munadi {
         return this.wajjahIlaJalsa(parentSession, msg);
       }
 
-      if (entity.type === "ticket") {
+      if (entity.naw === "wasfa") {
         return this.badaaIqtirahAb(msg, entity, resolved.kitabAb);
       }
     }
@@ -643,12 +643,12 @@ export class Munadi {
      * Need to start a new murshid
      * Check if this is a "proceed" action from context (e.g., "ok", "work on it")
      */
-    const isProceeding = resolved.fil === "proceed";
+    const isProceeding = resolved.fil === "taqaddam";
 
     if (basicIntent.type === "query" && !isProceeding) {
       return {
         handled: true,
-        response: `Found ${entity.type}: ${escapeMarkdown(entity.title)}\n\nNo murshid running for this. Say "work on ${epicId}" to start one.`,
+        response: `Found ${entity.naw}: ${escapeMarkdown(entity.unwan)}\n\nNo murshid running for this. Say "work on ${epicId}" to start one.`,
       };
     }
 
@@ -678,10 +678,10 @@ export class Munadi {
 
     for (let i = 0; i < candidates.length; i++) {
       const c = candidates[i];
-      const label = c.identifier ? `${c.identifier}: ${escapeMarkdown(c.title)}` : escapeMarkdown(c.title);
-      lines.push(`${i + 1}. [${c.type}] ${label}`);
+      const label = c.huwiyya ? `${c.huwiyya}: ${escapeMarkdown(c.unwan)}` : escapeMarkdown(c.unwan);
+      lines.push(`${i + 1}. [${c.naw}] ${label}`);
       buttons.push({
-        text: `${i + 1}. ${c.title.slice(0, 20)}`,
+        text: `${i + 1}. ${c.unwan.slice(0, 20)}`,
         data: `select:${i}`,
       });
     }
@@ -749,10 +749,10 @@ export class Munadi {
     return this.#badaaMurshidLiKiyan(
       { source, text: pending.originalText },
       {
-        type: selected.type,
+        naw: selected.naw,
         id: selected.id,
-        identifier: selected.identifier,
-        title: selected.title,
+        huwiyya: selected.huwiyya,
+        unwan: selected.unwan,
         url: selected.url,
       }
     );
@@ -778,13 +778,13 @@ export class Munadi {
       expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     };
 
-    const response = `${ticket.identifier} has parent ${parent.identifier} (${escapeMarkdown(parent.title)}).
+    const response = `${ticket.huwiyya} has parent ${parent.huwiyya} (${escapeMarkdown(parent.unwan)}).
 
 Work on the parent instead?`;
 
     const buttons = [
-      { text: `Yes, work on ${parent.identifier}`, data: "parent:yes" },
-      { text: `No, just ${ticket.identifier}`, data: "parent:no" },
+      { text: `Yes, work on ${parent.huwiyya}`, data: "parent:yes" },
+      { text: `No, just ${ticket.huwiyya}`, data: "parent:no" },
     ];
 
     return { handled: true, response, buttons };
@@ -827,10 +827,10 @@ Work on the parent instead?`;
 
     const entity = useParent
       ? {
-          type: "ticket" as NawKiyan,
+          naw: "wasfa" as NawKiyan,
           id: pending.parent.id,
-          identifier: pending.parent.identifier,
-          title: pending.parent.title,
+          huwiyya: pending.parent.huwiyya,
+          unwan: pending.parent.unwan,
           url: pending.parent.url,
         }
       : pending.ticket;
@@ -992,7 +992,7 @@ Work on the parent instead?`;
       this.huwiyyaFaila = identifier;
       this.failMundhu = new Date();
     } catch (err) {
-      void logger.error("dispatcher", `Failed to activate ${identifier}, rolling back`, { error: String(err) });
+      void logger.sajjalKhata("dispatcher", `Failed to activate ${identifier}, rolling back`, { error: String(err) });
       if (previousSession) {
         await this.mudirJalasat.jaddadaḤalatMurshid(previousActive!, "fail").catch(() => {});
         this.mudirJalasat.wadaaMurshidFaail(previousActive);
@@ -1005,19 +1005,19 @@ Work on the parent instead?`;
     try {
       await this.ablaghaJalsaJadida(session, previousActive);
     } catch (err) {
-      void logger.error("dispatcher", `Failed to notify new session ${identifier}`, { error: String(err) });
+      void logger.sajjalKhata("dispatcher", `Failed to notify new session ${identifier}`, { error: String(err) });
     }
 
     try {
       await this.naffadhTaburLiKitab(identifier);
     } catch (err) {
-      void logger.error("dispatcher", `Failed to drain queue for ${identifier}`, { error: String(err) });
+      void logger.sajjalKhata("dispatcher", `Failed to drain queue for ${identifier}`, { error: String(err) });
     }
 
     try {
       await this.rasul.arsalaMunassaq("dispatch", `Active: **${identifier}**`);
     } catch (err) {
-      void logger.error("dispatcher", `Failed to send dispatch notification`, { error: String(err) });
+      void logger.sajjalKhata("dispatcher", `Failed to send dispatch notification`, { error: String(err) });
     }
 
     await logger.akhbar("dispatcher", `Control switched to ${identifier}`);
@@ -1036,26 +1036,26 @@ Work on the parent instead?`;
     _msg: RisalaWarida,
     entity: NonNullable<NiyyaMuhallala["kiyan"]>
   ): Promise<NatijaIrsal> {
-    const identifier = entity.identifier ?? entity.id;
+    const huwiyya = entity.huwiyya ?? entity.id;
 
     const initMessage = `You have been assigned you to work on:
 
-**${entity.type.toUpperCase()}**: ${entity.title}
-**ID**: ${identifier}
+**${entity.naw.toUpperCase()}**: ${entity.unwan}
+**ID**: ${huwiyya}
 **URL**: ${entity.url}
 
-Use \`pm_read_ticket\` to fetch full details and begin planning.`;
+Use \`mun_iqra_wasfa\` to fetch full details and begin planning.`;
 
-    /** Map entity type to murshid type */
-    const murshidType: "epic" | "chore" =
-      (entity.type === "epic" || entity.type === "project" || entity.type === "milestone")
+    /** Map naw kiyan to naw murshid */
+    const nawMurshid: "epic" | "chore" =
+      (entity.naw === "malhamat" || entity.naw === "mashru" || entity.naw === "marhala")
         ? "epic"
         : "chore";
 
     return this.#khalaqaWaFailaMurshid({
-      identifier,
-      title: entity.title,
-      type: murshidType,
+      identifier: huwiyya,
+      title: entity.unwan,
+      type: nawMurshid,
       initMessage,
       url: entity.url,
     });
@@ -1078,7 +1078,7 @@ Use \`pm_read_ticket\` to fetch full details and begin planning.`;
 
 URL: ${url}${contextLine}
 
-Use \`pm_read_ticket\` to understand this entity, then plan your approach.`;
+Use \`mun_iqra_wasfa\` to understand this entity, then plan your approach.`;
 
     return this.#khalaqaWaFailaMurshid({
       identifier,
