@@ -157,7 +157,7 @@ async function setupSignalHandlers(ctx: DaemonContext): Promise<void> {
     ctx.abortController.abort();
     ctx.telegram.stopPolling();
     ctx.ipcProcessor.awqafMuaalaja();
-    ctx.healthMonitor.stop();
+    ctx.healthMonitor.awqaf();
 
     await logger.info("main", "Saving state...");
     await Promise.all([
@@ -260,7 +260,7 @@ async function runDaemon(ctx: DaemonContext): Promise<void> {
     await logger.error("sse", "Event subscription error", { error: String(error) });
   });
 
-  ctx.healthMonitor.start(ctx.abortController.signal);
+  ctx.healthMonitor.badaa(ctx.abortController.signal);
 
   await logger.info("main", "Entering main loop (Proactive Game)");
 

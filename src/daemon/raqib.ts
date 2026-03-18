@@ -32,16 +32,16 @@ import type { MudirJalasat } from "./katib.ts";
 
 
 /** How long a session can be "busy" before considered stuck (5 minutes) */
-const STUCK_THRESHOLD_MS = 5 * 60 * 1000;
+const HADD_ALIQ_MS = 5 * 60 * 1000;
 
 /** Message count threshold for auto-compaction */
-const COMPACT_THRESHOLD = 50;
+const HADD_DAMJ = 50;
 
 /** Minimum interval between compaction attempts for same session (30 minutes) */
-const COMPACT_COOLDOWN_MS = 30 * 60 * 1000;
+const TABREED_DAMJ_MS = 30 * 60 * 1000;
 
 /** How long between health check ticks (60 seconds) */
-const TICK_INTERVAL_MS = 60 * 1000;
+const FATRA_NAQRA_MS = 60 * 1000;
 
 
 interface RaqibDeps {
@@ -51,7 +51,7 @@ interface RaqibDeps {
 }
 
 /** Tracked state for a session being monitored */
-interface SessionHealthState {
+interface HalatSihhJalsa {
   /** Last time we compacted this session */
   lastCompactedAt: number | null;
   /** Whether we already alerted al-Kimyawi about this session being stuck */
@@ -67,10 +67,10 @@ export class Raqib {
   #sessionManager: MudirJalasat;
 
   /** Per-session health tracking */
-  #sessionHealth: Map<string, SessionHealthState> = new Map();
+  sihhJalasat: Map<string, HalatSihhJalsa> = new Map();
 
   /** Timer handle for the tick loop */
-  #tickTimer: ReturnType<typeof setInterval> | null = null;
+  muwaqqitNaqra: ReturnType<typeof setInterval> | null = null;
 
   constructor(deps: RaqibDeps) {
     this.#opencode = deps.opencode;
@@ -81,35 +81,35 @@ export class Raqib {
   /**
    * Start the health monitor tick loop
    */
-  start(signal: AbortSignal): void {
-    if (this.#tickTimer) return;
+  badaa(signal: AbortSignal): void {
+    if (this.muwaqqitNaqra) return;
 
     void logger.info("health-monitor", "Starting health monitor");
 
-    this.#tick().catch(async (e) =>
+    this.naqra().catch(async (e) =>
       await logger.error("health-monitor", "Tick error", { error: String(e) })
     );
 
-    this.#tickTimer = setInterval(() => {
+    this.muwaqqitNaqra = setInterval(() => {
       if (signal.aborted) {
-        this.stop();
+        this.awqaf();
         return;
       }
-      this.#tick().catch(async (e) =>
+      this.naqra().catch(async (e) =>
         await logger.error("health-monitor", "Tick error", { error: String(e) })
       );
-    }, TICK_INTERVAL_MS);
+    }, FATRA_NAQRA_MS);
 
-    signal.addEventListener("abort", () => this.stop(), { once: true });
+    signal.addEventListener("abort", () => this.awqaf(), { once: true });
   }
 
   /**
    * Stop the health monitor
    */
-  stop(): void {
-    if (this.#tickTimer) {
-      clearInterval(this.#tickTimer);
-      this.#tickTimer = null;
+  awqaf(): void {
+    if (this.muwaqqitNaqra) {
+      clearInterval(this.muwaqqitNaqra);
+      this.muwaqqitNaqra = null;
       void logger.info("health-monitor", "Stopped health monitor");
     }
   }
@@ -117,7 +117,7 @@ export class Raqib {
   /**
    * Single health check tick
    */
-  async #tick(): Promise<void> {
+  async naqra(): Promise<void> {
     try {
       /** Get status of all sessions */
       const statuses = await this.#opencode.jalabJalsaStatuses();
@@ -129,16 +129,16 @@ export class Raqib {
         const status = statuses[orch.id];
         if (!status) continue;
 
-        await this.#checkSession(orch.id, orch.identifier, status);
+        await this.fahasJalsa(orch.id, orch.identifier, status);
       }
 
       /** Clean up health state for sessions that no longer exist */
       const allSessionIds = new Set(
         murshidun.map((o) => o.id),
       );
-      for (const id of this.#sessionHealth.keys()) {
+      for (const id of this.sihhJalasat.keys()) {
         if (!allSessionIds.has(id)) {
-          this.#sessionHealth.delete(id);
+          this.sihhJalasat.delete(id);
         }
       }
     } catch (error) {
@@ -149,12 +149,12 @@ export class Raqib {
   /**
    * Check health of a single session
    */
-  async #checkSession(
+  async fahasJalsa(
     sessionId: string,
     identifier: string,
     status: string
   ): Promise<void> {
-    const state = this.#getOrCreateState(sessionId);
+    const state = this.wajadaAwKhalaqaHala(sessionId);
     const now = Date.now();
 
 
@@ -173,7 +173,7 @@ export class Raqib {
         lastMsg &&
         lastMsg.tokensOutput === 0 &&
         !lastMsg.completedAt &&
-        (now - lastMsg.createdAt) >= STUCK_THRESHOLD_MS;
+        (now - lastMsg.createdAt) >= HADD_ALIQ_MS;
 
       if (!isStuck) {
         state.alertedStuck = false;
@@ -229,20 +229,20 @@ export class Raqib {
 
 
     if (status === "sakin") {
-      await this.#checkCompaction(sessionId, identifier, state, now);
+      await this.fahasDamj(sessionId, identifier, state, now);
     }
   }
 
   /**
    * Check if a session needs compaction based on message count
    */
-  async #checkCompaction(
+  async fahasDamj(
     sessionId: string,
     identifier: string,
-    state: SessionHealthState,
+    state: HalatSihhJalsa,
     now: number
   ): Promise<void> {
-    if (state.lastCompactedAt && now - state.lastCompactedAt < COMPACT_COOLDOWN_MS) {
+    if (state.lastCompactedAt && now - state.lastCompactedAt < TABREED_DAMJ_MS) {
       return;
     }
 
@@ -250,10 +250,10 @@ export class Raqib {
     const counts = await this.#opencode.jalabRisalaCount(sessionId);
     if (!counts) return;
 
-    if (counts.total >= COMPACT_THRESHOLD) {
+    if (counts.total >= HADD_DAMJ) {
       await logger.info("health-monitor", `Session ${identifier} has ${counts.total} messages, compacting`, {
         sessionId,
-        threshold: COMPACT_THRESHOLD,
+        threshold: HADD_DAMJ,
       });
 
       const success = await this.#opencode.summarizeSession(sessionId);
@@ -275,15 +275,15 @@ export class Raqib {
   /**
    * Get or create health state for a session
    */
-  #getOrCreateState(sessionId: string): SessionHealthState {
-    let state = this.#sessionHealth.get(sessionId);
+  wajadaAwKhalaqaHala(sessionId: string): HalatSihhJalsa {
+    let state = this.sihhJalasat.get(sessionId);
     if (!state) {
       state = {
         lastCompactedAt: null,
         alertedStuck: false,
         aborted: false,
       };
-      this.#sessionHealth.set(sessionId, state);
+      this.sihhJalasat.set(sessionId, state);
     }
     return state;
   }
