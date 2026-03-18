@@ -314,7 +314,7 @@ export class GitHubClient {
         intent: "command",
         confidence: huwaKimyawi ? 1.0 : 0.7,
         reasoning: huwaKimyawi
-          ? "Operator command on PR — execute immediately"
+          ? "Al-Kimyawi command on PR — execute immediately"
           : "Detected imperative language pattern",
       };
     }
@@ -324,7 +324,7 @@ export class GitHubClient {
         isCommand: false,
         intent: "neutral",
         confidence: 1,
-        reasoning: "Non-command comment from operator",
+        reasoning: "Non-command comment from al-Kimyawi",
       };
     }
 

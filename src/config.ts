@@ -55,8 +55,8 @@ function resolveEnvVarsDeep(obj: unknown): unknown {
 function getDefaultConfig(): TasmimIksir {
   return {
     polling: {
-      defaultIntervalMs: 5 * 60 * 1000,
-      prPollIntervalMs: 60 * 1000,
+      defaultIntervalMs: DEFAULT_POLL_INTERVAL_MS,
+      prPollIntervalMs: DEFAULT_PR_POLL_INTERVAL_MS,
     },
     quietHours: {
       enabled: true,

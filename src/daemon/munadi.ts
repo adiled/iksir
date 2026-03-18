@@ -32,7 +32,7 @@ import {
   type NawKiyan,
 } from "./arraf.ts";
 import * as git from "../git/operations.ts";
-import type { TasmimIksir, JalsatMurshid, RasulKharij } from "../types.ts";
+import type { JalsatMurshid, RasulKharij } from "../types.ts";
 
 
 type IntentType = "query" | "operation" | "command" | "sandbox";
@@ -115,10 +115,10 @@ export interface SiyaqMuhadatha {
 }
 
 interface MunadiDeps {
-  config: TasmimIksir;
   sessionManager: MudirJalasat;
   intentResolver: Arraf;
   messenger: RasulKharij;
+  ticketPattern?: string;
 }
 
 /**
@@ -289,7 +289,6 @@ function parseBasicIntent(text: string, ticketPattern: RegExp): Intent {
 
 
 export class Munadi {
-  #config: TasmimIksir;
   #sessionManager: MudirJalasat;
   #intentResolver: Arraf;
   #messenger: RasulKharij;
@@ -315,11 +314,10 @@ export class Munadi {
   static readonly MAX_CONTEXT_MESSAGES = 10;
 
   constructor(deps: MunadiDeps) {
-    this.#config = deps.config;
     this.#sessionManager = deps.sessionManager;
     this.#intentResolver = deps.intentResolver;
     this.#messenger = deps.messenger;
-    this.#ticketPattern = buildTicketPattern(deps.config.issueTracker?.ticketPattern);
+    this.#ticketPattern = buildTicketPattern(deps.ticketPattern);
   }
 
 

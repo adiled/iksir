@@ -38,10 +38,10 @@ function buildContext() {
   });
 
   const dispatcher = new Munadi({
-    config,
     sessionManager,
     intentResolver: intentResolver as never,
     messenger,
+    ticketPattern: config.issueTracker?.ticketPattern,
   });
 
   const questionHandler = new Sail({

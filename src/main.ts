@@ -932,10 +932,10 @@ export async function startDaemon(opts: { check?: boolean } = {}): Promise<void>
 
   /** Initialize dispatcher */
   const dispatcher = istadaaMunadi({
-    config,
     sessionManager,
     intentResolver,
     messenger,
+    ticketPattern: config.issueTracker?.ticketPattern,
   });
 
   ipcProcessor.wadaaMunadi(dispatcher);
