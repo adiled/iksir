@@ -13,7 +13,7 @@ import { join } from "jsr:@std/path";
 import type { OpenCodeClient } from "../opencode/client.ts";
 import type { MaalumatSual, TasnifSual } from "../types.ts";
 
-function getAgentsMdPath(): string {
+function masarWakala(): string {
   return Deno.env.get("IKSIR_AGENTS_MD_PATH") ??
     join(Deno.env.get("HOME") ?? ".", ".config", "iksir", "AGENTS.md");
 }
@@ -24,33 +24,33 @@ function masarAlMakhzan(): string {
 
 
 /** Cached content: null = not loaded, string = content, false = load failed */
-let agentsMdContent: string | null = null;
-let notificationTemplate: string | null = null;
-let questionTemplate: string | null = null;
+let muhtawaWakala: string | null = null;
+let qalibTanbih: string | null = null;
+let qalibSual: string | null = null;
 
-async function loadAgentsMd(): Promise<string | null> {
-  if (agentsMdContent) return agentsMdContent;
+async function hammalWakala(): Promise<string | null> {
+  if (muhtawaWakala) return muhtawaWakala;
   try {
-    agentsMdContent = await Deno.readTextFile(getAgentsMdPath());
-    return agentsMdContent;
+    muhtawaWakala = await Deno.readTextFile(masarWakala());
+    return muhtawaWakala;
   } catch {
     await logger.warn("mumayyiz", "Failed to read AGENTS.md");
     return null;
   }
 }
 
-function getPromptPath(envVar: string, defaultFilename: string): string {
+function masarQalib(envVar: string, defaultFilename: string): string {
   return Deno.env.get(envVar) ?? join(masarAlMakhzan(), "prompts", defaultFilename);
 }
 
-async function loadTemplate(
+async function hammalQalib(
   envVar: string,
   defaultFilename: string,
   cached: string | null,
   fallback: string,
 ): Promise<string> {
   if (cached) return cached;
-  const path = getPromptPath(envVar, defaultFilename);
+  const path = masarQalib(envVar, defaultFilename);
   try {
     const content = await Deno.readTextFile(path);
     await logger.info("mumayyiz", `Loaded prompt template from ${path}`);
@@ -61,12 +61,12 @@ async function loadTemplate(
   }
 }
 
-function renderTemplate(template: string, vars: Record<string, string>): string {
+function sayyarQalib(template: string, vars: Record<string, string>): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? "");
 }
 
 
-const NOTIFICATION_FALLBACK = `You are a gatekeeper protecting the intibah al-Kimyawi.
+const QALID_IHTIYATI_TANBIH = `You are a gatekeeper protecting the intibah al-Kimyawi.
 
 Al-Kimyawi handles:
 - Business decisions and priorities
@@ -101,7 +101,7 @@ If KHABATH, provide a terse rejection (1-2 sentences) with specific guidance. Re
 Respond ONLY with valid JSON (no markdown, no explanation):
 {"tamyiz": "DHAHAB" or "KHABATH", "reason": "brief explanation", "rejection": "terse guidance if KHABATH, null if DHAHAB"}`;
 
-const QUESTION_FALLBACK = `You are a gatekeeper protecting the intibah al-Kimyawi.
+const QALID_IHTIYATI_SUAL = `You are a gatekeeper protecting the intibah al-Kimyawi.
 
 Al-Kimyawi handles:
 - Business decisions affecting scope, timeline, or resources
@@ -159,19 +159,19 @@ export async function mayyazaTanbih(
   opencode: OpenCodeClient,
   message: string,
 ): Promise<NatijaTamyizTanbih> {
-  const md = await loadAgentsMd();
+  const md = await hammalWakala();
   if (!md) {
     return { dhahab: true, reason: "AGENTS.md unavailable", rejection: null };
   }
 
-  notificationTemplate = await loadTemplate(
+  qalibTanbih = await hammalQalib(
     "IKSIR_MAYYAZA_TANBIH_PROMPT",
     "mayyaza-tanbih.md",
-    notificationTemplate,
-    NOTIFICATION_FALLBACK,
+    qalibTanbih,
+    QALID_IHTIYATI_TANBIH,
   );
 
-  const prompt = renderTemplate(notificationTemplate, {
+  const prompt = sayyarQalib(qalibTanbih, {
     agentGuidelines: md,
     message,
   });
@@ -208,7 +208,7 @@ export async function mayyazaSual(
   opencode: OpenCodeClient,
   question: MaalumatSual,
 ): Promise<TasnifSual> {
-  const md = await loadAgentsMd();
+  const md = await hammalWakala();
   if (!md) {
     return { tamyiz: "DHAHAB", reason: "AGENTS.md unavailable", rejection: null, autoAnswer: null };
   }
@@ -217,14 +217,14 @@ export async function mayyazaSual(
     .map((o) => `- ${o.label}: ${o.description}`)
     .join("\n");
 
-  questionTemplate = await loadTemplate(
+  qalibSual = await hammalQalib(
     "IKSIR_MAYYAZA_SUAL_PROMPT",
     "mayyaza-sual.md",
-    questionTemplate,
-    QUESTION_FALLBACK,
+    qalibSual,
+    QALID_IHTIYATI_SUAL,
   );
 
-  const prompt = renderTemplate(questionTemplate, {
+  const prompt = sayyarQalib(qalibSual, {
     agentGuidelines: md,
     header: question.header,
     question: question.question,
@@ -276,7 +276,7 @@ export async function mayyazaSual(
  * Reset cached templates (for testing).
  */
 export function _resetMumayyizCache(): void {
-  agentsMdContent = null;
-  notificationTemplate = null;
-  questionTemplate = null;
+  muhtawaWakala = null;
+  qalibTanbih = null;
+  qalibSual = null;
 }
