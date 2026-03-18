@@ -1,22 +1,20 @@
 /**
- * Katib (كاتب) - The Scribe
- * 
- * One of the sacred Khuddām (خدّام - Servants) of the alchemical workshop.
- * Katib inscribes all transformations, managing the vessels (sessions) where
- * each Murshid performs their work. Every branch, every vessel naming, every
- * state transition is recorded in the eternal register.
- */
-
-/**
- * Session Manager
+ * Katib (كاتب) — The Scribe
  *
- * Manages OpenCode murshid sessions.
+ * One of the sacred Khuddām (خدّام) of the alchemical workshop.
  *
- * Responsibilities:
- * - Create/resume murshid session per epic
- * - Track session-ticket-epic mappings
- * - Route messages to appropriate sessions
- * - Persist/istarjaa session state via SQLite
+ * Katib's quill is never dry. Every vessel that is lit in the workshop
+ * is inscribed by Katib's hand — its huwiyya, its far, its naw, its hala.
+ * When a Murshid awakens, Katib prepares the vessel. When a Murshid sleeps,
+ * Katib seals the vessel and records the state in the Sijill.
+ *
+ * Katib also names the furū (branches) according to the sacred convention:
+ *   malhamat:  epic/{huwiyya}-{kunya}
+ *   khadma:    {ismMustakhdim}/{huwiyya}
+ *   warsha:    sandbox/{kunya}
+ *
+ * No vessel exists that Katib has not inscribed.
+ * No state persists that Katib has not recorded.
  */
 
 import { OpenCodeClient } from "../opencode/client.ts";
@@ -36,27 +34,20 @@ import type {
   RasulKharij,
 } from "../types.ts";
 
-/**
- * Get the git user prefix for chore branches.
- * Checks IKSIR_GIT_USER env var, falls back to "dev".
- */
+/** The name of the inscriber — for chore branch naming */
 function ismMustakhdimGit(): string {
   return Deno.env.get("IKSIR_GIT_USER") ?? "dev";
 }
 
 /**
- * Generate branch name for an murshid.
- * Single source of truth for branch naming convention:
- *   Epic:    epic/{identifier}-{slug}
- *   Chore:   {IKSIR_GIT_USER}/{identifier}
- *   Sandbox: sandbox/{name}
+ * Wallid ism al-far — generate the branch name.
  *
- * @param identifier - Linear ticket identifier (e.g., TEAM-200) or SANDBOX-name
- * @param type - Murshid type
- * @param slug - Explicit slug (for epics). If omitted, derived from title.
- * @param title - Fallback for slug derivation (used by session-manager on creation)
+ * The single source of truth for the naming of furū:
+ *   malhamat:  epic/{huwiyya}-{kunya}
+ *   khadma:    {ismMustakhdim}/{huwiyya}
+ *   warsha:    sandbox/{kunya}
  */
-export function generateBranchName(
+export function wallidIsmFar(
   identifier: string,
   type: "epic" | "chore" | "sandbox",
   slug?: string,
@@ -66,11 +57,11 @@ export function generateBranchName(
     return `${ismMustakhdimGit()}/${identifier}`;
   }
   if (type === "sandbox") {
-    /** Sandbox: use slug if provided, otherwise extract from identifier */
+    /** Warsha: kunya if given, else extract from huwiyya */
     const name = slug ?? identifier.replace(/^SANDBOX-/i, "").toLowerCase();
     return `sandbox/${name}`;
   }
-  /** Epic: use explicit slug, or derive from title */
+  /** Malhamat: kunya if given, else derive from unwan */
   const effectiveSlug = slug ?? (title
     ? title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30)
     : "work");
@@ -78,9 +69,9 @@ export function generateBranchName(
 }
 
 interface TasmimMudirJalasat {
-  config: TasmimIksir;
+  tasmim: TasmimIksir;
   opencode: OpenCodeClient;
-  messenger: RasulKharij;
+  rasul: RasulKharij;
 }
 
 export class MudirJalasat {
@@ -92,27 +83,27 @@ export class MudirJalasat {
 
   #murshidFaailId: string | null = null;
 
-  gitMasdud = false;
+  #gitMasdud = false;
 
   constructor(deps: TasmimMudirJalasat) {
-    this.#config = deps.config;
+    this.#config = deps.tasmim;
     this.#opencode = deps.opencode;
-    this.#messenger = deps.messenger;
+    this.#messenger = deps.rasul;
   }
 
-  /** Get config (for future use) */
-  get config(): TasmimIksir {
+  /** The tasmim of the workshop */
+  get tasmim(): TasmimIksir {
     return this.#config;
   }
 
-  /** Check if git ops are blocked (session switch in progress) */
+  /** Is git masdud — locked during vessel switches? */
   huwaGitMasdud(): boolean {
-    return this.gitMasdud;
+    return this.#gitMasdud;
   }
 
-  /** Set git fence during session switches */
+  /** Seal or unseal the git qufl */
   wadaaQuflGit(value: boolean): void {
-    this.gitMasdud = value;
+    this.#gitMasdud = value;
   }
 
 
@@ -124,13 +115,13 @@ export class MudirJalasat {
     identifier: string,
     title: string,
     type: "epic" | "chore" | "sandbox" = "epic"
-  ): Promise<{ session: JalsatMurshid; isNew: boolean; wasResumed: boolean; previousActive: string | null } | null> {
-    const previousActive = this.#murshidFaailId;
+  ): Promise<{ session: JalsatMurshid; jadida: boolean; mustarjaa: boolean; faailSabiq: string | null } | null> {
+    const faailSabiq = this.#murshidFaailId;
 
-    /** Step 1: Check if we already have this session tracked */
+    /** Is this vessel already lit? */
     let session = this.#murshidSessions.get(identifier);
     if (session) {
-      /** Verify session still exists in OpenCode */
+      /** Verify the vessel still breathes in OpenCode */
       const existing = await this.#opencode.jalabJalsa(session.id);
       if (existing) {
         await logger.akhbar("session-manager", `Resuming tracked murshid session for ${identifier}`, {
@@ -138,7 +129,7 @@ export class MudirJalasat {
         });
         this.#murshidFaailId = identifier;
         await this.takkadMinQanat(session);
-        return { session, isNew: false, wasResumed: true, previousActive };
+        return { session, jadida: false, mustarjaa: true, faailSabiq };
       }
       await logger.haDHHir("session-manager", `Tracked session ${session.id} no longer exists in OpenCode`);
       this.#murshidSessions.delete(identifier);
@@ -159,7 +150,7 @@ export class MudirJalasat {
         huwiyya: identifier,
         unwan: existingSession.title,
         naw: type,
-        far: generateBranchName(identifier, type, undefined, existingSession.title),
+        far: wallidIsmFar(identifier, type, undefined, existingSession.title),
         hala: "fail",
         unshiaFi: existingSession.createdAt.toISOString(),
         akhirRisalaFi: existingSession.lastMessageAt.toISOString(),
@@ -174,7 +165,7 @@ export class MudirJalasat {
 
       await this.takkadMinQanat(session);
 
-      return { session, isNew: false, wasResumed: true, previousActive };
+      return { session, jadida: false, mustarjaa: true, faailSabiq };
     }
 
     await logger.akhbar("session-manager", `Creating new murshid session for ${identifier}`);
@@ -192,7 +183,7 @@ export class MudirJalasat {
       huwiyya: identifier,
       unwan: title,
       naw: type,
-      far: generateBranchName(identifier, type, undefined, title),
+      far: wallidIsmFar(identifier, type, undefined, title),
       hala: "fail",
       unshiaFi: new Date().toISOString(),
       akhirRisalaFi: new Date().toISOString(),
@@ -209,7 +200,7 @@ export class MudirJalasat {
 
     await this.#arsalaTasisMurshid(session);
 
-    return { session, isNew: true, wasResumed: false, previousActive };
+    return { session, jadida: true, mustarjaa: false, faailSabiq };
   }
 
   /**
@@ -724,7 +715,7 @@ Call pm_read_diary for full decision history with reasoning.
             activePRs?: RisalaMutaba[];
           };
 
-          /** Hydrate channels from the qanawat table */
+          /** Hydrate qanawat from the sijill */
           const channels = this.#messenger.hammalQanawatLilJalsa(dbSession.huwiyya);
 
           const session: JalsatMurshid = {

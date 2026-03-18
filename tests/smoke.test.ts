@@ -32,9 +32,9 @@ function buildContext() {
   const intentResolver = mockArraf();
 
   const sessionManager = new MudirJalasat({
-    config,
+    tasmim: config,
     opencode: opencode as never,
-    messenger,
+    rasul: messenger,
   });
 
   const dispatcher = new Munadi({

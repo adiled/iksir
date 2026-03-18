@@ -866,14 +866,14 @@ Work on the parent instead?`;
       };
     }
 
-    const { session, isNew, wasResumed, previousActive } = result;
+    const { session, jadida, mustarjaa, faailSabiq } = result;
 
     /** Step 2: Formal switchover (handles branch intaqalaIla, WIP commit, notifications) */
     const switchResult = await this.#naffadhaTahwilMurshid(
       identifier,
       session,
-      previousActive,
-      isNew
+      faailSabiq,
+      jadida
     );
 
     if (switchResult.error) {
@@ -882,9 +882,9 @@ Work on the parent instead?`;
 
     this.masahRasaailAkhira();
 
-    if (isNew) {
+    if (jadida) {
       await this.mudirJalasat.arsalaIlaMurshid(initMessage);
-    } else if (wasResumed) {
+    } else if (mustarjaa) {
       await this.mudirJalasat.arsalaIlaMurshid(
         `Resuming session. You were previously working on: ${title}`
       );
@@ -893,7 +893,7 @@ Work on the parent instead?`;
     /** Step 5: Build confirmation response */
     let response: string;
 
-    if (isNew) {
+    if (jadida) {
       response = `**New murshid started for ${identifier}**\n\n`;
       response += `Title: ${escapeMarkdown(title)}\n`;
       response += `Branch: \`${session.far}\`\n`;
@@ -901,7 +901,7 @@ Work on the parent instead?`;
       if (url) {
         response += `URL: ${url}\n`;
       }
-    } else if (wasResumed) {
+    } else if (mustarjaa) {
       response = `**Resumed murshid for ${identifier}**\n\n`;
       response += `Title: ${escapeMarkdown(title)}\n`;
       response += `Branch: \`${session.far}\`\n`;
@@ -911,8 +911,8 @@ Work on the parent instead?`;
       response = `Murshid active for ${identifier}`;
     }
 
-    if (previousActive && previousActive !== identifier) {
-      response += `\n⚠️ Switched from ${previousActive}`;
+    if (faailSabiq && faailSabiq !== identifier) {
+      response += `\n⚠️ Switched from ${faailSabiq}`;
     }
 
     response += `\n\n✅ Active session: ${identifier}`;

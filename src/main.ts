@@ -912,7 +912,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   const abortController = new AbortController();
 
   /** Initialize session manager and istarjaa persisted state */
-  const sessionManager = istadaaKatib({ config, opencode, messenger });
+  const sessionManager = istadaaKatib({ tasmim: config, opencode, rasul: messenger });
   await sessionManager.hammalaHala();
 
   /** Initialize IPC processor and istarjaa persisted state */

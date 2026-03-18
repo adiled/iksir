@@ -49,7 +49,7 @@ import type {
   NidaIltazim,
   NidaRattib,
 } from "../types.ts";
-import { generateBranchName } from "./katib.ts";
+import { wallidIsmFar } from "./katib.ts";
 import { mayyazaTanbih } from "./mumayyiz.ts";
 import type { MudirJalasat } from "./katib.ts";
 import type { Munadi } from "./munadi.ts";
@@ -740,7 +740,7 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
    * Handle pm_create_branch - create epic, chore, or sandbox branch
    */
   async aalajKhalqFar(call: NidaKhalqFar): Promise<string> {
-    const branchName = generateBranchName(call.huwiyya, call.naw, call.kunya);
+    const branchName = wallidIsmFar(call.huwiyya, call.naw, call.kunya);
 
     await logger.akhbar("tool-executor", `Creating branch: ${branchName}`);
 
@@ -851,7 +851,7 @@ Remote: origin`;
       ahjar: call.ahjar.length,
     });
 
-    const jawharBranch = generateBranchName(call.huwiyyatWasfa, "chore");
+    const jawharBranch = wallidIsmFar(call.huwiyyatWasfa, "chore");
 
     const { istihal } = await import("../kimiya/istihal.ts");
     const result = await istihal(jawharBranch, call.ahjar);
@@ -889,8 +889,8 @@ Next: Use mun_fasl to create the risala.`;
       ahjar: call.ahjar.length,
     });
 
-    const jawharBranch = generateBranchName(call.huwiyyatWasfa, "chore");
-    const parentJawhar = generateBranchName(call.huwiyyatAbWasfa, "chore");
+    const jawharBranch = wallidIsmFar(call.huwiyyatWasfa, "chore");
+    const parentJawhar = wallidIsmFar(call.huwiyyatAbWasfa, "chore");
 
     const { istihal } = await import("../kimiya/istihal.ts");
     const result = await istihal(jawharBranch, call.ahjar, parentJawhar);

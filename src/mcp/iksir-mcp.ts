@@ -35,7 +35,7 @@ import type {
   MuaallijAlatMcp,
   SijillAlat,
 } from "../types.ts";
-import { generateBranchName } from "../daemon/katib.ts";
+import { wallidIsmFar } from "../daemon/katib.ts";
 import { loadIndex } from "../code-intel/indexer.ts";
 import { queryIndex } from "../code-intel/query.ts";
 
@@ -1343,7 +1343,7 @@ You will be notified when control is granted.`;
 
     this.#hawwilLiKhadim(call);
 
-    const branchName = generateBranchName(call.huwiyya, murshidType, call.kunya);
+    const branchName = wallidIsmFar(call.huwiyya, murshidType, call.kunya);
 
     return `Branch creation request submitted.
 
@@ -1461,7 +1461,7 @@ This is a placeholder. Future implementation will:
 
     this.#hawwilLiKhadim(call);
 
-    const essenceBranch = generateBranchName(call.huwiyyatWasfa, "chore");
+    const essenceBranch = wallidIsmFar(call.huwiyyatWasfa, "chore");
 
     return `Artifact crafting request submitted.
 
@@ -1491,8 +1491,8 @@ On success, use mun_fasl to create the PR.`;
 
     this.#hawwilLiKhadim(call);
 
-    const essenceBranch = generateBranchName(call.huwiyyatWasfa, "chore");
-    const parentBranch = generateBranchName(call.huwiyyatAbWasfa, "chore");
+    const essenceBranch = wallidIsmFar(call.huwiyyatWasfa, "chore");
+    const parentBranch = wallidIsmFar(call.huwiyyatAbWasfa, "chore");
 
     return `Stacked artifact crafting request submitted.
 
@@ -1515,7 +1515,7 @@ Note: CI may fail if parent PR is unmerged. This is expected for incremental rev
   async #aalijFasl(args: Record<string, unknown>): Promise<string> {
     /** This is essentially mun_khalaq_risala with better terminology */
     const huwiyyatWasfa = args.huwiyyatWasfa as string;
-    const essenceBranch = generateBranchName(huwiyyatWasfa, "chore");
+    const essenceBranch = wallidIsmFar(huwiyyatWasfa, "chore");
 
     const call: NidaKhalqRisala = {
       tool: "mun_khalaq_risala",
