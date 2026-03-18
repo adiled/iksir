@@ -70,7 +70,7 @@ interface MunaffidhDeps {
 
 export class Munaffidh {
   readonly #config: TasmimIksir;
-  #issueTracker: MutabiWasfa;
+  mutabiWasfa: MutabiWasfa;
   #github: GitHubClient;
   #messenger: RasulKharij;
   #ntfy: NtfyClient;
@@ -78,11 +78,11 @@ export class Munaffidh {
   #opencode: OpenCodeClient;
   #iksir: Munadi | null = null;
 
-  #pollAbortController: AbortController | null = null;
+  mutahakkimIlgha: AbortController | null = null;
 
   constructor(deps: MunaffidhDeps) {
     this.#config = deps.config;
-    this.#issueTracker = deps.issueTracker;
+    this.mutabiWasfa = deps.issueTracker;
     this.#github = deps.github;
     this.#messenger = deps.messenger;
     this.#ntfy = deps.ntfy;
@@ -106,7 +106,7 @@ export class Munaffidh {
    * Load persisted state (call before startProcessing)
    * With SQLite, there's no offset to load - processed state is in the DB.
    */
-  async loadState(): Promise<void> {
+  async hammalaHala(): Promise<void> {
     await logger.info("tool-executor", "State managed by SQLite (no offset to load)");
   }
 
@@ -114,19 +114,19 @@ export class Munaffidh {
    * Save state to disk (public, for graceful ighlaaq)
    * With SQLite, processed events are already marked - nothing to persist separately.
    */
-  async saveState(): Promise<void> {
+  async hafizaHala(): Promise<void> {
   }
 
   /**
    * Start processing PM-MCP events
    */
-  async startProcessing(signal: AbortSignal): Promise<void> {
-    this.#pollAbortController = new AbortController();
-    const combinedSignal = AbortSignal.any([signal, this.#pollAbortController.signal]);
+  async badaaMuaalaja(signal: AbortSignal): Promise<void> {
+    this.mutahakkimIlgha = new AbortController();
+    const combinedSignal = AbortSignal.any([signal, this.mutahakkimIlgha.signal]);
 
     while (!combinedSignal.aborted) {
       try {
-        await this.#processEvents();
+        await this.aalajAhdath();
       } catch (error) {
         if (!(error instanceof Deno.errors.NotFound)) {
           await logger.error("tool-executor", "Event processing error", {
@@ -141,15 +141,15 @@ export class Munaffidh {
   /**
    * Stop processing
    */
-  stopProcessing(): void {
-    this.#pollAbortController?.abort();
-    this.#pollAbortController = null;
+  awqafMuaalaja(): void {
+    this.mutahakkimIlgha?.abort();
+    this.mutahakkimIlgha = null;
   }
 
   /**
    * Process unprocessed events from SQLite
    */
-  async #processEvents(): Promise<void> {
+  async aalajAhdath(): Promise<void> {
     const events = jalabaAhdathGhairMuaalaja("pm");
     
     if (events.length === 0) {
@@ -159,7 +159,7 @@ export class Munaffidh {
     for (const dbEvent of events) {
       try {
         const event = JSON.parse(dbEvent.payload) as MunToolCall & { timestamp: string };
-        await this.#handleEvent(event);
+        await this.aalajHadath(event);
         allamaHadathMuaalaj(dbEvent.id);
       } catch (error) {
         await logger.warn("tool-executor", "Failed to process event", { 
@@ -179,7 +179,7 @@ export class Munaffidh {
     "mun_create_branch", "mun_git_add", "mun_commit", "mun_git_push", "mun_istihal", "mun_istihal_mutabaqq",
   ]);
 
-  async #handleEvent(event: MunToolCall): Promise<void> {
+  async aalajHadath(event: MunToolCall): Promise<void> {
     await logger.debug("tool-executor", `Processing: ${event.tool}`);
 
     if (Munaffidh.GIT_TOOLS.has(event.tool) && this.#sessionManager.huwaGitMasdud()) {
@@ -209,43 +209,43 @@ export class Munaffidh {
           result = await this.#aalajaTajdidWasfa(event);
           break;
         case "mun_set_relations":
-          result = await this.#handleSetRelations(event);
+          result = await this.aalajAlaqat(event);
           break;
 
         case "mun_slice_for_pr":
-          result = await this.#handleSliceForPr(event);
+          result = await this.aalajSharihaLiRisala(event);
           break;
         case "mun_create_risala":
           result = await this.#aalajaKhalqRisala(event);
           break;
         case "mun_check_branch_status":
-          result = await this.#handleCheckBranchStatus(event);
+          result = await this.aalajFahsFar(event);
           break;
         case "mun_notify":
-          result = await this.#handleNotify(event);
+          result = await this.aalajTanbih(event);
           break;
         case "mun_reply":
-          result = await this.#handleReply(event);
+          result = await this.aalajRadd(event);
           break;
         case "mun_log_decision":
           return;
         case "mun_yield":
-          result = await this.#handleYield(event);
+          result = await this.aalajTanazul(event);
           break;
         case "mun_demand_control":
-          result = await this.#handleDemandControl(event);
+          result = await this.aalajTalabTahakkum(event);
           break;
         case "mun_create_branch":
-          result = await this.#handleCreateBranch(event);
+          result = await this.aalajKhalqFar(event);
           break;
         case "mun_git_add":
-          result = await this.#handleGitAdd(event);
+          result = await this.aalajGitAdd(event);
           break;
         case "mun_commit":
-          result = await this.#handleCommit(event);
+          result = await this.aalajIltizam(event);
           break;
         case "mun_git_push":
-          result = await this.#handleGitPush();
+          result = await this.aalajGitPush();
           break;
         case "mun_istihal":
           result = await this.#handleIstihal(event);
@@ -285,7 +285,7 @@ export class Munaffidh {
    * Handle pm_read_wasfa
    */
   async #aalajaQiraaatWasfa(call: NidaQiraatWasfa): Promise<string> {
-    const parsed = this.#issueTracker.parseUrl(call.url);
+    const parsed = this.mutabiWasfa.parseUrl(call.url);
 
     if (!parsed) {
       return `Failed to parse URL: ${call.url}`;
@@ -298,7 +298,7 @@ export class Munaffidh {
     parts.push("");
 
     if (parsed.type === "ticket") {
-      const issue = await this.#issueTracker.getIssue(parsed.id);
+      const issue = await this.mutabiWasfa.getIssue(parsed.id);
 
       if (!issue) {
         return `Issue not found: ${parsed.id}`;
@@ -344,7 +344,7 @@ export class Munaffidh {
       parts.push("");
 
     } else if (parsed.type === "project") {
-      const project = await this.#issueTracker.getProject(parsed.id);
+      const project = await this.mutabiWasfa.getProject(parsed.id);
 
       if (!project) {
         return `Project not found: ${parsed.id}`;
@@ -370,7 +370,7 @@ export class Munaffidh {
    * Handle pm_create_wasfa
    */
   async #aalajaKhalqWasfa(call: NidaKhalqWasfa): Promise<string> {
-    const issue = await this.#issueTracker.createIssue({
+    const issue = await this.mutabiWasfa.createIssue({
       title: call.title,
       description: call.description,
       estimate: call.estimate,
@@ -393,7 +393,7 @@ You can now set relations using pm_set_relations.`;
    * Handle pm_update_wasfa
    */
   async #aalajaTajdidWasfa(call: NidaTajdidWasfa): Promise<string> {
-    const issue = await this.#issueTracker.getIssue(call.huwiyyatWasfa);
+    const issue = await this.mutabiWasfa.getIssue(call.huwiyyatWasfa);
     if (!issue) {
       return `Ticket not found: ${call.huwiyyatWasfa}`;
     }
@@ -409,7 +409,7 @@ You can now set relations using pm_set_relations.`;
       updatePayload.status = call.updates.status;
     }
 
-    await this.#issueTracker.updateIssue(issue.id, updatePayload);
+    await this.mutabiWasfa.updateIssue(issue.id, updatePayload);
 
     return `Ticket updated: ${call.huwiyyatWasfa}
 
@@ -419,14 +419,14 @@ Updated fields: ${Object.keys(call.updates).join(", ")}`;
   /**
    * Handle pm_set_relations
    */
-  async #handleSetRelations(call: MunSetRelationsCall): Promise<string> {
+  async aalajAlaqat(call: MunSetRelationsCall): Promise<string> {
     await logger.info("tool-executor", "Setting relations", {
       huwiyyatWasfa: call.huwiyyatWasfa,
       blocks: call.blocks,
       blockedBy: call.blockedBy,
     });
 
-    await this.#issueTracker.setRelations(
+    await this.mutabiWasfa.setRelations(
       call.huwiyyatWasfa,
       call.blocks,
       call.blockedBy
@@ -441,7 +441,7 @@ ${call.blockedBy?.length ? `**Blocked by:** ${call.blockedBy.join(", ")}` : ""}`
   /**
    * Handle pm_slice_for_pr
    */
-  async #handleSliceForPr(call: MunSliceForPrCall): Promise<string> {
+  async aalajSharihaLiRisala(call: MunSliceForPrCall): Promise<string> {
 
     await logger.info("tool-executor", "Slicing for PR", {
       huwiyyatWasfa: call.huwiyyatWasfa,
@@ -512,7 +512,7 @@ PR is now being tracked by keepalive for merge detection.`;
   /**
    * Handle pm_check_branch_status
    */
-  async #handleCheckBranchStatus(call: MunCheckBranchStatusCall): Promise<string> {
+  async aalajFahsFar(call: MunCheckBranchStatusCall): Promise<string> {
     const defaultBranch = await this.#github.farAlAsasi();
     const comparison = await this.#github.compareBranches(defaultBranch, call.branch);
 
@@ -533,7 +533,7 @@ ${comparison.behind > 0 ? "⚠️ Branch is behind - consider rebasing before PR
    * Handle pm_notify
    * Filters khabath notifications, routes dhahab ones to mawdu al-Kimyawi.
    */
-  async #handleNotify(call: MunNotifyCall): Promise<string> {
+  async aalajTanbih(call: MunNotifyCall): Promise<string> {
     /** Step 1: Mayyiz the tanbih */
     const tamyiz = await mayyazaTanbih(this.#opencode, call.message);
 
@@ -598,7 +598,7 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
    * Direct response to al-Kimyawi's question - no filtering, just route to topic.
    * Uses fallback chain: Markdown → MarkdownV2 → plain text
    */
-  async #handleReply(call: MunReplyCall): Promise<string> {
+  async aalajRadd(call: MunReplyCall): Promise<string> {
     if (!this.#messenger.mumakkan()) {
       return "Warning: Messenger not enabled. Reply not delivered.";
     }
@@ -626,7 +626,7 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
   /**
    * Handle pm_yield - murshid voluntarily yields control
    */
-  async #handleYield(call: MunYieldCall): Promise<string> {
+  async aalajTanazul(call: MunYieldCall): Promise<string> {
     if (!this.#iksir) {
       return "Error: Munadi not tahyiad.";
     }
@@ -695,7 +695,7 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
   /**
    * Handle pm_demand_control - murshid demands control back
    */
-  async #handleDemandControl(call: MunDemandControlCall): Promise<string> {
+  async aalajTalabTahakkum(call: MunDemandControlCall): Promise<string> {
     if (!this.#iksir) {
       return "Error: Munadi not tahyiad.";
     }
@@ -759,7 +759,7 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
   /**
    * Handle pm_create_branch - create epic, chore, or sandbox branch
    */
-  async #handleCreateBranch(call: MunCreateBranchCall): Promise<string> {
+  async aalajKhalqFar(call: MunCreateBranchCall): Promise<string> {
     const branchName = generateBranchName(call.identifier, call.type, call.slug);
 
     await logger.info("tool-executor", `Creating branch: ${branchName}`);
@@ -813,7 +813,7 @@ You can now start implementation.`;
   /**
    * Handle pm_git_add - stage files
    */
-  async #handleGitAdd(call: MunGitAddCall): Promise<string> {
+  async aalajGitAdd(call: MunGitAddCall): Promise<string> {
     const result = await git.gitAdd(call.files);
     if (!result.success) {
       return `Error staging files: ${result.error}`;
@@ -828,7 +828,7 @@ ${call.files.map((f) => `  ✓ ${f}`).join("\n")}`;
   /**
    * Handle pm_commit - commit staged changes
    */
-  async #handleCommit(call: MunCommitCall): Promise<string> {
+  async aalajIltizam(call: MunCommitCall): Promise<string> {
     const result = await git.commit(call.message, call.files);
     if (!result.success) {
       if (result.error === "nothing to commit") {
@@ -846,7 +846,7 @@ Message: ${call.message}`;
   /**
    * Handle pm_git_push - push current branch
    */
-  async #handleGitPush(): Promise<string> {
+  async aalajGitPush(): Promise<string> {
     const currentBranch = await git.farAlHali();
     if (!currentBranch) {
       return `Error: Could not determine current branch.`;

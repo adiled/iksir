@@ -156,13 +156,13 @@ async function setupSignalHandlers(ctx: DaemonContext): Promise<void> {
 
     ctx.abortController.abort();
     ctx.telegram.stopPolling();
-    ctx.ipcProcessor.stopProcessing();
+    ctx.ipcProcessor.awqafMuaalaja();
     ctx.healthMonitor.stop();
 
     await logger.info("main", "Saving state...");
     await Promise.all([
       ctx.sessionManager.hafizaHala(),
-      ctx.ipcProcessor.saveState(),
+      ctx.ipcProcessor.hafizaHala(),
       ctx.questionHandler.saveState(),
     ]);
 
@@ -252,7 +252,7 @@ async function runDaemon(ctx: DaemonContext): Promise<void> {
     });
   }
 
-  ctx.ipcProcessor.startProcessing(ctx.abortController.signal).catch(async (error) => {
+  ctx.ipcProcessor.badaaMuaalaja(ctx.abortController.signal).catch(async (error) => {
     await logger.error("tool-executor", "Processing error", { error: String(error) });
   });
 
@@ -925,7 +925,7 @@ export async function startDaemon(opts: { check?: boolean } = {}): Promise<void>
     sessionManager,
     opencode,
   });
-  await ipcProcessor.loadState();
+  await ipcProcessor.hammalaHala();
 
   /** Initialize intent resolver */
   const intentResolver = istadaaArraf({ issueTracker, opencode });
