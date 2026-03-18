@@ -295,8 +295,8 @@ export class GitHubClient {
     const lowerBody = body.toLowerCase().trim();
 
     /**
-     * Check for command patterns — applies to ALL comments including the operator.s.
-     * The operator leaves PR commands that orchestrators must execute.
+     * Check for command patterns — applies to ALL comments including al-Kimyawi's.
+     * Al-Kimyawi leaves PR commands that orchestrators must execute.
      * The `huwaKimyawi` flag on TaaliqMuraja tells consumers WHO wrote it;
      * the assessment tells them WHAT was written.
      */
