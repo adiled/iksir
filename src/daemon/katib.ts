@@ -722,23 +722,23 @@ Call pm_read_diary for full decision history with reasoning.
         const exists = await this.#opencode.jalabJalsa(dbSession.id);
         if (exists) {
           /** Parse metadata */
-          const metadata = JSON.parse(dbSession.metadata || "{}") as {
+          const metadata = JSON.parse(dbSession.hala_mufassala || "{}") as {
             activePRs?: RisalaMutaba[];
           };
 
-          /** Hydrate channels from the channels table */
-          const channels = this.#messenger.hammalQanawatLilJalsa(dbSession.identifier);
+          /** Hydrate channels from the qanawat table */
+          const channels = this.#messenger.hammalQanawatLilJalsa(dbSession.huwiyya);
 
           const session: JalsatMurshid = {
             id: dbSession.id,
-            identifier: dbSession.identifier,
-            title: dbSession.title,
-            type: dbSession.type as NawMurshid,
-            status: dbSession.status as JalsatMurshid["status"],
-            branch: dbSession.branch ?? "",
-            blockedReason: dbSession.blocked_reason ?? undefined,
-            createdAt: dbSession.created_at,
-            lastMessageAt: dbSession.last_message_at,
+            identifier: dbSession.huwiyya,
+            title: dbSession.unwan ?? "",
+            type: dbSession.naw as NawMurshid,
+            status: dbSession.hala as JalsatMurshid["status"],
+            branch: dbSession.far ?? "",
+            blockedReason: dbSession.illa ?? undefined,
+            createdAt: dbSession.unshia_fi,
+            lastMessageAt: dbSession.akhir_risala_fi ?? "",
             channels,
             activePRs: metadata.activePRs ?? [],
           };

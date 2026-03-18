@@ -19,7 +19,7 @@ import {
   jalabaQararatSijill,
   haddathaAwAdkhalaMatlabMuallaq,
   jalabaMatalebMuallaq,
-  removePendingDemand,
+  mahaqaMatlabMuallaq,
 } from "./db.ts";
 
 
@@ -53,10 +53,10 @@ Deno.test("sessions: upsert and retrieve", async () => {
 
     const sessions = jalabaKullJalasat();
     assertEquals(sessions.length, 1);
-    assertEquals(sessions[0].identifier, "TEAM-200");
-    assertEquals(sessions[0].title, "Auto-login feature");
-    assertEquals(sessions[0].type, "epic");
-    assertEquals(sessions[0].status, "fail");
+    assertEquals(sessions[0].huwiyya, "TEAM-200");
+    assertEquals(sessions[0].unwan, "Auto-login feature");
+    assertEquals(sessions[0].naw, "epic");
+    assertEquals(sessions[0].hala, "fail");
   });
 });
 
@@ -89,9 +89,9 @@ Deno.test("sessions: upsert updates existing", async () => {
 
     const sessions = jalabaKullJalasat();
     assertEquals(sessions.length, 1);
-    assertEquals(sessions[0].title, "Auto-login v2");
-    assertEquals(sessions[0].status, "masdud");
-    assertEquals(sessions[0].blocked_reason, "Missing specs");
+    assertEquals(sessions[0].unwan, "Auto-login v2");
+    assertEquals(sessions[0].hala, "masdud");
+    assertEquals(sessions[0].illa, "Missing specs");
   });
 });
 
@@ -407,12 +407,12 @@ Deno.test("demands: upsert replaces existing for same murshid", async () => {
   });
 });
 
-Deno.test("demands: removePendingDemand", async () => {
+Deno.test("demands: mahaqaMatlabMuallaq", async () => {
   await withTestDb(() => {
     haddathaAwAdkhalaMatlabMuallaq("TEAM-200", "test", "normal");
     assertEquals(jalabaMatalebMuallaq().length, 1);
 
-    removePendingDemand("TEAM-200");
+    mahaqaMatlabMuallaq("TEAM-200");
     assertEquals(jalabaMatalebMuallaq().length, 0);
   });
 });

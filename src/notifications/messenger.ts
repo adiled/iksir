@@ -104,10 +104,7 @@ export class TelegramMessenger implements RasulKharij {
 
     const channelId = String(topic.message_thread_id);
 
-    haddathaAwAdkhalaQanat(identifier, "telegram", channelId, {
-      name: topicName,
-      iconColor: TOPIC_COLORS.blue,
-    });
+    haddathaAwAdkhalaQanat(identifier, "telegram", channelId);
 
     this.#cacheChannel(identifier, "telegram", channelId);
 

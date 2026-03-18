@@ -27,7 +27,7 @@ import {
   qiraStatus,
   naqshStatus,
   haddathaAwAdkhalaMatlabMuallaq,
-  removePendingDemand,
+  mahaqaMatlabMuallaq,
   jalabaMatalebMuallaq,
 } from "../../db/db.ts";
 import type {
@@ -630,7 +630,7 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
     const demands = jalabaMatalebMuallaq();
     if (demands.length > 0) {
       const demand = demands[0];
-      removePendingDemand(demand.huwiyat_murshid);
+      mahaqaMatlabMuallaq(demand.huwiyat_murshid);
       await logger.info("tool-executor", `Processing pending demand from ${demand.huwiyat_murshid}`, {
         reason: demand.reason,
       });
