@@ -335,12 +335,12 @@ export interface SualMuallaq {
 export interface NidaKhalqWasfa {
   tool: "mun_khalaq_wasfa";
   huwiyyatMurshid: string;
-  title: string;
-  description?: string;
-  estimate?: number;
-  status?: "triage" | "backlog";
-  labels?: string[];
-  parentId?: string;
+  unwan: string;
+  wasf?: string;
+  taqdir?: number;
+  hala?: "triage" | "backlog";
+  wasamat?: string[];
+  huwiyyatAb?: string;
 }
 
 /** Update an existing ticket */
@@ -349,20 +349,20 @@ export interface NidaTajdidWasfa {
   huwiyyatMurshid: string;
   huwiyyatWasfa: string;
   updates: {
-    title?: string;
-    description?: string;
-    estimate?: number;
-    status?: string;
+    unwan?: string;
+    wasf?: string;
+    taqdir?: number;
+    hala?: string;
   };
 }
 
 /** Set blocking relations between tickets */
-export interface MunSetRelationsCall {
+export interface NidaWadaaAlaqat {
   tool: "mun_wadaa_alaqat";
   huwiyyatMurshid: string;
   huwiyyatWasfa: string;
-  blocks?: string[];
-  blockedBy?: string[];
+  yahjub?: string[];
+  mahjoubBi?: string[];
 }
 
 /** Read any issue tracker URL — returns enriched info with context */
@@ -377,156 +377,156 @@ export interface NidaKhalqRisala {
   tool: "mun_khalaq_risala";
   huwiyyatMurshid: string;
   huwiyyatWasfa: string;
-  title: string;
-  body: string;
-  base: string;
-  head: string;
+  unwan: string;
+  matn: string;
+  asas: string;
+  ras: string;
 }
 
 /** Check branch status (ahead/behind) */
-export interface MunCheckBranchStatusCall {
+export interface NidaFahasFar {
   tool: "mun_fahas_far";
   huwiyyatMurshid: string;
-  branch: string;
+  far: string;
 }
 
 /** Send a notification to al-Kimyawi */
-export interface MunNotifyCall {
+export interface NidaTabligh {
   tool: "mun_balligh";
   /** Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator) */
   huwiyyatMurshid: string;
-  message: string;
+  risala: string;
   awwaliyya: "min" | "low" | "default" | "high" | "urgent";
-  actions?: Array<{ label: string; action: string }>;
+  afaal?: Array<{ label: string; action: string }>;
 }
 
 /** Send a conversational response to al-Kimyawi (for answering questions) */
-export interface MunReplyCall {
+export interface NidaRadd {
   tool: "mun_radd";
   /** Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator) */
   huwiyyatMurshid: string;
-  message: string;
+  risala: string;
 }
 
 /** Log a decision to the diary */
-export interface MunLogDecisionCall {
+export interface NidaSajjalQarar {
   tool: "mun_sajjal_qarar";
   huwiyyatMurshid: string;
-  type: "tadbir" | "tanfidh" | "tanfidh" | "hall" | "risala";
-  decision: string;
-  reasoning: string;
-  metadata?: Record<string, unknown>;
+  naw: "tadbir" | "tanfidh" | "tanfidh" | "hall" | "risala";
+  qarar: string;
+  mantiq: string;
+  bayyanat?: Record<string, unknown>;
 }
 
 /** Query the collective diary for past decisions and context */
-export interface MunReadDiaryCall {
+export interface NidaIqraMudawwana {
   tool: "mun_iqra_mudawwana";
   huwiyyatMurshid: string;
   /** Filter by murshid ID (omit for collective pool) */
-  filterMurshid?: string;
+  murshidMuhaddad?: string;
   /** Filter by decision type */
-  type?: "tadbir" | "tanfidh" | "tanfidh" | "hall" | "risala";
+  naw?: "tadbir" | "tanfidh" | "tanfidh" | "hall" | "risala";
   /** Free-text search in decision + reasoning */
-  search?: string;
+  bahth?: string;
   /** Max results (default 20) */
-  limit?: number;
+  hadd?: number;
   /** Only decisions since this ISO date */
-  since?: string;
+  mundhu?: string;
 }
 
 /** Yield control voluntarily (when blocked or waiting) */
-export interface MunYieldCall {
+export interface NidaTanazal {
   tool: "mun_tanazal";
   huwiyyatMurshid: string;
-  reason: "masdud" | "muntazir";
-  details: string;
-  suggestNext?: string;
+  sabab: "masdud" | "muntazir";
+  tafasil: string;
+  iqtarahTali?: string;
 }
 
 /** Demand control back (when unblocked and have actionable work) */
-export interface MunDemandControlCall {
+export interface NidaTalabTahakkum {
   tool: "mun_talab_tahakkum";
   huwiyyatMurshid: string;
-  reason: string;
+  sabab: string;
   awwaliyya: "normal" | "urgent";
 }
 
 /** Create branch for murshid (called once when starting work) */
-export interface MunCreateBranchCall {
+export interface NidaKhalqFar {
   tool: "mun_khalaq_far";
   huwiyyatMurshid: string;
-  identifier: string;
-  type: NawMurshid;
-  slug?: string;
+  huwiyya: string;
+  naw: NawMurshid;
+  kunya?: string;
 }
 
 /** Commit staged changes */
-export interface MunCommitCall {
+export interface NidaIltazim {
   tool: "mun_iltazim";
   huwiyyatMurshid: string;
-  message: string;
-  files?: string[];
+  risala: string;
+  ahjar?: string[];
 }
 
 /** Git add files */
-export interface MunGitAddCall {
+export interface NidaRattib {
   tool: "mun_rattib";
   huwiyyatMurshid: string;
-  files: string[];
+  ahjar: string[];
 }
 
 /** Git push current branch */
-export interface MunGitPushCall {
+export interface NidaIdfa {
   tool: "mun_idfa";
   huwiyyatMurshid: string;
 }
 
 
 /** Extract files from forge for artifact creation */
-export interface MunIstikhasCall {
+export interface NidaIstikhlas {
   tool: "mun_istikhlas";
   huwiyyatMurshid: string;
   huwiyyatWasfa: string;
-  files: string[];
+  ahjar: string[];
 }
 
 /** Test extraction for missing dependencies and coupling */
-export interface MunTalaumCall {
+export interface NidaTalaum {
   tool: "mun_talaum";
   huwiyyatMurshid: string;
   huwiyyatWasfa: string;
-  files: string[];
+  ahjar: string[];
 }
 
 /** Craft artifact from extracted files */
-export interface MunIstihalCall {
+export interface NidaIstihal {
   tool: "mun_istihal";
   huwiyyatMurshid: string;
   huwiyyatWasfa: string;
-  files: string[];
+  ahjar: string[];
 }
 
 /** Craft stacked artifact (builds on parent) */
-export interface MunIstihalMutabaqqCall {
+export interface NidaIstihalMutabaqq {
   tool: "mun_istihal_mutabaqq";
   huwiyyatMurshid: string;
   huwiyyatWasfa: string;
-  parentTicketId: string;
-  files: string[];
+  huwiyyatAbWasfa: string;
+  ahjar: string[];
 }
 
 /** Unveil artifact by creating PR */
-export interface MunFaslCall {
+export interface NidaFasl {
   tool: "mun_fasl";
   huwiyyatMurshid: string;
   huwiyyatWasfa: string;
-  title: string;
-  body: string;
-  draft?: boolean;
+  unwan: string;
+  matn: string;
+  musawwada?: boolean;
 }
 
 /** Naqsh (نقش — inscription): merge the risala into the codex */
-export interface MunNaqshCall {
+export interface NidaNaqsh {
   tool: "mun_naqsh";
   huwiyyatMurshid: string;
   huwiyyatWasfa: string;
@@ -536,26 +536,26 @@ export interface MunNaqshCall {
 export type MunToolCall =
   | NidaKhalqWasfa
   | NidaTajdidWasfa
-  | MunSetRelationsCall
+  | NidaWadaaAlaqat
   | NidaQiraatWasfa
   | NidaKhalqRisala
-  | MunCheckBranchStatusCall
-  | MunNotifyCall
-  | MunReplyCall
-  | MunLogDecisionCall
-  | MunReadDiaryCall
-  | MunYieldCall
-  | MunDemandControlCall
-  | MunCreateBranchCall
-  | MunCommitCall
-  | MunGitAddCall
-  | MunGitPushCall
-  | MunIstikhasCall
-  | MunTalaumCall
-  | MunIstihalCall
-  | MunIstihalMutabaqqCall
-  | MunFaslCall
-  | MunNaqshCall;
+  | NidaFahasFar
+  | NidaTabligh
+  | NidaRadd
+  | NidaSajjalQarar
+  | NidaIqraMudawwana
+  | NidaTanazal
+  | NidaTalabTahakkum
+  | NidaKhalqFar
+  | NidaIltazim
+  | NidaRattib
+  | NidaIdfa
+  | NidaIstikhlas
+  | NidaTalaum
+  | NidaIstihal
+  | NidaIstihalMutabaqq
+  | NidaFasl
+  | NidaNaqsh;
 
 
 /** MCP tool definition (JSON Schema for tool input) */
@@ -667,14 +667,14 @@ export type RisalaMutabaStatus = "draft" | "open" | "merged" | "closed";
 export interface RisalaMutaba {
   huwiyyatWasfa: string;
   raqamRisala: number;
-  branch: string;
-  status: RisalaMutabaStatus;
+  far: string;
+  hala: RisalaMutabaStatus;
   /** When PR was created */
-  createdAt: string;
+  unshiaFi: string;
   /** When status last changed */
-  statusChangedAt: string;
+  ghuyiratHalaFi: string;
   /** When comments were last polled (persisted to prevent re-fetching on restart) */
-  lastPolledAt?: string;
+  akhirRaqabaFi?: string;
 }
 
 /** Murshid type */

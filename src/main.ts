@@ -631,7 +631,7 @@ async function aalajDamjRisala(
    */
   const activePRs = ctx.mudirJalasat.wajadaRasaailFaailaLiMurshid(session.huwiyya);
   const stackedPRs = activePRs.filter(
-    (p) => p.status === "draft" || p.status === "open"
+    (p) => p.hala === "draft" || p.hala === "open"
   );
 
   let stackedNote = "";
@@ -639,7 +639,7 @@ async function aalajDamjRisala(
     stackedNote = `
 
 **Stacked PRs detected:** ${stackedPRs.length} PR(s) may have been created via early push.
-If any were targeting ${pr.branch} (layered istihal), they need re-transmuting:
+If any were targeting ${pr.far} (layered istihal), they need re-transmuting:
 
 ${stackedPRs.map((p) => `- ${p.huwiyyatWasfa} (PR #${p.raqamRisala}): Use \`mun_istihal\` to rebase onto main`).join("\n")}
 
@@ -650,7 +650,7 @@ Re-pushing will fix CI (now that base is on main).`;
 
 **PR:** #${pr.raqamRisala}
 **Ticket:** ${pr.huwiyyatWasfa}
-**Branch:** ${pr.branch}
+**Branch:** ${pr.far}
 
 This PR has been merged. You can now:
 1. Update ${pr.huwiyyatWasfa} status in Linear to "Done"
@@ -940,7 +940,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
 
   ipcProcessor.wadaaMunadi(dispatcher);
 
-  await dispatcher.istarjaaActiveOnStartup();
+  await dispatcher.istarjaaIndaNashaat();
 
   /** Initialize question handler (for question tool events from murshids) */
   const questionHandler = istadaaSail({

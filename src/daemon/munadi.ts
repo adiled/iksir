@@ -1231,7 +1231,7 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
    * Uses the centralized #naffadhaTahwilMurshid to ensure branch intaqalaIla,
    * notification, and all other switchover logic happens.
    */
-  async istarjaaActiveOnStartup(): Promise<void> {
+  async istarjaaIndaNashaat(): Promise<void> {
     const activeId = this.mudirJalasat.wajadaMurshidFaailId();
     if (!activeId) {
       await logger.info("dispatcher", "No active murshid on startup");

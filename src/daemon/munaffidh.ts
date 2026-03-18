@@ -35,19 +35,19 @@ import type {
   MunToolCall,
   NidaKhalqWasfa,
   NidaTajdidWasfa,
-  MunSetRelationsCall,
+  NidaWadaaAlaqat,
   NidaQiraatWasfa,
   NidaKhalqRisala,
-  MunCheckBranchStatusCall,
-  MunNotifyCall,
-  MunReplyCall,
-  MunYieldCall,
-  MunDemandControlCall,
-  MunCreateBranchCall,
-  MunIstihalCall,
-  MunIstihalMutabaqqCall,
-  MunCommitCall,
-  MunGitAddCall,
+  NidaFahasFar,
+  NidaTabligh,
+  NidaRadd,
+  NidaTanazal,
+  NidaTalabTahakkum,
+  NidaKhalqFar,
+  NidaIstihal,
+  NidaIstihalMutabaqq,
+  NidaIltazim,
+  NidaRattib,
 } from "../types.ts";
 import { generateBranchName } from "./katib.ts";
 import { mayyazaTanbih } from "./mumayyiz.ts";
@@ -367,12 +367,12 @@ export class Munaffidh {
    */
   async #aalajaKhalqWasfa(call: NidaKhalqWasfa): Promise<string> {
     const issue = await this.mutabiWasfa.createIssue({
-      title: call.title,
-      description: call.description,
-      estimate: call.estimate,
-      status: call.status,
-      labels: call.labels,
-      parentId: call.parentId,
+      title: call.unwan,
+      description: call.wasf,
+      estimate: call.taqdir,
+      status: call.hala,
+      labels: call.wasamat,
+      parentId: call.huwiyyatAb,
     });
 
     return `Ticket created successfully!
@@ -397,12 +397,12 @@ You can now set relations using pm_set_relations.`;
     /** Build update payload */
     const updatePayload: MudkhalTahdithQadiya = {};
 
-    if (call.updates.title) updatePayload.title = call.updates.title;
-    if (call.updates.description) updatePayload.description = call.updates.description;
-    if (call.updates.estimate) updatePayload.estimate = call.updates.estimate;
+    if (call.updates.unwan) updatePayload.title = call.updates.unwan;
+    if (call.updates.wasf) updatePayload.description = call.updates.wasf;
+    if (call.updates.taqdir) updatePayload.estimate = call.updates.taqdir;
 
-    if (call.updates.status) {
-      updatePayload.status = call.updates.status;
+    if (call.updates.hala) {
+      updatePayload.status = call.updates.hala;
     }
 
     await this.mutabiWasfa.updateIssue(issue.id, updatePayload);
@@ -415,23 +415,23 @@ Updated fields: ${Object.keys(call.updates).join(", ")}`;
   /**
    * Handle pm_set_relations
    */
-  async aalajAlaqat(call: MunSetRelationsCall): Promise<string> {
+  async aalajAlaqat(call: NidaWadaaAlaqat): Promise<string> {
     await logger.info("tool-executor", "Setting relations", {
       huwiyyatWasfa: call.huwiyyatWasfa,
-      blocks: call.blocks,
-      blockedBy: call.blockedBy,
+      blocks: call.yahjub,
+      blockedBy: call.mahjoubBi,
     });
 
     await this.mutabiWasfa.setRelations(
       call.huwiyyatWasfa,
-      call.blocks,
-      call.blockedBy
+      call.yahjub,
+      call.mahjoubBi
     );
 
     return `Relations updated for ${call.huwiyyatWasfa}.
 
-${call.blocks?.length ? `**Blocks:** ${call.blocks.join(", ")}` : ""}
-${call.blockedBy?.length ? `**Blocked by:** ${call.blockedBy.join(", ")}` : ""}`;
+${call.yahjub?.length ? `**Blocks:** ${call.yahjub.join(", ")}` : ""}
+${call.mahjoubBi?.length ? `**Blocked by:** ${call.mahjoubBi.join(", ")}` : ""}`;
   }
 
   /**
@@ -439,10 +439,10 @@ ${call.blockedBy?.length ? `**Blocked by:** ${call.blockedBy.join(", ")}` : ""}`
    */
   async #aalajaKhalqRisala(call: NidaKhalqRisala): Promise<string> {
     const result = await this.#github.createPR({
-      title: call.title,
-      body: call.body,
-      head: call.head,
-      base: call.base,
+      title: call.unwan,
+      body: call.matn,
+      head: call.ras,
+      base: call.asas,
       draft: true,
     });
 
@@ -468,8 +468,10 @@ ${call.blockedBy?.length ? `**Blocked by:** ${call.blockedBy.join(", ")}` : ""}`
       await this.#sessionManager.sajjalRisala(murshidFaail.huwiyya, {
         huwiyyatWasfa: call.huwiyyatWasfa,
         raqamRisala: result.number,
-        branch: call.head,
-        status: "draft",
+        far: call.ras,
+        hala: "draft",
+        unshiaFi: new Date().toISOString(),
+        ghuyiratHalaFi: new Date().toISOString(),
       });
     } else {
       await logger.warn("tool-executor", `PR #${result.number} created but no active murshid to track it`);
@@ -479,9 +481,9 @@ ${call.blockedBy?.length ? `**Blocked by:** ${call.blockedBy.join(", ")}` : ""}`
 
 **PR Number:** #${result.number}
 **URL:** ${result.url}
-**Title:** ${call.title}
-**Base:** ${call.base}
-**Head:** ${call.head}
+**Title:** ${call.unwan}
+**Base:** ${call.asas}
+**Head:** ${call.ras}
 
 The PR is in draft mode. It will be promoted it when ready for review.
 PR is now being tracked by keepalive for merge detection.`;
@@ -490,15 +492,15 @@ PR is now being tracked by keepalive for merge detection.`;
   /**
    * Handle pm_check_branch_status
    */
-  async aalajFahsFar(call: MunCheckBranchStatusCall): Promise<string> {
+  async aalajFahsFar(call: NidaFahasFar): Promise<string> {
     const defaultBranch = await this.#github.farAlAsasi();
-    const comparison = await this.#github.compareBranches(defaultBranch, call.branch);
+    const comparison = await this.#github.compareBranches(defaultBranch, call.far);
 
     if (!comparison) {
-      return `Failed to check branch status for ${call.branch}. Branch may not exist.`;
+      return `Failed to check branch status for ${call.far}. Branch may not exist.`;
     }
 
-    return `## Branch Status: ${call.branch}
+    return `## Branch Status: ${call.far}
 
 **Ahead of ${defaultBranch}:** ${comparison.ahead} commits
 **Behind ${defaultBranch}:** ${comparison.behind} commits
@@ -511,14 +513,14 @@ ${comparison.behind > 0 ? "⚠️ Branch is behind - consider rebasing before PR
    * Handle pm_notify
    * Filters khabath notifications, routes dhahab ones to mawdu al-Kimyawi.
    */
-  async aalajTanbih(call: MunNotifyCall): Promise<string> {
+  async aalajTanbih(call: NidaTabligh): Promise<string> {
     /** Step 1: Mayyiz the tanbih */
-    const tamyiz = await mayyazaTanbih(this.#opencode, call.message);
+    const tamyiz = await mayyazaTanbih(this.#opencode, call.risala);
 
     if (!tamyiz.dhahab) {
       await logger.info("tool-executor", "Ishara rejected as khabath", {
         reason: tamyiz.reason,
-        messagePreview: call.message.slice(0, 100),
+        messagePreview: call.risala.slice(0, 100),
       });
 
       return `REJECTED: ${tamyiz.rejection}
@@ -530,7 +532,7 @@ Reason: ${tamyiz.reason}`;
 
     await logger.info("tool-executor", "Ishara approved", {
       reason: tamyiz.reason,
-      messagePreview: call.message.slice(0, 100),
+      messagePreview: call.risala.slice(0, 100),
     });
 
     const sent: string[] = [];
@@ -539,7 +541,7 @@ Reason: ${tamyiz.reason}`;
       try {
         await this.#messenger.send(
           { murshid: call.huwiyyatMurshid },
-          call.message,
+          call.risala,
         );
         sent.push("messenger");
       } catch (err) {
@@ -553,7 +555,7 @@ Reason: ${tamyiz.reason}`;
       const success = await this.#ntfy.send({
         category: "decision",
         title: "Murshid Message",
-        body: call.message,
+        body: call.risala,
         awwaliyya: call.awwaliyya,
       });
       if (success) {
@@ -568,7 +570,7 @@ Reason: ${tamyiz.reason}`;
     return `Ishara sent to al-Kimyawi via: ${sent.join(", ")}
 
 Awwaliyya: ${call.awwaliyya}
-Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "..." : ""}`;
+Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." : ""}`;
   }
 
   /**
@@ -576,7 +578,7 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
    * Direct response to al-Kimyawi's question - no filtering, just route to topic.
    * Uses fallback chain: Markdown → MarkdownV2 → plain text
    */
-  async aalajRadd(call: MunReplyCall): Promise<string> {
+  async aalajRadd(call: NidaRadd): Promise<string> {
     if (!this.#messenger.mumakkan()) {
       return "Warning: Messenger not enabled. Reply not delivered.";
     }
@@ -584,12 +586,12 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
     try {
       await this.#messenger.arsalaMunassaq(
         { murshid: call.huwiyyatMurshid },
-        call.message,
+        call.risala,
       );
 
       await logger.info("tool-executor", "Reply sent to al-Kimyawi", {
         huwiyyatMurshid: call.huwiyyatMurshid,
-        messagePreview: call.message.slice(0, 100),
+        messagePreview: call.risala.slice(0, 100),
       });
       return `Reply sent to al-Kimyawi (${call.huwiyyatMurshid}).`;
     } catch (err) {
@@ -604,7 +606,7 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
   /**
    * Handle pm_yield - murshid voluntarily yields control
    */
-  async aalajTanazul(call: MunYieldCall): Promise<string> {
+  async aalajTanazul(call: NidaTanazal): Promise<string> {
     if (!this.#iksir) {
       return "Error: Munadi not tahyiad.";
     }
@@ -618,12 +620,12 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
     }
 
     /** Update session status */
-    const newStatus = call.reason === "masdud" ? "masdud" : "muntazir";
-    await this.#sessionManager.jaddadaḤalatMurshid(yielderId, newStatus, call.details);
+    const newStatus = call.sabab === "masdud" ? "masdud" : "muntazir";
+    await this.#sessionManager.jaddadaḤalatMurshid(yielderId, newStatus, call.tafasil);
 
-    await logger.info("tool-executor", `Murshid ${yielderId} yielded: ${call.reason}`, {
-      details: call.details,
-      suggestNext: call.suggestNext,
+    await logger.info("tool-executor", `Murshid ${yielderId} yielded: ${call.sabab}`, {
+      details: call.tafasil,
+      suggestNext: call.iqtarahTali,
     });
 
     /** Check pending demands first (persisted in SQLite, sorted by awwaliyya then time) */
@@ -641,12 +643,12 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
       }
     }
 
-    if (call.suggestNext) {
+    if (call.iqtarahTali) {
       const murshidun = this.#sessionManager.wajadaJalasatMurshid();
-      const suggested = murshidun.find((o) => o.huwiyya === call.suggestNext);
+      const suggested = murshidun.find((o) => o.huwiyya === call.iqtarahTali);
       if (suggested && suggested.hala === "sakin") {
-        await this.#iksir.aalajIstijabaZirr("cli", `switch:${call.suggestNext}`);
-        return `Yielded control. Switching to suggested: ${call.suggestNext}.`;
+        await this.#iksir.aalajIstijabaZirr("cli", `switch:${call.iqtarahTali}`);
+        return `Yielded control. Switching to suggested: ${call.iqtarahTali}.`;
       }
     }
 
@@ -658,14 +660,14 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
 
     if (idleSessions.length > 0) {
       /** Notify al-Kimyawi */
-      const msg = `${yielderId} yielded (${call.reason}). ${idleSessions.length} idle session(s) available:\n${idleSessions.map(s => `• ${s.huwiyya}`).join("\n")}`;
+      const msg = `${yielderId} yielded (${call.sabab}). ${idleSessions.length} idle session(s) available:\n${idleSessions.map(s => `• ${s.huwiyya}`).join("\n")}`;
       await this.#messenger.send("dispatch", msg);
       return `Yielded control. ${idleSessions.length} idle session(s) available. Al-Kimyawi can /switch to one.`;
     }
 
     this.#iksir.wadaaJalsaFaila(null);
 
-    await this.#messenger.send("dispatch", `${yielderId} yielded (${call.reason}). No other sessions available — system idle.`);
+    await this.#messenger.send("dispatch", `${yielderId} yielded (${call.sabab}). No other sessions available — system idle.`);
 
     return `Yielded control. No other sessions available. System is idle.`;
   }
@@ -673,7 +675,7 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
   /**
    * Handle pm_demand_control - murshid demands control back
    */
-  async aalajTalabTahakkum(call: MunDemandControlCall): Promise<string> {
+  async aalajTalabTahakkum(call: NidaTalabTahakkum): Promise<string> {
     if (!this.#iksir) {
       return "Error: Munadi not tahyiad.";
     }
@@ -688,7 +690,7 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
     const activeEpicId = this.#iksir.hawiyyaFaila();
 
     await logger.info("tool-executor", `Murshid ${demanderId} demands control`, {
-      reason: call.reason,
+      reason: call.sabab,
       awwaliyya: call.awwaliyya,
       currentActive: activeEpicId,
     });
@@ -696,7 +698,7 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
     if (!activeEpicId) {
       const result = await this.#iksir.aalajIstijabaZirr("cli", `switch:${demanderId}`);
       if (result.handled) {
-        return `Control granted immediately. You are now ACTIVE.\n\nReason: ${call.reason}`;
+        return `Control granted immediately. You are now ACTIVE.\n\nReason: ${call.sabab}`;
       }
       return "Failed to grant control.";
     }
@@ -710,12 +712,12 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
     if (currentActive && (currentActive.hala === "masdud" || currentActive.hala === "muntazir")) {
       const result = await this.#iksir.aalajIstijabaZirr("cli", `switch:${demanderId}`);
       if (result.handled) {
-        return `Control granted (${activeEpicId} was ${currentActive.hala}). You are now ACTIVE.\n\nReason: ${call.reason}`;
+        return `Control granted (${activeEpicId} was ${currentActive.hala}). You are now ACTIVE.\n\nReason: ${call.sabab}`;
       }
       return "Failed to grant control.";
     }
 
-    haddathaAwAdkhalaMatlabMuallaq(demanderId, call.reason, call.awwaliyya);
+    haddathaAwAdkhalaMatlabMuallaq(demanderId, call.sabab, call.awwaliyya);
 
     const queueLength = jalabaMatalebMuallaq().length;
     await logger.info("tool-executor", `Queued demand from ${demanderId}`, {
@@ -724,7 +726,7 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
 
     if (call.awwaliyya === "urgent") {
       await this.#messenger.send("dispatch",
-        `URGENT: ${demanderId} demands control.\n\nReason: ${call.reason}\nCurrent active: ${activeEpicId}\n\nApprove with /switch ${demanderId}`
+        `URGENT: ${demanderId} demands control.\n\nReason: ${call.sabab}\nCurrent active: ${activeEpicId}\n\nApprove with /switch ${demanderId}`
       );
 
       return `Urgent demand queued and al-Kimyawi mubalagh. Current active: ${activeEpicId}.\n\nYou will be activated when ${activeEpicId} yields or al-Kimyawi yuwafiq.`;
@@ -737,8 +739,8 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
   /**
    * Handle pm_create_branch - create epic, chore, or sandbox branch
    */
-  async aalajKhalqFar(call: MunCreateBranchCall): Promise<string> {
-    const branchName = generateBranchName(call.identifier, call.type, call.slug);
+  async aalajKhalqFar(call: NidaKhalqFar): Promise<string> {
+    const branchName = generateBranchName(call.huwiyya, call.naw, call.kunya);
 
     await logger.info("tool-executor", `Creating branch: ${branchName}`);
 
@@ -774,7 +776,7 @@ Try: git push -u origin ${branchName}`;
     }
 
     /** Update session with branch name */
-    const session = this.#sessionManager.jalabMurshid(call.identifier);
+    const session = this.#sessionManager.jalabMurshid(call.huwiyya);
     if (session) {
       session.far = branchName;
       await this.#sessionManager.hafizaHala();
@@ -791,23 +793,23 @@ You can now start implementation.`;
   /**
    * Handle pm_git_add - stage files
    */
-  async aalajGitAdd(call: MunGitAddCall): Promise<string> {
-    const result = await git.gitAdd(call.files);
+  async aalajGitAdd(call: NidaRattib): Promise<string> {
+    const result = await git.gitAdd(call.ahjar);
     if (!result.success) {
       return `Error staging files: ${result.error}`;
     }
 
     return `Files staged successfully.
 
-Files (${call.files.length}):
-${call.files.map((f) => `  ✓ ${f}`).join("\n")}`;
+Files (${call.ahjar.length}):
+${call.ahjar.map((f) => `  ✓ ${f}`).join("\n")}`;
   }
 
   /**
    * Handle pm_commit - commit staged changes
    */
-  async aalajIltizam(call: MunCommitCall): Promise<string> {
-    const result = await git.commit(call.message, call.files);
+  async aalajIltizam(call: NidaIltazim): Promise<string> {
+    const result = await git.commit(call.risala, call.ahjar);
     if (!result.success) {
       if (result.error === "nothing to commit") {
         return `Nothing to commit. Working tree clean.`;
@@ -818,7 +820,7 @@ ${call.files.map((f) => `  ✓ ${f}`).join("\n")}`;
     return `Commit created successfully.
 
 Commit: ${result.hash ?? "unknown"}
-Message: ${call.message}`;
+Message: ${call.risala}`;
   }
 
   /**
@@ -844,15 +846,15 @@ Remote: origin`;
   /**
    * Handle mun_istihal - transmute ahjar from buwtaqa into jawhar
    */
-  async #handleIstihal(call: MunIstihalCall): Promise<string> {
+  async #handleIstihal(call: NidaIstihal): Promise<string> {
     await logger.info("tool-executor", `Istihal for ${call.huwiyyatWasfa}`, {
-      ahjar: call.files.length,
+      ahjar: call.ahjar.length,
     });
 
     const jawharBranch = generateBranchName(call.huwiyyatWasfa, "chore");
 
     const { istihal } = await import("../kimiya/istihal.ts");
-    const result = await istihal(jawharBranch, call.files);
+    const result = await istihal(jawharBranch, call.ahjar);
 
     if (!result.najah) {
       if (result.nawKhata === "conflicts" && result.taarudat) {
@@ -881,17 +883,17 @@ Next: Use mun_fasl to create the risala.`;
   /**
    * Handle mun_istihal_mutabaqq - layered istihal targeting parent jawhar
    */
-  async #handleIstihalMutabaqq(call: MunIstihalMutabaqqCall): Promise<string> {
+  async #handleIstihalMutabaqq(call: NidaIstihalMutabaqq): Promise<string> {
     await logger.info("tool-executor", `Layered istihal for ${call.huwiyyatWasfa}`, {
-      parentTicketId: call.parentTicketId,
-      ahjar: call.files.length,
+      parentTicketId: call.huwiyyatAbWasfa,
+      ahjar: call.ahjar.length,
     });
 
     const jawharBranch = generateBranchName(call.huwiyyatWasfa, "chore");
-    const parentJawhar = generateBranchName(call.parentTicketId, "chore");
+    const parentJawhar = generateBranchName(call.huwiyyatAbWasfa, "chore");
 
     const { istihal } = await import("../kimiya/istihal.ts");
-    const result = await istihal(jawharBranch, call.files, parentJawhar);
+    const result = await istihal(jawharBranch, call.ahjar, parentJawhar);
 
     if (!result.najah) {
       if (result.nawKhata === "conflicts" && result.taarudat) {

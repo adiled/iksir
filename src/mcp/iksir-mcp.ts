@@ -13,21 +13,21 @@
 import type {
   NidaKhalqWasfa,
   NidaTajdidWasfa,
-  MunSetRelationsCall,
+  NidaWadaaAlaqat,
   NidaQiraatWasfa,
   NidaKhalqRisala,
-  MunCheckBranchStatusCall,
-  MunNotifyCall,
-  MunReplyCall,
-  MunLogDecisionCall,
-  MunReadDiaryCall,
-  MunYieldCall,
-  MunDemandControlCall,
-  MunCreateBranchCall,
-  MunCommitCall,
-  MunGitAddCall,
-  MunGitPushCall,
-  MunNaqshCall,
+  NidaFahasFar,
+  NidaTabligh,
+  NidaRadd,
+  NidaSajjalQarar,
+  NidaIqraMudawwana,
+  NidaTanazal,
+  NidaTalabTahakkum,
+  NidaKhalqFar,
+  NidaIltazim,
+  NidaRattib,
+  NidaIdfa,
+  NidaNaqsh,
   MunToolCall,
   QararSijill,
   NawMurshid,
@@ -1001,21 +1001,21 @@ You should only call this once per murshid, at the start.`,
     const call: NidaKhalqWasfa = {
       tool: "mun_khalaq_wasfa",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
-      title: args.title as string,
-      description: args.description as string | undefined,
-      estimate: args.estimate as number | undefined,
-      status: args.status as "triage" | "backlog" | undefined,
-      labels: args.labels as string[] | undefined,
-      parentId: args.parentId as string | undefined,
+      unwan: args.title as string,
+      wasf: args.description as string | undefined,
+      taqdir: args.estimate as number | undefined,
+      hala: args.status as "triage" | "backlog" | undefined,
+      wasamat: args.labels as string[] | undefined,
+      huwiyyatAb: args.parentId as string | undefined,
     };
 
     this.#hawwilLiKhadim(call);
 
     return `Ticket creation request forwarded to daemon.
 
-Title: ${call.title}
-Status: ${call.status ?? "backlog"}
-Estimate: ${call.estimate ?? "unestimated"}
+Title: ${call.unwan}
+Status: ${call.hala ?? "backlog"}
+Estimate: ${call.taqdir ?? "unestimated"}
 
 Daemon will create the ticket and return the ticket ID.`;
   }
@@ -1043,19 +1043,19 @@ ${updatesList}`;
   }
 
   async #aalijWadaaAlaqat(args: Record<string, unknown>): Promise<string> {
-    const call: MunSetRelationsCall = {
+    const call: NidaWadaaAlaqat = {
       tool: "mun_wadaa_alaqat",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       huwiyyatWasfa: args.huwiyyatWasfa as string,
-      blocks: args.blocks as string[] | undefined,
-      blockedBy: args.blockedBy as string[] | undefined,
+      yahjub: args.blocks as string[] | undefined,
+      mahjoubBi: args.blockedBy as string[] | undefined,
     };
 
     this.#hawwilLiKhadim(call);
 
-    const blocksList = call.blocks?.length ? `Blocks: ${call.blocks.join(", ")}` : "";
-    const blockedByList = call.blockedBy?.length
-      ? `Blocked by: ${call.blockedBy.join(", ")}`
+    const blocksList = call.yahjub?.length ? `Blocks: ${call.yahjub.join(", ")}` : "";
+    const blockedByList = call.mahjoubBi?.length
+      ? `Blocked by: ${call.mahjoubBi.join(", ")}`
       : "";
 
     return `Relation update request forwarded to daemon.
@@ -1114,10 +1114,10 @@ Awaiting daemon response...`;
       tool: "mun_khalaq_risala",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       huwiyyatWasfa: args.huwiyyatWasfa as string,
-      title: args.title as string,
-      body: args.body as string,
-      base: args.base as string,
-      head: args.head as string,
+      unwan: args.title as string,
+      matn: args.body as string,
+      asas: args.base as string,
+      ras: args.head as string,
     };
 
     this.#hawwilLiKhadim(call);
@@ -1125,9 +1125,9 @@ Awaiting daemon response...`;
     return `PR creation request forwarded to daemon.
 
 Ticket: ${call.huwiyyatWasfa}
-Title: ${call.title}
-Base: ${call.base}
-Head: ${call.head}
+Title: ${call.unwan}
+Base: ${call.asas}
+Head: ${call.ras}
 
 Daemon will:
 1. Push branch if needed
@@ -1137,17 +1137,17 @@ Daemon will:
   }
 
   async #aalijFahasFar(args: Record<string, unknown>): Promise<string> {
-    const call: MunCheckBranchStatusCall = {
+    const call: NidaFahasFar = {
       tool: "mun_fahas_far",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
-      branch: args.branch as string,
+      far: args.branch as string,
     };
 
     this.#hawwilLiKhadim(call);
 
     return `Branch status request forwarded to daemon.
 
-Branch: ${call.branch}
+Branch: ${call.far}
 
 Daemon will return:
 - Commits ahead/behind main
@@ -1157,59 +1157,59 @@ Daemon will return:
 
 
   async #aalijTabligh(args: Record<string, unknown>): Promise<string> {
-    const call: MunNotifyCall = {
+    const call: NidaTabligh = {
       tool: "mun_balligh",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
-      message: args.message as string,
-      awwaliyya: args.awwaliyya as MunNotifyCall["awwaliyya"],
-      actions: args.actions as MunNotifyCall["actions"],
+      risala: args.message as string,
+      awwaliyya: args.awwaliyya as NidaTabligh["awwaliyya"],
+      afaal: args.actions as NidaTabligh["afaal"],
     };
 
     this.#hawwilLiKhadim(call);
 
-    const actionsText = call.actions?.length
-      ? `\nActions: ${call.actions.map((a) => a.label).join(", ")}`
+    const actionsText = call.afaal?.length
+      ? `\nActions: ${call.afaal.map((a) => a.label).join(", ")}`
       : "";
 
     return `Ishara sent to al-Kimyawi.
 
 Awwaliyya: ${call.awwaliyya}
-Message: ${call.message}${actionsText}
+Message: ${call.risala}${actionsText}
 
 Al-Kimyawi will receive this via Telegram/ntfy.`;
   }
 
   async #aalijRadd(args: Record<string, unknown>): Promise<string> {
-    const call: MunReplyCall = {
+    const call: NidaRadd = {
       tool: "mun_radd",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
-      message: args.message as string,
+      risala: args.message as string,
     };
 
     this.#hawwilLiKhadim(call);
 
     return `Response sent to al-Kimyawi.
 
-${call.message}`;
+${call.risala}`;
   }
 
   async #aalijTasjilQarar(args: Record<string, unknown>): Promise<string> {
-    const call: MunLogDecisionCall = {
+    const call: NidaSajjalQarar = {
       tool: "mun_sajjal_qarar",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
-      type: args.type as MunLogDecisionCall["type"],
-      decision: args.decision as string,
-      reasoning: args.reasoning as string,
-      metadata: args.metadata as Record<string, unknown> | undefined,
+      naw: args.type as NidaSajjalQarar["naw"],
+      qarar: args.decision as string,
+      mantiq: args.reasoning as string,
+      bayyanat: args.metadata as Record<string, unknown> | undefined,
     };
 
     /** Log to diary directly */
     const decision: QararSijill = {
       timestamp: new Date().toISOString(),
-      type: call.type,
-      decision: call.decision,
-      reasoning: call.reasoning,
-      metadata: call.metadata,
+      type: call.naw,
+      decision: call.qarar,
+      reasoning: call.mantiq,
+      metadata: call.bayyanat,
     };
 
     this.#adhifQararSijill(decision, call.huwiyyatMurshid);
@@ -1218,38 +1218,38 @@ ${call.message}`;
 
     return `Decision logged to diary.
 
-Type: ${call.type}
-Decision: ${call.decision}
-Reasoning: ${call.reasoning}
+Type: ${call.naw}
+Decision: ${call.qarar}
+Reasoning: ${call.mantiq}
 
 This decision is now part of the persistent record.`;
   }
 
   #aalijQiraatMudawwana(args: Record<string, unknown>): string {
-    const call: MunReadDiaryCall = {
+    const call: NidaIqraMudawwana = {
       tool: "mun_iqra_mudawwana",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
-      filterMurshid: args.filterMurshid as string | undefined,
-      type: args.type as MunReadDiaryCall["type"],
-      search: args.search as string | undefined,
-      limit: args.limit as number | undefined,
-      since: args.since as string | undefined,
+      murshidMuhaddad: args.filterMurshid as string | undefined,
+      naw: args.type as NidaIqraMudawwana["naw"],
+      bahth: args.search as string | undefined,
+      hadd: args.limit as number | undefined,
+      mundhu: args.since as string | undefined,
     };
 
     const decisions = jalabaQararatSijill({
-      huwiyyatMurshid: call.filterMurshid,
-      type: call.type,
-      search: call.search,
-      limit: call.limit,
-      since: call.since,
+      huwiyyatMurshid: call.murshidMuhaddad,
+      type: call.naw,
+      search: call.bahth,
+      limit: call.hadd,
+      since: call.mundhu,
     });
 
     if (decisions.length === 0) {
       const filters = [
-        call.filterMurshid && `murshid=${call.filterMurshid}`,
-        call.type && `type=${call.type}`,
-        call.search && `search="${call.search}"`,
-        call.since && `since=${call.since}`,
+        call.murshidMuhaddad && `murshid=${call.murshidMuhaddad}`,
+        call.naw && `type=${call.naw}`,
+        call.bahth && `search="${call.bahth}"`,
+        call.mundhu && `since=${call.mundhu}`,
       ].filter(Boolean);
 
       return `No diary entries found.${filters.length > 0 ? ` Filters: ${filters.join(", ")}` : ""}`;
@@ -1274,25 +1274,25 @@ This decision is now part of the persistent record.`;
 
 
   async #aalijTanazal(args: Record<string, unknown>): Promise<string> {
-    const call: MunYieldCall = {
+    const call: NidaTanazal = {
       tool: "mun_tanazal",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
-      reason: args.reason as "masdud" | "muntazir",
-      details: args.details as string,
-      suggestNext: args.suggestNext as string | undefined,
+      sabab: args.reason as "masdud" | "muntazir",
+      tafasil: args.details as string,
+      iqtarahTali: args.suggestNext as string | undefined,
     };
 
     this.#hawwilLiKhadim(call);
 
-    const stateDescription = call.reason === "masdud"
+    const stateDescription = call.sabab === "masdud"
       ? "You are now in BLOCKED state. Al-Kimyawi will be notified of the blockers."
       : "You are now in WAITING state. Monitoring for PR events.";
 
     return `Control yielded.
 
-Reason: ${call.reason}
-Details: ${call.details}
-${call.suggestNext ? `Suggested next: ${call.suggestNext}` : ""}
+Reason: ${call.sabab}
+Details: ${call.tafasil}
+${call.iqtarahTali ? `Suggested next: ${call.iqtarahTali}` : ""}
 
 ${stateDescription}
 
@@ -1306,10 +1306,10 @@ Use \`mun_talab_tahakkum\` when you have actionable work again.`;
   }
 
   async #aalijTalabTahakkum(args: Record<string, unknown>): Promise<string> {
-    const call: MunDemandControlCall = {
+    const call: NidaTalabTahakkum = {
       tool: "mun_talab_tahakkum",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
-      reason: args.reason as string,
+      sabab: args.reason as string,
       awwaliyya: args.awwaliyya as "normal" | "urgent",
     };
 
@@ -1317,7 +1317,7 @@ Use \`mun_talab_tahakkum\` when you have actionable work again.`;
 
     return `Control demand submitted.
 
-Reason: ${call.reason}
+Reason: ${call.sabab}
 Awwaliyya: ${call.awwaliyya}
 
 Daemon will:
@@ -1333,17 +1333,17 @@ You will be notified when control is granted.`;
 
   async #aalijKhalqFar(args: Record<string, unknown>): Promise<string> {
     const murshidType = args.type as NawMurshid;
-    const call: MunCreateBranchCall = {
+    const call: NidaKhalqFar = {
       tool: "mun_khalaq_far",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
-      identifier: args.identifier as string,
-      type: murshidType,
-      slug: args.slug as string | undefined,
+      huwiyya: args.identifier as string,
+      naw: murshidType,
+      kunya: args.slug as string | undefined,
     };
 
     this.#hawwilLiKhadim(call);
 
-    const branchName = generateBranchName(call.identifier, murshidType, call.slug);
+    const branchName = generateBranchName(call.huwiyya, murshidType, call.kunya);
 
     return `Branch creation request submitted.
 
@@ -1360,42 +1360,42 @@ You will be notified when the branch is ready.`;
   }
 
   async #aalijRattib(args: Record<string, unknown>): Promise<string> {
-    const call: MunGitAddCall = {
+    const call: NidaRattib = {
       tool: "mun_rattib",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
-      files: args.files as string[],
+      ahjar: args.files as string[],
     };
 
     this.#hawwilLiKhadim(call);
 
     return `Git add request submitted.
 
-Files (${call.files.length}):
-${call.files.map((f) => `  - ${f}`).join("\n")}
+Files (${call.ahjar.length}):
+${call.ahjar.map((f) => `  - ${f}`).join("\n")}
 
 Daemon will stage these files.`;
   }
 
   async #aalijIltazim(args: Record<string, unknown>): Promise<string> {
-    const call: MunCommitCall = {
+    const call: NidaIltazim = {
       tool: "mun_iltazim",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
-      message: args.message as string,
-      files: args.files as string[] | undefined,
+      risala: args.message as string,
+      ahjar: args.files as string[] | undefined,
     };
 
     this.#hawwilLiKhadim(call);
 
     return `Commit request submitted.
 
-Message: ${call.message}
-${call.files ? `Files: ${call.files.join(", ")}` : "Files: all staged"}
+Message: ${call.risala}
+${call.ahjar ? `Files: ${call.ahjar.join(", ")}` : "Files: all staged"}
 
 Daemon will create the commit.`;
   }
 
   async #aalijIdfa(args: Record<string, unknown>): Promise<string> {
-    const call: MunGitPushCall = {
+    const call: NidaIdfa = {
       tool: "mun_idfa",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
     };
@@ -1456,7 +1456,7 @@ This is a placeholder. Future implementation will:
       tool: "mun_istihal" as const,
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       huwiyyatWasfa: args.huwiyyatWasfa as string,
-      files: args.files as string[],
+      ahjar: args.files as string[],
     };
 
     this.#hawwilLiKhadim(call);
@@ -1467,8 +1467,8 @@ This is a placeholder. Future implementation will:
 
 Ticket: ${call.huwiyyatWasfa}
 Essence Branch: ${essenceBranch}
-Files (${call.files.length}):
-${call.files.map((f) => `  - ${f}`).join("\n")}
+Files (${call.ahjar.length}):
+${call.ahjar.map((f) => `  - ${f}`).join("\n")}
 
 Daemon will:
 1. Merge origin/main into forge branch
@@ -1485,22 +1485,22 @@ On success, use mun_fasl to create the PR.`;
       tool: "mun_istihal_mutabaqq" as const,
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       huwiyyatWasfa: args.huwiyyatWasfa as string,
-      parentTicketId: args.parentTicketId as string,
-      files: args.files as string[],
+      huwiyyatAbWasfa: args.parentTicketId as string,
+      ahjar: args.files as string[],
     };
 
     this.#hawwilLiKhadim(call);
 
     const essenceBranch = generateBranchName(call.huwiyyatWasfa, "chore");
-    const parentBranch = generateBranchName(call.parentTicketId, "chore");
+    const parentBranch = generateBranchName(call.huwiyyatAbWasfa, "chore");
 
     return `Stacked artifact crafting request submitted.
 
 Ticket: ${call.huwiyyatWasfa}
 Essence Branch: ${essenceBranch}
 Parent Branch: ${parentBranch}
-Files (${call.files.length}):
-${call.files.map((f) => `  - ${f}`).join("\n")}
+Files (${call.ahjar.length}):
+${call.ahjar.map((f) => `  - ${f}`).join("\n")}
 
 Daemon will:
 1. Fetch latest ${parentBranch} from origin
@@ -1521,10 +1521,10 @@ Note: CI may fail if parent PR is unmerged. This is expected for incremental rev
       tool: "mun_khalaq_risala",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       huwiyyatWasfa: huwiyyatWasfa,
-      title: args.title as string,
-      body: args.body as string,
-      base: "main",
-      head: essenceBranch,
+      unwan: args.title as string,
+      matn: args.body as string,
+      asas: "main",
+      ras: essenceBranch,
     };
 
     this.#hawwilLiKhadim(call);
@@ -1532,7 +1532,7 @@ Note: CI may fail if parent PR is unmerged. This is expected for incremental rev
     return `Unveiling request submitted.
 
 Ticket: ${huwiyyatWasfa}
-Title: ${call.title}
+Title: ${call.unwan}
 Branch: ${essenceBranch}
 
 Daemon will create a ${args.draft !== false ? "draft " : ""}pull request.
@@ -1541,7 +1541,7 @@ You will be notified with the PR URL once created.`;
 
 
   async #aalijNaqsh(args: Record<string, unknown>): Promise<string> {
-    const call: MunNaqshCall = {
+    const call: NidaNaqsh = {
       tool: "mun_naqsh",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       huwiyyatWasfa: args.huwiyyatWasfa as string,

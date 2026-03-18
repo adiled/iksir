@@ -154,7 +154,7 @@ export class DawratHayat {
     await logger.debug("keepalive", `Starting cycle: ${trackedPRs.length} PRs to monitor`);
 
     for (const { session, pr } of trackedPRs) {
-      if (pr.status === "merged" || pr.status === "closed") {
+      if (pr.hala === "merged" || pr.hala === "closed") {
         continue;
       }
 
@@ -179,7 +179,7 @@ export class DawratHayat {
      * Rate limit: don't poll same PR more than configured interval
      * Use persisted lastPolledAt from RisalaMutaba (survives daemon restarts)
      */
-    const lastPoll = trackedPR.lastPolledAt ? new Date(trackedPR.lastPolledAt) : null;
+    const lastPoll = trackedPR.akhirRaqabaFi ? new Date(trackedPR.akhirRaqabaFi) : null;
     if (lastPoll && now.getTime() - lastPoll.getTime() < this.tasmim.polling.prPollIntervalMs) {
       return;
     }
@@ -193,7 +193,7 @@ export class DawratHayat {
 
       await this.fahasTaghayyurHala(session, trackedPR, pr.state);
 
-      if (pr.mergeable === "CONFLICTING" && trackedPR.status !== "merged") {
+      if (pr.mergeable === "CONFLICTING" && trackedPR.hala !== "merged") {
         if (!this.ublighaAnTaarud.has(raqamRisala)) {
           await logger.warn("keepalive", `PR #${raqamRisala} has conflicts`);
           await this.istijabat.indaTaarudRisala(session, trackedPR);
@@ -203,7 +203,7 @@ export class DawratHayat {
         this.ublighaAnTaarud.delete(raqamRisala);
       }
 
-      if (trackedPR.status === "draft") {
+      if (trackedPR.hala === "draft") {
         const checksPassing = await this.#github.arePRChecksPassing(raqamRisala);
         if (!checksPassing) {
           if (!this.ublighaAnFashal.has(raqamRisala)) {
@@ -220,7 +220,7 @@ export class DawratHayat {
        * Check for new comments (since last poll or PR creation)
        * Uses persisted lastPolledAt to prevent re-fetching all comments on daemon restart
        */
-      const commentsSince = lastPoll ?? new Date(trackedPR.createdAt);
+      const commentsSince = lastPoll ?? new Date(trackedPR.unshiaFi);
       const newComments = await this.#github.getNewComments(raqamRisala, commentsSince);
       if (newComments.length > 0) {
         await this.aalajTaaliqatJadida(session, raqamRisala, newComments);
@@ -246,19 +246,19 @@ export class DawratHayat {
     const raqamRisala = trackedPR.raqamRisala;
     let newStatus: RisalaMutabaStatus | null = null;
 
-    if (githubState === "MERGED" && trackedPR.status !== "merged") {
+    if (githubState === "MERGED" && trackedPR.hala !== "merged") {
       newStatus = "merged";
       await logger.info("keepalive", `PR #${raqamRisala} merged`, {
         epicId: session.huwiyya,
         huwiyyatWasfa: trackedPR.huwiyyatWasfa,
       });
-    } else if (githubState === "CLOSED" && trackedPR.status !== "closed") {
+    } else if (githubState === "CLOSED" && trackedPR.hala !== "closed") {
       newStatus = "closed";
       await logger.info("keepalive", `PR #${raqamRisala} closed`, {
         epicId: session.huwiyya,
         huwiyyatWasfa: trackedPR.huwiyyatWasfa,
       });
-    } else if (githubState === "OPEN" && trackedPR.status === "draft") {
+    } else if (githubState === "OPEN" && trackedPR.hala === "draft") {
       newStatus = "open";
       await logger.info("keepalive", `PR #${raqamRisala} promoted to open`, {
         epicId: session.huwiyya,

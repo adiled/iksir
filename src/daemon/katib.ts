@@ -375,8 +375,8 @@ export class MudirJalasat {
     const now = new Date().toISOString();
     const trackedPR: RisalaMutaba = {
       ...pr,
-      createdAt: now,
-      statusChangedAt: now,
+      unshiaFi: now,
+      ghuyiratHalaFi: now,
     };
 
     session.activePRs.push(trackedPR);
@@ -384,7 +384,7 @@ export class MudirJalasat {
 
     await logger.info("session-manager", `Registered PR #${pr.raqamRisala} for ${epicId}`, {
       huwiyyatWasfa: pr.huwiyyatWasfa,
-      branch: pr.branch,
+      branch: pr.far,
     });
 
     return true;
@@ -414,13 +414,13 @@ export class MudirJalasat {
     for (const session of this.#murshidSessions.values()) {
       const pr = session.activePRs.find((p) => p.raqamRisala === raqamRisala);
       if (pr) {
-        const previousStatus = pr.status;
+        const previousStatus = pr.hala;
         if (previousStatus === status) {
           return null;
         }
 
-        pr.status = status;
-        pr.statusChangedAt = new Date().toISOString();
+        pr.hala = status;
+        pr.ghuyiratHalaFi = new Date().toISOString();
         await this.hafizaHala();
 
         await logger.info("session-manager", `Updated PR #${raqamRisala} status: ${previousStatus} → ${status}`, {
@@ -441,7 +441,7 @@ export class MudirJalasat {
     for (const session of this.#murshidSessions.values()) {
       const pr = session.activePRs.find((p) => p.raqamRisala === raqamRisala);
       if (pr) {
-        pr.lastPolledAt = new Date().toISOString();
+        pr.akhirRaqabaFi = new Date().toISOString();
         await this.hafizaHala();
         return;
       }
@@ -468,7 +468,7 @@ export class MudirJalasat {
   wajadaRasaailFaailaLiMurshid(epicId: string): RisalaMutaba[] {
     const session = this.#murshidSessions.get(epicId);
     if (!session) return [];
-    return session.activePRs.filter((pr) => pr.status !== "merged" && pr.status !== "closed");
+    return session.activePRs.filter((pr) => pr.hala !== "merged" && pr.hala !== "closed");
   }
 
   /**
