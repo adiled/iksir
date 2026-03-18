@@ -163,7 +163,7 @@ async function setupSignalHandlers(ctx: DaemonContext): Promise<void> {
     await Promise.all([
       ctx.sessionManager.hafizaHala(),
       ctx.ipcProcessor.hafizaHala(),
-      ctx.questionHandler.saveState(),
+      ctx.questionHandler.hafizaHala(),
     ]);
 
     aghlaaqQaidatBayanat();
@@ -199,7 +199,7 @@ async function subscribeToHadathOpenCodes(ctx: DaemonContext): Promise<void> {
 
         if (event.type === "question.asked") {
           const questionEvent = event as unknown as HadathSualMatlub;
-          await ctx.questionHandler.handleQuestionAsked(questionEvent);
+          await ctx.questionHandler.aalajSualMatlub(questionEvent);
         }
 
         if (event.type === "session.compacted") {
@@ -311,8 +311,8 @@ function setupTelegramHandlers(ctx: DaemonContext): void {
       /** Resolve murshid from channel */
       const murshid = ctx.sessionManager.wajadaMurshidBiQanat("telegram", String(topicId));
 
-      if (murshid && ctx.questionHandler.isAwaitingCustomInput(murshid.identifier)) {
-        const handled = await ctx.questionHandler.handlePotentialCustomAnswer(murshid.identifier, text);
+      if (murshid && ctx.questionHandler.huwaYantazirIdkhal(murshid.identifier)) {
+        const handled = await ctx.questionHandler.aalajJawabKhass(murshid.identifier, text);
         if (handled) {
           await ctx.messenger.send({ murshid: murshid.identifier }, "Answer submitted.");
           return;
@@ -352,8 +352,8 @@ function setupTelegramHandlers(ctx: DaemonContext): void {
   ctx.telegram.onCallback(async (query) => {
     await logger.info("telegram", `Callback: ${query.data}`);
 
-    if (query.data && ctx.questionHandler.isQuestionCallback(query.data)) {
-      const parsed = ctx.questionHandler.parseQuestionCallback(query.data);
+    if (query.data && ctx.questionHandler.huwaIstijabaZirrSual(query.data)) {
+      const parsed = ctx.questionHandler.hallalIstijabaZirrSual(query.data);
       if (parsed) {
         if (parsed.selectedLabel === "__custom__") {
           /** Resolve murshid from the topic */
@@ -362,7 +362,7 @@ function setupTelegramHandlers(ctx: DaemonContext): void {
             ? ctx.sessionManager.wajadaMurshidBiQanat("telegram", String(topicId))
             : null;
           if (murshid) {
-            await ctx.questionHandler.markAwaitingCustomInput(murshid.identifier, parsed.questionId);
+            await ctx.questionHandler.allamIntizarIdkhal(murshid.identifier, parsed.questionId);
             await ctx.telegram.answerCallback(query.id, "Type your answer as a reply...");
           } else {
             await ctx.telegram.answerCallback(query.id, "Cannot resolve murshid for custom input");
@@ -371,7 +371,7 @@ function setupTelegramHandlers(ctx: DaemonContext): void {
         }
 
         /** Handle option selection */
-        const success = await ctx.questionHandler.handleQuestionCallback(
+        const success = await ctx.questionHandler.aalajIstijabaZirrSual(
           parsed.questionId,
           parsed.selectedLabel
         );
@@ -888,7 +888,7 @@ function buildQuestionKeyboard(
   questionId: string,
   question: MaalumatSual,
 ): { inline_keyboard: Array<Array<{ text: string; callback_data: string }>> } {
-  return handler.buildInlineKeyboard(questionId, question);
+  return handler.banaMafatihSatriyya(questionId, question);
 }
 
 
@@ -948,9 +948,9 @@ export async function startDaemon(opts: { check?: boolean } = {}): Promise<void>
     messenger,
     sessionManager,
   });
-  await questionHandler.loadState();
+  await questionHandler.hammalaHala();
 
-  questionHandler.setOnQuestionForwarded(async (pending: SualMuallaq, question: MaalumatSual) => {
+  questionHandler.wadaaIndaTahwilSual(async (pending: SualMuallaq, question: MaalumatSual) => {
     const keyboard = buildQuestionKeyboard(questionHandler, pending.id, question);
     const murshid = sessionManager.jalabMurshid(pending.huwiyyatMurshid);
     const topicId = murshid?.channels["telegram"];

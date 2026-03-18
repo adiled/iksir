@@ -243,7 +243,7 @@ Deno.test("smoke: question event classified and forwarded to murshid topic", asy
 
     const session = sessionManager.wajadaJalasatMurshid()[0];
 
-    await questionHandler.handleQuestionAsked({
+    await questionHandler.aalajSualMatlub({
       type: "question.asked",
       properties: {
         id: "q-smoke-001",
@@ -284,7 +284,7 @@ Deno.test("smoke: question answered via callback", async () => {
 
     const session = sessionManager.wajadaJalasatMurshid()[0];
 
-    await questionHandler.handleQuestionAsked({
+    await questionHandler.aalajSualMatlub({
       type: "question.asked",
       properties: {
         id: "q-smoke-002",
@@ -304,7 +304,7 @@ Deno.test("smoke: question answered via callback", async () => {
     const replyCountBefore = opencode._calls.replyToQuestion.length;
 
     /** Answer the question */
-    const success = await questionHandler.handleQuestionCallback("q-smoke-002", "Ijtihad");
+    const success = await questionHandler.aalajIstijabaZirrSual("q-smoke-002", "Ijtihad");
     assertEquals(success, true);
 
     assertEquals(opencode._calls.replyToQuestion.length, replyCountBefore + 1);

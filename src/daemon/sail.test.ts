@@ -62,8 +62,8 @@ Deno.test("isQuestionCallback: returns true for q: prefix", () => {
     sessionManager: mockMudirJalasat() as never,
   });
 
-  assertEquals(qh.isQuestionCallback("q:abc:label"), true);
-  assertEquals(qh.isQuestionCallback("q:12345678:Option A"), true);
+  assertEquals(qh.huwaIstijabaZirrSual("q:abc:label"), true);
+  assertEquals(qh.huwaIstijabaZirrSual("q:12345678:Option A"), true);
 });
 
 Deno.test("isQuestionCallback: returns false for other prefixes", () => {
@@ -73,9 +73,9 @@ Deno.test("isQuestionCallback: returns false for other prefixes", () => {
     sessionManager: mockMudirJalasat() as never,
   });
 
-  assertEquals(qh.isQuestionCallback("other:data"), false);
-  assertEquals(qh.isQuestionCallback(""), false);
-  assertEquals(qh.isQuestionCallback("qx:abc"), false);
+  assertEquals(qh.huwaIstijabaZirrSual("other:data"), false);
+  assertEquals(qh.huwaIstijabaZirrSual(""), false);
+  assertEquals(qh.huwaIstijabaZirrSual("qx:abc"), false);
 });
 
 
@@ -97,7 +97,7 @@ Deno.test("isAwaitingCustomInput: returns false initially", () => {
     sessionManager: mockMudirJalasat() as never,
   });
 
-  assertEquals(qh.isAwaitingCustomInput("TEAM-123"), false);
+  assertEquals(qh.huwaYantazirIdkhal("TEAM-123"), false);
 });
 
 
@@ -109,7 +109,7 @@ Deno.test("buildInlineKeyboard: creates rows for each option + custom", () => {
   });
 
   const question = makeMaalumatSual();
-  const keyboard = qh.buildInlineKeyboard("q-001", question);
+  const keyboard = qh.banaMafatihSatriyya("q-001", question);
 
   assertEquals(keyboard.inline_keyboard.length, 3);
   assertEquals(keyboard.inline_keyboard[0][0].text, "Pattern A (Recommended)");
@@ -128,7 +128,7 @@ Deno.test("buildInlineKeyboard: no custom button when custom=false", () => {
   });
 
   const question = makeMaalumatSual({ custom: false });
-  const keyboard = qh.buildInlineKeyboard("q-002", question);
+  const keyboard = qh.banaMafatihSatriyya("q-002", question);
 
   assertEquals(keyboard.inline_keyboard.length, 2);
 });
@@ -142,10 +142,10 @@ Deno.test("parseQuestionCallback: resolves registered short IDs", () => {
 
   /** Register via buildInlineKeyboard */
   const question = makeMaalumatSual();
-  const keyboard = qh.buildInlineKeyboard("q-full-uuid-001", question);
+  const keyboard = qh.banaMafatihSatriyya("q-full-uuid-001", question);
 
   /** Parse the first button's callback_data */
-  const parsed = qh.parseQuestionCallback(keyboard.inline_keyboard[0][0].callback_data);
+  const parsed = qh.hallalIstijabaZirrSual(keyboard.inline_keyboard[0][0].callback_data);
   assertExists(parsed);
   assertEquals(parsed.questionId, "q-full-uuid-001");
   assertEquals(parsed.selectedLabel.startsWith("Pattern A"), true);
@@ -158,7 +158,7 @@ Deno.test("parseQuestionCallback: returns null for unknown short IDs", () => {
     sessionManager: mockMudirJalasat() as never,
   });
 
-  const result = qh.parseQuestionCallback("q:unknown1:some label");
+  const result = qh.hallalIstijabaZirrSual("q:unknown1:some label");
   assertEquals(result, null);
 });
 
@@ -174,9 +174,9 @@ Deno.test("parseQuestionCallback: handles labels with colons", () => {
     options: [{ label: "Option:With:Colons", description: "test" }],
     custom: false,
   });
-  const keyboard = qh.buildInlineKeyboard("q-colon-test", question);
+  const keyboard = qh.banaMafatihSatriyya("q-colon-test", question);
 
-  const parsed = qh.parseQuestionCallback(keyboard.inline_keyboard[0][0].callback_data);
+  const parsed = qh.hallalIstijabaZirrSual(keyboard.inline_keyboard[0][0].callback_data);
   assertExists(parsed);
   assertEquals(parsed.selectedLabel, "Option:With:Colons");
 });
@@ -191,7 +191,7 @@ Deno.test("handleQuestionAsked: unknown session -> rejects", async () => {
       sessionManager: mockMudirJalasat([]) as never,
     });
 
-    await qh.handleQuestionAsked(makeEvent());
+    await qh.aalajSualMatlub(makeEvent());
 
     assertEquals(oc._calls.rejectQuestion.length, 1);
     assertEquals(oc._calls.rejectQuestion[0].questionId, "q-001");
@@ -208,7 +208,7 @@ Deno.test("handleQuestionAsked: empty questions -> rejects", async () => {
       sessionManager: mockMudirJalasat([session]) as never,
     });
 
-    await qh.handleQuestionAsked(makeEvent({ questions: [] }));
+    await qh.aalajSualMatlub(makeEvent({ questions: [] }));
 
     assertEquals(oc._calls.rejectQuestion.length, 1);
   });
@@ -231,7 +231,7 @@ Deno.test("handleQuestionAsked: KHABATH -> auto-answers + injects guidance", asy
       sessionManager: mockMudirJalasat([session]) as never,
     });
 
-    await qh.handleQuestionAsked(makeEvent());
+    await qh.aalajSualMatlub(makeEvent());
 
     assertEquals(oc._calls.replyToQuestion.length, 1);
     assertEquals(oc._calls.replyToQuestion[0].questionId, "q-001");
@@ -263,11 +263,11 @@ Deno.test("handleQuestionAsked: DHAHAB -> forwards to al-Kimyawi", async () => {
       sessionManager: mockMudirJalasat([session]) as never,
     });
 
-    qh.setOnQuestionForwarded(async () => {
+    qh.wadaaIndaTahwilSual(async () => {
       forwardedCount++;
     });
 
-    await qh.handleQuestionAsked(makeEvent());
+    await qh.aalajSualMatlub(makeEvent());
 
     assertEquals(messenger._calls.arsalaMunassaq.length, 1);
     const sentChannel = messenger._calls.arsalaMunassaq[0].channel;
@@ -307,10 +307,10 @@ Deno.test("handleQuestionCallback: answers question + marks in DB", async () => 
       sessionManager: mockMudirJalasat([session]) as never,
     });
 
-    await qh.handleQuestionAsked(makeEvent());
+    await qh.aalajSualMatlub(makeEvent());
 
     /** Now answer it */
-    const success = await qh.handleQuestionCallback("q-001", "Pattern A (Recommended)");
+    const success = await qh.aalajIstijabaZirrSual("q-001", "Pattern A (Recommended)");
     assertEquals(success, true);
 
     assertEquals(oc._calls.replyToQuestion.length, 1);
@@ -331,7 +331,7 @@ Deno.test("handleQuestionCallback: unknown question -> returns false", async () 
       sessionManager: mockMudirJalasat() as never,
     });
 
-    const success = await qh.handleQuestionCallback("nonexistent", "anything");
+    const success = await qh.aalajIstijabaZirrSual("nonexistent", "anything");
     assertEquals(success, false);
     assertEquals(oc._calls.replyToQuestion.length, 0);
   });
@@ -355,16 +355,16 @@ Deno.test("markAwaitingCustomInput + handlePotentialCustomAnswer: end-to-end", a
       sessionManager: mockMudirJalasat([session]) as never,
     });
 
-    await qh.handleQuestionAsked(makeEvent());
+    await qh.aalajSualMatlub(makeEvent());
 
-    await qh.markAwaitingCustomInput("TEAM-1234", "q-001");
-    assertEquals(qh.isAwaitingCustomInput("TEAM-1234"), true);
+    await qh.allamIntizarIdkhal("TEAM-1234", "q-001");
+    assertEquals(qh.huwaYantazirIdkhal("TEAM-1234"), true);
 
     /** Submit custom answer */
-    const success = await qh.handlePotentialCustomAnswer("TEAM-1234", "My custom answer");
+    const success = await qh.aalajJawabKhass("TEAM-1234", "My custom answer");
     assertEquals(success, true);
 
-    assertEquals(qh.isAwaitingCustomInput("TEAM-1234"), false);
+    assertEquals(qh.huwaYantazirIdkhal("TEAM-1234"), false);
 
     assertEquals(oc._calls.replyToQuestion.length, 1);
     assertEquals(oc._calls.replyToQuestion[0].answers[0].custom, "My custom answer");
@@ -379,7 +379,7 @@ Deno.test("handlePotentialCustomAnswer: returns false when not awaiting", async 
       sessionManager: mockMudirJalasat() as never,
     });
 
-    const result = await qh.handlePotentialCustomAnswer("TEAM-123", "some text");
+    const result = await qh.aalajJawabKhass("TEAM-123", "some text");
     assertEquals(result, false);
   });
 });
@@ -404,7 +404,7 @@ Deno.test("loadState: rebuilds pendingQuestions from DB", async () => {
       options: ["Yes", "No"],
     });
 
-    await qh.loadState();
+    await qh.hammalaHala();
 
     /** Should be in pending questions */
     const pending = qh.wajadaSualMuallaq("q-istarjaad");
@@ -435,7 +435,7 @@ Deno.test("loadState: rebuilds callbackIdMap (parseQuestionCallback works after 
       options: ["A", "B"],
     });
 
-    await qh.loadState();
+    await qh.hammalaHala();
 
     /** Build keyboard to get the short ID format */
     const pending = qh.wajadaSualMuallaq("q-callback-test");
@@ -445,8 +445,8 @@ Deno.test("loadState: rebuilds callbackIdMap (parseQuestionCallback works after 
      * The short callback ID should be registered by loadState via #shortCallbackId
      * We can verify by building a keyboard and parsing its callback
      */
-    const keyboard = qh.buildInlineKeyboard("q-callback-test", pending.questions[0]);
-    const parsed = qh.parseQuestionCallback(keyboard.inline_keyboard[0][0].callback_data);
+    const keyboard = qh.banaMafatihSatriyya("q-callback-test", pending.questions[0]);
+    const parsed = qh.hallalIstijabaZirrSual(keyboard.inline_keyboard[0][0].callback_data);
     assertExists(parsed);
     assertEquals(parsed.questionId, "q-callback-test");
   });
@@ -460,7 +460,7 @@ Deno.test("loadState: no questions -> no-op", async () => {
       sessionManager: mockMudirJalasat() as never,
     });
 
-    await qh.loadState();
+    await qh.hammalaHala();
     assertEquals(qh.wajadaSualMuallaq("anything"), undefined);
   });
 });
@@ -482,7 +482,7 @@ Deno.test("loadState: unknown session -> uses sessionId as huwiyyatMurshid fallb
       options: ["X"],
     });
 
-    await qh.loadState();
+    await qh.hammalaHala();
 
     const pending = qh.wajadaSualMuallaq("q-orphan");
     assertExists(pending);

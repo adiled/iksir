@@ -48,39 +48,39 @@ export class Sail {
   #messenger: RasulKharij;
   #sessionManager: MudirJalasat;
 
-  #pendingQuestions: Map<string, SualMuallaq> = new Map();
+  aseilaMuallaqa: Map<string, SualMuallaq> = new Map();
 
-  #callbackIdMap: Map<string, string> = new Map();
+  kharitaIstijabaId: Map<string, string> = new Map();
 
-  #awaitingCustomInput: Map<string, string> = new Map();
+  yantazirIdkhalKhass: Map<string, string> = new Map();
 
-  #onQuestionForwarded: ((pending: SualMuallaq, question: MaalumatSual) => Promise<void>) | null = null;
+  indaTahwilSual: ((pending: SualMuallaq, question: MaalumatSual) => Promise<void>) | null = null;
 
   /**
    * Set callback for transport-specific question rendering.
    * Called after a question is forwarded to al-Kimyawi via messenger.
    */
-  setOnQuestionForwarded(
+  wadaaIndaTahwilSual(
     callback: (pending: SualMuallaq, question: MaalumatSual) => Promise<void>,
   ): void {
-    this.#onQuestionForwarded = callback;
+    this.indaTahwilSual = callback;
   }
 
   /**
    * Generate a short callback ID (8 chars) for Telegram callback_data
    * and register the mapping to the full question ID.
    */
-  #shortCallbackId(questionId: string): string {
+  ikhtisarIdIstijaba(questionId: string): string {
     const short = questionId.replace(/-/g, "").slice(0, 8);
-    this.#callbackIdMap.set(short, questionId);
+    this.kharitaIstijabaId.set(short, questionId);
     return short;
   }
 
   /**
    * Resolve a short callback ID back to the full question ID.
    */
-  #resolveCallbackId(shortId: string): string | null {
-    return this.#callbackIdMap.get(shortId) ?? null;
+  hallaIdIstijaba(shortId: string): string | null {
+    return this.kharitaIstijabaId.get(shortId) ?? null;
   }
 
   constructor(deps: SailDeps) {
@@ -93,7 +93,7 @@ export class Sail {
    * Handle a question.asked event from OpenCode SSE.
    * Mayyiz the question and either auto-answers or forwards to al-Kimyawi.
    */
-  async handleQuestionAsked(event: HadathSualMatlub): Promise<void> {
+  async aalajSualMatlub(event: HadathSualMatlub): Promise<void> {
     const { id, sessionID, questions } = event.properties;
 
     await logger.info("question-handler", `Received question ${id}`, {
@@ -131,16 +131,16 @@ export class Sail {
     });
 
     if (tamyiz.tamyiz === "KHABATH") {
-      await this.#handleKhabath(sessionID, id, questions, tamyiz);
+      await this.aalajKhabath(sessionID, id, questions, tamyiz);
     } else {
-      await this.#forwardToDaemon(sessionID, id, questions, murshid.identifier);
+      await this.hawwalIlaKhadim(sessionID, id, questions, murshid.identifier);
     }
   }
 
   /**
    * Handle khabath: auto-answer and inject guidance.
    */
-  async #handleKhabath(
+  async aalajKhabath(
     sessionID: string,
     questionId: string,
     questions: MaalumatSual[],
@@ -192,7 +192,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
    * Sends formatted text. Transport-specific rendering (inline keyboards)
    * is handled by the onQuestionForwarded callback if set.
    */
-  async #forwardToDaemon(
+  async hawwalIlaKhadim(
     sessionID: string,
     questionId: string,
     questions: MaalumatSual[],
@@ -206,7 +206,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
       questions,
       createdAt: new Date().toISOString(),
     };
-    this.#pendingQuestions.set(questionId, pending);
+    this.aseilaMuallaqa.set(questionId, pending);
 
     /** Persist to SQLite immediately so we don't lose pending questions on crash */
     const primaryQuestion = questions[0];
@@ -218,12 +218,12 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
     });
 
     /** Build question text */
-    const messageText = this.#formatQuestionMessage(primaryQuestion!, huwiyyatMurshid);
+    const messageText = this.nassaqRisalatSual(primaryQuestion!, huwiyyatMurshid);
 
     await this.#messenger.arsalaMunassaq({ murshid: huwiyyatMurshid }, messageText);
 
-    if (this.#onQuestionForwarded) {
-      await this.#onQuestionForwarded(pending, primaryQuestion!);
+    if (this.indaTahwilSual) {
+      await this.indaTahwilSual(pending, primaryQuestion!);
     }
 
     await logger.info("question-handler", `Forwarded question ${questionId}`, {
@@ -234,7 +234,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
   /**
    * Format a question for Telegram display.
    */
-  #formatQuestionMessage(question: MaalumatSual, huwiyyatMurshid: string): string {
+  nassaqRisalatSual(question: MaalumatSual, huwiyyatMurshid: string): string {
     let msg = `**${question.header}** (${huwiyyatMurshid})\n\n`;
     msg += `${question.question}\n\n`;
     msg += `_Options:_\n`;
@@ -259,7 +259,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
    * Build inline keyboard data for transport-specific rendering.
    * Public so main.ts can build Telegram keyboards.
    */
-  buildInlineKeyboard(
+  banaMafatihSatriyya(
     questionId: string,
     question: MaalumatSual
   ): { inline_keyboard: Array<Array<{ text: string; callback_data: string }>> } {
@@ -268,7 +268,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
      * Use short 8-char ID to stay within Telegram's 64-byte callback_data limit.
      * Format: "q:{8}:{label}" — 11 chars overhead, leaving 53 for label.
      */
-    const shortId = this.#shortCallbackId(questionId);
+    const shortId = this.ikhtisarIdIstijaba(questionId);
     const maxLabelLen = 64 - 2 - shortId.length - 1;
 
     for (const opt of question.options) {
@@ -297,12 +297,12 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
    * Handle a callback query (button press) for a question.
    * Called from main.ts when Telegram callback matches question pattern.
    */
-  async handleQuestionCallback(
+  async aalajIstijabaZirrSual(
     questionId: string,
     selectedLabel: string,
     customText?: string
   ): Promise<boolean> {
-    const pending = this.#pendingQuestions.get(questionId);
+    const pending = this.aseilaMuallaqa.get(questionId);
     if (!pending) {
       await logger.warn("question-handler", `No pending question for callback ${questionId}`);
       return false;
@@ -323,7 +323,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
     );
 
     if (replied) {
-      this.#pendingQuestions.delete(questionId);
+      this.aseilaMuallaqa.delete(questionId);
       /** Mark answered in SQLite */
       const answerText = selectedLabel === "__custom__" && customText ? customText : selectedLabel;
       dbMarkJawabSualed(questionId, answerText);
@@ -341,7 +341,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
   /**
    * Check if a callback_data is for a question.
    */
-  isQuestionCallback(callbackData: string): boolean {
+  huwaIstijabaZirrSual(callbackData: string): boolean {
     return callbackData.startsWith("q:");
   }
 
@@ -349,13 +349,13 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
    * Parse question callback data.
    * Resolves short callback IDs back to full question IDs.
    */
-  parseQuestionCallback(callbackData: string): { questionId: string; selectedLabel: string } | null {
+  hallalIstijabaZirrSual(callbackData: string): { questionId: string; selectedLabel: string } | null {
     const parts = callbackData.split(":");
     if (parts.length < 3 || parts[0] !== "q") {
       return null;
     }
     const shortId = parts[1];
-    const fullId = this.#resolveCallbackId(shortId);
+    const fullId = this.hallaIdIstijaba(shortId);
     if (!fullId) {
       return null;
     }
@@ -369,39 +369,39 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
    * Get pending question by ID.
    */
   wajadaSualMuallaq(questionId: string): SualMuallaq | undefined {
-    return this.#pendingQuestions.get(questionId);
+    return this.aseilaMuallaqa.get(questionId);
   }
 
   /**
    * Mark a question as awaiting custom text input.
    * The next text message in the murshid's channel will be used as the answer.
    */
-  async markAwaitingCustomInput(huwiyyatMurshid: string, questionId: string): Promise<void> {
-    this.#awaitingCustomInput.set(huwiyyatMurshid, questionId);
-    await this.saveState();
+  async allamIntizarIdkhal(huwiyyatMurshid: string, questionId: string): Promise<void> {
+    this.yantazirIdkhalKhass.set(huwiyyatMurshid, questionId);
+    await this.hafizaHala();
   }
 
   /**
    * Check if an murshid is awaiting custom input.
    */
-  isAwaitingCustomInput(huwiyyatMurshid: string): boolean {
-    return this.#awaitingCustomInput.has(huwiyyatMurshid);
+  huwaYantazirIdkhal(huwiyyatMurshid: string): boolean {
+    return this.yantazirIdkhalKhass.has(huwiyyatMurshid);
   }
 
   /**
    * Handle a text message that might be a custom answer.
    * Returns true if the message was consumed as a custom answer.
    */
-  async handlePotentialCustomAnswer(huwiyyatMurshid: string, text: string): Promise<boolean> {
-    const questionId = this.#awaitingCustomInput.get(huwiyyatMurshid);
+  async aalajJawabKhass(huwiyyatMurshid: string, text: string): Promise<boolean> {
+    const questionId = this.yantazirIdkhalKhass.get(huwiyyatMurshid);
     if (!questionId) {
       return false;
     }
 
-    this.#awaitingCustomInput.delete(huwiyyatMurshid);
+    this.yantazirIdkhalKhass.delete(huwiyyatMurshid);
 
     /** Submit the custom answer */
-    const success = await this.handleQuestionCallback(questionId, "__custom__", text);
+    const success = await this.aalajIstijabaZirrSual(questionId, "__custom__", text);
 
     if (success) {
       await logger.info("question-handler", `Received custom answer for ${questionId}`, {
@@ -409,7 +409,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
       });
     }
 
-    await this.saveState();
+    await this.hafizaHala();
 
     return success;
   }
@@ -421,14 +421,14 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
    * answer (dbMarkJawabSualed), so this is a no-op kept for interface
    * compatibility with the daemon lifecycle.
    */
-  async saveState(): Promise<void> {
+  async hafizaHala(): Promise<void> {
   }
 
   /**
    * Load question handler state from SQLite.
    * Called at daemon startup to istarjaa pending questions.
    */
-  async loadState(): Promise<void> {
+  async hammalaHala(): Promise<void> {
     try {
       const dbQuestions = jalabaAseilaGhairMujaba();
       
@@ -437,7 +437,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
         return;
       }
 
-      this.#pendingQuestions.clear();
+      this.aseilaMuallaqa.clear();
       for (const dbQ of dbQuestions) {
         /**
          * Reconstruct SualMuallaq from SQLite
@@ -463,19 +463,19 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
           createdAt: dbQ.created_at,
         };
         
-        this.#pendingQuestions.set(dbQ.id, pendingQuestion);
-        this.#shortCallbackId(dbQ.id);
+        this.aseilaMuallaqa.set(dbQ.id, pendingQuestion);
+        this.ikhtisarIdIstijaba(dbQ.id);
       }
 
-      this.#awaitingCustomInput.clear();
+      this.yantazirIdkhalKhass.clear();
 
       await logger.info("question-handler", "Loaded question state", {
-        pending: this.#pendingQuestions.size,
-        awaitingInput: this.#awaitingCustomInput.size,
+        pending: this.aseilaMuallaqa.size,
+        awaitingInput: this.yantazirIdkhalKhass.size,
       });
 
-      if (this.#pendingQuestions.size > 0) {
-        for (const [id, q] of this.#pendingQuestions) {
+      if (this.aseilaMuallaqa.size > 0) {
+        for (const [id, q] of this.aseilaMuallaqa) {
           await logger.info("question-handler", `Restored pending question: ${id}`, {
             murshid: q.huwiyyatMurshid,
             header: q.questions[0]?.header,
