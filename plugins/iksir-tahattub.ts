@@ -17,14 +17,14 @@
 import type { Plugin } from "@opencode-ai/plugin"
 import { Database } from "bun:sqlite"
 
-interface DiaryRow {
+interface SaffMudawwana {
   type: string
   decision: string
   reasoning: string
   created_at: string
 }
 
-interface SessionRow {
+interface SaffJalsa {
   identifier: string
   title: string | null
   branch: string | null
@@ -44,7 +44,7 @@ const IKSIR_DB_PATH =
 function hallaHuwiyyatMurshid(
   db: Database,
   sessionId: string,
-): SessionRow | null {
+): SaffJalsa | null {
   try {
     const row = db
       .prepare(
@@ -53,7 +53,7 @@ function hallaHuwiyyatMurshid(
          WHERE id = ?
          LIMIT 1`,
       )
-      .get(sessionId) as SessionRow | null
+      .get(sessionId) as SaffJalsa | null
     if (row) return row
   } catch {
   }
@@ -63,7 +63,7 @@ function hallaHuwiyyatMurshid(
 /**
  * Fetch diary decisions for a murshid, most recent first.
  */
-function qaraaQararat(db: Database, huwiyyatMurshid: string): DiaryRow[] {
+function qaraaQararat(db: Database, huwiyyatMurshid: string): SaffMudawwana[] {
   try {
     return db
       .prepare(
@@ -73,7 +73,7 @@ function qaraaQararat(db: Database, huwiyyatMurshid: string): DiaryRow[] {
          ORDER BY created_at DESC
          LIMIT 30`,
       )
-      .all(huwiyyatMurshid) as DiaryRow[]
+      .all(huwiyyatMurshid) as SaffMudawwana[]
   } catch {
     return []
   }
@@ -82,7 +82,7 @@ function qaraaQararat(db: Database, huwiyyatMurshid: string): DiaryRow[] {
 /**
  * Format diary entries into a readable block for the compaction prompt.
  */
-function rattabaMudawwana(entries: DiaryRow[]): string {
+function rattabaMudawwana(entries: SaffMudawwana[]): string {
   return entries
     .map(
       (e) =>
@@ -133,7 +133,7 @@ MUST include these or they will be permanently lost:
 ${rattabaMudawwana(entries)}`)
         }
 
-        parts.push(qawaidHifz(murshidId))
+        parts.push(qawaidTahattub(murshidId))
 
         output.context.push(parts.join("\n\n"))
       } catch {
@@ -144,7 +144,7 @@ ${rattabaMudawwana(entries)}`)
   }
 }
 
-function qawaidHifz(murshidId: string): string {
+function qawaidTahattub(murshidId: string): string {
   return `### Qawā'id al-Hifẓ
 
 When constructing the compaction summary, you MUST:
