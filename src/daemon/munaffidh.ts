@@ -41,7 +41,6 @@ import type {
   MunCheckBranchStatusCall,
   MunNotifyCall,
   MunReplyCall,
-  MunSliceForPrCall,
   MunYieldCall,
   MunDemandControlCall,
   MunCreateBranchCall,
@@ -212,9 +211,6 @@ export class Munaffidh {
           result = await this.aalajAlaqat(event);
           break;
 
-        case "mun_slice_for_pr":
-          result = await this.aalajSharihaLiRisala(event);
-          break;
         case "mun_create_risala":
           result = await this.#aalajaKhalqRisala(event);
           break;
@@ -436,24 +432,6 @@ Updated fields: ${Object.keys(call.updates).join(", ")}`;
 
 ${call.blocks?.length ? `**Blocks:** ${call.blocks.join(", ")}` : ""}
 ${call.blockedBy?.length ? `**Blocked by:** ${call.blockedBy.join(", ")}` : ""}`;
-  }
-
-  /**
-   * Handle pm_slice_for_pr
-   */
-  async aalajSharihaLiRisala(call: MunSliceForPrCall): Promise<string> {
-
-    await logger.info("tool-executor", "Slicing for PR", {
-      huwiyyatWasfa: call.huwiyyatWasfa,
-      files: call.files,
-    });
-
-    return `PR slice prepared for ${call.huwiyyatWasfa}.
-
-Files (${call.files.length}):
-${call.files.map((f) => `- ${f}`).join("\n")}
-
-Ready for pm_create_risala.`;
   }
 
   /**

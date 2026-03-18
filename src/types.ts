@@ -372,14 +372,6 @@ export interface NidaQiraatWasfa {
   url: string;
 }
 
-/** Slice files for a PR */
-export interface MunSliceForPrCall {
-  tool: "mun_slice_for_pr";
-  huwiyyatMurshid: string;
-  huwiyyatWasfa: string;
-  files: string[];
-}
-
 /** Create a draft PR */
 export interface NidaKhalqRisala {
   tool: "mun_create_risala";
@@ -538,7 +530,6 @@ export type MunToolCall =
   | NidaTajdidWasfa
   | MunSetRelationsCall
   | NidaQiraatWasfa
-  | MunSliceForPrCall
   | NidaKhalqRisala
   | MunCheckBranchStatusCall
   | MunNotifyCall
