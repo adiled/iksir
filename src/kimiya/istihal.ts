@@ -12,10 +12,10 @@ import { logger } from "../logging/logger.ts";
 import { exec, farAlHali, farAlAsasi } from "../git/operations.ts";
 
 export interface NatijaIstihal {
-  success: boolean;
-  error?: string;
-  errorType?: "conflicts" | "checkout_failed" | "restore_failed" | "push_failed" | "merge_failed";
-  conflicts?: string[];
+  najah: boolean;
+  khata?: string;
+  nawKhata?: "conflicts" | "checkout_failed" | "restore_failed" | "push_failed" | "merge_failed";
+  taarudat?: string[];
   /** The buwtaqa branch we extracted from */
   buwtaqa?: string;
   /** The jawhar branch that was created */
@@ -24,7 +24,7 @@ export interface NatijaIstihal {
   asas?: string;
   /** Number of ahjar transmuted */
   adadAhjar?: number;
-  output?: string;
+  makhrujat?: string;
 }
 
 /**
@@ -53,9 +53,9 @@ export async function istihal(
   const buwtaqa = await farAlHali();
   if (!buwtaqa) {
     return {
-      success: false,
-      error: "Could not determine current branch",
-      errorType: "checkout_failed",
+      najah: false,
+      khata: "Could not determine current branch",
+      nawKhata: "checkout_failed",
     };
   }
 
@@ -68,9 +68,9 @@ export async function istihal(
     const fetchResult = await exec(["fetch", "origin", `${codex}:${codex}`]);
     if (!fetchResult.success) {
       return {
-        success: false,
-        error: `Failed to fetch ${codex}: ${fetchResult.stderr}`,
-        errorType: "merge_failed",
+        najah: false,
+        khata: `Failed to fetch ${codex}: ${fetchResult.stderr}`,
+        nawKhata: "merge_failed",
         buwtaqa,
       };
     }
@@ -88,21 +88,21 @@ export async function istihal(
         await exec(["merge", "--abort"]);
 
         return {
-          success: false,
-          error: `Merge conflicts with ${codex}`,
-          errorType: "conflicts",
-          conflicts,
+          najah: false,
+          khata: `Merge conflicts with ${codex}`,
+          nawKhata: "conflicts",
+          taarudat: conflicts,
           buwtaqa,
-          output: mergeOutput,
+          makhrujat: mergeOutput,
         };
       }
 
       return {
-        success: false,
-        error: `Failed to merge ${codex}: ${mergeOutput}`,
-        errorType: "merge_failed",
+        najah: false,
+        khata: `Failed to merge ${codex}: ${mergeOutput}`,
+        nawKhata: "merge_failed",
         buwtaqa,
-        output: mergeOutput,
+        makhrujat: mergeOutput,
       };
     }
 
@@ -110,9 +110,9 @@ export async function istihal(
       const fetchBase = await exec(["fetch", "origin", asasBranch]);
       if (!fetchBase.success) {
         return {
-          success: false,
-          error: `Failed to fetch asas branch ${asasBranch}: ${fetchBase.stderr}`,
-          errorType: "merge_failed",
+          najah: false,
+          khata: `Failed to fetch asas branch ${asasBranch}: ${fetchBase.stderr}`,
+          nawKhata: "merge_failed",
           buwtaqa,
         };
       }
@@ -123,9 +123,9 @@ export async function istihal(
     const branchResult = await exec(["branch", "-f", jawharBranch, baseRef]);
     if (!branchResult.success) {
       return {
-        success: false,
-        error: `Failed to create branch ${jawharBranch}: ${branchResult.stderr}`,
-        errorType: "checkout_failed",
+        najah: false,
+        khata: `Failed to create branch ${jawharBranch}: ${branchResult.stderr}`,
+        nawKhata: "checkout_failed",
         buwtaqa,
       };
     }
@@ -134,9 +134,9 @@ export async function istihal(
     const checkoutResult = await exec(["checkout", jawharBranch]);
     if (!checkoutResult.success) {
       return {
-        success: false,
-        error: `Checkout failed for ${jawharBranch}. Commit or stash changes on buwtaqa first. ${checkoutResult.stderr}`,
-        errorType: "checkout_failed",
+        najah: false,
+        khata: `Checkout failed for ${jawharBranch}. Commit or stash changes on buwtaqa first. ${checkoutResult.stderr}`,
+        nawKhata: "checkout_failed",
         buwtaqa,
       };
     }
@@ -146,9 +146,9 @@ export async function istihal(
     if (!restoreResult.success) {
       await rajaaIlaButwaqa();
       return {
-        success: false,
-        error: `Failed to restore ahjar from ${buwtaqa}: ${restoreResult.stderr}`,
-        errorType: "restore_failed",
+        najah: false,
+        khata: `Failed to restore ahjar from ${buwtaqa}: ${restoreResult.stderr}`,
+        nawKhata: "restore_failed",
         buwtaqa,
         jawhar: jawharBranch,
       };
@@ -159,9 +159,9 @@ export async function istihal(
     if (!addResult.success) {
       await rajaaIlaButwaqa();
       return {
-        success: false,
-        error: `Failed to stage ahjar: ${addResult.stderr}`,
-        errorType: "restore_failed",
+        najah: false,
+        khata: `Failed to stage ahjar: ${addResult.stderr}`,
+        nawKhata: "restore_failed",
         buwtaqa,
         jawhar: jawharBranch,
       };
@@ -171,9 +171,9 @@ export async function istihal(
     if (!commitResult.success) {
       await rajaaIlaButwaqa();
       return {
-        success: false,
-        error: `Failed to commit: ${commitResult.stderr}`,
-        errorType: "restore_failed",
+        najah: false,
+        khata: `Failed to commit: ${commitResult.stderr}`,
+        nawKhata: "restore_failed",
         buwtaqa,
         jawhar: jawharBranch,
       };
@@ -184,9 +184,9 @@ export async function istihal(
     if (!pushResult.success) {
       await rajaaIlaButwaqa();
       return {
-        success: false,
-        error: `Failed to push ${jawharBranch}: ${pushResult.stderr}`,
-        errorType: "push_failed",
+        najah: false,
+        khata: `Failed to push ${jawharBranch}: ${pushResult.stderr}`,
+        nawKhata: "push_failed",
         buwtaqa,
         jawhar: jawharBranch,
       };
@@ -200,7 +200,7 @@ export async function istihal(
     });
 
     return {
-      success: true,
+      najah: true,
       buwtaqa,
       jawhar: jawharBranch,
       asas: asasBranch ?? codex,
@@ -209,9 +209,9 @@ export async function istihal(
   } catch (error) {
     await rajaaIlaButwaqa();
     return {
-      success: false,
-      error: `Unexpected error: ${error}`,
-      errorType: "checkout_failed",
+      najah: false,
+      khata: `Unexpected error: ${error}`,
+      nawKhata: "checkout_failed",
       buwtaqa,
     };
   }

@@ -854,19 +854,19 @@ Remote: origin`;
     const { istihal } = await import("../kimiya/istihal.ts");
     const result = await istihal(jawharBranch, call.files);
 
-    if (!result.success) {
-      if (result.errorType === "conflicts" && result.conflicts) {
+    if (!result.najah) {
+      if (result.nawKhata === "conflicts" && result.taarudat) {
         return `Istihal failed: Ahjar conflict with codex.
 
 Conflicted ahjar:
-${result.conflicts.map((f) => `  - ${f}`).join("\n")}
+${result.taarudat.map((f) => `  - ${f}`).join("\n")}
 
 To resolve:
 1. Reconcile the conflicting ahjar in buwtaqa, then retry mun_istihal
 2. git status to identify conflicts
 3. Resolve, git add, git commit`;
       }
-      return `Istihal failed (${result.errorType}): ${result.error}`;
+      return `Istihal failed (${result.nawKhata}): ${result.khata}`;
     }
 
     return `Istihal complete.
@@ -893,16 +893,16 @@ Next: Use mun_fasl to create the risala.`;
     const { istihal } = await import("../kimiya/istihal.ts");
     const result = await istihal(jawharBranch, call.files, parentJawhar);
 
-    if (!result.success) {
-      if (result.errorType === "conflicts" && result.conflicts) {
+    if (!result.najah) {
+      if (result.nawKhata === "conflicts" && result.taarudat) {
         return `Layered istihal failed: Conflicts with codex.
 
 Conflicted ahjar:
-${result.conflicts.map((f) => `  - ${f}`).join("\n")}
+${result.taarudat.map((f) => `  - ${f}`).join("\n")}
 
 Resolve conflicts in buwtaqa before retrying.`;
       }
-      return `Layered istihal failed (${result.errorType}): ${result.error}`;
+      return `Layered istihal failed (${result.nawKhata}): ${result.khata}`;
     }
 
     const codex = await git.farAlAsasi();
