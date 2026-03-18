@@ -1,7 +1,7 @@
 /**
  * Sail (سائل) - The Oracle
  * 
- * One of the sacred Khuddām (خدّام - Servants) of the alchemical workshop.
+ * One of the sacred Khuddām (خدّام - Servants) of Iksīr.
  * Sail divines the nature of questions, separating dhahab (gold) from
  * khabath (dross). Only questions of true worth are brought before the
  * Kimyawi (the Human Alchemist).

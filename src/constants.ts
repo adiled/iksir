@@ -1,5 +1,5 @@
 /**
- * Sacred Constants of the Alchemical Workshop
+ * Sacred Constants of Iksīr
  * 
  * Immutable values used throughout the Iksīr system.
  */

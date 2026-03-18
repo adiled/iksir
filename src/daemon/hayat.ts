@@ -1,9 +1,9 @@
 /**
  * Hayat (حياة) — The Life Force
  *
- * One of the sacred Khuddām (خدّام) of the alchemical workshop.
+ * One of the sacred Khuddām (خدّام) of Iksīr.
  *
- * While others sleep, Hayat breathes. The slow pulse of the workshop —
+ * While others sleep, Hayat breathes. The slow pulse —
  * watching over risālāt as they wait for judgement, listening for the
  * murmur of new taaliqat, sensing when a risala has been merged into
  * the codex or abandoned by its author.
@@ -11,7 +11,7 @@
  * In the quiet hours, when al-Kimyawi rests, Hayat performs the
  * sacred rites of seyana — merging the river of main into each
  * murshid's forge branch, rebuilding the code-intel index, ensuring
- * the workshop is clean and ready for the dawn.
+ * everything is clean and ready for the dawn.
  *
  * Hayat does not think. Hayat does not decide. Hayat watches,
  * breathes, and keeps the flame from going cold.
@@ -87,10 +87,10 @@ interface IstijabatHayat {
     pr: RisalaMutaba
   ) => Promise<void>;
 
-  /** Request seyana — the workshop must be still */
+  /** Request seyana — all must be still */
   utlubWadaSeyana: () => Promise<boolean>;
 
-  /** Release seyana — the workshop may breathe again */
+  /** Release seyana — Iksīr may breathe again */
   harrarWadaSeyana: () => Promise<void>;
 
   /** Seyana is complete — report what was done */
@@ -460,7 +460,7 @@ export class DawratHayat {
   }
 }
 
-/** Summon Hayat — breathe life into the workshop */
+/** Summon Hayat — breathe life into Iksīr */
 export function awqadaHayat(
   deps: MutatallabatHayat,
   callbacks: IstijabatHayat

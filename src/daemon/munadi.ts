@@ -1,7 +1,7 @@
 /**
  * Munadi (منادي) - The Caller
  * 
- * One of the sacred Khuddām (خدّام - Servants) of the alchemical workshop.
+ * One of the sacred Khuddām (خدّام - Servants) of Iksīr.
  * Munadi calls forth the workers, routing messages and dispatching intent.
  * Like a muezzin calling the faithful to prayer, Munadi summons the spirits
  * to their appointed tasks in the Great Work.

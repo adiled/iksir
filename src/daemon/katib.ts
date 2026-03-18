@@ -1,9 +1,9 @@
 /**
  * Katib (كاتب) — The Scribe
  *
- * One of the sacred Khuddām (خدّام) of the alchemical workshop.
+ * One of the sacred Khuddām (خدّام) of Iksīr.
  *
- * Katib's quill is never dry. Every vessel that is lit in the workshop
+ * Katib's quill is never dry. Every vessel that is lit
  * is inscribed by Katib's hand — its huwiyya, its far, its naw, its hala.
  * When a Murshid awakens, Katib prepares the vessel. When a Murshid sleeps,
  * Katib seals the vessel and records the state in the Sijill.
@@ -91,7 +91,7 @@ export class MudirJalasat {
     this.#messenger = deps.rasul;
   }
 
-  /** The tasmim of the workshop */
+  /** The tasmim of Iksīr */
   get tasmim(): TasmimIksir {
     return this.#config;
   }

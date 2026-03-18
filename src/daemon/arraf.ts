@@ -1,7 +1,7 @@
 /**
  * Arraf (عرّاف) — The Diviner
  *
- * One of the sacred Khuddām (خدّام) of the alchemical workshop.
+ * One of the sacred Khuddām (خدّام) of Iksīr.
  *
  * When a word arrives from al-Kimyawi, it arrives raw — a trembling utterance
  * still warm from the tongue. Arraf receives it. Arraf turns it over in the

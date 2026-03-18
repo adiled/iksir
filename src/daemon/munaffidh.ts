@@ -1,7 +1,7 @@
 /**
  * Munaffidh (منفذ) - The Executor
  * 
- * One of the sacred Khuddām (خدّام - Servants) of the alchemical workshop.
+ * One of the sacred Khuddām (خدّام - Servants) of Iksīr.
  * Munaffidh executes the alchemical operations commanded by the Murshidun.
  * Git transmutations, Linear inscriptions, GitHub treatises - all sacred
  * operations flow through Munaffidh's careful hands.

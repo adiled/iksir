@@ -1,7 +1,7 @@
 /**
  * Raqib (رقيب) - The Watcher
  * 
- * One of the sacred Khuddām (خدّام - Servants) of the alchemical workshop.
+ * One of the sacred Khuddām (خدّام - Servants) of Iksīr.
  * Raqib watches over the health of all transformations, detecting when
  * a Murshid has become stuck in contemplation or lost in the labyrinth.
  * The eternal guardian against fasād (corruption) in the work.

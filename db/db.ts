@@ -1,5 +1,5 @@
 /**
- * Sijill al-Warsha (سجلّ الورشة) — The Workshop Register
+ * Sijill Iksīr (سجلّ الإكسير) — The Eternal Register
  *
  * Centralized state persistence using SQLite with WAL mode.
  * All state inscribed in a single iksir.sqlite file.
