@@ -1205,11 +1205,11 @@ ${call.risala}`;
 
     /** Log to diary directly */
     const decision: QararSijill = {
-      timestamp: new Date().toISOString(),
-      type: call.naw,
-      decision: call.qarar,
-      reasoning: call.mantiq,
-      metadata: call.bayyanat,
+      waqt: new Date().toISOString(),
+      naw: call.naw,
+      qarar: call.qarar,
+      mantiq: call.mantiq,
+      bayyanat: call.bayyanat,
     };
 
     this.#adhifQararSijill(decision, call.huwiyyatMurshid);
@@ -1573,10 +1573,10 @@ You will be notified with the PR URL once created.`;
   #adhifQararSijill(decision: QararSijill, huwiyyatMurshid: string = "unknown"): void {
     adhafaQararSijill({
       huwiyyatMurshid,
-      type: decision.type,
-      decision: decision.decision,
-      reasoning: decision.reasoning,
-      metadata: decision.metadata,
+      type: decision.naw,
+      decision: decision.qarar,
+      reasoning: decision.mantiq,
+      metadata: decision.bayyanat,
     });
   }
 

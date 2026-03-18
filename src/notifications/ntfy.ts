@@ -68,16 +68,16 @@ export class NtfyClient {
     }
 
     const url = `${this.server}/${this.topic}`;
-    const tags = CATEGORY_TAGS[notification.category] ?? [];
+    const tags = CATEGORY_TAGS[notification.sinf] ?? [];
 
     const headers: Record<string, string> = {
-      Title: notification.title,
+      Title: notification.unwan,
       Awwaliyya: String(PRIORITY_MAP[notification.awwaliyya]),
       Tags: tags.join(","),
     };
 
-    if (notification.actions && notification.actions.length > 0) {
-      headers["Actions"] = this.buildActions(notification.actions);
+    if (notification.afaal && notification.afaal.length > 0) {
+      headers["Actions"] = this.buildActions(notification.afaal);
     }
 
     if (notification.url) {
@@ -88,11 +88,11 @@ export class NtfyClient {
       const response = await fetch(url, {
         method: "POST",
         headers,
-        body: notification.body,
+        body: notification.matn,
       });
 
       const success = response.ok;
-      await logger.notification("ntfy", notification.category, this.topic, notification.title, success);
+      await logger.notification("ntfy", notification.sinf, this.topic, notification.unwan, success);
 
       if (!success) {
         const errorText = await response.text();
@@ -105,7 +105,7 @@ export class NtfyClient {
       return success;
     } catch (error) {
       await logger.error("ntfy", "Network error sending notification", { error: String(error) });
-      await logger.notification("ntfy", notification.category, this.topic, notification.title, false);
+      await logger.notification("ntfy", notification.sinf, this.topic, notification.unwan, false);
       return false;
     }
   }
@@ -126,13 +126,13 @@ export class NtfyClient {
     }));
 
     return this.send({
-      category: "blocker",
-      title,
-      body,
+      sinf: "blocker",
+      unwan: title,
+      matn: body,
       awwaliyya: "urgent",
-      actions,
+      afaal: actions,
       huwiyyatWasfa,
-      projectId,
+      huwiyyatMashru: projectId,
     });
   }
 
@@ -152,13 +152,13 @@ export class NtfyClient {
     }));
 
     return this.send({
-      category: "decision",
-      title,
-      body,
+      sinf: "decision",
+      unwan: title,
+      matn: body,
       awwaliyya: "high",
-      actions,
+      afaal: actions,
       huwiyyatWasfa,
-      projectId,
+      huwiyyatMashru: projectId,
     });
   }
 
@@ -172,13 +172,13 @@ export class NtfyClient {
     summary: string
   ): Promise<boolean> {
     return this.send({
-      category: "pr_ready",
-      title: `Draft PR Ready: #${raqamRisala}`,
-      body: `${huwiyyatWasfa}\n\n${summary}`,
+      sinf: "pr_ready",
+      unwan: `Draft PR Ready: #${raqamRisala}`,
+      matn: `${huwiyyatWasfa}\n\n${summary}`,
       awwaliyya: "default",
       url: prUrl,
       huwiyyatWasfa,
-      actions: [
+      afaal: [
         {
           label: "View PR",
           action: `view_pr_${raqamRisala}`,
@@ -193,11 +193,11 @@ export class NtfyClient {
    */
   async sendMilestone(projectId: string, title: string, summary: string): Promise<boolean> {
     return this.send({
-      category: "milestone",
-      title: `Milestone Complete: ${projectId}`,
-      body: `${title}\n\n${summary}`,
+      sinf: "milestone",
+      unwan: `Milestone Complete: ${projectId}`,
+      matn: `${title}\n\n${summary}`,
       awwaliyya: "high",
-      projectId,
+      huwiyyatMashru: projectId,
     });
   }
 
@@ -219,11 +219,11 @@ export class NtfyClient {
         : [];
 
     return this.send({
-      category: "quiet_hours_exit",
-      title: "Good morning!",
-      body,
+      sinf: "quiet_hours_exit",
+      unwan: "Good morning!",
+      matn: body,
       awwaliyya: blockedItems.length > 0 ? "high" : "default",
-      actions,
+      afaal: actions,
     });
   }
 }

@@ -553,9 +553,9 @@ Reason: ${tamyiz.reason}`;
 
     if (this.#ntfy.mumakkan()) {
       const success = await this.#ntfy.send({
-        category: "decision",
-        title: "Murshid Message",
-        body: call.risala,
+        sinf: "decision",
+        unwan: "Murshid Message",
+        matn: call.risala,
         awwaliyya: call.awwaliyya,
       });
       if (success) {

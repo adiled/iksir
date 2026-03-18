@@ -388,14 +388,14 @@ export function seedSession(overrides?: Partial<JalsatMurshid>): void {
   const s = makeSession(overrides);
   haddathaAwAdkhalaJalsa({
     id: s.id,
-    identifier: s.huwiyya,
-    title: s.unwan,
-    type: s.naw,
-    status: s.hala,
-    branch: s.far,
-    createdAt: s.unshiaFi,
-    lastMessageAt: s.akhirRisalaFi,
-    metadata: {},
+    huwiyya: s.huwiyya,
+    unwan: s.unwan,
+    naw: s.naw,
+    hala: s.hala,
+    far: s.far,
+    unshiaFi: s.unshiaFi,
+    akhirRisalaFi: s.akhirRisalaFi,
+    halaMufassala: {},
   });
 }
 

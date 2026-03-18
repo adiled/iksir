@@ -230,15 +230,15 @@ export function allamaHadathMuaalaj(hadathId: number | string): void {
 
 interface HujajIdkhalJalsa {
   id: string;
-  identifier: string;
-  title: string;
-  type: string;
-  status: string;
-  branch: string;
-  blockedReason?: string;
-  createdAt: string;
-  lastMessageAt: string;
-  metadata: Record<string, unknown>;
+  huwiyya: string;
+  unwan: string;
+  naw: string;
+  hala: string;
+  far: string;
+  illa?: string;
+  unshiaFi: string;
+  akhirRisalaFi: string;
+  halaMufassala: Record<string, unknown>;
 }
 
 /**
@@ -261,16 +261,16 @@ export function haddathaAwAdkhalaJalsa(args: HujajIdkhalJalsa): void {
       hala_mufassala = excluded.hala_mufassala
   `).run(
     args.id,
-    args.identifier,
-    args.title,
-    args.type,
-    args.status,
-    args.branch,
-    args.blockedReason ?? null,
-    args.createdAt,
+    args.huwiyya,
+    args.unwan,
+    args.naw,
+    args.hala,
+    args.far,
+    args.illa ?? null,
+    args.unshiaFi,
     new Date().toISOString(),
-    args.lastMessageAt,
-    JSON.stringify(args.metadata),
+    args.akhirRisalaFi,
+    JSON.stringify(args.halaMufassala),
   );
 }
 

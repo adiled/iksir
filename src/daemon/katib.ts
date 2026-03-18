@@ -671,19 +671,17 @@ Call pm_read_diary for full decision history with reasoning.
     try {
       for (const session of this.#murshidSessions.values()) {
         /** Handle legacy sessions that might have epicTitle instead of title */
-        const title = session.unwan || (session as unknown as { epicTitle?: string }).epicTitle || "";
-        
         haddathaAwAdkhalaJalsa({
           id: session.id,
-          identifier: session.huwiyya,
-          title,
-          type: session.naw,
-          status: session.hala,
-          branch: session.far || "",
-          blockedReason: session.illa,
-          createdAt: session.unshiaFi,
-          lastMessageAt: session.akhirRisalaFi,
-          metadata: {
+          huwiyya: session.huwiyya,
+          unwan: session.unwan || (session as unknown as { epicTitle?: string }).epicTitle || "",
+          naw: session.naw,
+          hala: session.hala,
+          far: session.far || "",
+          illa: session.illa,
+          unshiaFi: session.unshiaFi,
+          akhirRisalaFi: session.akhirRisalaFi,
+          halaMufassala: {
             activePRs: session.activePRs || [],
           },
         });

@@ -548,7 +548,7 @@ export class Munadi {
 
     switch (resolved.hala) {
       case "resolved":
-        return this.#handleNiyyaMuhallala(msg, resolved, basicIntent);
+        return this.aalajNiyyaMuhallala(msg, resolved, basicIntent);
 
       case "list":
         return this.aalajNatijaQaima(resolved);
@@ -602,7 +602,7 @@ export class Munadi {
   /**
    * Handle a fully resolved intent
    */
-  async #handleNiyyaMuhallala(
+  async aalajNiyyaMuhallala(
     msg: RisalaWarida,
     resolved: NiyyaMuhallala,
     basicIntent: Niyya

@@ -41,14 +41,14 @@ Deno.test("sessions: upsert and retrieve", async () => {
   await withTestDb(() => {
     haddathaAwAdkhalaJalsa({
       id: "sess-1",
-      identifier: "TEAM-200",
-      title: "Auto-login feature",
-      type: "epic",
-      status: "fail",
-      branch: "epic/stay-2189-auto-login",
-      createdAt: "2026-03-01T00:00:00Z",
-      lastMessageAt: "2026-03-01T12:00:00Z",
-      metadata: { activePRs: [] },
+      huwiyya: "TEAM-200",
+      unwan: "Auto-login feature",
+      naw: "epic",
+      hala: "fail",
+      far: "epic/stay-2189-auto-login",
+      unshiaFi: "2026-03-01T00:00:00Z",
+      akhirRisalaFi: "2026-03-01T12:00:00Z",
+      halaMufassala: { activePRs: [] },
     });
 
     const sessions = jalabaKullJalasat();
@@ -64,27 +64,27 @@ Deno.test("sessions: upsert updates existing", async () => {
   await withTestDb(() => {
     haddathaAwAdkhalaJalsa({
       id: "sess-1",
-      identifier: "TEAM-200",
-      title: "Auto-login",
-      type: "epic",
-      status: "fail",
-      branch: "epic/stay-2189",
-      createdAt: "2026-03-01T00:00:00Z",
-      lastMessageAt: "2026-03-01T12:00:00Z",
-      metadata: {},
+      huwiyya: "TEAM-200",
+      unwan: "Auto-login",
+      naw: "epic",
+      hala: "fail",
+      far: "epic/stay-2189",
+      unshiaFi: "2026-03-01T00:00:00Z",
+      akhirRisalaFi: "2026-03-01T12:00:00Z",
+      halaMufassala: {},
     });
 
     haddathaAwAdkhalaJalsa({
       id: "sess-1",
-      identifier: "TEAM-200",
-      title: "Auto-login v2",
-      type: "epic",
-      status: "masdud",
-      branch: "epic/stay-2189",
-      blockedReason: "Missing specs",
-      createdAt: "2026-03-01T00:00:00Z",
-      lastMessageAt: "2026-03-02T12:00:00Z",
-      metadata: {},
+      huwiyya: "TEAM-200",
+      unwan: "Auto-login v2",
+      naw: "epic",
+      hala: "masdud",
+      far: "epic/stay-2189",
+      illa: "Missing specs",
+      unshiaFi: "2026-03-01T00:00:00Z",
+      akhirRisalaFi: "2026-03-02T12:00:00Z",
+      halaMufassala: {},
     });
 
     const sessions = jalabaKullJalasat();
@@ -215,14 +215,14 @@ Deno.test("questions: insert and retrieve unanswered", async () => {
   await withTestDb(() => {
     haddathaAwAdkhalaJalsa({
       id: "sess-1",
-      identifier: "TEAM-200",
-      title: "Test",
-      type: "epic",
-      status: "fail",
-      branch: "",
-      createdAt: new Date().toISOString(),
-      lastMessageAt: new Date().toISOString(),
-      metadata: {},
+      huwiyya: "TEAM-200",
+      unwan: "Test",
+      naw: "epic",
+      hala: "fail",
+      far: "",
+      unshiaFi: new Date().toISOString(),
+      akhirRisalaFi: new Date().toISOString(),
+      halaMufassala: {},
     });
 
     adkhalaSual({
@@ -243,14 +243,14 @@ Deno.test("questions: allamaJawabSual removes from unanswered", async () => {
   await withTestDb(() => {
     haddathaAwAdkhalaJalsa({
       id: "sess-1",
-      identifier: "TEAM-200",
-      title: "Test",
-      type: "epic",
-      status: "fail",
-      branch: "",
-      createdAt: new Date().toISOString(),
-      lastMessageAt: new Date().toISOString(),
-      metadata: {},
+      huwiyya: "TEAM-200",
+      unwan: "Test",
+      naw: "epic",
+      hala: "fail",
+      far: "",
+      unshiaFi: new Date().toISOString(),
+      akhirRisalaFi: new Date().toISOString(),
+      halaMufassala: {},
     });
 
     adkhalaSual({

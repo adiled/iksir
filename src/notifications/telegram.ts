@@ -620,11 +620,11 @@ export class TelegramClient {
    * Send a notification (unified interface)
    */
   async sendNotification(notification: Ishara): Promise<number | null> {
-    const emoji = this.getCategoryEmoji(notification.category);
-    const text = `${emoji} *${notification.title}*\n\n${notification.body}`;
+    const emoji = this.getCategoryEmoji(notification.sinf);
+    const text = `${emoji} *${notification.unwan}*\n\n${notification.matn}`;
 
-    const keyboard = notification.actions
-      ? this.buildKeyboard(notification.actions.map((a) => ({ text: a.label, callback_data: a.action })))
+    const keyboard = notification.afaal
+      ? this.buildKeyboard(notification.afaal.map((a) => ({ text: a.label, callback_data: a.action })))
       : undefined;
 
     return this.arsalaRisala(text, {

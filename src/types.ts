@@ -176,13 +176,13 @@ export type SinfIshara =
   | "quiet_hours_exit";
 
 export interface Ishara {
-  category: SinfIshara;
-  title: string;
-  body: string;
+  sinf: SinfIshara;
+  unwan: string;
+  matn: string;
   awwaliyya: AwwaliyyatIshara;
-  actions?: FiilIshara[];
+  afaal?: FiilIshara[];
   url?: string;
-  projectId?: string;
+  huwiyyatMashru?: string;
   huwiyyatWasfa?: string;
 }
 
@@ -596,33 +596,33 @@ export interface SijillAlat {
 
 
 export interface QararSijill {
-  timestamp: string;
-  type: "tadbir" | "tanfidh" | "tanfidh" | "hall" | "risala";
-  decision: string;
-  reasoning: string;
-  metadata?: Record<string, unknown>;
+  waqt: string;
+  naw: "tadbir" | "tanfidh" | "tanfidh" | "hall" | "risala";
+  qarar: string;
+  mantiq: string;
+  bayyanat?: Record<string, unknown>;
 }
 
 export interface MakhtutatSijill {
-  name: string;
-  purpose: string;
-  createdAt: string;
-  content?: string;
+  ism: string;
+  gharad: string;
+  unshiaFi: string;
+  matn?: string;
 }
 
 export interface HalatTanfidhSijill {
-  status: "pending" | "in_progress" | "complete" | "masdud";
-  sessionId?: string;
-  pr?: number;
-  blockedReason?: string;
+  hala: "pending" | "in_progress" | "complete" | "masdud";
+  huwiyyatJalsa?: string;
+  risala?: number;
+  illa?: string;
 }
 
 export interface SijillMurshid {
-  epicId: string;
-  startedAt: string;
-  decisions: QararSijill[];
-  scriptsCreated: MakhtutatSijill[];
-  implementationStatus: Record<string, HalatTanfidhSijill>;
+  huwiyyatMalhamat: string;
+  badaFi: string;
+  qararat: QararSijill[];
+  nusakhMunshaa: MakhtutatSijill[];
+  halatTanfidh: Record<string, HalatTanfidhSijill>;
 }
 
 
