@@ -519,19 +519,19 @@ ${comparison.behind > 0 ? "⚠️ Branch is behind - consider rebasing before PR
 
     if (!tamyiz.dhahab) {
       await logger.akhbar("tool-executor", "Ishara rejected as khabath", {
-        reason: tamyiz.reason,
+        reason: tamyiz.sabab,
         messagePreview: call.risala.slice(0, 100),
       });
 
-      return `REJECTED: ${tamyiz.rejection}
+      return `REJECTED: ${tamyiz.radd}
 
 Your message was not forwarded to al-Kimyawi. This appears to be within your autonomy.
 
-Reason: ${tamyiz.reason}`;
+Reason: ${tamyiz.sabab}`;
     }
 
     await logger.akhbar("tool-executor", "Ishara approved", {
-      reason: tamyiz.reason,
+      reason: tamyiz.sabab,
       messagePreview: call.risala.slice(0, 100),
     });
 

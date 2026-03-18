@@ -1,11 +1,19 @@
 /**
- * Tamyiz - Shared Divination Service
+ * Mumayyiz (مميّز) — The Discerner
  *
- * LLM-based gatekeeper for notifications and questions.
- * Divines whether the message gleams as dhahab (gold) or is khabath (khabath).
+ * Not all that arrives at al-Kimyawi's door is worthy of his gaze.
+ * The Mumayyiz stands at the threshold, examines each offering —
+ * each ishara, each sual — and performs tamyiz: the ancient assay.
  *
- * Prompt templates are loaded from files (configurable via env vars) with
- * inline fallbacks. AGENTS.md cache shared across all tamyiz calls.
+ * Heat the ore in the cupel. Watch the lead burn away.
+ * What gleams is dhahab — gold, worthy of al-Kimyawi's attention.
+ * What crumbles is khabath — dross, sent back to the murshid
+ * with a terse word of guidance.
+ *
+ * The Mumayyiz carries two scrolls — the tamyiz incantation for
+ * isharat and the tamyiz incantation for asila. These are loaded
+ * from the prompts/ archive, with sacred fallbacks inscribed here
+ * in case the scrolls are absent.
  */
 
 import { logger } from "../logging/logger.ts";
@@ -23,7 +31,10 @@ function masarAlMakhzan(): string {
 }
 
 
-/** Cached content: null = not loaded, string = content, false = load failed */
+/**
+ * Cached scrolls — loaded once, held in memory.
+ * The teachings of al-Kimyawi, and the two tamyiz incantations.
+ */
 let muhtawaWakala: string | null = null;
 let qalibTanbih: string | null = null;
 let qalibSual: string | null = null;
@@ -34,7 +45,7 @@ async function hammalWakala(): Promise<string | null> {
     muhtawaWakala = await Deno.readTextFile(masarWakala());
     return muhtawaWakala;
   } catch {
-    await logger.haDHHir("mumayyiz", "Failed to read AGENTS.md");
+    await logger.haDHHir("mumayyiz", "التعاليم لم تُقرأ — AGENTS.md unavailable");
     return null;
   }
 }
@@ -53,10 +64,10 @@ async function hammalQalib(
   const path = masarQalib(envVar, defaultFilename);
   try {
     const content = await Deno.readTextFile(path);
-    await logger.akhbar("mumayyiz", `Loaded prompt template from ${path}`);
+    await logger.akhbar("mumayyiz", `اللفافة حُمّلت — ${path}`);
     return content;
   } catch {
-    await logger.akhbar("mumayyiz", `Prompt template not found at ${path}, using inline fallback`);
+    await logger.akhbar("mumayyiz", `اللفافة غائبة — ${path} — using inscribed fallback`);
     return fallback;
   }
 }
@@ -148,8 +159,8 @@ Respond ONLY with valid JSON (no markdown, no explanation):
 
 interface NatijaTamyizTanbih {
   dhahab: boolean;
-  reason: string;
-  rejection: string | null;
+  sabab: string;
+  radd: string | null;
 }
 
 /**
@@ -161,7 +172,7 @@ export async function mayyazaTanbih(
 ): Promise<NatijaTamyizTanbih> {
   const md = await hammalWakala();
   if (!md) {
-    return { dhahab: true, reason: "AGENTS.md unavailable", rejection: null };
+    return { dhahab: true, sabab: "AGENTS.md unavailable", radd: null };
   }
 
   qalibTanbih = await hammalQalib(
@@ -182,21 +193,21 @@ export async function mayyazaTanbih(
       await logger.haDHHir("mumayyiz", "Ishara tamyiz failed, allowing", {
         error: result.error,
       });
-      return { dhahab: true, reason: "Tamyiz failed", rejection: null };
+      return { dhahab: true, sabab: "Tamyiz failed", radd: null };
     }
 
     const parsed = JSON.parse(result.response.trim());
     const isDhahab = parsed.tamyiz === "DHAHAB";
     return {
       dhahab: isDhahab,
-      reason: parsed.reason ?? "Unknown",
-      rejection: isDhahab ? null : (parsed.rejection ?? "Handle this autonomously."),
+      sabab: parsed.reason ?? "Unknown",
+      radd: isDhahab ? null : (parsed.rejection ?? "Handle this autonomously."),
     };
   } catch (error) {
     await logger.haDHHir("mumayyiz", "Ishara tamyiz error, allowing", {
       error: String(error),
     });
-    return { dhahab: true, reason: "Tamyiz error", rejection: null };
+    return { dhahab: true, sabab: "Tamyiz error", radd: null };
   }
 }
 
@@ -275,7 +286,7 @@ export async function mayyazaSual(
 /**
  * Reset cached templates (for testing).
  */
-export function _resetMumayyizCache(): void {
+export function _masahaDhakira(): void {
   muhtawaWakala = null;
   qalibTanbih = null;
   qalibSual = null;

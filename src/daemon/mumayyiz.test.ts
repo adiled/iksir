@@ -55,8 +55,8 @@ Deno.test("mayyazaTanbih: DHAHAB response parsed correctly", async () => {
 
   const result = await mayyazaTanbih(oc as never, "Is this a good API boundary?");
   assertEquals(result.dhahab, true);
-  assertEquals(result.reason, "architecture question");
-  assertEquals(result.rejection, null);
+  assertEquals(result.sabab, "architecture question");
+  assertEquals(result.radd, null);
 });
 
 Deno.test("mayyazaTanbih: KHABATH response parsed correctly", async () => {
@@ -70,8 +70,8 @@ Deno.test("mayyazaTanbih: KHABATH response parsed correctly", async () => {
 
   const result = await mayyazaTanbih(oc as never, "This test is failing");
   assertEquals(result.dhahab, false);
-  assertEquals(result.reason, "debugging");
-  assertEquals(result.rejection, "Check the logs first.");
+  assertEquals(result.sabab, "debugging");
+  assertEquals(result.radd, "Check the logs first.");
 });
 
 Deno.test("mayyazaTanbih: malformed JSON -> fail-open dhahab", async () => {
@@ -85,7 +85,7 @@ Deno.test("mayyazaTanbih: malformed JSON -> fail-open dhahab", async () => {
 
   const result = await mayyazaTanbih(oc as never, "Some message");
   assertEquals(result.dhahab, true);
-  assertEquals(result.reason, "Tamyiz error");
+  assertEquals(result.sabab, "Tamyiz error");
 });
 
 Deno.test("mayyazaTanbih: LLM returns success:false -> fail-open", async () => {
@@ -96,7 +96,7 @@ Deno.test("mayyazaTanbih: LLM returns success:false -> fail-open", async () => {
 
   const result = await mayyazaTanbih(oc as never, "Some message");
   assertEquals(result.dhahab, true);
-  assertEquals(result.reason, "Tamyiz failed");
+  assertEquals(result.sabab, "Tamyiz failed");
 });
 
 Deno.test("mayyazaTanbih: LLM throws -> fail-open", async () => {
@@ -109,7 +109,7 @@ Deno.test("mayyazaTanbih: LLM throws -> fail-open", async () => {
 
   const result = await mayyazaTanbih(oc as never, "Some message");
   assertEquals(result.dhahab, true);
-  assertEquals(result.reason, "Tamyiz error");
+  assertEquals(result.sabab, "Tamyiz error");
 });
 
 Deno.test("mayyazaTanbih: missing fields get defaults", async () => {
@@ -123,8 +123,8 @@ Deno.test("mayyazaTanbih: missing fields get defaults", async () => {
 
   const result = await mayyazaTanbih(oc as never, "Some message");
   assertEquals(result.dhahab, true);
-  assertEquals(result.reason, "Unknown");
-  assertEquals(result.rejection, null);
+  assertEquals(result.sabab, "Unknown");
+  assertEquals(result.radd, null);
 });
 
 Deno.test("mayyazaTanbih: KHABATH missing rejection gets default", async () => {
@@ -138,7 +138,7 @@ Deno.test("mayyazaTanbih: KHABATH missing rejection gets default", async () => {
 
   const result = await mayyazaTanbih(oc as never, "Some message");
   assertEquals(result.dhahab, false);
-  assertEquals(result.rejection, "Handle this autonomously.");
+  assertEquals(result.radd, "Handle this autonomously.");
 });
 
 
