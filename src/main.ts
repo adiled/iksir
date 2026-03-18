@@ -800,15 +800,15 @@ async function aalajIktimalSeyana(
 ): Promise<void> {
   await logger.akhbar("main", "Maintenance complete", {
     total: results.length,
-    merged: results.filter((r) => r.fil === "merged").length,
-    conflicts: results.filter((r) => r.fil === "conflicts").length,
+    merged: results.filter((r) => r.fil === "udmija").length,
+    conflicts: results.filter((r) => r.fil === "taarudat").length,
   });
 
   /** Build summary */
-  const merged = results.filter((r) => r.fil === "merged");
-  const upToDate = results.filter((r) => r.fil === "up-to-date");
-  const conflicts = results.filter((r) => r.fil === "conflicts");
-  const errors = results.filter((r) => r.fil === "error");
+  const merged = results.filter((r) => r.fil === "udmija");
+  const upToDate = results.filter((r) => r.fil === "muhaddath");
+  const conflicts = results.filter((r) => r.fil === "taarudat");
+  const errors = results.filter((r) => r.fil === "khata");
 
   let summary = "## Overnight Maintenance Complete\n\n";
 
@@ -995,8 +995,8 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
    */
   const keepAlive = awqadaHayat(
     {
-      config,
-      sessionManager,
+      tasmim: config,
+      mudirJalasat: sessionManager,
       github,
     },
     {

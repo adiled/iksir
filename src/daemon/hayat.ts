@@ -1,20 +1,20 @@
 /**
- * Hayat (حياة) - The Life Force
- * 
- * One of the sacred Khuddām (خدّام - Servants) of the alchemical workshop.
- * Hayat maintains the vital essence of the work, keeping vigil over the
- * inscriptions (PRs), observing the quiet hours, performing the maintenance
- * rites that keep the workshop alive and breathing.
- */
-
-/**
- * Keep-Alive Loop
+ * Hayat (حياة) — The Life Force
  *
- * Periodic background tasks on a slow tick (minutes).
+ * One of the sacred Khuddām (خدّام) of the alchemical workshop.
  *
- * 1. Detect PR merges and closures
- * 2. Process PR comments (amr al-Kimyawis, review feedback)
- * 3. Overnight maintenance (merge main into epic branches, rebuild code-intel index)
+ * While others sleep, Hayat breathes. The slow pulse of the workshop —
+ * watching over risālāt as they wait for judgement, listening for the
+ * murmur of new taaliqat, sensing when a risala has been merged into
+ * the codex or abandoned by its author.
+ *
+ * In the quiet hours, when al-Kimyawi rests, Hayat performs the
+ * sacred rites of seyana — merging the river of main into each
+ * murshid's forge branch, rebuilding the code-intel index, ensuring
+ * the workshop is clean and ready for the dawn.
+ *
+ * Hayat does not think. Hayat does not decide. Hayat watches,
+ * breathes, and keeps the flame from going cold.
  */
 
 import { GitHubClient } from "../github/gh.ts";
@@ -32,119 +32,100 @@ import type {
 import type { MudirJalasat } from "./katib.ts";
 
 /**
- * Result of maintenance run for a single branch
+ * NatijaSeyana — what became of a single branch after the night rites
  */
 export interface NatijaSeyana {
   far: string;
   huwiyya: string;
   najah: boolean;
-  fil: "merged" | "up-to-date" | "conflicts" | "error";
+  fil: "udmija" | "muhaddath" | "taarudat" | "khata";
   taarudat?: string[];
   iltizamatKhalfa?: number;
   nass: string;
 }
 
 /**
- * Callbacks for keepalive events.
- * These feed information to the owning murshid session.
+ * IstijabatHayat — the signals Hayat sends when it witnesses change.
+ * The daemon receives these and acts.
  */
 interface IstijabatHayat {
-  /**
-   * PR was merged - murshid can now disclose next dependent slice
-   */
+  /** A risala was merged into the codex */
   indaDamjRisala: (
     session: JalsatMurshid,
     pr: RisalaMutaba
   ) => Promise<void>;
 
-  /**
-   * PR was closed without merge
-   */
+  /** A risala was abandoned — closed without merge */
   indaIghlaqRisala: (
     session: JalsatMurshid,
     pr: RisalaMutaba
   ) => Promise<void>;
 
-  /**
-   * Al-Kimyawi left a command on a PR - execute immediately
-   */
+  /** Al-Kimyawi has spoken on a risala — a command to obey */
   indaAmrAlKimyawi: (
     session: JalsatMurshid,
     raqamRisala: number,
     comment: TaaliqMuraja
   ) => Promise<void>;
 
-  /**
-   * Other reviewers left comments - queue for muraja'at al-Kimyawi
-   */
+  /** Others have spoken on a risala — for al-Kimyawi's consideration */
   indaTaaliqatJadida: (
     session: JalsatMurshid,
     raqamRisala: number,
     comments: TaaliqMuraja[]
   ) => Promise<void>;
 
-  /**
-   * PR has merge conflicts
-   */
+  /** A risala has taarudat — conflicting inscriptions */
   indaTaarudRisala: (
     session: JalsatMurshid,
     pr: RisalaMutaba
   ) => Promise<void>;
 
-  /**
-   * PR CI checks failed
-   */
+  /** The fahs (tests) have failed on a risala */
   indaFashalFahs: (
     session: JalsatMurshid,
     pr: RisalaMutaba
   ) => Promise<void>;
 
-  /**
-   * Request maintenance mode - daemon should ensure no murshid is active
-   * Returns true if maintenance mode was granted
-   */
+  /** Request seyana — the workshop must be still */
   utlubWadaSeyana: () => Promise<boolean>;
 
-  /**
-   * Release maintenance mode - daemon can resume normal operations
-   */
+  /** Release seyana — the workshop may breathe again */
   harrarWadaSeyana: () => Promise<void>;
 
-  /**
-   * Maintenance completed - report results to al-Kimyawi
-   */
+  /** Seyana is complete — report what was done */
   indaIktimalSeyana: (results: NatijaSeyana[]) => Promise<void>;
 }
 
 interface MutatallabatHayat {
-  config: TasmimIksir;
-  sessionManager: MudirJalasat;
+  tasmim: TasmimIksir;
+  mudirJalasat: MudirJalasat;
   github: GitHubClient;
 }
 
 export class DawratHayat {
-  tasmim: TasmimIksir;
-  mudirJalasat: MudirJalasat;
+  #tasmim: TasmimIksir;
+  #mudirJalasat: MudirJalasat;
   #github: GitHubClient;
-  istijabat: IstijabatHayat;
-  tarikhAkhirSeyana: string | null = null;
-  seyanaJariya = false;
-  ublighaAnTaarud: Set<number> = new Set();
-  ublighaAnFashal: Set<number> = new Set();
+  #istijabat: IstijabatHayat;
+  #tarikhAkhirSeyana: string | null = null;
+  #seyanaJariya = false;
+  #ublighaAnTaarud: Set<number> = new Set();
+  #ublighaAnFashal: Set<number> = new Set();
 
   constructor(deps: MutatallabatHayat, callbacks: IstijabatHayat) {
-    this.tasmim = deps.config;
-    this.mudirJalasat = deps.sessionManager;
+    this.#tasmim = deps.tasmim;
+    this.#mudirJalasat = deps.mudirJalasat;
     this.#github = deps.github;
-    this.istijabat = callbacks;
+    this.#istijabat = callbacks;
   }
 
   /**
-   * Run a single keep-alive cycle.
-   * Polls all tracked PRs across all murshid sessions.
+   * A single breath. Poll all tracked risālāt,
+   * and if the hour is right, perform the night rites.
    */
   async dawra(): Promise<void> {
-    const trackedPRs = this.mudirJalasat.jalabaKullRasaailMutaba();
+    const trackedPRs = this.#mudirJalasat.jalabaKullRasaailMutaba();
 
     if (trackedPRs.length === 0) {
       await logger.tatbeeq("keepalive", "No PRs to monitor");
@@ -169,7 +150,7 @@ export class DawratHayat {
   }
 
   /**
-   * Poll a single PR for status changes and comments
+   * Watch a single risala — has it been merged? Closed? Commented upon?
    */
   async raqabRisala(session: JalsatMurshid, trackedPR: RisalaMutaba): Promise<void> {
     const raqamRisala = trackedPR.raqamRisala;
@@ -180,7 +161,7 @@ export class DawratHayat {
      * Use persisted lastPolledAt from RisalaMutaba (survives daemon restarts)
      */
     const lastPoll = trackedPR.akhirRaqabaFi ? new Date(trackedPR.akhirRaqabaFi) : null;
-    if (lastPoll && now.getTime() - lastPoll.getTime() < this.tasmim.istiftaa.fajwatRaqabaRisala) {
+    if (lastPoll && now.getTime() - lastPoll.getTime() < this.#tasmim.istiftaa.fajwatRaqabaRisala) {
       return;
     }
 
@@ -194,25 +175,25 @@ export class DawratHayat {
       await this.fahasTaghayyurHala(session, trackedPR, pr.state);
 
       if (pr.mergeable === "CONFLICTING" && trackedPR.hala !== "merged") {
-        if (!this.ublighaAnTaarud.has(raqamRisala)) {
+        if (!this.#ublighaAnTaarud.has(raqamRisala)) {
           await logger.haDHHir("keepalive", `PR #${raqamRisala} has conflicts`);
-          await this.istijabat.indaTaarudRisala(session, trackedPR);
-          this.ublighaAnTaarud.add(raqamRisala);
+          await this.#istijabat.indaTaarudRisala(session, trackedPR);
+          this.#ublighaAnTaarud.add(raqamRisala);
         }
       } else {
-        this.ublighaAnTaarud.delete(raqamRisala);
+        this.#ublighaAnTaarud.delete(raqamRisala);
       }
 
       if (trackedPR.hala === "draft") {
         const checksPassing = await this.#github.arePRChecksPassing(raqamRisala);
         if (!checksPassing) {
-          if (!this.ublighaAnFashal.has(raqamRisala)) {
+          if (!this.#ublighaAnFashal.has(raqamRisala)) {
             await logger.haDHHir("keepalive", `PR #${raqamRisala} CI failing`);
-            await this.istijabat.indaFashalFahs(session, trackedPR);
-            this.ublighaAnFashal.add(raqamRisala);
+            await this.#istijabat.indaFashalFahs(session, trackedPR);
+            this.#ublighaAnFashal.add(raqamRisala);
           }
         } else {
-          this.ublighaAnFashal.delete(raqamRisala);
+          this.#ublighaAnFashal.delete(raqamRisala);
         }
       }
 
@@ -226,7 +207,7 @@ export class DawratHayat {
         await this.aalajTaaliqatJadida(session, raqamRisala, newComments);
       }
 
-      await this.mudirJalasat.jaddadaAkhirRaqaba(raqamRisala);
+      await this.#mudirJalasat.jaddadaAkhirRaqaba(raqamRisala);
     } catch (error) {
       await logger.sajjalKhata("keepalive", `Failed to poll PR #${raqamRisala}`, {
         error: String(error),
@@ -236,7 +217,7 @@ export class DawratHayat {
   }
 
   /**
-   * Check if PR status changed and update tracking
+   * Has the hala of this risala changed since last we looked?
    */
   async fahasTaghayyurHala(
     session: JalsatMurshid,
@@ -267,25 +248,25 @@ export class DawratHayat {
 
     if (newStatus) {
       /** Update tracking */
-      const result = await this.mudirJalasat.jaddadaHalatRisala(raqamRisala, newStatus);
+      const result = await this.#mudirJalasat.jaddadaHalatRisala(raqamRisala, newStatus);
 
       if (newStatus === "merged" && result) {
-        await this.istijabat.indaDamjRisala(result.session, trackedPR);
+        await this.#istijabat.indaDamjRisala(result.session, trackedPR);
       } else if (newStatus === "closed" && result) {
-        await this.istijabat.indaIghlaqRisala(result.session, trackedPR);
+        await this.#istijabat.indaIghlaqRisala(result.session, trackedPR);
       }
     }
   }
 
   /**
-   * Process new PR comments - mayyiz and route
+   * New taaliqat on a risala — separate al-Kimyawi's commands from others' words
    */
   async aalajTaaliqatJadida(
     session: JalsatMurshid,
     raqamRisala: number,
     comments: TaaliqMuraja[]
   ): Promise<void> {
-    const ismKimyawi = this.tasmim.github.ismKimyawi;
+    const ismKimyawi = this.#tasmim.github.ismKimyawi;
     const awamirAlKimyawi: TaaliqMuraja[] = [];
     const taaliqatUkhra: TaaliqMuraja[] = [];
 
@@ -301,77 +282,73 @@ export class DawratHayat {
       await logger.akhbar("keepalive", `amr al-Kimyawi on PR #${raqamRisala}`, {
         body: cmd.body.slice(0, 100),
       });
-      await this.istijabat.indaAmrAlKimyawi(session, raqamRisala, cmd);
+      await this.#istijabat.indaAmrAlKimyawi(session, raqamRisala, cmd);
     }
 
     if (taaliqatUkhra.length > 0) {
       await logger.akhbar("keepalive", `${taaliqatUkhra.length} new comments on PR #${raqamRisala}`, {
         authors: [...new Set(taaliqatUkhra.map((c) => c.author))],
       });
-      await this.istijabat.indaTaaliqatJadida(session, raqamRisala, taaliqatUkhra);
+      await this.#istijabat.indaTaaliqatJadida(session, raqamRisala, taaliqatUkhra);
     }
   }
 
 
-  /**
-   * Check if currently in quiet hours (delegates to shared time utils)
-   */
+  /** Are we in the saat al-sukun — the quiet hours? */
   fiSaatHudu(): boolean {
-    if (!this.tasmim.saatSukun.mufattah) return false;
-    const { mintaqaZamaniyya, bidaya, nihaya } = this.tasmim.saatSukun;
+    if (!this.#tasmim.saatSukun.mufattah) return false;
+    const { mintaqaZamaniyya, bidaya, nihaya } = this.#tasmim.saatSukun;
     return fiNitaqAlWaqt(mintaqaZamaniyya, bidaya, nihaya);
   }
 
-  /**
-   * Check if we're in the maintenance window (last N minutes of quiet hours).
-   */
+  /** Are we in the final watch — the seyana window before dawn? */
   fiAkhirSaatHudu(): boolean {
     if (!this.fiSaatHudu()) return false;
-    const { mintaqaZamaniyya, nihaya, daqaiqNafizhaSeyana } = this.tasmim.saatSukun;
+    const { mintaqaZamaniyya, nihaya, daqaiqNafizhaSeyana } = this.#tasmim.saatSukun;
     const remaining = minutesUntil(mintaqaZamaniyya, nihaya);
     return remaining <= daqaiqNafizhaSeyana && remaining > 0;
   }
 
   /**
-   * Run maintenance tasks during quiet hours (last hour only)
-   * 
-   * Maintenance tasks:
-   * - Merge main into all tracked epic branches
-   * - Report conflicts (don't auto-resolve)
+   * The night rites — seyana.
+   *
+   * Merge the river of main into each murshid's forge branch.
+   * Rebuild the code-intel index. Report what was found.
+   * If taarudat arise, do not resolve them — only report.
    */
   async naffadhSeyana(): Promise<void> {
     if (!this.fiAkhirSaatHudu()) {
       return;
     }
 
-    /** Only run once per day (using configured timezone, not UTC) */
-    const today = todayInTz(this.tasmim.saatSukun.mintaqaZamaniyya);
-    if (this.tarikhAkhirSeyana === today) {
+    /** The rites are performed once per dawn */
+    const today = todayInTz(this.#tasmim.saatSukun.mintaqaZamaniyya);
+    if (this.#tarikhAkhirSeyana === today) {
       return;
     }
 
-    if (this.seyanaJariya) {
+    if (this.#seyanaJariya) {
       return;
     }
 
     await logger.akhbar("keepalive", "Starting overnight maintenance");
-    this.seyanaJariya = true;
+    this.#seyanaJariya = true;
 
-    /** Request maintenance mode (no active murshid) */
-    const granted = await this.istijabat.utlubWadaSeyana();
+    /** Request stillness — no murshid may transmute during seyana */
+    const granted = await this.#istijabat.utlubWadaSeyana();
     if (!granted) {
       await logger.haDHHir("keepalive", "Maintenance mode denied - murshid active");
-      this.seyanaJariya = false;
+      this.#seyanaJariya = false;
       return;
     }
 
-    this.mudirJalasat.wadaaQuflGit(true);
+    this.#mudirJalasat.wadaaQuflGit(true);
 
     try {
       const results: NatijaSeyana[] = [];
-      const sessions = this.mudirJalasat.wajadaJalasatMurshid();
+      const sessions = this.#mudirJalasat.wajadaJalasatMurshid();
 
-      /** Save current branch to istarjaa later */
+      /** Remember where we stood */
       const originalBranch = await git.farAlHali();
 
       await git.fetch();
@@ -396,26 +373,24 @@ export class DawratHayat {
         await logger.haDHHir("keepalive", "Code-intel index build failed", { error: String(error) });
       }
 
-      await this.istijabat.indaIktimalSeyana(results);
+      await this.#istijabat.indaIktimalSeyana(results);
 
-      this.tarikhAkhirSeyana = today;
+      this.#tarikhAkhirSeyana = today;
       await logger.akhbar("keepalive", "Overnight maintenance complete", {
         branches: results.length,
-        merged: results.filter(r => r.fil === "merged").length,
-        conflicts: results.filter(r => r.fil === "conflicts").length,
+        merged: results.filter(r => r.fil === "udmija").length,
+        conflicts: results.filter(r => r.fil === "taarudat").length,
       });
     } catch (error) {
       await logger.sajjalKhata("keepalive", "Maintenance failed", { error: String(error) });
     } finally {
-      this.mudirJalasat.wadaaQuflGit(false);
-      await this.istijabat.harrarWadaSeyana();
-      this.seyanaJariya = false;
+      this.#mudirJalasat.wadaaQuflGit(false);
+      await this.#istijabat.harrarWadaSeyana();
+      this.#seyanaJariya = false;
     }
   }
 
-  /**
-   * Maintain a single epic branch - merge main into it
-   */
+  /** Seyana of a single far — merge main into it */
   async sayanFar(session: JalsatMurshid): Promise<NatijaSeyana> {
     const far = session.far;
     const huwiyya = session.huwiyya;
@@ -423,32 +398,32 @@ export class DawratHayat {
     await logger.akhbar("keepalive", `Maintaining branch ${far}`);
 
     try {
-      /** Checkout the branch */
+      /** Enter the far */
       const checkedOut = await git.intaqalaIla(far);
       if (!checkedOut) {
         return {
           far,
           huwiyya,
           najah: false,
-          fil: "error",
+          fil: "khata",
           nass: `Failed to intaqalaIla ${far}`,
         };
       }
 
-      /** Check how far behind we are */
+      /** How far has the river of main flowed past this far? */
       const behind = await git.commitsBehindMain(far);
       if (behind === 0) {
         return {
           far,
           huwiyya,
           najah: true,
-          fil: "up-to-date",
+          fil: "muhaddath",
           iltizamatKhalfa: 0,
           nass: "Already up to date with main",
         };
       }
 
-      /** Attempt merge */
+      /** Attempt the merging of waters */
       const mergeResult = await git.mergeMain();
 
       if (mergeResult.success) {
@@ -458,7 +433,7 @@ export class DawratHayat {
           far,
           huwiyya,
           najah: true,
-          fil: "merged",
+          fil: "udmija",
           iltizamatKhalfa: behind,
           nass: `Merged ${behind} commit(s) from main`,
         };
@@ -468,7 +443,7 @@ export class DawratHayat {
         far,
         huwiyya,
         najah: false,
-        fil: "conflicts",
+        fil: "taarudat",
         taarudat: mergeResult.conflicts,
         iltizamatKhalfa: behind,
         nass: mergeResult.message,
@@ -478,16 +453,14 @@ export class DawratHayat {
         far,
         huwiyya,
         najah: false,
-        fil: "error",
+        fil: "khata",
         nass: String(error),
       };
     }
   }
 }
 
-/**
- * Create a keep-alive loop instance
- */
+/** Summon Hayat — breathe life into the workshop */
 export function awqadaHayat(
   deps: MutatallabatHayat,
   callbacks: IstijabatHayat
