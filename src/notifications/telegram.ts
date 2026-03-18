@@ -342,7 +342,7 @@ export class TelegramClient {
   }
 
   /**
-   * Send a message to the dispatch topic (for spawning orchestrators)
+   * Send a message to the dispatch topic (for spawning murshids)
    */
   async sendToDispatch(
     text: string,
@@ -363,7 +363,7 @@ export class TelegramClient {
   }
 
   /**
-   * Send a message to an orchestrator's topic
+   * Send a message to an murshid's topic
    */
   async arsalaIlaMurshidTopic(
     topicId: number,
@@ -386,7 +386,7 @@ export class TelegramClient {
 
 
   /**
-   * Create a forum topic for an orchestrator session.
+   * Create a forum topic for an murshid session.
    * Requires a forum-enabled supergroup (groupId must be set).
    */
   async createForumTopic(
@@ -899,7 +899,7 @@ Overall: ${percent}% complete`;
 /**
  * Create a Telegram client instance
  */
-export function createTelegramClient(config: TasmimIksir): TelegramClient {
+export function anshaaTelegramAmil(config: TasmimIksir): TelegramClient {
   return new TelegramClient(config);
 }
 

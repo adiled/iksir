@@ -1,13 +1,13 @@
 /**
- * Munadi Daemon - Autonomous Agent Orchestration
+ * Iksir Daemon - Autonomous Agent Tansiq
  *
- * Main entry point for the Munadi daemon.
+ * Main entry point for the Iksir daemon.
  * 
  * Architecture:
- * - MudirJalasat: Manages orchestrator OpenCode sessions
+ * - MudirJalasat: Manages murshid OpenCode sessions
  * - Munaffidh: Executes PM-MCP tool calls via Linear/GitHub APIs
- * - Telegram: Routes human messages to orchestrator session
- * - KeepAlive: Polls for external changes, feeds to orchestrator
+ * - Telegram: Routes human messages to murshid session
+ * - KeepAlive: Polls for external changes, feeds to murshid
  *
  * Usage:
  *   deno run --allow-all src/main.ts [options]
@@ -19,7 +19,7 @@
  */
 
 import { logger } from "./logging/logger.ts";
-import { loadConfig, getConfigPath } from "./config.ts";
+import { hammalaAlTasmim, masarMilafAlTasmim } from "./config.ts";
 import { 
   INITIAL_BACKOFF_MS, 
   MAX_BACKOFF_MS
@@ -27,9 +27,9 @@ import {
 
 import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, haddathaHuwiyyatRisalaSual } from "../db/db.ts";
 import { createOpenCodeClient } from "./opencode/client.ts";
-import { createNtfyClient } from "./notifications/ntfy.ts";
-import { createTelegramClient } from "./notifications/telegram.ts";
-import { createTelegramMessenger, type TelegramMessenger } from "./notifications/messenger.ts";
+import { anshaaNtfyAmil } from "./notifications/ntfy.ts";
+import { anshaaTelegramAmil } from "./notifications/telegram.ts";
+import { anshaaTelegramRasul, type TelegramMessenger } from "./notifications/messenger.ts";
 import { createLinearClient } from "./linear/client.ts";
 import { createGitHubClient } from "./github/gh.ts";
 import { istadaaKatib } from "./daemon/katib.ts";
@@ -44,8 +44,8 @@ import type { TasmimIksir, TaaliqMuraja, JalsatMurshid, RisalaMutaba, HadathSual
 interface DaemonContext {
   config: TasmimIksir;
   opencode: ReturnType<typeof createOpenCodeClient>;
-  ntfy: ReturnType<typeof createNtfyClient>;
-  telegram: ReturnType<typeof createTelegramClient>;
+  ntfy: ReturnType<typeof anshaaNtfyAmil>;
+  telegram: ReturnType<typeof anshaaTelegramAmil>;
   messenger: TelegramMessenger;
   issueTracker: MutabiWasfa;
   github: ReturnType<typeof createGitHubClient>;
@@ -132,8 +132,8 @@ async function checkConnectivity(ctx: DaemonContext): Promise<boolean> {
 }
 
 async function runCheck(ctx: DaemonContext): Promise<void> {
-  console.log(`\nMunadi v${VERSION} - Configuration Check\n`);
-  console.log(`Config file: ${getConfigPath()}`);
+  console.log(`\nIksir v${VERSION} - Configuration Check\n`);
+  console.log(`Config file: ${masarMilafAlTasmim()}`);
 
   console.log("\nConfiguration:");
   console.log(`  OpenCode server: ${ctx.config.opencode.server}`);
@@ -230,8 +230,8 @@ async function subscribeToHadathOpenCodes(ctx: DaemonContext): Promise<void> {
 }
 
 async function runDaemon(ctx: DaemonContext): Promise<void> {
-  await logger.info("main", `Munadi v${VERSION} starting`);
-  await logger.info("main", `Config loaded from ${getConfigPath()}`);
+  await logger.info("main", `Iksir v${VERSION} starting`);
+  await logger.info("main", `Config loaded from ${masarMilafAlTasmim()}`);
 
   /** Check OpenCode connectivity */
   const healthy = await ctx.opencode.isHealthy();
@@ -308,25 +308,25 @@ function setupTelegramHandlers(ctx: DaemonContext): void {
     }
 
     if (topicId) {
-      /** Resolve orchestrator from channel */
-      const orchestrator = ctx.sessionManager.wajadaMurshidBiQanat("telegram", String(topicId));
+      /** Resolve murshid from channel */
+      const murshid = ctx.sessionManager.wajadaMurshidBiQanat("telegram", String(topicId));
 
-      if (orchestrator && ctx.questionHandler.isAwaitingCustomInput(orchestrator.identifier)) {
-        const handled = await ctx.questionHandler.handlePotentialCustomAnswer(orchestrator.identifier, text);
+      if (murshid && ctx.questionHandler.isAwaitingCustomInput(murshid.identifier)) {
+        const handled = await ctx.questionHandler.handlePotentialCustomAnswer(murshid.identifier, text);
         if (handled) {
-          await ctx.messenger.send({ murshid: orchestrator.identifier }, "Answer submitted.");
+          await ctx.messenger.send({ murshid: murshid.identifier }, "Answer submitted.");
           return;
         }
       }
       
-      if (orchestrator) {
-        await logger.info("telegram", `Routing to orchestrator ${orchestrator.identifier} via topic ${topicId}`);
+      if (murshid) {
+        await logger.info("telegram", `Routing to murshid ${murshid.identifier} via topic ${topicId}`);
         
-        const success = await ctx.sessionManager.arsalaIlaMurshidById(orchestrator.identifier, text);
+        const success = await ctx.sessionManager.arsalaIlaMurshidById(murshid.identifier, text);
         if (!success) {
           await ctx.telegram.arsalaIlaMurshidTopic(
             topicId,
-            `Failed to send message to orchestrator ${orchestrator.identifier}.`
+            `Failed to send message to murshid ${murshid.identifier}.`
           );
         }
         return;
@@ -334,12 +334,12 @@ function setupTelegramHandlers(ctx: DaemonContext): void {
       
       if (topicId === 1) {
         await ctx.telegram.arsalaRisala(
-          "Use the **Dispatch** topic to send Linear URLs and spawn orchestrators.",
+          "Use the **Dispatch** topic to send Linear URLs and spawn murshids.",
           { topicId: 1, chatId: ctx.telegram.getGroupId(), parseMode: "Markdown" }
         );
       } else {
         await ctx.telegram.arsalaRisala(
-          "This topic is not linked to an active orchestrator.",
+          "This topic is not linked to an active murshid.",
           { topicId, chatId: ctx.telegram.getGroupId() }
         );
       }
@@ -356,16 +356,16 @@ function setupTelegramHandlers(ctx: DaemonContext): void {
       const parsed = ctx.questionHandler.parseQuestionCallback(query.data);
       if (parsed) {
         if (parsed.selectedLabel === "__custom__") {
-          /** Resolve orchestrator from the topic */
+          /** Resolve murshid from the topic */
           const topicId = query.message?.message_thread_id;
-          const orchestrator = topicId
+          const murshid = topicId
             ? ctx.sessionManager.wajadaMurshidBiQanat("telegram", String(topicId))
             : null;
-          if (orchestrator) {
-            await ctx.questionHandler.markAwaitingCustomInput(orchestrator.identifier, parsed.questionId);
+          if (murshid) {
+            await ctx.questionHandler.markAwaitingCustomInput(murshid.identifier, parsed.questionId);
             await ctx.telegram.answerCallback(query.id, "Type your answer as a reply...");
           } else {
-            await ctx.telegram.answerCallback(query.id, "Cannot resolve orchestrator for custom input");
+            await ctx.telegram.answerCallback(query.id, "Cannot resolve murshid for custom input");
           }
           return;
         }
@@ -414,9 +414,9 @@ function setupTelegramHandlers(ctx: DaemonContext): void {
 
     await ctx.telegram.answerCallback(query.id, "Received!");
 
-    /** Forward to orchestrator as a decision */
-    const orchestrator = ctx.sessionManager.wajadaMurshidFaail();
-    if (orchestrator && query.data) {
+    /** Forward to murshid as a decision */
+    const murshid = ctx.sessionManager.wajadaMurshidFaail();
+    if (murshid && query.data) {
       await ctx.sessionManager.arsalaIlaMurshid(
         `Al-Kimyawi selected option: ${query.data}`
       );
@@ -436,7 +436,7 @@ async function handlePrivateChatMessage(
   let response = "**Sessions**\n\n";
   
   if (sessions.length === 0) {
-    response += "No active orchestrator sessions.\n\n";
+    response += "No active murshid sessions.\n\n";
   } else {
     for (const session of sessions) {
       const statusEmoji = session.status === "fail" ? "🟢" : 
@@ -455,8 +455,8 @@ async function handlePrivateChatMessage(
   if (ctx.telegram.isGroupMode()) {
     response += "---\n";
     response += "Use the **Telegram group for operations:\n";
-    response += "• **Dispatch** topic: Send ticket URLs to spawn orchestrators\n";
-    response += "• **Orchestrator topics**: Converse with active sessions\n";
+    response += "• **Dispatch** topic: Send ticket URLs to spawn murshids\n";
+    response += "• **Murshid topics**: Converse with active sessions\n";
   }
   
   await ctx.telegram.arsalaRisala(response, { 
@@ -510,7 +510,7 @@ async function handleDispatchTopicMessage(
     }
 
     await ctx.telegram.sendToDispatch(
-      "Send a ticket URL to spawn an orchestrator, or use /help for commands."
+      "Send a ticket URL to spawn an murshid, or use /help for commands."
     );
   }).catch(async (error) => {
     await logger.error("main", "Dispatch handler failed", { error: String(error) });
@@ -552,14 +552,14 @@ async function handleDispatchCommand(ctx: DaemonContext, text: string): Promise<
     case "help":
       await ctx.telegram.sendToDispatch(`**Commands**
 
-/start <url> - Start orchestrator for ticket URL
-/status - Show active orchestrator status
+/start <url> - Start murshid for ticket URL
+/status - Show active murshid status
 /sessions - List all sessions
 /help - Show this help
 
 **Usage**
 Send a ticket URL to start working on a ticket/project.
-Each orchestrator gets its own topic for conversation.
+Each murshid gets its own topic for conversation.
 `, { parseMode: "Markdown" });
       break;
 
@@ -589,7 +589,7 @@ async function handleTicketUrl(ctx: DaemonContext, url: string, additionalContex
 
   /**
    * Delegate to dispatcher — goes through the full switch protocol
-   * (WIP commit, branch checkout, interrupt previous session, etc.)
+   * (WIP commit, branch intaqalaIla, interrupt previous session, etc.)
    */
   const result = await ctx.dispatcher.activateForTicketUrl(
     parsed.id,
@@ -627,7 +627,7 @@ async function handlePRMerged(
 
   /**
    * Check if any other PRs were stacked on this one (early push / pressure mode)
-   * Those PRs need to be re-pushed via pm_ssp to rebase onto main
+   * Those PRs need to be re-transmuted via mun_istihal onto codex
    */
   const activePRs = ctx.sessionManager.wajadaRasaailFaailaLiMurshid(session.identifier);
   const stackedPRs = activePRs.filter(
@@ -639,9 +639,9 @@ async function handlePRMerged(
     stackedNote = `
 
 **Stacked PRs detected:** ${stackedPRs.length} PR(s) may have been created via early push.
-If any were targeting ${pr.branch} (SSSP), they need re-pushing:
+If any were targeting ${pr.branch} (layered istihal), they need re-transmuting:
 
-${stackedPRs.map((p) => `- ${p.huwiyyatWasfa} (PR #${p.raqamRisala}): Use \`pm_ssp\` to rebase onto main`).join("\n")}
+${stackedPRs.map((p) => `- ${p.huwiyyatWasfa} (PR #${p.raqamRisala}): Use \`mun_istihal\` to rebase onto main`).join("\n")}
 
 Re-pushing will fix CI (now that base is on main).`;
   }
@@ -655,7 +655,7 @@ Re-pushing will fix CI (now that base is on main).`;
 This PR has been merged. You can now:
 1. Update ${pr.huwiyyatWasfa} status in Linear to "Done"
 2. Check \`blocked_by\` relations to see which tickets are now unblocked for the next PR
-3. Use \`pm_ssp\` to create the next PR if appropriate${stackedNote}
+3. Use \`mun_istihal\` to transmute the next jawhar if appropriate${stackedNote}
 
 Query Linear for the ticket's blocking relations to determine next slice.`);
 
@@ -690,7 +690,7 @@ This PR was closed without being merged. Investigate why:
 - Should the ticket status be updated?`);
 }
 
-async function handleOperatorCommand(
+async function handleAlKimyawiCommand(
   ctx: DaemonContext,
   session: JalsatMurshid,
   raqamRisala: number,
@@ -719,7 +719,7 @@ async function handleNewTaaliqMurajas(
     authors: [...new Set(comments.map((c) => c.author))],
   });
 
-  /** Forward to the owning orchestrator */
+  /** Forward to the owning murshid */
   const commentText = comments
     .map((c) => `- @${c.author}: "${c.body.slice(0, 100)}${c.body.length > 100 ? "..." : ""}"`)
     .join("\n");
@@ -751,7 +751,7 @@ async function handlePRConflict(
 
 The PR has conflicts with the base branch. Options:
 1. Resolve during quiet hours maintenance (if minor)
-2. Resolve now on epic branch, then re-slice with \`pm_ssp\`
+2. Resolve now in buwtaqa, then re-transmute with \`mun_istihal\`
 3. Notify al-Kimyawi if conflicts are complex`);
 }
 
@@ -778,8 +778,8 @@ The PR has failing CI checks. Investigate:
 
 
 async function handleMaintenanceModeRequest(ctx: DaemonContext): Promise<boolean> {
-  /** Check if any orchestrator is active */
-  const activeId = ctx.dispatcher.getActiveIdentifier();
+  /** Check if any murshid is active */
+  const activeId = ctx.dispatcher.hawiyyaFaila();
 
   if (activeId) {
     await logger.info("main", `Maintenance mode denied - ${activeId} is active`);
@@ -833,7 +833,7 @@ async function handleMaintenanceComplete(
       for (const f of r.conflicts ?? []) {
         summary += `- \`${f}\`\n`;
       }
-      summary += `\n**Suggestion:** Resolve manually when active, then \`pm_ssp\` to refresh PRs.\n`;
+      summary += `\n**Suggestion:** Resolve manually when active, then \`mun_istihal\` to refresh risalat.\n`;
     }
     summary += "\n";
   }
@@ -872,7 +872,7 @@ Your branch \`${r.branch}\` has conflicts with main.
 **Conflicting files:**
 ${(r.conflicts ?? []).map((f) => `- \`${f}\``).join("\n")}
 
-**Action required:** When you become active, resolve these conflicts manually, then use \`pm_ssp\` to refresh any open PRs.`;
+**Action required:** When you become active, resolve these conflicts manually, then use \`mun_istihal\` to refresh any open risalat.`;
 
     await ctx.sessionManager.arsalaIlaMurshidById(r.identifier, conflictMsg);
   }
@@ -898,15 +898,15 @@ export async function startDaemon(opts: { check?: boolean } = {}): Promise<void>
   await logger.init();
 
   /** Load configuration */
-  const config = await loadConfig();
+  const config = await hammalaAlTasmim();
 
   await baddaaQaidatBayanat();
 
   /** Initialize clients */
   const opencode = createOpenCodeClient(config);
-  const ntfy = createNtfyClient(config);
-  const telegram = createTelegramClient(config);
-  const messenger = createTelegramMessenger(telegram);
+  const ntfy = anshaaNtfyAmil(config);
+  const telegram = anshaaTelegramAmil(config);
+  const messenger = anshaaTelegramRasul(telegram);
   const issueTracker = createLinearClient(config);
   const github = createGitHubClient(config);
   const abortController = new AbortController();
@@ -942,7 +942,7 @@ export async function startDaemon(opts: { check?: boolean } = {}): Promise<void>
 
   await dispatcher.istarjaaActiveOnStartup();
 
-  /** Initialize question handler (for question tool events from orchestrators) */
+  /** Initialize question handler (for question tool events from murshids) */
   const questionHandler = istadaaSail({
     opencode,
     messenger,
@@ -952,8 +952,8 @@ export async function startDaemon(opts: { check?: boolean } = {}): Promise<void>
 
   questionHandler.setOnQuestionForwarded(async (pending: SualMuallaq, question: MaalumatSual) => {
     const keyboard = buildQuestionKeyboard(questionHandler, pending.id, question);
-    const orchestrator = sessionManager.jalabMurshid(pending.huwiyyatMurshid);
-    const topicId = orchestrator?.channels["telegram"];
+    const murshid = sessionManager.jalabMurshid(pending.huwiyyatMurshid);
+    const topicId = murshid?.channels["telegram"];
     const messageId = await telegram.arsalaRisala("Use buttons below to answer:", {
       topicId: topicId ? parseInt(topicId, 10) : undefined,
       keyboard,
@@ -1006,8 +1006,8 @@ export async function startDaemon(opts: { check?: boolean } = {}): Promise<void>
       onPRClosed: async (session, pr) => {
         await handlePRClosed(ctx, session, pr);
       },
-      onOperatorCommand: async (session, raqamRisala, comment) => {
-        await handleOperatorCommand(ctx, session, raqamRisala, comment);
+      onAlKimyawiCommand: async (session, raqamRisala, comment) => {
+        await handleAlKimyawiCommand(ctx, session, raqamRisala, comment);
       },
       onNewTaaliqMurajas: async (session, raqamRisala, comments) => {
         await handleNewTaaliqMurajas(ctx, session, raqamRisala, comments);

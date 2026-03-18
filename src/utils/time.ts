@@ -43,7 +43,7 @@ export function todayInTz(tz: string): string {
  * @param end - End time as "HH:MM"
  * @returns true if current time is within [start, end)
  */
-export function isInTimeRange(tz: string, start: string, end: string): boolean {
+export function fiNitaqAlWaqt(tz: string, start: string, end: string): boolean {
   const { hours, minutes } = nowInTz(tz);
   const [startH, startM] = start.split(":").map(Number);
   const [endH, endM] = end.split(":").map(Number);

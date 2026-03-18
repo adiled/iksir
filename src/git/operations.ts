@@ -2,14 +2,14 @@
  * Git Operations
  *
  * Local git operations for the graceful snatch protocol.
- * Munadi owns all git operations - orchestrators should NOT call these directly.
+ * Iksir owns all git operations - murshids should NOT call these directly.
  */
 
 import { logger } from "../logging/logger.ts";
 import { execCommand, type ExecResult } from "../utils/exec.ts";
 
-function getRepoPath(): string {
-  return Deno.env.get("MUNADI_REPO_PATH") ?? ".";
+function masarAlMakhzan(): string {
+  return Deno.env.get("IKSIR_REPO_PATH") ?? ".";
 }
 
 /** Cached default branch name (detected once per process) */
@@ -19,13 +19,13 @@ let _defaultBranch: string | null = null;
  * Execute a git command in the repo directory
  */
 export function exec(args: string[]): Promise<ExecResult> {
-  return execCommand("git", args, { cwd: getRepoPath() });
+  return execCommand("git", args, { cwd: masarAlMakhzan() });
 }
 
 /**
  * Check if working directory is dirty
  */
-export async function isDirty(): Promise<boolean> {
+export async function huwaWasikh(): Promise<boolean> {
   const result = await exec(["status", "--porcelain"]);
   if (!result.success) {
     await logger.error("git", "Failed to check status", { stderr: result.stderr });
@@ -37,7 +37,7 @@ export async function isDirty(): Promise<boolean> {
 /**
  * Get current branch name
  */
-export async function getCurrentBranch(): Promise<string | null> {
+export async function farAlHali(): Promise<string | null> {
   const result = await exec(["rev-parse", "--abbrev-ref", "HEAD"]);
   if (!result.success) {
     await logger.error("git", "Failed to get current branch", { stderr: result.stderr });
@@ -50,7 +50,7 @@ export async function getCurrentBranch(): Promise<string | null> {
  * Create a WIP commit with all changes
  * Returns true if commit was created, false if nothing to commit or error
  */
-export async function createWipCommit(identifier: string): Promise<boolean> {
+export async function khalaqaIltizamMuaqqat(identifier: string): Promise<boolean> {
   /** Stage all changes */
   const addResult = await exec(["add", "-A"]);
   if (!addResult.success) {
@@ -76,8 +76,8 @@ export async function createWipCommit(identifier: string): Promise<boolean> {
  * Checkout a branch
  * Creates the branch if it doesn't exist
  */
-export async function checkout(branch: string): Promise<boolean> {
-  /** Try to checkout existing branch */
+export async function intaqalaIla(branch: string): Promise<boolean> {
+  /** Try to intaqalaIla existing branch */
   let result = await exec(["checkout", branch]);
   
   if (!result.success) {
@@ -92,7 +92,7 @@ export async function checkout(branch: string): Promise<boolean> {
       }
     }
     
-    await logger.error("git", `Failed to checkout ${branch}`, { stderr: result.stderr });
+    await logger.error("git", `Failed to intaqalaIla ${branch}`, { stderr: result.stderr });
     return false;
   }
 
@@ -201,7 +201,7 @@ export async function fetch(remote = "origin"): Promise<boolean> {
  * Returns number of commits behind, or -1 on error
  */
 export async function commitsBehindMain(branch: string): Promise<number> {
-  const defaultBranch = await getDefaultBranch();
+  const defaultBranch = await farAlAsasi();
   const result = await exec(["rev-list", "--count", `${branch}..origin/${defaultBranch}`]);
   if (!result.success) {
     await logger.error("git", `Failed to check commits behind for ${branch}`, { stderr: result.stderr });
@@ -222,7 +222,7 @@ interface MergeResult {
  * Returns conflict information if merge fails
  */
 export async function mergeMain(): Promise<MergeResult> {
-  const defaultBranch = await getDefaultBranch();
+  const defaultBranch = await farAlAsasi();
 
   /** First try the merge */
   const mergeResult = await exec(["merge", `origin/${defaultBranch}`, "--no-edit"]);
@@ -266,7 +266,7 @@ export async function mergeMain(): Promise<MergeResult> {
  * Get the default branch name (master or main).
  * Detected from origin/HEAD. Cached for the process lifetime.
  */
-export async function getDefaultBranch(): Promise<string> {
+export async function farAlAsasi(): Promise<string> {
   if (_defaultBranch) return _defaultBranch;
 
   /** Try origin/HEAD (set by git clone) */
@@ -292,201 +292,3 @@ export async function getDefaultBranch(): Promise<string> {
 }
 
 
-interface SspResult {
-  success: boolean;
-  /** What went wrong (if !success) */
-  error?: string;
-  /** "conflicts" | "checkout_failed" | "istarjaa_failed" | "push_failed" | "merge_failed" */
-  errorType?: string;
-  /** Conflicted file paths (if errorType === "conflicts") */
-  conflicts?: string[];
-  /** The epic branch we were on */
-  epicBranch?: string;
-  /** The PR branch that was created */
-  prBranch?: string;
-  /** The base branch (default branch or parent PR branch) */
-  baseBranch?: string;
-  /** Number of files sliced */
-  filesSliced?: number;
-  /** stdout/stderr for debugging */
-  output?: string;
-}
-
-/**
- * DEPRECATED: Use pluckFiles from craft.ts instead
- * 
- * Kept for backwards compatibility during transition.
- * This function will be removed once all references are updated.
- */
-export async function ssp(
-  prBranch: string,
-  files: string[],
-  baseBranch?: string,
-): Promise<SspResult> {
-  const defaultBranch = await getDefaultBranch();
-
-  /** Step 1: Record epic branch */
-  const epicBranch = (await getCurrentBranch());
-  if (!epicBranch) {
-    return { success: false, error: "Could not determine current branch", errorType: "checkout_failed" };
-  }
-
-  /** Safety: helper to always return to epic branch */
-  const returnToEpic = async () => {
-    await exec(["checkout", epicBranch]);
-  };
-
-  try {
-    /** Step 2: Fetch and merge default branch into epic (always — surfaces conflicts) */
-    const fetchResult = await exec(["fetch", "origin", `${defaultBranch}:${defaultBranch}`]);
-    if (!fetchResult.success) {
-      return {
-        success: false,
-        error: `Failed to fetch ${defaultBranch}: ${fetchResult.stderr}`,
-        errorType: "merge_failed",
-        epicBranch,
-      };
-    }
-
-    const mergeResult = await exec(["merge", defaultBranch, "--no-gpg-sign", "--no-edit"]);
-    if (!mergeResult.success) {
-      const mergeOutput = mergeResult.stdout + mergeResult.stderr;
-
-      if (mergeOutput.includes("CONFLICT")) {
-        /** Get conflicted files */
-        const conflictResult = await exec(["diff", "--name-only", "--diff-filter=U"]);
-        const conflicts = conflictResult.success
-          ? conflictResult.stdout.trim().split("\n").filter(f => f)
-          : [];
-
-        await exec(["merge", "--abort"]);
-
-        return {
-          success: false,
-          error: `Merge conflicts with ${defaultBranch}`,
-          errorType: "conflicts",
-          conflicts,
-          epicBranch,
-          output: mergeOutput,
-        };
-      }
-
-      return {
-        success: false,
-        error: `Failed to merge ${defaultBranch}: ${mergeOutput}`,
-        errorType: "merge_failed",
-        epicBranch,
-        output: mergeOutput,
-      };
-    }
-
-    if (baseBranch) {
-      const fetchBase = await exec(["fetch", "origin", baseBranch]);
-      if (!fetchBase.success) {
-        return {
-          success: false,
-          error: `Failed to fetch base branch ${baseBranch}: ${fetchBase.stderr}`,
-          errorType: "merge_failed",
-          epicBranch,
-        };
-      }
-    }
-
-    /** Step 3: Create/reset PR branch at base HEAD */
-    const baseRef = baseBranch ? `origin/${baseBranch}` : defaultBranch;
-    const branchResult = await exec(["branch", "-f", prBranch, baseRef]);
-    if (!branchResult.success) {
-      return {
-        success: false,
-        error: `Failed to create branch ${prBranch}: ${branchResult.stderr}`,
-        errorType: "checkout_failed",
-        epicBranch,
-      };
-    }
-
-    /** Step 4: Checkout PR branch */
-    const checkoutResult = await exec(["checkout", prBranch]);
-    if (!checkoutResult.success) {
-      return {
-        success: false,
-        error: `Checkout failed for ${prBranch}. Commit or stash changes on epic first. ${checkoutResult.stderr}`,
-        errorType: "checkout_failed",
-        epicBranch,
-      };
-    }
-
-    /** Step 5: Restore specified files from epic branch */
-    const istarjaaResult = await exec(["istarjaa", `--source=${epicBranch}`, "--", ...files]);
-    if (!istarjaaResult.success) {
-      await returnToEpic();
-      return {
-        success: false,
-        error: `Failed to istarjaa files from ${epicBranch}: ${istarjaaResult.stderr}`,
-        errorType: "istarjaa_failed",
-        epicBranch,
-        prBranch,
-      };
-    }
-
-    /** Step 6: Stage and commit */
-    const addResult = await exec(["add", "."]);
-    if (!addResult.success) {
-      await returnToEpic();
-      return {
-        success: false,
-        error: `Failed to stage files: ${addResult.stderr}`,
-        errorType: "istarjaa_failed",
-        epicBranch,
-        prBranch,
-      };
-    }
-
-    const commitResult = await exec(["commit", "--allow-empty-message", "-a", "-m", "", "--no-gpg-sign"]);
-    if (!commitResult.success) {
-      await returnToEpic();
-      return {
-        success: false,
-        error: `Failed to commit: ${commitResult.stderr}`,
-        errorType: "istarjaa_failed",
-        epicBranch,
-        prBranch,
-      };
-    }
-
-    /** Step 7: Force push */
-    const pushResult = await exec(["push", "--force", "-u", "origin", prBranch]);
-    if (!pushResult.success) {
-      await returnToEpic();
-      return {
-        success: false,
-        error: `Failed to push ${prBranch}: ${pushResult.stderr}`,
-        errorType: "push_failed",
-        epicBranch,
-        prBranch,
-      };
-    }
-
-    await returnToEpic();
-
-    await logger.info("git", `SSP complete: ${prBranch}`, {
-      epicBranch,
-      files: files.length,
-    });
-
-    return {
-      success: true,
-      epicBranch,
-      prBranch,
-      baseBranch: baseBranch ?? defaultBranch,
-      filesSliced: files.length,
-    };
-  } catch (error) {
-    await returnToEpic();
-    return {
-      success: false,
-      error: `Unexpected error: ${String(error)}`,
-      errorType: "merge_failed",
-      epicBranch,
-    };
-  }
-}

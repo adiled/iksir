@@ -57,7 +57,7 @@ export class TelegramMessenger implements RasulKharij {
     }
 
     /** { murshid: id } */
-    const topicId = this.#resolveOrchestratorTopic(channel.murshid);
+    const topicId = this.#resolveMurshidTopic(channel.murshid);
     if (topicId !== null) {
       await this.#telegram.arsalaIlaMurshidTopic(topicId, text);
     } else {
@@ -79,7 +79,7 @@ export class TelegramMessenger implements RasulKharij {
     }
 
     /** { murshid: id } */
-    const topicId = this.#resolveOrchestratorTopic(channel.murshid);
+    const topicId = this.#resolveMurshidTopic(channel.murshid);
     if (topicId !== null) {
       await this.#telegram.arsalaIlaMurshidTopic(topicId, text, { parseMode: "Markdown" });
     } else {
@@ -146,7 +146,7 @@ export class TelegramMessenger implements RasulKharij {
   }
 
   /**
-   * Reverse lookup: find orchestrator identifier by provider + channelId.
+   * Reverse lookup: find murshid identifier by provider + channelId.
    * Checks cache first, then DB.
    */
   hallJalsaBilQanat(provider: string, channelId: string): string | null {
@@ -171,7 +171,7 @@ export class TelegramMessenger implements RasulKharij {
   }
 
 
-  #resolveOrchestratorTopic(identifier: string): number | null {
+  #resolveMurshidTopic(identifier: string): number | null {
     /** Check cache */
     const cached = this.#sessionChannels.get(identifier);
     if (cached?.["telegram"]) {
@@ -200,6 +200,6 @@ export class TelegramMessenger implements RasulKharij {
 /**
  * Create a TelegramMessenger instance.
  */
-export function createTelegramMessenger(telegram: TelegramClient): TelegramMessenger {
+export function anshaaTelegramRasul(telegram: TelegramClient): TelegramMessenger {
   return new TelegramMessenger(telegram);
 }

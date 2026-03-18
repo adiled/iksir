@@ -14,34 +14,34 @@ import { DEFAULT_OPENCODE_SERVER } from "./constants.ts";
 
 /**
  * Run a test function with an isolated temp SQLite DB.
- * Sets MUNADI_STATE_DIR, tahyias DB, runs fn, then cleans up.
+ * Sets IKSIR_STATE_DIR, tahyias DB, runs fn, then cleans up.
  */
 export async function withTestDb(fn: () => Promise<void> | void): Promise<void> {
-  const tempDir = await Deno.makeTempDir({ prefix: "munadi-test-" });
-  Deno.env.set("MUNADI_STATE_DIR", tempDir);
+  const tempDir = await Deno.makeTempDir({ prefix: "iksir-test-" });
+  Deno.env.set("IKSIR_STATE_DIR", tempDir);
   try {
     await baddaaQaidatBayanat();
     await fn();
   } finally {
     aghlaaqQaidatBayanat();
-    Deno.env.delete("MUNADI_STATE_DIR");
+    Deno.env.delete("IKSIR_STATE_DIR");
     await Deno.remove(tempDir, { recursive: true });
   }
 }
 
 /**
  * Run a test function with both an isolated DB and an isolated git repo.
- * Creates a temp dir with `git init`, sets MUNADI_REPO_PATH + MUNADI_STATE_DIR,
+ * Creates a temp dir with `git init`, sets IKSIR_REPO_PATH + IKSIR_STATE_DIR,
  * tahyias DB, runs fn, then cleans up everything.
  *
  * Use this for tests that exercise code paths involving git operations
- * (e.g. dispatcher → session-manager → git checkout).
+ * (e.g. dispatcher → session-manager → git intaqalaIla).
  */
 export async function withTestRepo(fn: () => Promise<void> | void): Promise<void> {
-  const tempDir = await Deno.makeTempDir({ prefix: "munadi-repo-test-" });
-  const prevRepo = Deno.env.get("MUNADI_REPO_PATH");
-  Deno.env.set("MUNADI_REPO_PATH", tempDir);
-  Deno.env.set("MUNADI_STATE_DIR", tempDir);
+  const tempDir = await Deno.makeTempDir({ prefix: "iksir-repo-test-" });
+  const prevRepo = Deno.env.get("IKSIR_REPO_PATH");
+  Deno.env.set("IKSIR_REPO_PATH", tempDir);
+  Deno.env.set("IKSIR_STATE_DIR", tempDir);
   try {
     await execCommand("git", ["init"], { cwd: tempDir });
     await execCommand("git", ["commit", "--allow-empty", "-m", "init"], { cwd: tempDir });
@@ -49,9 +49,9 @@ export async function withTestRepo(fn: () => Promise<void> | void): Promise<void
     await fn();
   } finally {
     aghlaaqQaidatBayanat();
-    Deno.env.delete("MUNADI_STATE_DIR");
-    if (prevRepo) Deno.env.set("MUNADI_REPO_PATH", prevRepo);
-    else Deno.env.delete("MUNADI_REPO_PATH");
+    Deno.env.delete("IKSIR_STATE_DIR");
+    if (prevRepo) Deno.env.set("IKSIR_REPO_PATH", prevRepo);
+    else Deno.env.delete("IKSIR_REPO_PATH");
     await Deno.remove(tempDir, { recursive: true });
   }
 }
@@ -66,7 +66,7 @@ interface MockJalsatOpenCode {
 }
 
 export interface MockOpenCodeClient {
-  classify(prompt: string): Promise<{ success: boolean; response?: string; error?: string }>;
+  mayyaza(prompt: string): Promise<{ success: boolean; response?: string; error?: string }>;
   replyToQuestion(
     sessionId: string,
     questionId: string,
@@ -84,7 +84,7 @@ export interface MockOpenCodeClient {
   listSessions(): Promise<Array<{ id: string; title: string; createdAt: Date; lastMessageAt: Date }>>;
 
   _calls: {
-    classify: string[];
+    mayyaza: string[];
     replyToQuestion: Array<{ sessionId: string; questionId: string; answers: JawabSual[] }>;
     rejectQuestion: Array<{ sessionId: string; questionId: string }>;
     sendPromptAsync: Array<{ sessionId: string; prompt: string }>;
@@ -99,7 +99,7 @@ export interface MockOpenCodeClient {
  * Includes session management (khalaqaJalsa, jalabJalsa) for integration tests.
  */
 export function mockOpenCodeClient(overrides?: {
-  classify?: (prompt: string) => Promise<{ success: boolean; response?: string; error?: string }>;
+  mayyaza?: (prompt: string) => Promise<{ success: boolean; response?: string; error?: string }>;
   replyToQuestion?: (
     sessionId: string,
     questionId: string,
@@ -111,7 +111,7 @@ export function mockOpenCodeClient(overrides?: {
   khalaqaJalsa?: (huwiyyatWasfa: string, title: string) => Promise<MockJalsatOpenCode | null>;
 }): MockOpenCodeClient {
   const calls: MockOpenCodeClient["_calls"] = {
-    classify: [],
+    mayyaza: [],
     replyToQuestion: [],
     rejectQuestion: [],
     sendPromptAsync: [],
@@ -126,10 +126,10 @@ export function mockOpenCodeClient(overrides?: {
     _calls: calls,
     _sessions: sessions,
 
-    async classify(prompt: string) {
-      calls.classify.push(prompt);
-      if (overrides?.classify) return overrides.classify(prompt);
-      return { success: true, response: '{"classification":"WORTHY","reason":"test","rejection":null}' };
+    async mayyaza(prompt: string) {
+      calls.mayyaza.push(prompt);
+      if (overrides?.mayyaza) return overrides.mayyaza(prompt);
+      return { success: true, response: '{"tamyiz":"DHAHAB","reason":"test","rejection":null}' };
     },
 
     async replyToQuestion(sessionId, questionId, answers) {
@@ -403,7 +403,7 @@ export function seedSession(overrides?: Partial<JalsatMurshid>): void {
  * Create a temp file with given content, return its path.
  * Caller is responsible for cleanup.
  */
-export async function writeTempFile(content: string, prefix = "munadi-fixture-"): Promise<string> {
+export async function writeTempFile(content: string, prefix = "iksir-fixture-"): Promise<string> {
   const path = await Deno.makeTempFile({ prefix });
   await Deno.writeTextFile(path, content);
   return path;

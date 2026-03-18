@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { nowInTz, todayInTz, isInTimeRange, minutesUntil } from "./time.ts";
+import { nowInTz, todayInTz, fiNitaqAlWaqt, minutesUntil } from "./time.ts";
 
 
 Deno.test("nowInTz: returns hours and minutes as numbers", () => {
@@ -31,7 +31,7 @@ Deno.test("todayInTz: produces valid date parts", () => {
 });
 
 
-Deno.test("isInTimeRange: normal range — inside", () => {
+Deno.test("fiNitaqAlWaqt: normal range — inside", () => {
   /**
    * We can't control wall clock, so we test the logic by comparing
    * with nowInTz and constructing ranges around the current time
@@ -42,11 +42,11 @@ Deno.test("isInTimeRange: normal range — inside", () => {
   const end = `${String(endH).padStart(2, "0")}:00`;
 
   if (minutes < 59) {
-    assertEquals(isInTimeRange("UTC", start, end), true);
+    assertEquals(fiNitaqAlWaqt("UTC", start, end), true);
   }
 });
 
-Deno.test("isInTimeRange: normal range — outside", () => {
+Deno.test("fiNitaqAlWaqt: normal range — outside", () => {
   const { hours } = nowInTz("UTC");
   /** Create a range that definitely excludes current time */
   const rangeStart = (hours + 2) % 24;
@@ -55,11 +55,11 @@ Deno.test("isInTimeRange: normal range — outside", () => {
   if (rangeStart < rangeEnd) {
     const start = `${String(rangeStart).padStart(2, "0")}:00`;
     const end = `${String(rangeEnd).padStart(2, "0")}:00`;
-    assertEquals(isInTimeRange("UTC", start, end), false);
+    assertEquals(fiNitaqAlWaqt("UTC", start, end), false);
   }
 });
 
-Deno.test("isInTimeRange: overnight range — 22:00-07:00 logic", () => {
+Deno.test("fiNitaqAlWaqt: overnight range — 22:00-07:00 logic", () => {
   /**
    * Test the overnight wrap by checking consistent behavior:
    * If we're at, say, 23:00 UTC, we should be in 22:00-07:00
@@ -67,7 +67,7 @@ Deno.test("isInTimeRange: overnight range — 22:00-07:00 logic", () => {
    */
   const { hours } = nowInTz("UTC");
 
-  const inRange = isInTimeRange("UTC", "22:00", "07:00");
+  const inRange = fiNitaqAlWaqt("UTC", "22:00", "07:00");
   if (hours >= 22 || hours < 7) {
     assertEquals(inRange, true);
   } else {
@@ -75,8 +75,8 @@ Deno.test("isInTimeRange: overnight range — 22:00-07:00 logic", () => {
   }
 });
 
-Deno.test("isInTimeRange: same start and end — empty range", () => {
-  assertEquals(isInTimeRange("UTC", "12:00", "12:00"), false);
+Deno.test("fiNitaqAlWaqt: same start and end — empty range", () => {
+  assertEquals(fiNitaqAlWaqt("UTC", "12:00", "12:00"), false);
 });
 
 

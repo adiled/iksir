@@ -1,7 +1,7 @@
 /**
  * Smoke Test — End-to-end daemon pipeline validation
  *
- * Exercises the full inbound message pipeline with real Munadi,
+ * Exercises the full inbound message pipeline with real Iksir,
  * MudirJalasat, Sail, and TelegramMessenger — mocking only
  * the external boundaries (OpenCode API, Linear API, Telegram API).
  *
@@ -323,10 +323,10 @@ Deno.test("smoke: second murshid activation switches active session", async () =
     const { dispatcher, sessionManager } = buildContext();
 
     await dispatcher.activateForTicketUrl("TEAM-8001", "Rihla Alpha", "https://linear.app/team/TEAM-8001");
-    assertEquals(dispatcher.getActiveIdentifier(), "TEAM-8001");
+    assertEquals(dispatcher.hawiyyaFaila(), "TEAM-8001");
 
     await dispatcher.activateForTicketUrl("TEAM-8002", "Rihla Beta", "https://linear.app/team/TEAM-8002");
-    assertEquals(dispatcher.getActiveIdentifier(), "TEAM-8002");
+    assertEquals(dispatcher.hawiyyaFaila(), "TEAM-8002");
 
     assertEquals(sessionManager.wajadaJalasatMurshid().length, 2);
   });

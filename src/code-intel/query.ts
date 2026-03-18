@@ -7,7 +7,7 @@
  * Supports:
  *   Symbol lookup:    "where is MudirJalasat defined"
  *   Reverse deps:     "what depends on types.ts"
- *   Forward deps:     "what does classifier.ts import"
+ *   Forward deps:     "what does mumayyiz.ts import"
  *   Export listing:    "exports of pm-server.ts"
  *   Impact analysis:  "impact of changing TasmimIksir"
  *   Search:           "files related to authentication"
@@ -24,7 +24,7 @@ type QueryIntent =
   | { type: "impact"; name: string }
   | { type: "search"; terms: string[] };
 
-function classify(query: string): QueryIntent {
+function mayyaza(query: string): QueryIntent {
   const q = query.toLowerCase().trim();
 
   /** "where is X" / "who exports X" / "find X" / "X definition" */
@@ -190,7 +190,7 @@ function formatSymbol(sym: CodeSymbol, filePath: string): string {
 
 
 export function queryIndex(index: CodeIndex, query: string): QueryResult {
-  const intent = classify(query);
+  const intent = mayyaza(query);
 
   switch (intent.type) {
     case "symbol_lookup": {

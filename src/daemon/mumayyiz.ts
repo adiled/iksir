@@ -1,11 +1,11 @@
 /**
- * Shared Classification Service
+ * Tamyiz - Shared Divination Service
  *
  * LLM-based gatekeeper for notifications and questions.
- * Classifies as WORTHY (forward to al-Kimyawi) or CRY_BABY (handle autonomously).
+ * Divines whether the message gleams as dhahab (gold) or is khabath (khabath).
  *
  * Prompt templates are loaded from files (configurable via env vars) with
- * inline fallbacks. AGENTS.md cache shared across all classification calls.
+ * inline fallbacks. AGENTS.md cache shared across all tamyiz calls.
  */
 
 import { logger } from "../logging/logger.ts";
@@ -14,12 +14,12 @@ import type { OpenCodeClient } from "../opencode/client.ts";
 import type { MaalumatSual, TasnifSual } from "../types.ts";
 
 function getAgentsMdPath(): string {
-  return Deno.env.get("MUNADI_AGENTS_MD_PATH") ??
-    join(Deno.env.get("HOME") ?? ".", ".config", "munadi", "AGENTS.md");
+  return Deno.env.get("IKSIR_AGENTS_MD_PATH") ??
+    join(Deno.env.get("HOME") ?? ".", ".config", "iksir", "AGENTS.md");
 }
 
-function getRepoPath(): string {
-  return Deno.env.get("MUNADI_REPO_PATH") ?? ".";
+function masarAlMakhzan(): string {
+  return Deno.env.get("IKSIR_REPO_PATH") ?? ".";
 }
 
 
@@ -34,13 +34,13 @@ async function loadAgentsMd(): Promise<string | null> {
     agentsMdContent = await Deno.readTextFile(getAgentsMdPath());
     return agentsMdContent;
   } catch {
-    await logger.warn("classifier", "Failed to read AGENTS.md");
+    await logger.warn("mumayyiz", "Failed to read AGENTS.md");
     return null;
   }
 }
 
 function getPromptPath(envVar: string, defaultFilename: string): string {
-  return Deno.env.get(envVar) ?? join(getRepoPath(), "prompts", defaultFilename);
+  return Deno.env.get(envVar) ?? join(masarAlMakhzan(), "prompts", defaultFilename);
 }
 
 async function loadTemplate(
@@ -53,10 +53,10 @@ async function loadTemplate(
   const path = getPromptPath(envVar, defaultFilename);
   try {
     const content = await Deno.readTextFile(path);
-    await logger.info("classifier", `Loaded prompt template from ${path}`);
+    await logger.info("mumayyiz", `Loaded prompt template from ${path}`);
     return content;
   } catch {
-    await logger.info("classifier", `Prompt template not found at ${path}, using inline fallback`);
+    await logger.info("mumayyiz", `Prompt template not found at ${path}, using inline fallback`);
     return fallback;
   }
 }
@@ -82,24 +82,24 @@ Al-Kimyawi does NOT handle:
 - Debugging ("this test is failing")
 - Learned helplessness ("I'm not sure what to do")
 
-Reference guidelines the orchestrator should follow autonomously:
+Reference guidelines the murshid should follow autonomously:
 ---
 {{agentGuidelines}}
 ---
 
-Orchestrator wants to send this message to al-Kimyawi:
+Murshid wants to send this message to al-Kimyawi:
 ---
 {{message}}
 ---
 
-Classify this message:
-- WORTHY: Genuinely needs the intibah al-Kimyawi (architecture ambiguity, external blocker, political timing, milestone)
-- CRY_BABY: Should be handled autonomously by orchestrator using specs, docs, and precedents
+Mayyiz this message:
+- DHAHAB: Genuinely needs the intibah al-Kimyawi (architecture ambiguity, external blocker, political timing, milestone)
+- KHABATH: Khabath - should be handled autonomously by murshid using specs, docs, and precedents
 
-If CRY_BABY, provide a terse rejection (1-2 sentences) with specific guidance. Reference file paths when applicable.
+If KHABATH, provide a terse rejection (1-2 sentences) with specific guidance. Reference file paths when applicable.
 
 Respond ONLY with valid JSON (no markdown, no explanation):
-{"classification": "WORTHY" or "CRY_BABY", "reason": "brief explanation", "rejection": "terse guidance if CRY_BABY, null if WORTHY"}`;
+{"tamyiz": "DHAHAB" or "KHABATH", "reason": "brief explanation", "rejection": "terse guidance if KHABATH, null if DHAHAB"}`;
 
 const QUESTION_FALLBACK = `You are a gatekeeper protecting the intibah al-Kimyawi.
 
@@ -117,56 +117,56 @@ Al-Kimyawi does NOT handle:
 - Progress confirmations ("should I proceed?")
 - Debugging decisions ("which approach to try first?")
 
-Reference guidelines the orchestrator should follow autonomously:
+Reference guidelines the murshid should follow autonomously:
 ---
 {{agentGuidelines}}
 ---
 
-Orchestrator is asking this question:
+Murshid is asking this question:
 
 Header: {{header}}
 Question: {{question}}
 Options:
 {{options}}
 
-Classify this question:
-- WORTHY: Genuinely needs the hukm al-Kimyawi (business impact, architecture boundaries, political timing)
-- CRY_BABY: Can be decided autonomously using specs, docs, precedents, or common sense
+Mayyiz this question:
+- DHAHAB: Genuinely needs the hukm al-Kimyawi (business impact, architecture boundaries, political timing)
+- KHABATH: Khabath - can be decided autonomously using specs, docs, precedents, or common sense
 
-If CRY_BABY:
+If KHABATH:
 - Provide a terse rejection (1-2 sentences) with guidance
 - Specify which option to auto-select (use exact label text, or "pick first" or "pick recommended")
 
 Respond ONLY with valid JSON (no markdown, no explanation):
 {
-  "classification": "WORTHY" or "CRY_BABY",
+  "tamyiz": "DHAHAB" or "KHABATH",
   "reason": "brief explanation",
-  "rejection": "terse guidance if CRY_BABY, null if WORTHY",
-  "autoAnswer": "exact label of option to pick if CRY_BABY, null if WORTHY"
+  "rejection": "terse guidance if KHABATH, null if DHAHAB",
+  "autoAnswer": "exact label of option to pick if KHABATH, null if DHAHAB"
 }`;
 
 
-interface NotificationClassification {
-  worthy: boolean;
+interface NatijaTamyizTanbih {
+  dhahab: boolean;
   reason: string;
   rejection: string | null;
 }
 
 /**
- * Classify a notification as worthy of the intibah al-Kimyawi or cry-baby.
+ * Mayyiz a tanbih as dhahab of the intibah al-Kimyawi or khabath.
  */
-export async function classifyNotification(
+export async function mayyazaTanbih(
   opencode: OpenCodeClient,
   message: string,
-): Promise<NotificationClassification> {
+): Promise<NatijaTamyizTanbih> {
   const md = await loadAgentsMd();
   if (!md) {
-    return { worthy: true, reason: "AGENTS.md unavailable", rejection: null };
+    return { dhahab: true, reason: "AGENTS.md unavailable", rejection: null };
   }
 
   notificationTemplate = await loadTemplate(
-    "MUNADI_CLASSIFY_NOTIFICATION_PROMPT",
-    "classify-notification.md",
+    "IKSIR_MAYYAZA_TANBIH_PROMPT",
+    "mayyaza-tanbih.md",
     notificationTemplate,
     NOTIFICATION_FALLBACK,
   );
@@ -177,40 +177,40 @@ export async function classifyNotification(
   });
 
   try {
-    const result = await opencode.classify(prompt);
+    const result = await opencode.mayyaza(prompt);
     if (!result.success || !result.response) {
-      await logger.warn("classifier", "Ishara classification failed, allowing", {
+      await logger.warn("mumayyiz", "Ishara tamyiz failed, allowing", {
         error: result.error,
       });
-      return { worthy: true, reason: "Classification failed", rejection: null };
+      return { dhahab: true, reason: "Tamyiz failed", rejection: null };
     }
 
     const parsed = JSON.parse(result.response.trim());
-    const isWorthy = parsed.classification === "WORTHY";
+    const isDhahab = parsed.tamyiz === "DHAHAB";
     return {
-      worthy: isWorthy,
+      dhahab: isDhahab,
       reason: parsed.reason ?? "Unknown",
-      rejection: isWorthy ? null : (parsed.rejection ?? "Handle this autonomously."),
+      rejection: isDhahab ? null : (parsed.rejection ?? "Handle this autonomously."),
     };
   } catch (error) {
-    await logger.warn("classifier", "Ishara classification error, allowing", {
+    await logger.warn("mumayyiz", "Ishara tamyiz error, allowing", {
       error: String(error),
     });
-    return { worthy: true, reason: "Classification error", rejection: null };
+    return { dhahab: true, reason: "Tamyiz error", rejection: null };
   }
 }
 
 
 /**
- * Classify a question as worthy of the hukm al-Kimyawi or cry-baby.
+ * Mayyiz a sual as dhahab of the hukm al-Kimyawi or khabath.
  */
-export async function classifyQuestion(
+export async function mayyazaSual(
   opencode: OpenCodeClient,
   question: MaalumatSual,
 ): Promise<TasnifSual> {
   const md = await loadAgentsMd();
   if (!md) {
-    return { classification: "WORTHY", reason: "AGENTS.md unavailable", rejection: null, autoAnswer: null };
+    return { tamyiz: "DHAHAB", reason: "AGENTS.md unavailable", rejection: null, autoAnswer: null };
   }
 
   const optionsText = question.options
@@ -218,8 +218,8 @@ export async function classifyQuestion(
     .join("\n");
 
   questionTemplate = await loadTemplate(
-    "MUNADI_CLASSIFY_QUESTION_PROMPT",
-    "classify-question.md",
+    "IKSIR_MAYYAZA_SUAL_PROMPT",
+    "mayyaza-sual.md",
     questionTemplate,
     QUESTION_FALLBACK,
   );
@@ -232,12 +232,12 @@ export async function classifyQuestion(
   });
 
   try {
-    const result = await opencode.classify(prompt);
+    const result = await opencode.mayyaza(prompt);
     if (!result.success || !result.response) {
-      await logger.warn("classifier", "Question classification failed, allowing", {
+      await logger.warn("mumayyiz", "Question tamyiz failed, allowing", {
         error: result.error,
       });
-      return { classification: "WORTHY", reason: "Classification failed", rejection: null, autoAnswer: null };
+      return { tamyiz: "DHAHAB", reason: "Tamyiz failed", rejection: null, autoAnswer: null };
     }
 
     /** Parse JSON — handle potential markdown wrapping */
@@ -249,7 +249,7 @@ export async function classifyQuestion(
 
     /** Handle "pick recommended" / "pick first" shortcuts */
     let autoAnswer = parsed.autoAnswer;
-    if (autoAnswer && parsed.classification === "CRY_BABY") {
+    if (autoAnswer && parsed.tamyiz === "KHABATH") {
       if (autoAnswer.toLowerCase() === "pick recommended") {
         const rec = question.options.find((o) => o.label.includes("(Recommended)"));
         autoAnswer = rec?.label ?? question.options[0]?.label ?? null;
@@ -259,23 +259,23 @@ export async function classifyQuestion(
     }
 
     return {
-      classification: parsed.classification === "WORTHY" ? "WORTHY" : "CRY_BABY",
+      tamyiz: parsed.tamyiz === "DHAHAB" ? "DHAHAB" : "KHABATH",
       reason: parsed.reason ?? "Unknown",
-      rejection: parsed.classification === "CRY_BABY" ? (parsed.rejection ?? "Handle autonomously.") : null,
-      autoAnswer: parsed.classification === "CRY_BABY" ? autoAnswer : null,
+      rejection: parsed.tamyiz === "KHABATH" ? (parsed.rejection ?? "Handle autonomously.") : null,
+      autoAnswer: parsed.tamyiz === "KHABATH" ? autoAnswer : null,
     };
   } catch (error) {
-    await logger.warn("classifier", "Question classification error, allowing", {
+    await logger.warn("mumayyiz", "Question tamyiz error, allowing", {
       error: String(error),
     });
-    return { classification: "WORTHY", reason: "Classification error", rejection: null, autoAnswer: null };
+    return { tamyiz: "DHAHAB", reason: "Tamyiz error", rejection: null, autoAnswer: null };
   }
 }
 
 /**
  * Reset cached templates (for testing).
  */
-export function _resetClassifierCache(): void {
+export function _resetMumayyizCache(): void {
   agentsMdContent = null;
   notificationTemplate = null;
   questionTemplate = null;

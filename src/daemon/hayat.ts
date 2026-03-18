@@ -20,7 +20,7 @@
 import { GitHubClient } from "../github/gh.ts";
 import { buildIndex } from "../code-intel/indexer.ts";
 import { logger } from "../logging/logger.ts";
-import { isInTimeRange, minutesUntil, todayInTz } from "../utils/time.ts";
+import { fiNitaqAlWaqt, minutesUntil, todayInTz } from "../utils/time.ts";
 import * as git from "../git/operations.ts";
 import type {
   TasmimIksir,
@@ -68,7 +68,7 @@ interface KeepAliveCallbacks {
   /**
    * Al-Kimyawi left a command on a PR - execute immediately
    */
-  onOperatorCommand: (
+  onAlKimyawiCommand: (
     session: JalsatMurshid,
     raqamRisala: number,
     comment: TaaliqMuraja
@@ -278,7 +278,7 @@ export class KeepAliveLoop {
   }
 
   /**
-   * Process new PR comments - classify and route
+   * Process new PR comments - mayyiz and route
    */
   async #processNewComments(
     session: JalsatMurshid,
@@ -286,29 +286,29 @@ export class KeepAliveLoop {
     comments: TaaliqMuraja[]
   ): Promise<void> {
     const ismKimyawi = this.#config.github.ismKimyawi;
-    const operatorCommands: TaaliqMuraja[] = [];
-    const otherComments: TaaliqMuraja[] = [];
+    const awamirAlKimyawi: TaaliqMuraja[] = [];
+    const taaliqatUkhra: TaaliqMuraja[] = [];
 
     for (const comment of comments) {
       if (comment.author === ismKimyawi && comment.assessment.isCommand) {
-        operatorCommands.push(comment);
+        awamirAlKimyawi.push(comment);
       } else if (comment.author !== ismKimyawi) {
-        otherComments.push(comment);
+        taaliqatUkhra.push(comment);
       }
     }
 
-    for (const cmd of operatorCommands) {
+    for (const cmd of awamirAlKimyawi) {
       await logger.info("keepalive", `amr al-Kimyawi on PR #${raqamRisala}`, {
         body: cmd.body.slice(0, 100),
       });
-      await this.#callbacks.onOperatorCommand(session, raqamRisala, cmd);
+      await this.#callbacks.onAlKimyawiCommand(session, raqamRisala, cmd);
     }
 
-    if (otherComments.length > 0) {
-      await logger.info("keepalive", `${otherComments.length} new comments on PR #${raqamRisala}`, {
-        authors: [...new Set(otherComments.map((c) => c.author))],
+    if (taaliqatUkhra.length > 0) {
+      await logger.info("keepalive", `${taaliqatUkhra.length} new comments on PR #${raqamRisala}`, {
+        authors: [...new Set(taaliqatUkhra.map((c) => c.author))],
       });
-      await this.#callbacks.onNewTaaliqMurajas(session, raqamRisala, otherComments);
+      await this.#callbacks.onNewTaaliqMurajas(session, raqamRisala, taaliqatUkhra);
     }
   }
 
@@ -319,7 +319,7 @@ export class KeepAliveLoop {
   #isQuietHours(): boolean {
     if (!this.#config.quietHours.enabled) return false;
     const { timezone, start, end } = this.#config.quietHours;
-    return isInTimeRange(timezone, start, end);
+    return fiNitaqAlWaqt(timezone, start, end);
   }
 
   /**
@@ -372,7 +372,7 @@ export class KeepAliveLoop {
       const sessions = this.#sessionManager.wajadaJalasatMurshid();
 
       /** Save current branch to istarjaa later */
-      const originalBranch = await git.getCurrentBranch();
+      const originalBranch = await git.farAlHali();
 
       await git.fetch();
 
@@ -382,10 +382,10 @@ export class KeepAliveLoop {
       }
 
       if (originalBranch) {
-        const istarjaad = await git.checkout(originalBranch);
+        const istarjaad = await git.intaqalaIla(originalBranch);
         if (!istarjaad) {
           await logger.error("keepalive", `Failed to istarjaa branch ${originalBranch}, falling back to main`);
-          await git.checkout("main");
+          await git.intaqalaIla("main");
         }
       }
 
@@ -424,14 +424,14 @@ export class KeepAliveLoop {
 
     try {
       /** Checkout the branch */
-      const checkedOut = await git.checkout(branch);
+      const checkedOut = await git.intaqalaIla(branch);
       if (!checkedOut) {
         return {
           branch,
           identifier,
           success: false,
           action: "error",
-          message: `Failed to checkout ${branch}`,
+          message: `Failed to intaqalaIla ${branch}`,
         };
       }
 

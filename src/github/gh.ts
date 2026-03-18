@@ -283,7 +283,7 @@ export class GitHubClient {
       path: comment.path,
       line: comment.line,
       createdAt: new Date(comment.createdAt),
-      isOperator: huwaKimyawi,
+      isAlKimyawi: huwaKimyawi,
       assessment: this.assessComment(comment.body, huwaKimyawi),
     };
   }
@@ -296,7 +296,7 @@ export class GitHubClient {
 
     /**
      * Check for command patterns — applies to ALL comments including al-Kimyawi's.
-     * Al-Kimyawi leaves PR commands that orchestrators must execute.
+     * Al-Kimyawi leaves PR commands that murshids must execute.
      * The `huwaKimyawi` flag on TaaliqMuraja tells consumers WHO wrote it;
      * the assessment tells them WHAT was written.
      */
@@ -464,7 +464,7 @@ export class GitHubClient {
   /**
    * Get the default branch
    */
-  async getDefaultBranch(): Promise<string> {
+  async farAlAsasi(): Promise<string> {
     const result = await this.execJson<{ defaultBranchRef: { name: string } }>([
       "repo", "view",
       "--repo", `${this.owner}/${this.repo}`,

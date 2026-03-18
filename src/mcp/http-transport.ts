@@ -42,7 +42,7 @@ export function startMcpHttpServer(options: McpHttpServerOptions): Deno.HttpServ
     if (req.method !== "POST") {
       if (req.method === "GET" && path === "/") {
         return Response.json({
-          name: "munadi-mcp",
+          name: "iksir-mcp",
           version: "0.1.0",
           servers: ["/pm"],
         });

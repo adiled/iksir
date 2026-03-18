@@ -1,7 +1,7 @@
 /**
  * OpenCode Client
  *
- * Wrapper around the OpenCode SDK for Munadi's needs.
+ * Wrapper around the OpenCode SDK for Iksir's needs.
  * Provides session management, event listening, and prompt execution.
  */
 
@@ -277,36 +277,36 @@ export class OpenCodeClient {
     }
   }
 
-  private classifierSessionId: string | null = null;
+  private mumayyizSessionId: string | null = null;
 
   /**
-   * Get or create a lightweight session for classification tasks.
+   * Get or create a lightweight session for tamyiz tasks.
    * Reuses a single session to avoid spawning many.
    */
-  private async getClassifierSession(): Promise<string | null> {
-    if (this.classifierSessionId) {
+  private async wajadaJalsatMumayyiz(): Promise<string | null> {
+    if (this.mumayyizSessionId) {
       /** Verify it still exists */
-      const session = await this.jalabJalsa(this.classifierSessionId);
-      if (session) return this.classifierSessionId;
+      const session = await this.jalabJalsa(this.mumayyizSessionId);
+      if (session) return this.mumayyizSessionId;
     }
 
-    /** Create new classifier session */
-    const session = await this.khalaqaJalsa("munadi-classifier", "Munadi Classification");
+    /** Create new mumayyiz session */
+    const session = await this.khalaqaJalsa("iksir-mumayyiz", "Iksir Tamyiz");
     if (session) {
-      this.classifierSessionId = session.id;
+      this.mumayyizSessionId = session.id;
       return session.id;
     }
     return null;
   }
 
   /**
-   * Run a one-shot classification prompt.
-   * Uses a shared classifier session for efficiency.
+   * Run a one-shot tamyiz prompt.
+   * Uses a shared mumayyiz session for efficiency.
    */
-  async classify(prompt: string): Promise<{ success: boolean; response?: string; error?: string }> {
-    const sessionId = await this.getClassifierSession();
+  async mayyaza(prompt: string): Promise<{ success: boolean; response?: string; error?: string }> {
+    const sessionId = await this.wajadaJalsatMumayyiz();
     if (!sessionId) {
-      return { success: false, error: "Failed to get classifier session" };
+      return { success: false, error: "Failed to get mumayyiz session" };
     }
 
     return this.sendPrompt(sessionId, prompt);

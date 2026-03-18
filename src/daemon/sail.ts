@@ -11,7 +11,7 @@
  * Question Handler
  *
  * Handles question.asked events from OpenCode SSE.
- * Classifies questions as worthy (forward to al-Kimyawi) or cry-baby (auto-answer).
+ * Mayyiz questions as dhahab (forward to al-Kimyawi) or khabath (auto-answer).
  *
  * Similar to pm_notify filtering in tool-executor, but for the
  * question tool which presents MCQ-style decisions.
@@ -24,7 +24,7 @@ import {
   jalabaAseilaGhairMujaba,
   allamaJawabSual as dbMarkJawabSualed,
 } from "../../db/db.ts";
-import { classifyQuestion } from "./classifier.ts";
+import { mayyazaSual } from "./mumayyiz.ts";
 import type { MudirJalasat } from "./katib.ts";
 import type {
   HadathSualMatlub,
@@ -91,7 +91,7 @@ export class Sail {
 
   /**
    * Handle a question.asked event from OpenCode SSE.
-   * Classifies the question and either auto-answers or forwards to al-Kimyawi.
+   * Mayyiz the question and either auto-answers or forwards to al-Kimyawi.
    */
   async handleQuestionAsked(event: HadathSualMatlub): Promise<void> {
     const { id, sessionID, questions } = event.properties;
@@ -113,7 +113,7 @@ export class Sail {
     }
 
     /**
-     * Classify each question (for now, treat all questions in batch as one)
+     * Mayyiz each question (for now, treat all questions in batch as one)
      * Take the first question as representative (most question calls have 1 question)
      */
     const primaryQuestion = questions[0];
@@ -123,36 +123,36 @@ export class Sail {
       return;
     }
 
-    const classification = await classifyQuestion(this.#opencode, primaryQuestion);
+    const tamyiz = await mayyazaSual(this.#opencode, primaryQuestion);
 
-    await logger.info("question-handler", `Classification: ${classification.classification}`, {
-      reason: classification.reason,
+    await logger.info("question-handler", `Tamyiz: ${tamyiz.tamyiz}`, {
+      reason: tamyiz.reason,
       questionHeader: primaryQuestion.header,
     });
 
-    if (classification.classification === "CRY_BABY") {
-      await this.#handleCryBaby(sessionID, id, questions, classification);
+    if (tamyiz.tamyiz === "KHABATH") {
+      await this.#handleKhabath(sessionID, id, questions, tamyiz);
     } else {
       await this.#forwardToDaemon(sessionID, id, questions, murshid.identifier);
     }
   }
 
   /**
-   * Handle a cry-baby question: auto-answer and inject guidance.
+   * Handle khabath: auto-answer and inject guidance.
    */
-  async #handleCryBaby(
+  async #handleKhabath(
     sessionID: string,
     questionId: string,
     questions: MaalumatSual[],
-    classification: TasnifSual
+    tamyiz: TasnifSual
   ): Promise<void> {
     /** Build auto-answers */
     const answers: JawabSual[] = questions.map((q, index) => {
-      /** Find the recommended option or use autoAnswer from classification */
+      /** Find the recommended option or use autoAnswer from tamyiz */
       let selectedLabel: string;
 
-      if (classification.autoAnswer) {
-        selectedLabel = classification.autoAnswer;
+      if (tamyiz.autoAnswer) {
+        selectedLabel = tamyiz.autoAnswer;
       } else {
         /** Find option marked as "(Recommended)" or pick first */
         const recommended = q.options.find((o) => o.label.includes("(Recommended)"));
@@ -170,7 +170,7 @@ export class Sail {
 
     if (replied) {
       await logger.info("question-handler", `Auto-answered question ${questionId}`, {
-        autoAnswer: classification.autoAnswer,
+        autoAnswer: tamyiz.autoAnswer,
       });
     } else {
       await this.#opencode.rejectQuestion(sessionID, questionId);
@@ -178,9 +178,9 @@ export class Sail {
     }
 
     /** Inject guidance as follow-up message */
-    const guidance = `Your question was auto-answered. Reason: ${classification.reason}
+    const guidance = `Your question was auto-answered. Reason: ${tamyiz.reason}
 
-${classification.rejection ?? "Proceed autonomously using your judgment."}
+${tamyiz.rejection ?? "Proceed autonomously using your judgment."}
 
 Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
 
@@ -188,7 +188,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
   }
 
   /**
-   * Forward a worthy question to al-Kimyawi via messenger.
+   * Forward dhahab to al-Kimyawi via messenger.
    * Sends formatted text. Transport-specific rendering (inline keyboards)
    * is handled by the onQuestionForwarded callback if set.
    */

@@ -45,15 +45,13 @@ import type {
   MunYieldCall,
   MunDemandControlCall,
   MunCreateBranchCall,
-  MunSspCall,
-  MunSsspCall,
   MunIstihalCall,
   MunIstihalMutabaqqCall,
   MunCommitCall,
   MunGitAddCall,
 } from "../types.ts";
 import { generateBranchName } from "./katib.ts";
-import { classifyNotification } from "./classifier.ts";
+import { mayyazaTanbih } from "./mumayyiz.ts";
 import type { MudirJalasat } from "./katib.ts";
 import type { Munadi } from "./munadi.ts";
 import * as git from "../git/operations.ts";
@@ -78,7 +76,7 @@ export class Munaffidh {
   #ntfy: NtfyClient;
   #sessionManager: MudirJalasat;
   #opencode: OpenCodeClient;
-  #munadi: Munadi | null = null;
+  #iksir: Munadi | null = null;
 
   #pollAbortController: AbortController | null = null;
 
@@ -95,8 +93,8 @@ export class Munaffidh {
   /**
    * Set Munadi (called after Munadi is created to avoid circular dep)
    */
-  wadaaMunadi(munadi: Munadi): void {
-    this.#munadi = munadi;
+  wadaaMunadi(iksir: Munadi): void {
+    this.#iksir = iksir;
   }
 
   /** Access config for quiet hours checks etc. */
@@ -178,7 +176,7 @@ export class Munaffidh {
    */
   /** Git-mutating tools that must be blocked during session switches */
   static readonly GIT_TOOLS = new Set([
-    "mun_create_branch", "mun_git_add", "mun_commit", "mun_git_push", "mun_ssp", "mun_sssp",
+    "mun_create_branch", "mun_git_add", "mun_commit", "mun_git_push", "mun_istihal", "mun_istihal_mutabaqq",
   ]);
 
   async #handleEvent(event: MunToolCall): Promise<void> {
@@ -249,17 +247,11 @@ export class Munaffidh {
         case "mun_git_push":
           result = await this.#handleGitPush();
           break;
-        case "mun_ssp":
-          result = await this.#handleSsp(event);
-          break;
-        case "mun_sssp":
-          result = await this.#handleSssp(event);
-          break;
         case "mun_istihal":
-          result = await this.#handleTransmute(event);
+          result = await this.#handleIstihal(event);
           break;
         case "mun_istihal_mutabaqq":
-          result = await this.#handleTransmuteStacked(event);
+          result = await this.#handleIstihalMutabaqq(event);
           break;
         default:
           result = `Unknown tool: ${(event as { tool: string }).tool}`;
@@ -521,7 +513,7 @@ PR is now being tracked by keepalive for merge detection.`;
    * Handle pm_check_branch_status
    */
   async #handleCheckBranchStatus(call: MunCheckBranchStatusCall): Promise<string> {
-    const defaultBranch = await this.#github.getDefaultBranch();
+    const defaultBranch = await this.#github.farAlAsasi();
     const comparison = await this.#github.compareBranches(defaultBranch, call.branch);
 
     if (!comparison) {
@@ -539,27 +531,27 @@ ${comparison.behind > 0 ? "⚠️ Branch is behind - consider rebasing before PR
 
   /**
    * Handle pm_notify
-   * Filters cry-baby notifications, routes worthy ones to mawdu al-Kimyawi.
+   * Filters khabath notifications, routes dhahab ones to mawdu al-Kimyawi.
    */
   async #handleNotify(call: MunNotifyCall): Promise<string> {
-    /** Step 1: Classify the notification */
-    const classification = await classifyNotification(this.#opencode, call.message);
+    /** Step 1: Mayyiz the tanbih */
+    const tamyiz = await mayyazaTanbih(this.#opencode, call.message);
 
-    if (!classification.worthy) {
-      await logger.info("tool-executor", "Ishara rejected as cry-baby", {
-        reason: classification.reason,
+    if (!tamyiz.dhahab) {
+      await logger.info("tool-executor", "Ishara rejected as khabath", {
+        reason: tamyiz.reason,
         messagePreview: call.message.slice(0, 100),
       });
 
-      return `REJECTED: ${classification.rejection}
+      return `REJECTED: ${tamyiz.rejection}
 
 Your message was not forwarded to al-Kimyawi. This appears to be within your autonomy.
 
-Reason: ${classification.reason}`;
+Reason: ${tamyiz.reason}`;
     }
 
     await logger.info("tool-executor", "Ishara approved", {
-      reason: classification.reason,
+      reason: tamyiz.reason,
       messagePreview: call.message.slice(0, 100),
     });
 
@@ -635,12 +627,12 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
    * Handle pm_yield - murshid voluntarily yields control
    */
   async #handleYield(call: MunYieldCall): Promise<string> {
-    if (!this.#munadi) {
+    if (!this.#iksir) {
       return "Error: Munadi not tahyiad.";
     }
 
     const yielderId = call.huwiyyatMurshid;
-    const activeEpicId = this.#munadi.getActiveIdentifier();
+    const activeEpicId = this.#iksir.hawiyyaFaila();
 
     if (yielderId !== activeEpicId) {
       await logger.warn("tool-executor", `Non-active murshid ${yielderId} tried to yield (active: ${activeEpicId})`);
@@ -665,7 +657,7 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
         reason: demand.reason,
       });
 
-      const switchResult = await this.#munadi.handleCallback("cli", `switch:${demand.huwiyat_murshid}`);
+      const switchResult = await this.#iksir.handleCallback("cli", `switch:${demand.huwiyat_murshid}`);
       if (switchResult.handled) {
         return `Yielded control. Switching to ${demand.huwiyat_murshid} (pending demand: ${demand.reason}).`;
       }
@@ -675,7 +667,7 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
       const murshidun = this.#sessionManager.wajadaJalasatMurshid();
       const suggested = murshidun.find((o) => o.identifier === call.suggestNext);
       if (suggested && suggested.status === "sakin") {
-        await this.#munadi.handleCallback("cli", `switch:${call.suggestNext}`);
+        await this.#iksir.handleCallback("cli", `switch:${call.suggestNext}`);
         return `Yielded control. Switching to suggested: ${call.suggestNext}.`;
       }
     }
@@ -693,7 +685,7 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
       return `Yielded control. ${idleSessions.length} idle session(s) available. Al-Kimyawi can /switch to one.`;
     }
 
-    this.#munadi.setActiveSession(null);
+    this.#iksir.setActiveSession(null);
 
     await this.#messenger.send("dispatch", `${yielderId} yielded (${call.reason}). No other sessions available — system idle.`);
 
@@ -704,7 +696,7 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
    * Handle pm_demand_control - murshid demands control back
    */
   async #handleDemandControl(call: MunDemandControlCall): Promise<string> {
-    if (!this.#munadi) {
+    if (!this.#iksir) {
       return "Error: Munadi not tahyiad.";
     }
 
@@ -715,7 +707,7 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
       return `Cannot demand control: unknown murshid ${demanderId}.`;
     }
 
-    const activeEpicId = this.#munadi.getActiveIdentifier();
+    const activeEpicId = this.#iksir.hawiyyaFaila();
 
     await logger.info("tool-executor", `Murshid ${demanderId} demands control`, {
       reason: call.reason,
@@ -724,7 +716,7 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
     });
 
     if (!activeEpicId) {
-      const result = await this.#munadi.handleCallback("cli", `switch:${demanderId}`);
+      const result = await this.#iksir.handleCallback("cli", `switch:${demanderId}`);
       if (result.handled) {
         return `Control granted immediately. You are now ACTIVE.\n\nReason: ${call.reason}`;
       }
@@ -738,7 +730,7 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
     /** Case 3: Current active is blocked/waiting — graceful snatch */
     const currentActive = this.#sessionManager.jalabMurshid(activeEpicId);
     if (currentActive && (currentActive.status === "masdud" || currentActive.status === "muntazir")) {
-      const result = await this.#munadi.handleCallback("cli", `switch:${demanderId}`);
+      const result = await this.#iksir.handleCallback("cli", `switch:${demanderId}`);
       if (result.handled) {
         return `Control granted (${activeEpicId} was ${currentActive.status}). You are now ACTIVE.\n\nReason: ${call.reason}`;
       }
@@ -772,24 +764,24 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
 
     await logger.info("tool-executor", `Creating branch: ${branchName}`);
 
-    if (await git.isDirty()) {
+    if (await git.huwaWasikh()) {
       return `Error: Working directory is dirty. Cannot create branch.
 
 Please commit or stash changes first.`;
     }
 
     /** Checkout default branch and pull */
-    const defaultBranch = await git.getDefaultBranch();
-    const checkoutMain = await git.checkout(defaultBranch);
-    if (!checkoutMain) {
-      return `Error: Failed to checkout ${defaultBranch} branch.`;
+    const defaultBranch = await git.farAlAsasi();
+    const intaqalaIlaMain = await git.intaqalaIla(defaultBranch);
+    if (!intaqalaIlaMain) {
+      return `Error: Failed to intaqalaIla ${defaultBranch} branch.`;
     }
 
     await git.pull(defaultBranch);
 
     /** Create new branch */
-    const checkoutNew = await git.checkout(branchName);
-    if (!checkoutNew) {
+    const intaqalaIlaNew = await git.intaqalaIla(branchName);
+    if (!intaqalaIlaNew) {
       return `Error: Failed to create branch ${branchName}.`;
     }
 
@@ -855,7 +847,7 @@ Message: ${call.message}`;
    * Handle pm_git_push - push current branch
    */
   async #handleGitPush(): Promise<string> {
-    const currentBranch = await git.getCurrentBranch();
+    const currentBranch = await git.farAlHali();
     if (!currentBranch) {
       return `Error: Could not determine current branch.`;
     }
@@ -872,191 +864,82 @@ Remote: origin`;
   }
 
   /**
-   * Handle pm_ssp - run SSP to create PR branch
+   * Handle mun_istihal - transmute ahjar from buwtaqa into jawhar
    */
-  async #handleSsp(call: MunSspCall): Promise<string> {
-    const prBranch = generateBranchName(call.huwiyyatWasfa, "chore");
-
-    await logger.info("tool-executor", `Running SSP for ${call.huwiyyatWasfa}`, {
-      files: call.files,
-      prBranch,
+  async #handleIstihal(call: MunIstihalCall): Promise<string> {
+    await logger.info("tool-executor", `Istihal for ${call.huwiyyatWasfa}`, {
+      ahjar: call.files.length,
     });
 
-    const result = await git.ssp(prBranch, call.files);
+    const jawharBranch = generateBranchName(call.huwiyyatWasfa, "chore");
 
-    if (!result.success) {
-      if (result.errorType === "conflicts") {
-        const conflictList = result.conflicts?.map(f => `  - ${f}`).join("\n") ?? "  (unknown)";
-        return `SSP failed: Merge conflicts with default branch.
-
-Conflicted files:
-${conflictList}
-
-To resolve:
-1. Resolve conflicts in the listed files on the epic branch
-2. Stage resolved files with pm_git_add
-3. Commit the merge with pm_commit
-4. Retry pm_ssp
-
-The merge has been aborted — your epic branch is clean.`;
-      }
-
-      return `SSP failed (${result.errorType}): ${result.error}`;
-    }
-
-    const defaultBranch = await git.getDefaultBranch();
-
-    return `SSP completed successfully.
-
-PR Branch: ${prBranch}
-Epic Branch: ${result.epicBranch}
-Files Sliced: ${result.filesSliced}
-
-The branch has been pushed to origin.
-
-Next: Create the PR with:
-  gh pr create --title "Your PR title (${call.huwiyyatWasfa})" --base ${defaultBranch} --head ${prBranch} --draft`;
-  }
-
-  /**
-   * Handle pm_sssp - run SSSP (Stacked) to create PR branch targeting parent slice
-   * 
-   * Same as SSP but the PR branch is based on a parent PR branch instead of
-   * the default branch. Still merges default branch into epic to surface conflicts.
-   */
-  async #handleSssp(call: MunSsspCall): Promise<string> {
-    const prBranch = generateBranchName(call.huwiyyatWasfa, "chore");
-    const parentBranch = generateBranchName(call.parentTicketId, "chore");
-
-    await logger.info("tool-executor", `Running SSSP for ${call.huwiyyatWasfa}`, {
-      files: call.files,
-      prBranch,
-      parentBranch,
-    });
-
-    const result = await git.ssp(prBranch, call.files, parentBranch);
-
-    if (!result.success) {
-      if (result.errorType === "conflicts") {
-        const conflictList = result.conflicts?.map(f => `  - ${f}`).join("\n") ?? "  (unknown)";
-        return `SSSP failed: Merge conflicts with default branch.
-
-Conflicted files:
-${conflictList}
-
-To resolve:
-1. Resolve conflicts in the listed files on the epic branch
-2. Stage resolved files with pm_git_add
-3. Commit the merge with pm_commit
-4. Retry pm_sssp`;
-      }
-
-      return `SSSP failed (${result.errorType}): ${result.error}`;
-    }
-
-    return `SSSP completed successfully.
-
-PR Branch: ${prBranch}
-Parent Branch: ${parentBranch}
-Epic Branch: ${result.epicBranch}
-Files Sliced: ${result.filesSliced}
-
-The branch has been pushed to origin.
-
-Next: Create the PR with:
-  gh pr create --title "Your PR title (${call.huwiyyatWasfa})" --base ${parentBranch} --head ${prBranch} --draft
-
-NOTE: CI may fail until parent PR merges. This is expected.
-When parent merges, use mun_ssp to re-push this slice onto ${await git.getDefaultBranch()}.`;
-  }
-
-  /**
-   * Handle mun_istihal - create artifact using file-plucking technique
-   */
-  async #handleTransmute(call: MunIstihalCall): Promise<string> {
-    await logger.info("tool-executor", `Crafting artifact for ${call.huwiyyatWasfa}`, {
-      files: call.files.length,
-    });
-
-    const prBranch = generateBranchName(call.huwiyyatWasfa, "chore");
-    
-    /** Use the new transmute utility from craft.ts */
-    const { transmute } = await import("../git/alchemy.ts");
-    const result = await transmute(prBranch, call.files);
+    const { istihal } = await import("../kimiya/istihal.ts");
+    const result = await istihal(jawharBranch, call.files);
 
     if (!result.success) {
       if (result.errorType === "conflicts" && result.conflicts) {
-        return `Transmutation failed: Runes conflict with codex inscriptions.
+        return `Istihal failed: Ahjar conflict with codex.
 
-Conflicted stones:
+Conflicted ahjar:
 ${result.conflicts.map((f) => `  - ${f}`).join("\n")}
 
-Options:
-1. Reconcile the conflicting runes in crucible, then retry mun_istihal
-2. Force transmutation (conflicted runes will need reconciliation during examination)
-
-To reconcile runes:
-  git status  # Identify conflicted stones
-  # Reconcile the conflicting incantations
-  git add <stones>
-  git commit`;
+To resolve:
+1. Reconcile the conflicting ahjar in buwtaqa, then retry mun_istihal
+2. git status to identify conflicts
+3. Resolve, git add, git commit`;
       }
-      return `Transmutation failed (${result.errorType}): ${result.error}`;
+      return `Istihal failed (${result.errorType}): ${result.error}`;
     }
 
-    return `Transmutation complete.
+    return `Istihal complete.
 
-Essence Vessel: ${prBranch}
-Crucible: ${result.crucibleBranch}
-Rune Stones Transmuted: ${result.materialsTransmuted}
+Jawhar: ${jawharBranch}
+Buwtaqa: ${result.buwtaqa}
+Ahjar transmuted: ${result.adadAhjar}
 
-The runes have crystallized into pure essence.
-
-Next: Use mun_fasl to transfer the essence for examination.`;
+Next: Use mun_fasl to create the risala.`;
   }
 
   /**
-   * Handle mun_istihal_mutabaqq - create stacked artifact
+   * Handle mun_istihal_mutabaqq - layered istihal targeting parent jawhar
    */
-  async #handleTransmuteStacked(call: MunIstihalMutabaqqCall): Promise<string> {
-    await logger.info("tool-executor", `Crafting stacked artifact for ${call.huwiyyatWasfa}`, {
+  async #handleIstihalMutabaqq(call: MunIstihalMutabaqqCall): Promise<string> {
+    await logger.info("tool-executor", `Layered istihal for ${call.huwiyyatWasfa}`, {
       parentTicketId: call.parentTicketId,
-      files: call.files.length,
+      ahjar: call.files.length,
     });
 
-    const prBranch = generateBranchName(call.huwiyyatWasfa, "chore");
-    const parentBranch = generateBranchName(call.parentTicketId, "chore");
-    
-    /** Use transmute with parent branch as base */
-    const { transmute } = await import("../git/alchemy.ts");
-    const result = await transmute(prBranch, call.files, parentBranch);
+    const jawharBranch = generateBranchName(call.huwiyyatWasfa, "chore");
+    const parentJawhar = generateBranchName(call.parentTicketId, "chore");
+
+    const { istihal } = await import("../kimiya/istihal.ts");
+    const result = await istihal(jawharBranch, call.files, parentJawhar);
 
     if (!result.success) {
       if (result.errorType === "conflicts" && result.conflicts) {
-        return `Stacked artifact crafting failed: Merge conflicts with default branch.
+        return `Layered istihal failed: Conflicts with codex.
 
-Conflicted files:
+Conflicted ahjar:
 ${result.conflicts.map((f) => `  - ${f}`).join("\n")}
 
-Resolve conflicts in crucible before retrying.`;
+Resolve conflicts in buwtaqa before retrying.`;
       }
-      return `Layered transmutation failed (${result.errorType}): ${result.error}`;
+      return `Layered istihal failed (${result.errorType}): ${result.error}`;
     }
 
-    return `Layered transmutation complete.
+    const codex = await git.farAlAsasi();
 
-Essence Branch: ${prBranch}
-Parent Essence: ${parentBranch}
-Crucible: ${result.crucibleBranch}
-Materials Transmuted: ${result.materialsTransmuted}
+    return `Layered istihal complete.
 
-The layered essence has been crystallized and pushed to origin.
+Jawhar: ${jawharBranch}
+Parent jawhar: ${parentJawhar}
+Buwtaqa: ${result.buwtaqa}
+Ahjar transmuted: ${result.adadAhjar}
 
-Next: Use mun_fasl to transfer for examination (will reference parent essence).
+Next: Use mun_fasl to create the risala (base on parent jawhar).
 
-NOTE: Examination may reveal instability until parent essence inscribes.
-This is expected for layered transmutations.
-When parent inscribes, use mun_istihal to re-transmute onto ${await git.getDefaultBranch()}.`;
+NOTE: Risala may be unstable until parent jawhar inscribes.
+When parent inscribes, use mun_istihal to re-transmute onto ${codex}.`;
   }
 }
 

@@ -7,7 +7,7 @@
  *
  * Key behaviors tested:
  * - Pure logic: isQuestionCallback, parseQuestionCallback, buildInlineKeyboard
- * - handleQuestionAsked: classification routing (worthy vs cry-baby)
+ * - handleQuestionAsked: tamyiz routing (dhahab vs khabath)
  * - handleQuestionCallback: answer submission + DB persistence
  * - Custom input flow: markAwaitingCustomInput + handlePotentialCustomAnswer
  * - loadState: rebuilds in-memory state from DB
@@ -214,12 +214,12 @@ Deno.test("handleQuestionAsked: empty questions -> rejects", async () => {
   });
 });
 
-Deno.test("handleQuestionAsked: CRY_BABY -> auto-answers + injects guidance", async () => {
+Deno.test("handleQuestionAsked: KHABATH -> auto-answers + injects guidance", async () => {
   await withTestDb(async () => {
     const oc = mockOpenCodeClient({
-      classify: async () => ({
+      mayyaza: async () => ({
         success: true,
-        response: '{"classification":"CRY_BABY","reason":"obvious","rejection":"Check docs.","autoAnswer":"Pattern B"}',
+        response: '{"tamyiz":"KHABATH","reason":"obvious","rejection":"Check docs.","autoAnswer":"Pattern B"}',
       }),
     });
 
@@ -243,12 +243,12 @@ Deno.test("handleQuestionAsked: CRY_BABY -> auto-answers + injects guidance", as
   });
 });
 
-Deno.test("handleQuestionAsked: WORTHY -> forwards to al-Kimyawi", async () => {
+Deno.test("handleQuestionAsked: DHAHAB -> forwards to al-Kimyawi", async () => {
   await withTestDb(async () => {
     const oc = mockOpenCodeClient({
-      classify: async () => ({
+      mayyaza: async () => ({
         success: true,
-        response: '{"classification":"WORTHY","reason":"architecture","rejection":null,"autoAnswer":null}',
+        response: '{"tamyiz":"DHAHAB","reason":"architecture","rejection":null,"autoAnswer":null}',
       }),
     });
 
@@ -293,9 +293,9 @@ Deno.test("handleQuestionAsked: WORTHY -> forwards to al-Kimyawi", async () => {
 Deno.test("handleQuestionCallback: answers question + marks in DB", async () => {
   await withTestDb(async () => {
     const oc = mockOpenCodeClient({
-      classify: async () => ({
+      mayyaza: async () => ({
         success: true,
-        response: '{"classification":"WORTHY","reason":"test","rejection":null,"autoAnswer":null}',
+        response: '{"tamyiz":"DHAHAB","reason":"test","rejection":null,"autoAnswer":null}',
       }),
     });
 
@@ -341,9 +341,9 @@ Deno.test("handleQuestionCallback: unknown question -> returns false", async () 
 Deno.test("markAwaitingCustomInput + handlePotentialCustomAnswer: end-to-end", async () => {
   await withTestDb(async () => {
     const oc = mockOpenCodeClient({
-      classify: async () => ({
+      mayyaza: async () => ({
         success: true,
-        response: '{"classification":"WORTHY","reason":"test","rejection":null,"autoAnswer":null}',
+        response: '{"tamyiz":"DHAHAB","reason":"test","rejection":null,"autoAnswer":null}',
       }),
     });
 

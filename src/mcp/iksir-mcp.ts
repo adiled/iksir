@@ -61,7 +61,7 @@ import {
 } from "../../db/db.ts";
 
 
-class IksirSijillAlat implements SijillAlat {
+class MunadiSijillAlat implements SijillAlat {
   #tools = new Map<string, { definition: TaarifAlatMcp; handler: MuaallijAlatMcp }>();
   #forwarder: (call: MunToolCall) => void;
 
@@ -73,11 +73,11 @@ class IksirSijillAlat implements SijillAlat {
     this.#tools.set(tool.name, { definition: tool, handler });
   }
 
-  getTools(): TaarifAlatMcp[] {
+  adawat(): TaarifAlatMcp[] {
     return Array.from(this.#tools.values()).map((t) => t.definition);
   }
 
-  getHandler(name: string): MuaallijAlatMcp | undefined {
+  muaallijLi(name: string): MuaallijAlatMcp | undefined {
     return this.#tools.get(name)?.handler;
   }
 
@@ -85,17 +85,17 @@ class IksirSijillAlat implements SijillAlat {
     return this.#tools.has(name);
   }
 
-  getForwarder(): (call: MunToolCall) => void {
+  muwassil(): (call: MunToolCall) => void {
     return this.#forwarder;
   }
 }
 
 
-export class IksirMunMcpServer {
-  #registry: IksirSijillAlat;
+export class MunadiMunMcpServer {
+  #registry: SijillAlat;
 
   constructor() {
-    this.#registry = new IksirSijillAlat((call) => this.#forwardToDaemon(call));
+    this.#registry = new MunadiSijillAlat((call) => this.#forwardToDaemon(call));
 
     this.#registerCoreTools();
     this.#registerAlchemicalTools();
@@ -142,7 +142,7 @@ export class IksirMunMcpServer {
           tools: {},
         },
         serverInfo: {
-          name: "munadi-pm-mcp",
+          name: "iksir-pm-mcp",
           version: "0.1.0",
         },
       },
@@ -157,7 +157,7 @@ export class IksirMunMcpServer {
       jsonrpc: "2.0",
       id: request.id,
       result: {
-        tools: this.#registry.getTools(),
+        tools: this.#registry.adawat(),
       },
     };
   }
@@ -170,7 +170,7 @@ export class IksirMunMcpServer {
     toolName: string,
     args: Record<string, unknown>,
   ): void {
-    const tools = this.#registry.getTools();
+    const tools = this.#registry.adawat();
     const tool = tools.find((t) => t.name === toolName);
     if (!tool) return;
 
@@ -199,7 +199,7 @@ export class IksirMunMcpServer {
     try {
       this.#tahaqqaqArgs(toolName, args);
 
-      const handler = this.#registry.getHandler(toolName);
+      const handler = this.#registry.muaallijLi(toolName);
       if (!handler) {
         return {
           jsonrpc: "2.0",
@@ -562,7 +562,7 @@ The diary is a shared knowledge pool across all murshidun. Use it to:
               type: "string",
               description: "Your murshid ID",
             },
-            filterOrchestrator: {
+            filterMurshid: {
               type: "string",
               description: "Filter by a specific murshid ID (omit for collective pool)",
             },
@@ -674,7 +674,7 @@ If another murshid is working, Al-Kimyawi will be asked to approve the switch.`,
 The daemon will:
 1. Ensure main is checked out and clean
 2. Pull latest main
-3. Create and checkout the branch
+3. Create and intaqalaIla the branch
 4. Push to origin with -u
 
 Branch naming:
@@ -786,7 +786,7 @@ You should only call this once per murshid, at the start.`,
           "Query the codebase index for symbol locations, dependencies, impact analysis, and search. " +
           "Use this BEFORE grepping or globbing — it's faster and gives structured results. " +
           "Examples: 'where is MudirJalasat', 'what depends on types.ts', 'impact of changing TasmimIksir', " +
-          "'exports of classifier.ts', 'files related to auth'.",
+          "'exports of mumayyiz.ts', 'files related to auth'.",
         inputSchema: {
           type: "object",
           properties: {
@@ -1057,7 +1057,7 @@ Relations control execution order: blocked tickets wait for blockers to complete
       if (status) {
         localContext = `
 
-Local Munadi Context (from diary):
+Local Iksir Context (from diary):
 - Implementation Status: ${status.status}
 ${status.huwiyat_murshid ? `- Murshid: ${status.huwiyat_murshid}` : ""}
 ${status.summary ? `- Summary: ${status.summary}` : ""}`;
@@ -1199,7 +1199,7 @@ This decision is now part of the persistent record.`;
     const call: MunReadDiaryCall = {
       tool: "mun_read_diary",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
-      filterOrchestrator: args.filterOrchestrator as string | undefined,
+      filterMurshid: args.filterMurshid as string | undefined,
       type: args.type as MunReadDiaryCall["type"],
       search: args.search as string | undefined,
       limit: args.limit as number | undefined,
@@ -1207,7 +1207,7 @@ This decision is now part of the persistent record.`;
     };
 
     const decisions = jalabaQararatSijill({
-      huwiyyatMurshid: call.filterOrchestrator,
+      huwiyyatMurshid: call.filterMurshid,
       type: call.type,
       search: call.search,
       limit: call.limit,
@@ -1216,7 +1216,7 @@ This decision is now part of the persistent record.`;
 
     if (decisions.length === 0) {
       const filters = [
-        call.filterOrchestrator && `murshid=${call.filterOrchestrator}`,
+        call.filterMurshid && `murshid=${call.filterMurshid}`,
         call.type && `type=${call.type}`,
         call.search && `search="${call.search}"`,
         call.since && `since=${call.since}`,

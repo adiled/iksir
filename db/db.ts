@@ -1,5 +1,5 @@
 /**
- * Munadi State Database (SQLite)
+ * Iksir State Database (SQLite)
  *
  * Centralized state persistence using SQLite with WAL mode.
  *
@@ -22,7 +22,7 @@ import { logger } from "../src/logging/logger.ts";
 
 
 function getStateDir(): string {
-  return Deno.env.get("MUNADI_STATE_DIR") ??
+  return Deno.env.get("IKSIR_STATE_DIR") ??
     join(Deno.env.get("XDG_DATA_HOME") ?? join(Deno.env.get("HOME") ?? "/root", ".local", "share"), "iksir");
 }
 

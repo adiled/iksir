@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { loadConfig } from "./config.ts";
+import { hammalaAlTasmim } from "./config.ts";
 import { join } from "jsr:@std/path";
 import { 
   TEST_OPENCODE_URL, 
@@ -11,8 +11,8 @@ import {
 
 /** Env vars we might set during tests — saved/istarjaad around each test */
 const ENV_KEYS = [
-  "MUNADI_CONFIG_DIR",
-  "MUNADI_OPENCODE_SERVER",
+  "IKSIR_CONFIG_DIR",
+  "IKSIR_OPENCODE_SERVER",
   "LINEAR_API_KEY",
   "TELEGRAM_BOT_TOKEN",
   "TELEGRAM_CHAT_ID",
@@ -25,9 +25,9 @@ const ENV_KEYS = [
 async function withTestConfig(
   jsonContent: string | null,
   envOverrides: Record<string, string>,
-  fn: (config: Awaited<ReturnType<typeof loadConfig>>) => void | Promise<void>,
+  fn: (config: Awaited<ReturnType<typeof hammalaAlTasmim>>) => void | Promise<void>,
 ): Promise<void> {
-  const tempDir = await Deno.makeTempDir({ prefix: "munadi-config-test-" });
+  const tempDir = await Deno.makeTempDir({ prefix: "iksir-config-test-" });
 
   /** Save existing env vars */
   const saved: Record<string, string | undefined> = {};
@@ -36,7 +36,7 @@ async function withTestConfig(
   }
 
   try {
-    Deno.env.set("MUNADI_CONFIG_DIR", tempDir);
+    Deno.env.set("IKSIR_CONFIG_DIR", tempDir);
 
     if (jsonContent !== null) {
       await Deno.writeTextFile(join(tempDir, "iksir.json"), jsonContent);
@@ -46,7 +46,7 @@ async function withTestConfig(
       Deno.env.set(key, value);
     }
 
-    const config = await loadConfig();
+    const config = await hammalaAlTasmim();
     await fn(config);
   } finally {
     for (const key of ENV_KEYS) {
@@ -98,8 +98,8 @@ Deno.test("config: loads values from JSON", async () => {
 });
 
 
-Deno.test("config: MUNADI_OPENCODE_SERVER env override", async () => {
-  await withTestConfig(null, { MUNADI_OPENCODE_SERVER: TEST_OPENCODE_URL }, (config) => {
+Deno.test("config: IKSIR_OPENCODE_SERVER env override", async () => {
+  await withTestConfig(null, { IKSIR_OPENCODE_SERVER: TEST_OPENCODE_URL }, (config) => {
     assertEquals(config.opencode.server, TEST_OPENCODE_URL);
   });
 });
@@ -134,7 +134,7 @@ Deno.test("config: env overrides take precedence over JSON", async () => {
   const json = JSON.stringify({
     opencode: { server: TEST_OPENCODE_URL }
   });
-  await withTestConfig(json, { MUNADI_OPENCODE_SERVER: TEST_OPENCODE_URL_ALT }, (config) => {
+  await withTestConfig(json, { IKSIR_OPENCODE_SERVER: TEST_OPENCODE_URL_ALT }, (config) => {
     assertEquals(config.opencode.server, TEST_OPENCODE_URL_ALT);
   });
 });

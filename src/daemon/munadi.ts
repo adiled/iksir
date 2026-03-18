@@ -264,7 +264,7 @@ function parseBasicIntent(text: string, ticketPattern: RegExp): Intent {
     };
   }
 
-  /** Classify as query or operation */
+  /** Mayyiz as query or operation */
   let type: IntentType = "query";
   let confidence = 0.5;
 
@@ -843,7 +843,7 @@ Work on the parent instead?`;
    * Common murshid creation and activation.
    * Handles:
    * 1. Session creation via session manager
-   * 2. Formal switchover (WIP commit, branch checkout, notifications)
+   * 2. Formal switchover (WIP commit, branch intaqalaIla, notifications)
    * 3. Init message for new sessions
    * 4. Resumption message for existing sessions
    *
@@ -868,7 +868,7 @@ Work on the parent instead?`;
 
     const { session, isNew, wasResumed, previousActive } = result;
 
-    /** Step 2: Formal switchover (handles branch checkout, WIP commit, notifications) */
+    /** Step 2: Formal switchover (handles branch intaqalaIla, WIP commit, notifications) */
     const switchResult = await this.#naffadhaTahwilMurshid(
       identifier,
       session,
@@ -929,7 +929,7 @@ Work on the parent instead?`;
 
   /**
    * Execute the formal switchover for an murshid.
-   * Handles WIP commit, branch checkout, and state updates.
+   * Handles WIP commit, branch intaqalaIla, and state updates.
    * Used for both new and existing murshidun.
    */
   async #naffadhaTahwilMurshid(
@@ -959,10 +959,10 @@ Work on the parent instead?`;
     }
 
     /** Step 2: WIP commit if dirty */
-    const isDirty = await git.isDirty();
-    if (isDirty && previousActive) {
+    const huwaWasikh = await git.huwaWasikh();
+    if (huwaWasikh && previousActive) {
       await logger.info("dispatcher", `Working directory dirty, creating WIP commit for ${previousActive}`);
-      wipCommitted = await git.createWipCommit(previousActive);
+      wipCommitted = await git.khalaqaIltizamMuaqqat(previousActive);
     }
 
     if (previousSession) {
@@ -971,14 +971,14 @@ Work on the parent instead?`;
     }
 
     /** Step 4: Checkout target branch (creates if doesn't exist for new murshidun) */
-    const checkoutSuccess = await git.checkout(session.branch);
-    if (!checkoutSuccess) {
+    const intaqalaIlaSuccess = await git.intaqalaIla(session.branch);
+    if (!intaqalaIlaSuccess) {
       if (previousSession) {
         await this.#sessionManager.jaddadaḤalatMurshid(previousActive!, "fail");
       }
       return {
         handled: true,
-        error: `Failed to checkout branch ${session.branch}. Switch aborted.`,
+        error: `Failed to intaqalaIla branch ${session.branch}. Switch aborted.`,
       };
     }
 
@@ -1064,7 +1064,7 @@ Use \`pm_read_ticket\` to fetch full details and begin planning.`;
   /**
    * Public entry point for activating an murshid from a ticket URL.
    * Routes through the full switch protocol (#khalaqaWaFailaMurshid)
-   * so WIP commit, branch checkout, and interrupts all happen correctly.
+   * so WIP commit, branch intaqalaIla, and interrupts all happen correctly.
    */
   async activateForTicketUrl(
     identifier: string,
@@ -1222,13 +1222,13 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
     void logger.info("dispatcher", `Active session set to ${identifier ?? "none"}`);
   }
 
-  getActiveIdentifier(): string | null {
+  hawiyyaFaila(): string | null {
     return this.#activeIdentifier;
   }
 
   /**
    * Restore active murshid on daemon startup.
-   * Uses the centralized #naffadhaTahwilMurshid to ensure branch checkout,
+   * Uses the centralized #naffadhaTahwilMurshid to ensure branch intaqalaIla,
    * notification, and all other switchover logic happens.
    */
   async istarjaaActiveOnStartup(): Promise<void> {
@@ -1252,7 +1252,7 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
   /**
    * Manual switch command handler. Validates target exists, delegates to
    * #naffadhaTahwilMurshid for the full switch protocol (interrupt,
-   * WIP commit, branch checkout, activation, queue drain, notification).
+   * WIP commit, branch intaqalaIla, activation, queue drain, notification).
    */
   async #switchActiveSession(epicId: string, _source: InboundSource): Promise<DispatchResult> {
     const tarjalabJalsa = this.#sessionManager.jalabMurshid(epicId);

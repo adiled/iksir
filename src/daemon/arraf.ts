@@ -242,7 +242,7 @@ export class Arraf {
     const result: NiyyaMuhallala = {
       status: "resolved",
       entity: {
-        type: this.#classifyTicketType(issue),
+        type: this.#mayyazaNawWasfa(issue),
         id: issue.id,
         identifier: issue.identifier,
         title: issue.title,
@@ -268,9 +268,9 @@ export class Arraf {
   }
 
   /**
-   * Classify whether a ticket is an epic or regular ticket
+   * Mayyiz whether a ticket is an epic or regular ticket
    */
-  #classifyTicketType(issue: WasfaMutaba): NawKiyan {
+  #mayyazaNawWasfa(issue: WasfaMutaba): NawKiyan {
     /** Has "epic" label */
     const labels = issue.labels ?? [];
     if (labels.some((l) => l.toLowerCase() === "epic")) {
@@ -477,7 +477,7 @@ ${Arraf.INTENT_SYSTEM_PROMPT}`;
       }, 15) ?? [];
 
       for (const issue of filteredIssues) {
-        const type = this.#classifyTicketType(issue);
+        const type = this.#mayyazaNawWasfa(issue);
         candidates.push({
           type,
           id: issue.id,
@@ -491,7 +491,7 @@ ${Arraf.INTENT_SYSTEM_PROMPT}`;
       /** Text-based search (original behavior) */
       const issues = await this.#issueTracker.searchIssues(searchQuery, 10);
       for (const issue of issues) {
-        const type = this.#classifyTicketType(issue);
+        const type = this.#mayyazaNawWasfa(issue);
         candidates.push({
           type,
           id: issue.id,

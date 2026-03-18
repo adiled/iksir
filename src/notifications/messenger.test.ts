@@ -6,7 +6,7 @@
  * - Real temp DB (for channel persistence)
  *
  * Key behaviors tested:
- * - Channel routing: dispatch, al-Kimyawi, orchestrator (with/without topic)
+ * - Channel routing: dispatch, al-Kimyawi, murshid (with/without topic)
  * - Channel creation, persistence, and cache behavior
  * - Reverse lookup via hallJalsaBilQanat
  */
@@ -43,22 +43,22 @@ Deno.test("send: kimyawi channel -> arsalaRisala", async () => {
   });
 });
 
-Deno.test("send: orchestrator with known topic -> arsalaIlaMurshidTopic", async () => {
+Deno.test("send: murshid with known topic -> arsalaIlaMurshidTopic", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
 
     haddathaAwAdkhalaQanat("TEAM-123", "telegram", "999");
 
-    await m.send({ murshid: "TEAM-123" }, "hello orchestrator");
+    await m.send({ murshid: "TEAM-123" }, "hello murshid");
 
     assertEquals(tc._calls.arsalaIlaMurshidTopic.length, 1);
     assertEquals(tc._calls.arsalaIlaMurshidTopic[0].topicId, 999);
-    assertEquals(tc._calls.arsalaIlaMurshidTopic[0].text, "hello orchestrator");
+    assertEquals(tc._calls.arsalaIlaMurshidTopic[0].text, "hello murshid");
   });
 });
 
-Deno.test("send: orchestrator with no topic -> fallback to dispatch with prefix", async () => {
+Deno.test("send: murshid with no topic -> fallback to dispatch with prefix", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
@@ -110,7 +110,7 @@ Deno.test("arsalaMunassaq: al-Kimyawi -> arsalaRisala with Markdown", async () =
   });
 });
 
-Deno.test("arsalaMunassaq: orchestrator with topic -> Markdown", async () => {
+Deno.test("arsalaMunassaq: murshid with topic -> Markdown", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
@@ -124,7 +124,7 @@ Deno.test("arsalaMunassaq: orchestrator with topic -> Markdown", async () => {
   });
 });
 
-Deno.test("arsalaMunassaq: orchestrator fallback -> dispatch with prefix + Markdown", async () => {
+Deno.test("arsalaMunassaq: murshid fallback -> dispatch with prefix + Markdown", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);

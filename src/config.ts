@@ -1,5 +1,5 @@
 /**
- * Munadi Configuration
+ * Iksir Configuration
  *
  * Loads and tahaqqaqs configuration from JSON file and environment variables.
  * Schema: iksir.schema.json
@@ -15,8 +15,8 @@ const DEFAULT_PR_POLL_INTERVAL_MS = 60000;
 
 const CONFIG_FILENAME = "iksir.json";
 
-function getConfigDir(): string {
-  const envDir = Deno.env.get("MUNADI_CONFIG_DIR");
+function masarAlTasmim(): string {
+  const envDir = Deno.env.get("IKSIR_CONFIG_DIR");
   if (envDir) return envDir;
 
   const home = Deno.env.get("HOME") ?? Deno.env.get("USERPROFILE") ?? "/root";
@@ -52,7 +52,7 @@ function resolveEnvVarsDeep(obj: unknown): unknown {
   return obj;
 }
 
-function getDefaultConfig(): TasmimIksir {
+function tasmimAsasi(): TasmimIksir {
   return {
     polling: {
       defaultIntervalMs: DEFAULT_POLL_INTERVAL_MS,
@@ -160,11 +160,11 @@ function tahaqqaqConfig(config: TasmimIksir): string[] {
   return errors;
 }
 
-export async function loadConfig(): Promise<TasmimIksir> {
-  const configDir = getConfigDir();
+export async function hammalaAlTasmim(): Promise<TasmimIksir> {
+  const configDir = masarAlTasmim();
   const configPath = join(configDir, CONFIG_FILENAME);
 
-  let config = getDefaultConfig();
+  let config = tasmimAsasi();
 
   if (await exists(configPath)) {
     try {
@@ -186,8 +186,8 @@ export async function loadConfig(): Promise<TasmimIksir> {
   /** Override with environment variables */
   const envOverrides: Partial<TasmimIksir> = {};
 
-  if (Deno.env.get("MUNADI_OPENCODE_SERVER")) {
-    envOverrides.opencode = { server: Deno.env.get("MUNADI_OPENCODE_SERVER")! };
+  if (Deno.env.get("IKSIR_OPENCODE_SERVER")) {
+    envOverrides.opencode = { server: Deno.env.get("IKSIR_OPENCODE_SERVER")! };
   }
   if (Deno.env.get("LINEAR_API_KEY")) {
     envOverrides.issueTracker = { ...config.issueTracker, apiKey: Deno.env.get("LINEAR_API_KEY")! };
@@ -270,6 +270,6 @@ export async function loadConfig(): Promise<TasmimIksir> {
   return config;
 }
 
-export function getConfigPath(): string {
-  return join(getConfigDir(), CONFIG_FILENAME);
+export function masarMilafAlTasmim(): string {
+  return join(masarAlTasmim(), CONFIG_FILENAME);
 }

@@ -1,17 +1,17 @@
 /**
- * Munadi Compaction Plugin for OpenCode
+ * Iksīr Compaction Plugin for OpenCode
  *
- * Hooks into OpenCode's session compaction to inject Munadi-specific context:
- * - Diary decisions (architectural choices, PR strategy, blockers)
- * - Murshid identity (ID, branch, epic info)
- * - Preservation rules (what the compaction summary MUST retain)
+ * Hooks into OpenCode's session compaction to inject Iksīr-specific context:
+ * - Mudawwana qarārāt
+ * - Murshid hawiyya
+ * - Qawā'id al-hifẓ
  *
  * Without this plugin, compaction uses a generic summarizer that gradually
- * loses Munadi-critical context over 5-6 compaction cycles. With it, diary
+ * loses Iksīr-critical context over 5-6 compaction cycles. With it, diary
  * entries and murshid identity are baked into every compaction summary.
  *
- * Runs inside OpenCode's Bun process. Reads Munadi's SQLite DB directly
- * (read-only) via bun:sqlite.
+ * Runs inside OpenCode's Bun process. Reads Iksīr's SQLite DB directly
+ * via bun:sqlite.
  */
 
 import type { Plugin } from "@opencode-ai/plugin"
@@ -31,17 +31,17 @@ interface SessionRow {
   status: string | null
 }
 
-const MUNADI_DB_PATH =
-  process.env.MUNADI_DB_PATH ??
+const IKSIR_DB_PATH =
+  process.env.IKSIR_DB_PATH ??
   `${process.env.HOME ?? "/root"}/.config/iksir/state/iksir.sqlite`
 
 /**
  * Resolve murshid identifier from an OpenCode session ID.
  *
- * Munadi's sessions table uses the OpenCode session ID as its primary key (`id`).
- * Returns session metadata including the murshid identifier (Linear ticket ID).
+ * Iksīr's sessions table uses the OpenCode session ID as its primary key (`id`).
+ * Returns session metadata including the murshid identifier.
  */
-function resolveMurshid(
+function hallaHuwiyyatMurshid(
   db: Database,
   sessionId: string,
 ): SessionRow | null {
@@ -61,15 +61,15 @@ function resolveMurshid(
 }
 
 /**
- * Fetch diary decisions for an murshid, most recent first.
+ * Fetch diary decisions for a murshid, most recent first.
  */
-function getDiaryEntries(db: Database, huwiyyatMurshid: string): DiaryRow[] {
+function qaraaQararat(db: Database, huwiyyatMurshid: string): DiaryRow[] {
   try {
     return db
       .prepare(
         `SELECT type, decision, reasoning, created_at
          FROM diary_decisions
-         WHERE huwiyat_murshid = ?
+         WHERE huwiyyat_murshid = ?
          ORDER BY created_at DESC
          LIMIT 30`,
       )
@@ -82,11 +82,11 @@ function getDiaryEntries(db: Database, huwiyyatMurshid: string): DiaryRow[] {
 /**
  * Format diary entries into a readable block for the compaction prompt.
  */
-function formatDiary(entries: DiaryRow[]): string {
+function rattabaMudawwana(entries: DiaryRow[]): string {
   return entries
     .map(
       (e) =>
-        `[${e.type.toUpperCase()}] ${e.created_at}\n  Decision: ${e.decision}\n  Reasoning: ${e.reasoning}`,
+        `[${e.type.toUpperCase()}] ${e.created_at}\n  Qarar: ${e.decision}\n  Sabab: ${e.reasoning}`,
     )
     .join("\n\n")
 }
@@ -96,7 +96,7 @@ export const iksirCompaction: Plugin = async (_ctx) => {
     "experimental.session.compacting": async (input, output) => {
       let db: Database | null = null
       try {
-        db = new Database(MUNADI_DB_PATH, { readonly: true })
+        db = new Database(IKSIR_DB_PATH, { readonly: true })
       } catch {
         output.context.push(STATIC_RULES)
         return
@@ -104,36 +104,36 @@ export const iksirCompaction: Plugin = async (_ctx) => {
 
       try {
         /** Resolve which murshid owns this session */
-        const session = resolveMurshid(db, input.sessionID)
+        const session = hallaHuwiyyatMurshid(db, input.sessionID)
         if (!session) {
           db.close()
           return
         }
 
-        const orchId = session.identifier
-        const entries = getDiaryEntries(db, orchId)
+        const murshidId = session.identifier
+        const entries = qaraaQararat(db, murshidId)
         db.close()
 
         /** Build the context injection */
         const parts: string[] = []
 
-        parts.push(`## Munadi Murshid Context
+        parts.push(`## Iksīr Murshid Context
 
-This is a Munadi murshid session managing a Linear epic.
+This is an Iksīr murshid session managing a kitāb.
 
-- **Murshid ID**: ${orchId}${session.title ? `\n- **Epic Title**: ${session.title}` : ""}${session.branch ? `\n- **Branch**: ${session.branch}` : ""}${session.status ? `\n- **Status**: ${session.status}` : ""}`)
+- **Murshid ID**: ${murshidId}${session.title ? `\n- **Kitāb Title**: ${session.title}` : ""}${session.branch ? `\n- **Branch**: ${session.branch}` : ""}${session.status ? `\n- **Hāla**: ${session.status}` : ""}`)
 
         if (entries.length > 0) {
-          parts.push(`### Diary Decisions (CRITICAL — preserve in summary)
+          parts.push(`### Mudawwana Qarārāt
 
-These decisions represent key architectural, strategic, and PR choices made during
-this epic. They CANNOT be reconstructed from code alone. The compaction summary
+These qarārāt represent key architectural, strategic, and risāla choices made during
+this kitāb. They CANNOT be reconstructed from runūz alone. The compaction summary
 MUST include these or they will be permanently lost:
 
-${formatDiary(entries)}`)
+${rattabaMudawwana(entries)}`)
         }
 
-        parts.push(preservationRules(orchId))
+        parts.push(qawaidHifz(murshidId))
 
         output.context.push(parts.join("\n\n"))
       } catch {
@@ -144,29 +144,29 @@ ${formatDiary(entries)}`)
   }
 }
 
-function preservationRules(orchId: string): string {
-  return `### Preservation Rules
+function qawaidHifz(murshidId: string): string {
+  return `### Qawā'id al-Hifẓ
 
 When constructing the compaction summary, you MUST:
 
-1. Include the murshid ID (**${orchId}**) — needed for mun_reply tool calls
-2. Include which Linear tickets are done, in-progress, or blocked
-3. Include SSP/SSSP state — which files have been sliced to PR branches vs still on epic branch
-4. Include the current branch name and its relationship to the epic
-5. Include all blocking decisions and their rationale
-6. Include the instruction: "Use mun_reply to respond to Munadi — direct text output is invisible"
-7. Include the instruction: "Call mun_read_diary after compaction to reload full decision history"
-8. Preserve any constraints or architectural decisions from the diary entries above`
+1. Include the murshid ID (**${murshidId}**)
+2. Include which waṣfāt are done, in-progress, or masdūda
+3. Include istihal state - which ahjar have been transmuted into jawahir vs still in the buwtaqa
+4. Include the current buwtaqa branch and its relationship to the kitāb
+5. Include all blocking qarārāt and their sabab
+6. Include the instruction: "Use mun_radd to respond to Iksīr"
+7. Include the instruction: "Call mun_qaraa_mudawwana after compaction to reload full qarar history"
+8. Preserve any constraints or architectural qarārāt from the mudawwana entries above`
 }
 
-const STATIC_RULES = `## Munadi Murshid — Compaction Rules
+const STATIC_RULES = `## Iksīr Murshid — Compaction Rules
 
-This is a Munadi murshid session. When summarizing, ALWAYS preserve:
+This is an Iksīr murshid session. When summarizing, ALWAYS preserve:
 
-1. the murshid ID (format: TICKET-1234) — critical for mun_reply
-2. Which Linear tickets are done, in-progress, or blocked
-3. SSP/SSSP state — which files have been sliced to PR branches
-4. Branch name and epic relationship
-5. Key architectural decisions and WHY they were made
-6. The instruction: "Use mun_reply to respond — text output is invisible to Munadi"
-7. The instruction: "Call mun_read_diary to reload decision history after compaction"`
+1. The murshid ID 
+2. Which waṣfāt are done, in-progress, or masdūda
+3. Istihal state - ahjar transmuted into jawahir vs still in buwtaqa
+4. Buwtaqa branch and kitāb relationship
+5. Key architectural qarārāt and WHY they were made (sabab)
+6. The instruction: "Use mun_radd to respond — text output is invisible to Iksīr"
+7. The instruction: "Call mun_qaraa_mudawwana to reload qarar history after compaction"`

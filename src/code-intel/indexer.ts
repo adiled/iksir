@@ -25,8 +25,8 @@ const IGNORED_PATTERNS = [
 ];
 
 function getIndexPath(): string {
-  const dataDir = Deno.env.get("MUNADI_STATE_DIR") ??
-    join(Deno.env.get("XDG_DATA_HOME") ?? join(Deno.env.get("HOME") ?? ".", ".local", "share"), "munadi");
+  const dataDir = Deno.env.get("IKSIR_STATE_DIR") ??
+    join(Deno.env.get("XDG_DATA_HOME") ?? join(Deno.env.get("HOME") ?? ".", ".local", "share"), "iksir");
   return join(dataDir, "code-intel.json");
 }
 

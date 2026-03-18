@@ -1,34 +1,34 @@
 /**
- * Munadi CLI
+ * Iksir CLI
  *
- * Single entry point for all Munadi operations.
+ * Single entry point for all Iksir operations.
  *
  * Usage:
  *   iksir start              Start all services
  *   iksir start mcp          Start just the MCP service
  *   iksir stop               Stop all services
- *   munadi restart             Restart all services
- *   munadi status              Show service and session status
- *   munadi check               Validate config, type check, run tests
- *   munadi sync                Sync prompts and plugins to agent runtime
- *   munadi config              Print resolved configuration
- *   munadi help                Show this help
+ *   iksir restart             Restart all services
+ *   iksir status              Show service and session status
+ *   iksir check               Validate config, type check, run tests
+ *   iksir sync                Sync prompts and plugins to agent runtime
+ *   iksir config              Print resolved configuration
+ *   iksir help                Show this help
  */
 
 import { VERSION } from "./main.ts";
-import { loadConfig, getConfigPath } from "./config.ts";
+import { hammalaAlTasmim, masarMilafAlTasmim } from "./config.ts";
 import { runInit } from "./init.ts";
 import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, jalabaKullJalasat, jalabaAseilaGhairMujaba } from "../db/db.ts";
 import { execCommand } from "./utils/exec.ts";
 import { join } from "jsr:@std/path";
 
-const SERVICES = ["munadi-mcp", "munadi-agent", "munadi"] as const;
+const SERVICES = ["iksir-mcp", "iksir-agent", "iksir"] as const;
 
 const HELP = `
-munadi v${VERSION} - Autonomous Agent Orchestration
+iksir v${VERSION} - Autonomous Agent Tansiq
 
 Usage:
-  munadi <command> [target] [options]
+  iksir <command> [target] [options]
 
 Setup:
   init               Interactive onboarding wizard
@@ -67,9 +67,9 @@ function resolveTarget(arg?: string): ServiceTarget {
 
 function serviceName(target: ServiceTarget): string[] {
   switch (target) {
-    case "mcp": return ["munadi-mcp"];
-    case "agent": return ["munadi-agent"];
-    case "daemon": return ["munadi"];
+    case "mcp": return ["iksir-mcp"];
+    case "agent": return ["iksir-agent"];
+    case "daemon": return ["iksir"];
     case "all": return [...SERVICES];
   }
 }
@@ -137,13 +137,13 @@ async function cmdStatus(): Promise<void> {
 
 
 async function cmdCheck(): Promise<void> {
-  const repoPath = Deno.env.get("MUNADI_REPO_PATH") ?? ".";
+  const repoPath = Deno.env.get("IKSIR_REPO_PATH") ?? ".";
   let failures = 0;
 
   console.log("Checking config...");
   try {
-    const config = await loadConfig();
-    console.log(`  \x1b[32m✓\x1b[0m Config loaded from ${getConfigPath()}`);
+    const config = await hammalaAlTasmim();
+    console.log(`  \x1b[32m✓\x1b[0m Config loaded from ${masarMilafAlTasmim()}`);
     if (config.issueTracker.apiKey) console.log("  \x1b[32m✓\x1b[0m Issue tracker API key set");
     else console.log("  \x1b[33m!\x1b[0m Issue tracker API key not set");
     if (config.notifications.telegram.botToken) console.log("  \x1b[32m✓\x1b[0m Telegram bot token set");
@@ -183,7 +183,7 @@ async function cmdCheck(): Promise<void> {
 
 
 async function cmdSync(): Promise<void> {
-  const repoPath = Deno.env.get("MUNADI_REPO_PATH") ?? Deno.cwd();
+  const repoPath = Deno.env.get("IKSIR_REPO_PATH") ?? Deno.cwd();
   const home = Deno.env.get("HOME") ?? ".";
   const agentDir = join(home, ".config", "opencode", "agent");
   const pluginDir = join(home, ".config", "opencode", "plugins");
@@ -195,7 +195,7 @@ async function cmdSync(): Promise<void> {
   const promptsDir = join(repoPath, "prompts");
   try {
     for await (const entry of Deno.readDir(promptsDir)) {
-      if (entry.isFile && entry.name.startsWith("munadi-") && entry.name.endsWith(".md")) {
+      if (entry.isFile && entry.name.startsWith("iksir-") && entry.name.endsWith(".md")) {
         await Deno.copyFile(join(promptsDir, entry.name), join(agentDir, entry.name));
         console.log(`  synced prompt: ${entry.name}`);
         synced++;
@@ -222,7 +222,7 @@ async function cmdSync(): Promise<void> {
 
 
 async function cmdUpdate(): Promise<void> {
-  const repoPath = Deno.env.get("MUNADI_REPO_PATH") ?? Deno.cwd();
+  const repoPath = Deno.env.get("IKSIR_REPO_PATH") ?? Deno.cwd();
 
   console.log("Pulling latest...");
   const pull = await execCommand("git", ["pull"], { cwd: repoPath });
@@ -253,9 +253,9 @@ async function cmdUpdate(): Promise<void> {
 
 
 async function cmdConfig(): Promise<void> {
-  const config = await loadConfig();
+  const config = await hammalaAlTasmim();
   if (Deno.args.includes("--path")) {
-    console.log(getConfigPath());
+    console.log(masarMilafAlTasmim());
     return;
   }
   console.log(JSON.stringify(config, null, 2));
@@ -296,7 +296,7 @@ switch (command) {
   case "version":
   case "--version":
   case "-v":
-    console.log(`munadi v${VERSION}`);
+    console.log(`iksir v${VERSION}`);
     break;
   default:
     console.error(`Unknown command: ${command}`);

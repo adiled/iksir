@@ -546,7 +546,7 @@ Awaiting direction from al-Kimyawi...`
 This is a standalone task (chore), not an epic. No sub-tickets needed.
 
 Please use \`pm_read_ticket\` to fetch the full details, then implement directly.
-When done, use \`pm_ssp\` to create a PR.
+When done, use \`mun_istihal\` to create a PR.
 
 Awaiting direction from al-Kimyawi...`;
 

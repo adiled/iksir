@@ -26,18 +26,18 @@ Question: {{question}}
 Options:
 {{options}}
 
-Classify this question:
-- WORTHY: Genuinely needs the hukm al-Kimyawi (business impact, architecture boundaries, political timing)
-- CRY_BABY: Can be decided autonomously using specs, docs, precedents, or common sense
+Mayyiz this question:
+- DHAHAB: Genuinely needs the hukm al-Kimyawi (business impact, architecture boundaries, political timing)
+- KHABATH: Khabath - can be decided autonomously using specs, docs, precedents, or common sense
 
-If CRY_BABY:
+If KHABATH:
 - Provide a terse rejection (1-2 sentences) with guidance
 - Specify which option to auto-select (use exact label text, or "pick first" or "pick recommended")
 
 Respond ONLY with valid JSON (no markdown, no explanation):
 {
-  "classification": "WORTHY" or "CRY_BABY",
+  "tamyiz": "DHAHAB" or "KHABATH",
   "reason": "brief explanation",
-  "rejection": "terse guidance if CRY_BABY, null if WORTHY",
-  "autoAnswer": "exact label of option to pick if CRY_BABY, null if WORTHY"
+  "rejection": "terse guidance if KHABATH, null if DHAHAB",
+  "autoAnswer": "exact label of option to pick if KHABATH, null if DHAHAB"
 }

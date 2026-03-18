@@ -1,5 +1,5 @@
 /**
- * Munadi Logger
+ * Iksir Logger
  *
  * Structured logging with file output and console display.
  * Cross-platform compatible (Linux, macOS).
@@ -10,12 +10,12 @@ import { join } from "jsr:@std/path";
 import type { DecisionMudkhalSijill, MudkhalTaghyirKhariji, MudkhalSijill, MustawaSijill } from "../types.ts";
 
 function getLogDir(): string {
-  return Deno.env.get("MUNADI_LOG_DIR") ??
-    join(Deno.env.get("XDG_STATE_HOME") ?? join(Deno.env.get("HOME") ?? "/root", ".local", "state"), "munadi");
+  return Deno.env.get("IKSIR_LOG_DIR") ??
+    join(Deno.env.get("XDG_STATE_HOME") ?? join(Deno.env.get("HOME") ?? "/root", ".local", "state"), "iksir");
 }
 
 const LOG_FILES = {
-  main: "munadi.log",
+  main: "iksir.log",
   decisions: "decisions.log",
   externalChanges: "external_changes.log",
   notifications: "notifications.log",
@@ -39,7 +39,7 @@ class Logger {
     await ensureDir(getLogDir());
     this.tahyiad = true;
 
-    const level = Deno.env.get("MUNADI_LOG_LEVEL") as MustawaSijill | undefined;
+    const level = Deno.env.get("IKSIR_LOG_LEVEL") as MustawaSijill | undefined;
     if (level && this.levelPriority[level] !== undefined) {
       this.logLevel = level;
     }

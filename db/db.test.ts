@@ -25,13 +25,13 @@ import {
 
 async function withTestDb(fn: () => Promise<void> | void): Promise<void> {
   const tempDir = await Deno.makeTempDir({ prefix: "iksir-test-" });
-  Deno.env.set("MUNADI_STATE_DIR", tempDir);
+  Deno.env.set("IKSIR_STATE_DIR", tempDir);
   try {
     await baddaaQaidatBayanat();
     await fn();
   } finally {
     aghlaaqQaidatBayanat();
-    Deno.env.delete("MUNADI_STATE_DIR");
+    Deno.env.delete("IKSIR_STATE_DIR");
     await Deno.remove(tempDir, { recursive: true });
   }
 }

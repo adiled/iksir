@@ -24,11 +24,11 @@ Murshid wants to send this message to al-Kimyawi:
 {{message}}
 ---
 
-Classify this message:
-- WORTHY: Genuinely needs the intibah al-Kimyawi (architecture ambiguity, external blocker, political timing, milestone)
-- CRY_BABY: Should be handled autonomously by murshid using specs, docs, and precedents
+Mayyiz this message:
+- DHAHAB: Genuinely needs the intibah al-Kimyawi (architecture ambiguity, external blocker, political timing, milestone)
+- KHABATH: Khabath - should be handled autonomously by murshid using specs, docs, and precedents
 
-If CRY_BABY, provide a terse rejection (1-2 sentences) with specific guidance. Reference file paths when applicable.
+If KHABATH, provide a terse rejection (1-2 sentences) with specific guidance. Reference file paths when applicable.
 
 Respond ONLY with valid JSON (no markdown, no explanation):
-{"classification": "WORTHY" or "CRY_BABY", "reason": "brief explanation", "rejection": "terse guidance if CRY_BABY, null if WORTHY"}
+{"tamyiz": "DHAHAB" or "KHABATH", "reason": "brief explanation", "rejection": "terse guidance if KHABATH, null if DHAHAB"}

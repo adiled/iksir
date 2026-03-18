@@ -231,6 +231,6 @@ export class NtfyClient {
 /**
  * Create an ntfy client instance
  */
-export function createNtfyClient(config: TasmimIksir): NtfyClient {
+export function anshaaNtfyAmil(config: TasmimIksir): NtfyClient {
   return new NtfyClient(config);
 }

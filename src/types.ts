@@ -1,7 +1,7 @@
 /**
- * Munadi Core Types
+ * Iksir Core Types
  *
- * Type definitions for the Munadi autonomous agent orchestration system.
+ * Type definitions for the Iksir autonomous agent tansiq system.
  */
 
 
@@ -46,9 +46,9 @@ export interface TasmimTelegram {
   enabled: boolean;
   botToken: string;
   chatId: string;
-  /** Forum-enabled supergroup for Munadi operations */
+  /** Forum-enabled supergroup for Iksir operations */
   groupId?: string;
-  /** Dispatch topic ID in the group (for spawning orchestrators) */
+  /** Dispatch topic ID in the group (for spawning murshids) */
   dispatchTopicId?: number;
   /** SOCKS5 proxy URL (e.g., "socks5://localhost:1080") */
   proxy?: string;
@@ -156,10 +156,10 @@ export interface TasmimOpenCode {
 }
 
 export interface TasmimHaththat {
-  /** Path to notification classification prompt template */
-  classifyNotification?: string;
-  /** Path to question classification prompt template */
-  classifyQuestion?: string;
+  /** Path to tanbih tamyiz prompt template */
+  mayyazaTanbih?: string;
+  /** Path to sual tamyiz prompt template */
+  mayyazaSual?: string;
 }
 
 
@@ -201,7 +201,7 @@ export interface TaaliqMuraja {
   path?: string;
   line?: number;
   createdAt: Date;
-  isOperator: boolean;
+  isAlKimyawi: boolean;
   assessment: TaqyimTaaliq;
 }
 
@@ -305,13 +305,13 @@ export interface JawabSual {
   custom?: string;
 }
 
-/** Classification result for a question */
+/** Tamyiz result for a sual */
 export interface TasnifSual {
-  classification: "WORTHY" | "CRY_BABY";
+  tamyiz: "DHAHAB" | "KHABATH";
   reason: string;
-  /** Terse guidance if CRY_BABY */
+  /** Terse guidance if KHABATH */
   rejection: string | null;
-  /** Label of option to auto-select if CRY_BABY */
+  /** Label of option to auto-select if KHABATH */
   autoAnswer: string | null;
 }
 
@@ -327,7 +327,7 @@ export interface SualMuallaq {
 
 
 /**
- * Tool calls made by orchestrators via MUN-MCP.
+ * Tool calls made by murshids via MUN-MCP.
  * These are dispatched by the daemon's tool executor.
  */
 
@@ -401,7 +401,7 @@ export interface MunCheckBranchStatusCall {
 /** Send a notification to al-Kimyawi */
 export interface MunNotifyCall {
   tool: "mun_notify";
-  /** Your orchestrator ID (e.g., TEAM-100, SANDBOX-pos-simulator) */
+  /** Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator) */
   huwiyyatMurshid: string;
   message: string;
   awwaliyya: "min" | "low" | "default" | "high" | "urgent";
@@ -411,7 +411,7 @@ export interface MunNotifyCall {
 /** Send a conversational response to al-Kimyawi (for answering questions) */
 export interface MunReplyCall {
   tool: "mun_reply";
-  /** Your orchestrator ID (e.g., TEAM-100, SANDBOX-pos-simulator) */
+  /** Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator) */
   huwiyyatMurshid: string;
   message: string;
 }
@@ -430,8 +430,8 @@ export interface MunLogDecisionCall {
 export interface MunReadDiaryCall {
   tool: "mun_read_diary";
   huwiyyatMurshid: string;
-  /** Filter by orchestrator ID (omit for collective pool) */
-  filterOrchestrator?: string;
+  /** Filter by murshid ID (omit for collective pool) */
+  filterMurshid?: string;
   /** Filter by decision type */
   type?: "tadbir" | "tanfidh" | "tanfidh" | "hall" | "risala";
   /** Free-text search in decision + reasoning */
@@ -459,41 +459,13 @@ export interface MunDemandControlCall {
   awwaliyya: "normal" | "urgent";
 }
 
-/** Create branch for orchestrator (called once when starting work) */
+/** Create branch for murshid (called once when starting work) */
 export interface MunCreateBranchCall {
   tool: "mun_create_branch";
   huwiyyatMurshid: string;
   identifier: string;
   type: NawMurshid;
   slug?: string;
-}
-
-/** Run SSP to slice files into a PR branch (targets main) */
-export interface MunSspCall {
-  tool: "mun_ssp";
-  huwiyyatMurshid: string;
-  huwiyyatWasfa: string;
-  files: string[];
-}
-
-/**
- * Run SSSP (Stacked Single Slice Push) to create a PR branch targeting a parent slice.
- * Used for early push under timeline pressure, or when reviewers need context.
- * 
- * Unlike SSP (which targets main), SSSP creates a stack:
- * - PR #1: BE → main
- * - PR #2: FE → BE (not main)
- * - PR #3: INT → FE
- * 
- * When base PR merges, dependent PRs need rebase cascade.
- */
-export interface MunSsspCall {
-  tool: "mun_sssp";
-  huwiyyatMurshid: string;
-  huwiyyatWasfa: string;
-  /** Parent ticket ID whose PR branch this should target */
-  parentTicketId: string;
-  files: string[];
 }
 
 /** Commit staged changes */
@@ -576,8 +548,6 @@ export type MunToolCall =
   | MunYieldCall
   | MunDemandControlCall
   | MunCreateBranchCall
-  | MunSspCall
-  | MunSsspCall
   | MunCommitCall
   | MunGitAddCall
   | MunGitPushCall
@@ -612,16 +582,16 @@ export interface SijillAlat {
   register(tool: TaarifAlatMcp, handler: MuaallijAlatMcp): void;
 
   /** Get all registered tool definitions (for tools/list) */
-  getTools(): TaarifAlatMcp[];
+  adawat(): TaarifAlatMcp[];
 
   /** Get a specific handler by name (for tools/call) */
-  getHandler(name: string): MuaallijAlatMcp | undefined;
+  muaallijLi(name: string): MuaallijAlatMcp | undefined;
 
   /** Check if a tool name is registered */
   has(name: string): boolean;
 
   /** Get the IPC forwarder (for sending events to daemon) */
-  getForwarder(): (call: MunToolCall) => void;
+  muwassil(): (call: MunToolCall) => void;
 }
 
 
@@ -673,21 +643,21 @@ export interface RasulKharij {
   /** Send with markdown formatting (falls back to plain if unsupported) */
   arsalaMunassaq(channel: QanatRisala, text: string): Promise<void>;
 
-  /** Create a dedicated channel for an orchestrator (e.g., Telegram topic, Slack channel) */
+  /** Create a dedicated channel for an murshid (e.g., Telegram topic, Slack channel) */
   khalaqaQanatMurshid(identifier: string, title: string): Promise<string | null>;
 
-  /** Check if an orchestrator has a dedicated channel */
+  /** Check if an murshid has a dedicated channel */
   yamlikQanatMurshid(identifier: string): boolean;
 
   /** Load all channels for a session from persistence into cache. Returns the channels record. */
   hammalQanawatLilJalsa(identifier: string): Record<string, string>;
 
-  /** Reverse lookup: find orchestrator identifier by provider + channelId. */
+  /** Reverse lookup: find murshid identifier by provider + channelId. */
   hallJalsaBilQanat(provider: string, channelId: string): string | null;
 }
 
 
-/** Orchestrator status for control handover */
+/** Murshid status for control handover */
 export type HalatMurshid = "sakin" | "fail" | "masdud" | "muntazir";
 
 /** PR status for keepalive tracking */
@@ -707,17 +677,17 @@ export interface RisalaMutaba {
   lastPolledAt?: string;
 }
 
-/** Orchestrator type */
+/** Murshid type */
 export type NawMurshid = "epic" | "chore" | "sandbox";
 
 /**
- * Orchestrator session
+ * Murshid session
  * 
  * - Epic: Multi-ticket work with sub-tickets and blocking relations
  *   Branch: epic/{identifier}-{slug}
  * 
  * - Chore: Single standalone task, no sub-tickets
- *   Branch: {MUNADI_GIT_USER}/{identifier}
+ *   Branch: {IKSIR_GIT_USER}/{identifier}
  */
 export interface JalsatMurshid {
   id: string;
@@ -726,7 +696,7 @@ export interface JalsatMurshid {
   title: string;
   /** Epic = multi-ticket work, Chore = standalone task */
   type: NawMurshid;
-  /** Primary branch for this orchestrator */
+  /** Primary branch for this murshid */
   branch: string;
   /** Control status: idle/active/blocked/waiting */
   status: HalatMurshid;
@@ -735,9 +705,9 @@ export interface JalsatMurshid {
   createdAt: string;
   lastMessageAt: string;
   /**
-   * PRs created via SSP for PR tracking.
-   * Keepalive monitors these for:
-   * - Merge detection (paves way for next PR cycle)
+   * Risālāt created via istihal for tracking.
+   * Hayāt monitors these for:
+   * - Merge detection (paves way for next risāla cycle)
    * - Comment interpretation (conditional action per command protocol)
    */
   activePRs: RisalaMutaba[];
