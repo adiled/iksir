@@ -657,7 +657,7 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
         reason: demand.reason,
       });
 
-      const switchResult = await this.#iksir.handleCallback("cli", `switch:${demand.huwiyat_murshid}`);
+      const switchResult = await this.#iksir.aalajIstijabaZirr("cli", `switch:${demand.huwiyat_murshid}`);
       if (switchResult.handled) {
         return `Yielded control. Switching to ${demand.huwiyat_murshid} (pending demand: ${demand.reason}).`;
       }
@@ -667,7 +667,7 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
       const murshidun = this.#sessionManager.wajadaJalasatMurshid();
       const suggested = murshidun.find((o) => o.identifier === call.suggestNext);
       if (suggested && suggested.status === "sakin") {
-        await this.#iksir.handleCallback("cli", `switch:${call.suggestNext}`);
+        await this.#iksir.aalajIstijabaZirr("cli", `switch:${call.suggestNext}`);
         return `Yielded control. Switching to suggested: ${call.suggestNext}.`;
       }
     }
@@ -685,7 +685,7 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
       return `Yielded control. ${idleSessions.length} idle session(s) available. Al-Kimyawi can /switch to one.`;
     }
 
-    this.#iksir.setActiveSession(null);
+    this.#iksir.wadaaJalsaFaila(null);
 
     await this.#messenger.send("dispatch", `${yielderId} yielded (${call.reason}). No other sessions available — system idle.`);
 
@@ -716,7 +716,7 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
     });
 
     if (!activeEpicId) {
-      const result = await this.#iksir.handleCallback("cli", `switch:${demanderId}`);
+      const result = await this.#iksir.aalajIstijabaZirr("cli", `switch:${demanderId}`);
       if (result.handled) {
         return `Control granted immediately. You are now ACTIVE.\n\nReason: ${call.reason}`;
       }
@@ -730,7 +730,7 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
     /** Case 3: Current active is blocked/waiting — graceful snatch */
     const currentActive = this.#sessionManager.jalabMurshid(activeEpicId);
     if (currentActive && (currentActive.status === "masdud" || currentActive.status === "muntazir")) {
-      const result = await this.#iksir.handleCallback("cli", `switch:${demanderId}`);
+      const result = await this.#iksir.aalajIstijabaZirr("cli", `switch:${demanderId}`);
       if (result.handled) {
         return `Control granted (${activeEpicId} was ${currentActive.status}). You are now ACTIVE.\n\nReason: ${call.reason}`;
       }

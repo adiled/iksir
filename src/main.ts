@@ -391,7 +391,7 @@ function setupTelegramHandlers(ctx: DaemonContext): void {
       query.data.startsWith("switch:") ||
       query.data === "cancel"
     )) {
-      const result = await ctx.dispatcher.handleCallback("telegram", query.data);
+      const result = await ctx.dispatcher.aalajIstijabaZirr("telegram", query.data);
       await ctx.telegram.answerCallback(query.id, "Received!");
       if (result.handled) {
         if (result.buttons) {
@@ -485,7 +485,7 @@ async function handleDispatchTopicMessage(
     return;
   }
 
-  ctx.dispatcher.handleDispatchMessage({
+  ctx.dispatcher.aalajRisalaIrsal({
     source: "telegram",
     text,
     messageId,
@@ -539,7 +539,7 @@ async function handleDispatchCommand(ctx: DaemonContext, text: string): Promise<
     case "status":
     case "sessions": {
       /** Delegate to dispatcher — single source of truth for status rendering */
-      const result = await ctx.dispatcher.handleDispatchMessage({
+      const result = await ctx.dispatcher.aalajRisalaIrsal({
         source: "telegram",
         text: `/${command}`,
       });
@@ -591,7 +591,7 @@ async function handleTicketUrl(ctx: DaemonContext, url: string, additionalContex
    * Delegate to dispatcher — goes through the full switch protocol
    * (WIP commit, branch intaqalaIla, interrupt previous session, etc.)
    */
-  const result = await ctx.dispatcher.activateForTicketUrl(
+  const result = await ctx.dispatcher.faaalLiRabitWasfa(
     parsed.id,
     title,
     url,

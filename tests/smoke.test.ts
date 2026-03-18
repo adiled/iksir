@@ -58,7 +58,7 @@ Deno.test("smoke: /status with no sessions returns empty status", async () => {
   await withTestRepo(async () => {
     const { dispatcher } = buildContext();
 
-    const result = await dispatcher.handleDispatchMessage({
+    const result = await dispatcher.aalajRisalaIrsal({
       source: "telegram",
       text: "/status",
     });
@@ -74,7 +74,7 @@ Deno.test("smoke: activateForTicketUrl creates session + topic", async () => {
   await withTestRepo(async () => {
     const { dispatcher, opencode, telegram, sessionManager } = buildContext();
 
-    const result = await dispatcher.activateForTicketUrl(
+    const result = await dispatcher.faaalLiRabitWasfa(
       "TEAM-1000",
       "Bab Al Shams Portal",
       "https://linear.app/team/issue/TEAM-XXX"
@@ -108,7 +108,7 @@ Deno.test("smoke: message routed to active murshid via sendPromptAsync", async (
   await withTestRepo(async () => {
     const { dispatcher, opencode, sessionManager } = buildContext();
 
-    await dispatcher.activateForTicketUrl(
+    await dispatcher.faaalLiRabitWasfa(
       "TEAM-2000",
       "Alf Layla Migration",
       "https://linear.app/team/issue/TEAM-XXX"
@@ -138,14 +138,14 @@ Deno.test("smoke: /status with active session shows identifier", async () => {
   await withTestRepo(async () => {
     const { dispatcher } = buildContext();
 
-    await dispatcher.activateForTicketUrl(
+    await dispatcher.faaalLiRabitWasfa(
       "TEAM-3000",
       "Qasr Al Hikma",
       "https://linear.app/team/issue/TEAM-XXX"
     );
 
     /** Now check status */
-    const result = await dispatcher.handleDispatchMessage({
+    const result = await dispatcher.aalajRisalaIrsal({
       source: "telegram",
       text: "/status",
     });
@@ -175,7 +175,7 @@ Deno.test("smoke: dispatch message uses intent resolver for natural language", a
       fil: "proceed",
     } as NiyyaMuhallala;
 
-    const result = await dispatcher.handleDispatchMessage({
+    const result = await dispatcher.aalajRisalaIrsal({
       source: "telegram",
       text: "work on the majlis refactor",
     });
@@ -195,7 +195,7 @@ Deno.test("smoke: murshid topic message routes to correct session", async () => 
   await withTestRepo(async () => {
     const { dispatcher, opencode, sessionManager } = buildContext();
 
-    await dispatcher.activateForTicketUrl(
+    await dispatcher.faaalLiRabitWasfa(
       "TEAM-5000",
       "Diwan Al Rasail",
       "https://linear.app/team/issue/TEAM-XXX"
@@ -235,7 +235,7 @@ Deno.test("smoke: question event classified and forwarded to murshid topic", asy
   await withTestRepo(async () => {
     const { dispatcher, questionHandler, sessionManager } = buildContext();
 
-    await dispatcher.activateForTicketUrl(
+    await dispatcher.faaalLiRabitWasfa(
       "TEAM-6000",
       "Funduq Search",
       "https://linear.app/team/issue/TEAM-XXX"
@@ -276,7 +276,7 @@ Deno.test("smoke: question answered via callback", async () => {
   await withTestRepo(async () => {
     const { dispatcher, opencode, questionHandler, sessionManager } = buildContext();
 
-    await dispatcher.activateForTicketUrl(
+    await dispatcher.faaalLiRabitWasfa(
       "TEAM-7000",
       "Bayt Al Hikma",
       "https://linear.app/team/issue/TEAM-XXX"
@@ -322,10 +322,10 @@ Deno.test("smoke: second murshid activation switches active session", async () =
   await withTestRepo(async () => {
     const { dispatcher, sessionManager } = buildContext();
 
-    await dispatcher.activateForTicketUrl("TEAM-8001", "Rihla Alpha", "https://linear.app/team/TEAM-8001");
+    await dispatcher.faaalLiRabitWasfa("TEAM-8001", "Rihla Alpha", "https://linear.app/team/TEAM-8001");
     assertEquals(dispatcher.hawiyyaFaila(), "TEAM-8001");
 
-    await dispatcher.activateForTicketUrl("TEAM-8002", "Rihla Beta", "https://linear.app/team/TEAM-8002");
+    await dispatcher.faaalLiRabitWasfa("TEAM-8002", "Rihla Beta", "https://linear.app/team/TEAM-8002");
     assertEquals(dispatcher.hawiyyaFaila(), "TEAM-8002");
 
     assertEquals(sessionManager.wajadaJalasatMurshid().length, 2);
