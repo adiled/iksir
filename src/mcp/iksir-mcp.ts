@@ -39,14 +39,14 @@ import { loadIndex } from "../code-intel/indexer.ts";
 import { queryIndex } from "../code-intel/query.ts";
 
 /** MCP Protocol types */
-interface McpRequest {
+interface TalabMcp {
   jsonrpc: "2.0";
   id: number | string;
   method: string;
   params?: Record<string, unknown>;
 }
 
-interface McpResponse {
+interface RaddMcp {
   jsonrpc: "2.0";
   id: number | string;
   result?: unknown;
@@ -69,7 +69,7 @@ class MunadiSijillAlat implements SijillAlat {
     this.#forwarder = forwarder;
   }
 
-  register(tool: TaarifAlatMcp, handler: MuaallijAlatMcp): void {
+  sajjil(tool: TaarifAlatMcp, handler: MuaallijAlatMcp): void {
     this.#tools.set(tool.name, { definition: tool, handler });
   }
 
@@ -81,7 +81,7 @@ class MunadiSijillAlat implements SijillAlat {
     return this.#tools.get(name)?.handler;
   }
 
-  has(name: string): boolean {
+  yujad(name: string): boolean {
     return this.#tools.has(name);
   }
 
@@ -104,7 +104,7 @@ export class MunadiMunMcpServer {
   /**
    * Expose the registry for external access (e.g., serve.ts health check).
    */
-  get registry(): SijillAlat {
+  get sijill(): SijillAlat {
     return this.#registry;
   }
 
@@ -112,7 +112,7 @@ export class MunadiMunMcpServer {
   /**
    * Handle incoming MCP request
    */
-  async aalijTalab(request: McpRequest): Promise<McpResponse> {
+  async aalijTalab(request: TalabMcp): Promise<RaddMcp> {
     switch (request.method) {
       case "tahyia":
         return this.#aalijBadaa(request);
@@ -132,7 +132,7 @@ export class MunadiMunMcpServer {
   /**
    * Handle tahyia request
    */
-  #aalijBadaa(request: McpRequest): McpResponse {
+  #aalijBadaa(request: TalabMcp): RaddMcp {
     return {
       jsonrpc: "2.0",
       id: request.id,
@@ -152,7 +152,7 @@ export class MunadiMunMcpServer {
   /**
    * Handle tools/list request
    */
-  #aalijQaaimalAlat(request: McpRequest): McpResponse {
+  #aalijQaaimalAlat(request: TalabMcp): RaddMcp {
     return {
       jsonrpc: "2.0",
       id: request.id,
@@ -188,7 +188,7 @@ export class MunadiMunMcpServer {
   /**
    * Handle tools/call request
    */
-  async #aalijNidaAlat(request: McpRequest): Promise<McpResponse> {
+  async #aalijNidaAlat(request: TalabMcp): Promise<RaddMcp> {
     const params = request.params as {
       name: string;
       arguments: Record<string, unknown>;
@@ -232,7 +232,7 @@ export class MunadiMunMcpServer {
    */
   #sajjilAlatAsasiyya(): void {
 
-    this.#registry.register(
+    this.#registry.sajjil(
       {
         name: "mun_khalaq_wasfa",
         description:
@@ -278,7 +278,7 @@ export class MunadiMunMcpServer {
       (args) => this.#aalajaKhalqWasfa(args),
     );
 
-    this.#registry.register(
+    this.#registry.sajjil(
       {
         name: "mun_jaddid_wasfa",
         description:
@@ -311,7 +311,7 @@ export class MunadiMunMcpServer {
       (args) => this.#aalajaTajdidWasfa(args),
     );
 
-    this.#registry.register(
+    this.#registry.sajjil(
       {
         name: "mun_wadaa_alaqat",
         description:
@@ -344,7 +344,7 @@ export class MunadiMunMcpServer {
       (args) => this.#aalijWadaaAlaqat(args),
     );
 
-    this.#registry.register(
+    this.#registry.sajjil(
       {
         name: "mun_iqra_wasfa",
         description: `Read any issue tracker URL (Linear, Jira, GitHub) and get enriched information with Iksir context.
@@ -377,7 +377,7 @@ Use this as your primary way to understand ticket entities.`,
     );
 
 
-    this.#registry.register(
+    this.#registry.sajjil(
       {
         name: "mun_khalaq_risala",
         description:
@@ -416,7 +416,7 @@ Use this as your primary way to understand ticket entities.`,
       (args) => this.#aalajaKhalqRisala(args),
     );
 
-    this.#registry.register(
+    this.#registry.sajjil(
       {
         name: "mun_fahas_far",
         description:
@@ -440,7 +440,7 @@ Use this as your primary way to understand ticket entities.`,
     );
 
 
-    this.#registry.register(
+    this.#registry.sajjil(
       {
         name: "mun_balligh",
         description:
@@ -480,7 +480,7 @@ Use this as your primary way to understand ticket entities.`,
       (args) => this.#aalijTabligh(args),
     );
 
-    this.#registry.register(
+    this.#registry.sajjil(
       {
         name: "mun_radd",
         description:
@@ -503,7 +503,7 @@ Use this as your primary way to understand ticket entities.`,
       (args) => this.#aalijRadd(args),
     );
 
-    this.#registry.register(
+    this.#registry.sajjil(
       {
         name: "mun_sajjal_qarar",
         description:
@@ -545,7 +545,7 @@ Use this as your primary way to understand ticket entities.`,
       (args) => this.#aalijTasjilQarar(args),
     );
 
-    this.#registry.register(
+    this.#registry.sajjil(
       {
         name: "mun_iqra_mudawwana",
         description: `Query the collective diary for past decisions, learnings, and context.
@@ -591,7 +591,7 @@ The diary is a shared knowledge pool across all murshidun. Use it to:
     );
 
 
-    this.#registry.register(
+    this.#registry.sajjil(
       {
         name: "mun_tanazal",
         description: `Yield control voluntarily when blocked or waiting.
@@ -629,7 +629,7 @@ You will continue receiving issue tracker/GitHub updates even while idle.`,
       (args) => this.#aalijTanazal(args),
     );
 
-    this.#registry.register(
+    this.#registry.sajjil(
       {
         name: "mun_talab_tahakkum",
         description: `Demand control back when you have actionable work.
@@ -666,7 +666,7 @@ If another murshid is working, Al-Kimyawi will be asked to approve the switch.`,
     );
 
 
-    this.#registry.register(
+    this.#registry.sajjil(
       {
         name: "mun_khalaq_far",
         description: `Create the branch for a new murshid. Called once when starting work.
@@ -710,7 +710,7 @@ You should only call this once per murshid, at the start.`,
       (args) => this.#aalijKhalqFar(args),
     );
 
-    this.#registry.register(
+    this.#registry.sajjil(
       {
         name: "mun_rattib",
         description: "Stage files for commit. Use before mun_iltazim.",
@@ -733,7 +733,7 @@ You should only call this once per murshid, at the start.`,
       (args) => this.#aalijRattib(args),
     );
 
-    this.#registry.register(
+    this.#registry.sajjil(
       {
         name: "mun_iltazim",
         description: "Commit staged changes with a message.",
@@ -760,7 +760,7 @@ You should only call this once per murshid, at the start.`,
       (args) => this.#aalijIltazim(args),
     );
 
-    this.#registry.register(
+    this.#registry.sajjil(
       {
         name: "mun_idfa",
         description: "Push current branch to origin.",
@@ -779,7 +779,7 @@ You should only call this once per murshid, at the start.`,
     );
 
 
-    this.#registry.register(
+    this.#registry.sajjil(
       {
         name: "mun_istifsar",
         description:
@@ -804,7 +804,7 @@ You should only call this once per murshid, at the start.`,
 
 
   #sajjilAlatKimiya(): void {
-    this.#registry.register(
+    this.#registry.sajjil(
       {
         name: "mun_istikhlas",
         description: 
@@ -834,7 +834,7 @@ You should only call this once per murshid, at the start.`,
       (args) => this.#handleExtract(args),
     );
 
-    this.#registry.register(
+    this.#registry.sajjil(
       {
         name: "mun_talaum",
         description:
@@ -864,7 +864,7 @@ You should only call this once per murshid, at the start.`,
       (args) => this.#handleAttune(args),
     );
 
-    this.#registry.register(
+    this.#registry.sajjil(
       {
         name: "mun_istihal",
         description:
@@ -894,7 +894,7 @@ You should only call this once per murshid, at the start.`,
       (args) => this.#handleTransmute(args),
     );
 
-    this.#registry.register(
+    this.#registry.sajjil(
       {
         name: "mun_istihal_mutabaqq",
         description:
@@ -928,7 +928,7 @@ You should only call this once per murshid, at the start.`,
       (args) => this.#handleTransmuteStacked(args),
     );
 
-    this.#registry.register(
+    this.#registry.sajjil(
       {
         name: "mun_fasl",
         description:

@@ -570,7 +570,7 @@ export type MuaallijAlatMcp = (args: Record<string, unknown>) => Promise<string>
  */
 export interface SijillAlat {
   /** Register a tool definition + its handler */
-  register(tool: TaarifAlatMcp, handler: MuaallijAlatMcp): void;
+  sajjil(tool: TaarifAlatMcp, handler: MuaallijAlatMcp): void;
 
   /** Get all registered tool definitions (for tools/list) */
   adawat(): TaarifAlatMcp[];
@@ -579,7 +579,7 @@ export interface SijillAlat {
   muaallijLi(name: string): MuaallijAlatMcp | undefined;
 
   /** Check if a tool name is registered */
-  has(name: string): boolean;
+  yujad(name: string): boolean;
 
   /** Get the IPC forwarder (for sending events to daemon) */
   muwassil(): (call: MunToolCall) => void;

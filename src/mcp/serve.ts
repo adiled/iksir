@@ -39,7 +39,7 @@ export async function startMcpServer(opts: { port?: number } = {}): Promise<void
   const port = opts.port ?? raqamAlBab();
   const pmServer = new MunadiMunMcpServer();
 
-  const toolCount = pmServer.registry.adawat().length;
+  const toolCount = pmServer.sijill.adawat().length;
   const server = startMcpHttpServer({ port, pmServer });
 
   console.log(`Iksir MCP server listening on http://localhost:${port}`);
