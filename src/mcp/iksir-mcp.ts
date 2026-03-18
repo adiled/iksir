@@ -62,40 +62,40 @@ import {
 
 
 class MunadiSijillAlat implements SijillAlat {
-  #tools = new Map<string, { definition: TaarifAlatMcp; handler: MuaallijAlatMcp }>();
-  #forwarder: (call: MunToolCall) => void;
+  #khazana = new Map<string, { tarif: TaarifAlatMcp; muaalij: MuaallijAlatMcp }>();
+  #muhawwil: (call: MunToolCall) => void;
 
   constructor(forwarder: (call: MunToolCall) => void) {
-    this.#forwarder = forwarder;
+    this.#muhawwil = forwarder;
   }
 
-  sajjil(tool: TaarifAlatMcp, handler: MuaallijAlatMcp): void {
-    this.#tools.set(tool.name, { definition: tool, handler });
+  sajjil(tool: TaarifAlatMcp, muaalij: MuaallijAlatMcp): void {
+    this.#khazana.set(tool.name, { tarif: tool, muaalij });
   }
 
   adawat(): TaarifAlatMcp[] {
-    return Array.from(this.#tools.values()).map((t) => t.definition);
+    return Array.from(this.#khazana.values()).map((t) => t.tarif);
   }
 
   muaallijLi(name: string): MuaallijAlatMcp | undefined {
-    return this.#tools.get(name)?.handler;
+    return this.#khazana.get(name)?.muaalij;
   }
 
   yujad(name: string): boolean {
-    return this.#tools.has(name);
+    return this.#khazana.has(name);
   }
 
   muwassil(): (call: MunToolCall) => void {
-    return this.#forwarder;
+    return this.#muhawwil;
   }
 }
 
 
 export class MunadiMunMcpServer {
-  #registry: SijillAlat;
+  #sijillAlat: SijillAlat;
 
   constructor() {
-    this.#registry = new MunadiSijillAlat((call) => this.#forwardToDaemon(call));
+    this.#sijillAlat = new MunadiSijillAlat((call) => this.#hawwilLiKhadim(call));
 
     this.#sajjilAlatAsasiyya();
     this.#sajjilAlatKimiya();
@@ -105,7 +105,7 @@ export class MunadiMunMcpServer {
    * Expose the registry for external access (e.g., serve.ts health check).
    */
   get sijill(): SijillAlat {
-    return this.#registry;
+    return this.#sijillAlat;
   }
 
 
@@ -157,7 +157,7 @@ export class MunadiMunMcpServer {
       jsonrpc: "2.0",
       id: request.id,
       result: {
-        tools: this.#registry.adawat(),
+        tools: this.#sijillAlat.adawat(),
       },
     };
   }
@@ -170,7 +170,7 @@ export class MunadiMunMcpServer {
     toolName: string,
     args: Record<string, unknown>,
   ): void {
-    const tools = this.#registry.adawat();
+    const tools = this.#sijillAlat.adawat();
     const tool = tools.find((t) => t.name === toolName);
     if (!tool) return;
 
@@ -199,7 +199,7 @@ export class MunadiMunMcpServer {
     try {
       this.#tahaqqaqHujaj(toolName, args);
 
-      const handler = this.#registry.muaallijLi(toolName);
+      const handler = this.#sijillAlat.muaallijLi(toolName);
       if (!handler) {
         return {
           jsonrpc: "2.0",
@@ -232,7 +232,7 @@ export class MunadiMunMcpServer {
    */
   #sajjilAlatAsasiyya(): void {
 
-    this.#registry.sajjil(
+    this.#sijillAlat.sajjil(
       {
         name: "mun_khalaq_wasfa",
         description:
@@ -278,7 +278,7 @@ export class MunadiMunMcpServer {
       (args) => this.#aalajaKhalqWasfa(args),
     );
 
-    this.#registry.sajjil(
+    this.#sijillAlat.sajjil(
       {
         name: "mun_jaddid_wasfa",
         description:
@@ -311,7 +311,7 @@ export class MunadiMunMcpServer {
       (args) => this.#aalajaTajdidWasfa(args),
     );
 
-    this.#registry.sajjil(
+    this.#sijillAlat.sajjil(
       {
         name: "mun_wadaa_alaqat",
         description:
@@ -344,7 +344,7 @@ export class MunadiMunMcpServer {
       (args) => this.#aalijWadaaAlaqat(args),
     );
 
-    this.#registry.sajjil(
+    this.#sijillAlat.sajjil(
       {
         name: "mun_iqra_wasfa",
         description: `Read any issue tracker URL (Linear, Jira, GitHub) and get enriched information with Iksir context.
@@ -377,7 +377,7 @@ Use this as your primary way to understand ticket entities.`,
     );
 
 
-    this.#registry.sajjil(
+    this.#sijillAlat.sajjil(
       {
         name: "mun_khalaq_risala",
         description:
@@ -416,7 +416,7 @@ Use this as your primary way to understand ticket entities.`,
       (args) => this.#aalajaKhalqRisala(args),
     );
 
-    this.#registry.sajjil(
+    this.#sijillAlat.sajjil(
       {
         name: "mun_fahas_far",
         description:
@@ -440,7 +440,7 @@ Use this as your primary way to understand ticket entities.`,
     );
 
 
-    this.#registry.sajjil(
+    this.#sijillAlat.sajjil(
       {
         name: "mun_balligh",
         description:
@@ -480,7 +480,7 @@ Use this as your primary way to understand ticket entities.`,
       (args) => this.#aalijTabligh(args),
     );
 
-    this.#registry.sajjil(
+    this.#sijillAlat.sajjil(
       {
         name: "mun_radd",
         description:
@@ -503,7 +503,7 @@ Use this as your primary way to understand ticket entities.`,
       (args) => this.#aalijRadd(args),
     );
 
-    this.#registry.sajjil(
+    this.#sijillAlat.sajjil(
       {
         name: "mun_sajjal_qarar",
         description:
@@ -545,7 +545,7 @@ Use this as your primary way to understand ticket entities.`,
       (args) => this.#aalijTasjilQarar(args),
     );
 
-    this.#registry.sajjil(
+    this.#sijillAlat.sajjil(
       {
         name: "mun_iqra_mudawwana",
         description: `Query the collective diary for past decisions, learnings, and context.
@@ -591,7 +591,7 @@ The diary is a shared knowledge pool across all murshidun. Use it to:
     );
 
 
-    this.#registry.sajjil(
+    this.#sijillAlat.sajjil(
       {
         name: "mun_tanazal",
         description: `Yield control voluntarily when blocked or waiting.
@@ -629,7 +629,7 @@ You will continue receiving issue tracker/GitHub updates even while idle.`,
       (args) => this.#aalijTanazal(args),
     );
 
-    this.#registry.sajjil(
+    this.#sijillAlat.sajjil(
       {
         name: "mun_talab_tahakkum",
         description: `Demand control back when you have actionable work.
@@ -666,7 +666,7 @@ If another murshid is working, Al-Kimyawi will be asked to approve the switch.`,
     );
 
 
-    this.#registry.sajjil(
+    this.#sijillAlat.sajjil(
       {
         name: "mun_khalaq_far",
         description: `Create the branch for a new murshid. Called once when starting work.
@@ -710,7 +710,7 @@ You should only call this once per murshid, at the start.`,
       (args) => this.#aalijKhalqFar(args),
     );
 
-    this.#registry.sajjil(
+    this.#sijillAlat.sajjil(
       {
         name: "mun_rattib",
         description: "Stage files for commit. Use before mun_iltazim.",
@@ -733,7 +733,7 @@ You should only call this once per murshid, at the start.`,
       (args) => this.#aalijRattib(args),
     );
 
-    this.#registry.sajjil(
+    this.#sijillAlat.sajjil(
       {
         name: "mun_iltazim",
         description: "Commit staged changes with a message.",
@@ -760,7 +760,7 @@ You should only call this once per murshid, at the start.`,
       (args) => this.#aalijIltazim(args),
     );
 
-    this.#registry.sajjil(
+    this.#sijillAlat.sajjil(
       {
         name: "mun_idfa",
         description: "Push current branch to origin.",
@@ -779,7 +779,7 @@ You should only call this once per murshid, at the start.`,
     );
 
 
-    this.#registry.sajjil(
+    this.#sijillAlat.sajjil(
       {
         name: "mun_istifsar",
         description:
@@ -798,13 +798,13 @@ You should only call this once per murshid, at the start.`,
           required: ["query"],
         },
       },
-      (args) => this.#handleCodeQuery(args),
+      (args) => this.#aalijIstifsar(args),
     );
   }
 
 
   #sajjilAlatKimiya(): void {
-    this.#registry.sajjil(
+    this.#sijillAlat.sajjil(
       {
         name: "mun_istikhlas",
         description: 
@@ -831,10 +831,10 @@ You should only call this once per murshid, at the start.`,
           required: ["huwiyyatMurshid", "huwiyyatWasfa", "files"],
         },
       },
-      (args) => this.#handleExtract(args),
+      (args) => this.#aalijIstikhlas(args),
     );
 
-    this.#registry.sajjil(
+    this.#sijillAlat.sajjil(
       {
         name: "mun_talaum",
         description:
@@ -861,10 +861,10 @@ You should only call this once per murshid, at the start.`,
           required: ["huwiyyatMurshid", "huwiyyatWasfa", "files"],
         },
       },
-      (args) => this.#handleAttune(args),
+      (args) => this.#aalijTalaum(args),
     );
 
-    this.#registry.sajjil(
+    this.#sijillAlat.sajjil(
       {
         name: "mun_istihal",
         description:
@@ -891,10 +891,10 @@ You should only call this once per murshid, at the start.`,
           required: ["huwiyyatMurshid", "huwiyyatWasfa", "files"],
         },
       },
-      (args) => this.#handleTransmute(args),
+      (args) => this.#aalijIstihal(args),
     );
 
-    this.#registry.sajjil(
+    this.#sijillAlat.sajjil(
       {
         name: "mun_istihal_mutabaqq",
         description:
@@ -925,10 +925,10 @@ You should only call this once per murshid, at the start.`,
           required: ["huwiyyatMurshid", "huwiyyatWasfa", "parentTicketId", "files"],
         },
       },
-      (args) => this.#handleTransmuteStacked(args),
+      (args) => this.#aalijIstihalMutabaqq(args),
     );
 
-    this.#registry.sajjil(
+    this.#sijillAlat.sajjil(
       {
         name: "mun_fasl",
         description:
@@ -962,7 +962,7 @@ You should only call this once per murshid, at the start.`,
           required: ["huwiyyatMurshid", "huwiyyatWasfa", "title", "body"],
         },
       },
-      (args) => this.#handleDecant(args),
+      (args) => this.#aalijFasl(args),
     );
   }
 
@@ -979,7 +979,7 @@ You should only call this once per murshid, at the start.`,
       parentId: args.parentId as string | undefined,
     };
 
-    this.#forwardToDaemon(call);
+    this.#hawwilLiKhadim(call);
 
     return `Ticket creation request forwarded to daemon.
 
@@ -998,7 +998,7 @@ Daemon will create the ticket and return the ticket ID.`;
       updates: args.updates as NidaTajdidWasfa["updates"],
     };
 
-    this.#forwardToDaemon(call);
+    this.#hawwilLiKhadim(call);
 
     const updatesList = Object.entries(call.updates)
       .filter(([, v]) => v !== undefined)
@@ -1021,7 +1021,7 @@ ${updatesList}`;
       blockedBy: args.blockedBy as string[] | undefined,
     };
 
-    this.#forwardToDaemon(call);
+    this.#hawwilLiKhadim(call);
 
     const blocksList = call.blocks?.length ? `Blocks: ${call.blocks.join(", ")}` : "";
     const blockedByList = call.blockedBy?.length
@@ -1044,7 +1044,7 @@ Relations control execution order: blocked tickets wait for blockers to complete
       url: args.url as string,
     };
 
-    this.#forwardToDaemon(call);
+    this.#hawwilLiKhadim(call);
 
     /** Extract ticket ID from URL if possible (heuristic) */
     const ticketMatch = call.url.match(/([A-Z]+-\d+)/);
@@ -1090,7 +1090,7 @@ Awaiting daemon response...`;
       head: args.head as string,
     };
 
-    this.#forwardToDaemon(call);
+    this.#hawwilLiKhadim(call);
 
     return `PR creation request forwarded to daemon.
 
@@ -1113,7 +1113,7 @@ Daemon will:
       branch: args.branch as string,
     };
 
-    this.#forwardToDaemon(call);
+    this.#hawwilLiKhadim(call);
 
     return `Branch status request forwarded to daemon.
 
@@ -1135,7 +1135,7 @@ Daemon will return:
       actions: args.actions as MunNotifyCall["actions"],
     };
 
-    this.#forwardToDaemon(call);
+    this.#hawwilLiKhadim(call);
 
     const actionsText = call.actions?.length
       ? `\nActions: ${call.actions.map((a) => a.label).join(", ")}`
@@ -1156,7 +1156,7 @@ Al-Kimyawi will receive this via Telegram/ntfy.`;
       message: args.message as string,
     };
 
-    this.#forwardToDaemon(call);
+    this.#hawwilLiKhadim(call);
 
     return `Response sent to al-Kimyawi.
 
@@ -1182,9 +1182,9 @@ ${call.message}`;
       metadata: call.metadata,
     };
 
-    this.#appendQararSijill(decision, call.huwiyyatMurshid);
+    this.#adhifQararSijill(decision, call.huwiyyatMurshid);
 
-    this.#forwardToDaemon(call);
+    this.#hawwilLiKhadim(call);
 
     return `Decision logged to diary.
 
@@ -1252,7 +1252,7 @@ This decision is now part of the persistent record.`;
       suggestNext: args.suggestNext as string | undefined,
     };
 
-    this.#forwardToDaemon(call);
+    this.#hawwilLiKhadim(call);
 
     const stateDescription = call.reason === "masdud"
       ? "You are now in BLOCKED state. Al-Kimyawi will be notified of the blockers."
@@ -1283,7 +1283,7 @@ Use \`mun_talab_tahakkum\` when you have actionable work again.`;
       awwaliyya: args.awwaliyya as "normal" | "urgent",
     };
 
-    this.#forwardToDaemon(call);
+    this.#hawwilLiKhadim(call);
 
     return `Control demand submitted.
 
@@ -1311,7 +1311,7 @@ You will be notified when control is granted.`;
       slug: args.slug as string | undefined,
     };
 
-    this.#forwardToDaemon(call);
+    this.#hawwilLiKhadim(call);
 
     const branchName = generateBranchName(call.identifier, murshidType, call.slug);
 
@@ -1336,7 +1336,7 @@ You will be notified when the branch is ready.`;
       files: args.files as string[],
     };
 
-    this.#forwardToDaemon(call);
+    this.#hawwilLiKhadim(call);
 
     return `Git add request submitted.
 
@@ -1354,7 +1354,7 @@ Daemon will stage these files.`;
       files: args.files as string[] | undefined,
     };
 
-    this.#forwardToDaemon(call);
+    this.#hawwilLiKhadim(call);
 
     return `Commit request submitted.
 
@@ -1370,7 +1370,7 @@ Daemon will create the commit.`;
       huwiyyatMurshid: args.huwiyyatMurshid as string,
     };
 
-    this.#forwardToDaemon(call);
+    this.#hawwilLiKhadim(call);
 
     return `Push request submitted.
 
@@ -1378,7 +1378,7 @@ Daemon will push current branch to origin.`;
   }
 
 
-  async #handleExtract(args: Record<string, unknown>): Promise<string> {
+  async #aalijIstikhlas(args: Record<string, unknown>): Promise<string> {
     /**
      * For now, extraction is just validation and planning
      * The actual file operations happen in mun_istihal
@@ -1396,7 +1396,7 @@ Next steps:
 2. Use mun_istihal to crystallize into essence`;
   }
 
-  async #handleAttune(args: Record<string, unknown>): Promise<string> {
+  async #aalijTalaum(args: Record<string, unknown>): Promise<string> {
     /**
      * TODO: Implement smart dependency discovery
      * For now, return a placeholder that suggests manual review
@@ -1421,7 +1421,7 @@ This is a placeholder. Future implementation will:
 - Determine if layered transmutation is needed`;
   }
 
-  async #handleTransmute(args: Record<string, unknown>): Promise<string> {
+  async #aalijIstihal(args: Record<string, unknown>): Promise<string> {
     const call = {
       tool: "mun_istihal" as const,
       huwiyyatMurshid: args.huwiyyatMurshid as string,
@@ -1429,7 +1429,7 @@ This is a placeholder. Future implementation will:
       files: args.files as string[],
     };
 
-    this.#forwardToDaemon(call);
+    this.#hawwilLiKhadim(call);
 
     const essenceBranch = generateBranchName(call.huwiyyatWasfa, "chore");
 
@@ -1450,7 +1450,7 @@ If conflicts occur, you will be notified with resolution guidance.
 On success, use mun_fasl to create the PR.`;
   }
 
-  async #handleTransmuteStacked(args: Record<string, unknown>): Promise<string> {
+  async #aalijIstihalMutabaqq(args: Record<string, unknown>): Promise<string> {
     const call = {
       tool: "mun_istihal_mutabaqq" as const,
       huwiyyatMurshid: args.huwiyyatMurshid as string,
@@ -1459,7 +1459,7 @@ On success, use mun_fasl to create the PR.`;
       files: args.files as string[],
     };
 
-    this.#forwardToDaemon(call);
+    this.#hawwilLiKhadim(call);
 
     const essenceBranch = generateBranchName(call.huwiyyatWasfa, "chore");
     const parentBranch = generateBranchName(call.parentTicketId, "chore");
@@ -1482,7 +1482,7 @@ On success, use mun_fasl with base pointing to parent branch.
 Note: CI may fail if parent PR is unmerged. This is expected for incremental review.`;
   }
 
-  async #handleDecant(args: Record<string, unknown>): Promise<string> {
+  async #aalijFasl(args: Record<string, unknown>): Promise<string> {
     /** This is essentially mun_khalaq_risala with better terminology */
     const huwiyyatWasfa = args.huwiyyatWasfa as string;
     const essenceBranch = generateBranchName(huwiyyatWasfa, "chore");
@@ -1497,7 +1497,7 @@ Note: CI may fail if parent PR is unmerged. This is expected for incremental rev
       head: essenceBranch,
     };
 
-    this.#forwardToDaemon(call);
+    this.#hawwilLiKhadim(call);
 
     return `Unveiling request submitted.
 
@@ -1513,7 +1513,7 @@ You will be notified with the PR URL once created.`;
   /**
    * Forward a tool call to the Iksir daemon via SQLite
    */
-  #forwardToDaemon(call: MunToolCall): void {
+  #hawwilLiKhadim(call: MunToolCall): void {
     /** Extract huwiyyatMurshid if present (for routing) */
     const huwiyyatMurshid = "huwiyyatMurshid" in call ? (call as { huwiyyatMurshid?: string }).huwiyyatMurshid : undefined;
 
@@ -1523,7 +1523,7 @@ You will be notified with the PR URL once created.`;
   /**
    * Append a decision to the diary (SQLite)
    */
-  #appendQararSijill(decision: QararSijill, huwiyyatMurshid: string = "unknown"): void {
+  #adhifQararSijill(decision: QararSijill, huwiyyatMurshid: string = "unknown"): void {
     adhafaQararSijill({
       huwiyyatMurshid,
       type: decision.type,
@@ -1534,7 +1534,7 @@ You will be notified with the PR URL once created.`;
   }
 
 
-  async #handleCodeQuery(args: Record<string, unknown>): Promise<string> {
+  async #aalijIstifsar(args: Record<string, unknown>): Promise<string> {
     const query = args.query as string;
     if (!query) return JSON.stringify({ error: "query is required" });
 
