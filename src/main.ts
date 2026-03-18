@@ -161,7 +161,7 @@ async function setupSignalHandlers(ctx: DaemonContext): Promise<void> {
 
     await logger.info("main", "Saving state...");
     await Promise.all([
-      ctx.sessionManager.saveState(),
+      ctx.sessionManager.hafizaHala(),
       ctx.ipcProcessor.saveState(),
       ctx.questionHandler.saveState(),
     ]);
@@ -205,7 +205,7 @@ async function subscribeToHadathOpenCodes(ctx: DaemonContext): Promise<void> {
         if (event.type === "session.compacted") {
           const sessionId = (event.properties as { sessionID?: string })?.sessionID;
           if (sessionId) {
-            ctx.sessionManager.handleCompaction(sessionId).catch(async (e) =>
+            ctx.sessionManager.aalajaDamj(sessionId).catch(async (e) =>
               await logger.error("sse", "Failed to handle compaction event", {
                 sessionId,
                 error: String(e),
@@ -913,7 +913,7 @@ export async function startDaemon(opts: { check?: boolean } = {}): Promise<void>
 
   /** Initialize session manager and istarjaa persisted state */
   const sessionManager = istadaaKatib({ config, opencode, messenger });
-  await sessionManager.loadState();
+  await sessionManager.hammalaHala();
 
   /** Initialize IPC processor and istarjaa persisted state */
   const ipcProcessor = istadaaMunaffidh({

@@ -949,7 +949,7 @@ Work on the parent instead?`;
 
     await logger.info("dispatcher", `Executing switchover: ${previousActive ?? "none"} → ${identifier}`);
 
-    this.#sessionManager.setGitFence(true);
+    this.#sessionManager.wadaaQuflGit(true);
 
     let wipCommitted = false;
 
@@ -1025,7 +1025,7 @@ Work on the parent instead?`;
     return { handled: true };
 
     } finally {
-      this.#sessionManager.setGitFence(false);
+      this.#sessionManager.wadaaQuflGit(false);
     }
   }
 

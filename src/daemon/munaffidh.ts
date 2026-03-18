@@ -182,7 +182,7 @@ export class Munaffidh {
   async #handleEvent(event: MunToolCall): Promise<void> {
     await logger.debug("tool-executor", `Processing: ${event.tool}`);
 
-    if (Munaffidh.GIT_TOOLS.has(event.tool) && this.#sessionManager.isGitFenced()) {
+    if (Munaffidh.GIT_TOOLS.has(event.tool) && this.#sessionManager.huwaGitMasdud()) {
       const msg = `Git operation blocked: a session switch is in progress. Try again in a few seconds.`;
       const targetId = ("huwiyyatMurshid" in event && event.huwiyyatMurshid)
         ? event.huwiyyatMurshid as string
@@ -799,7 +799,7 @@ Try: git push -u origin ${branchName}`;
     const session = this.#sessionManager.jalabMurshid(call.identifier);
     if (session) {
       session.branch = branchName;
-      await this.#sessionManager.saveState();
+      await this.#sessionManager.hafizaHala();
     }
 
     return `Branch created and pushed successfully.

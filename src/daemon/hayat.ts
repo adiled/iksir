@@ -144,7 +144,7 @@ export class DawratHayat {
    * Polls all tracked PRs across all murshid sessions.
    */
   async dawra(): Promise<void> {
-    const trackedPRs = this.mudirJalasat.getAllRisalaMutabas();
+    const trackedPRs = this.mudirJalasat.jalabaKullRasaailMutaba();
 
     if (trackedPRs.length === 0) {
       await logger.debug("keepalive", "No PRs to monitor");
@@ -226,7 +226,7 @@ export class DawratHayat {
         await this.aalajTaaliqatJadida(session, raqamRisala, newComments);
       }
 
-      await this.mudirJalasat.updatePRLastPolled(raqamRisala);
+      await this.mudirJalasat.jaddadaAkhirRaqaba(raqamRisala);
     } catch (error) {
       await logger.error("keepalive", `Failed to poll PR #${raqamRisala}`, {
         error: String(error),
@@ -267,7 +267,7 @@ export class DawratHayat {
 
     if (newStatus) {
       /** Update tracking */
-      const result = await this.mudirJalasat.updatePRStatus(raqamRisala, newStatus);
+      const result = await this.mudirJalasat.jaddadaHalatRisala(raqamRisala, newStatus);
 
       if (newStatus === "merged" && result) {
         await this.istijabat.indaDamjRisala(result.session, trackedPR);
@@ -365,7 +365,7 @@ export class DawratHayat {
       return;
     }
 
-    this.mudirJalasat.setGitFence(true);
+    this.mudirJalasat.wadaaQuflGit(true);
 
     try {
       const results: NatijaSeyana[] = [];
@@ -407,7 +407,7 @@ export class DawratHayat {
     } catch (error) {
       await logger.error("keepalive", "Maintenance failed", { error: String(error) });
     } finally {
-      this.mudirJalasat.setGitFence(false);
+      this.mudirJalasat.wadaaQuflGit(false);
       await this.istijabat.harrarWadaSeyana();
       this.seyanaJariya = false;
     }
