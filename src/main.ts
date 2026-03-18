@@ -41,24 +41,24 @@ import { istadaaSail } from "./daemon/sail.ts";
 import { istadaaRaqib } from "./daemon/raqib.ts";
 import type { TasmimIksir, TaaliqMuraja, JalsatMurshid, RisalaMutaba, HadathSualMatlub, MaalumatSual, SualMuallaq, MutabiWasfa } from "./types.ts";
 
-interface DaemonContext {
-  config: TasmimIksir;
+interface SiyaqKhadim {
+  tasmim: TasmimIksir;
   opencode: ReturnType<typeof createOpenCodeClient>;
   ntfy: ReturnType<typeof anshaaNtfyAmil>;
   telegram: ReturnType<typeof anshaaTelegramAmil>;
-  messenger: TelegramMessenger;
-  issueTracker: MutabiWasfa;
+  rasul: TelegramMessenger;
+  mutabiWasfa: MutabiWasfa;
   github: ReturnType<typeof createGitHubClient>;
-  sessionManager: ReturnType<typeof istadaaKatib>;
-  ipcProcessor: ReturnType<typeof istadaaMunaffidh>;
-  dispatcher: ReturnType<typeof istadaaMunadi>;
-  keepAlive: ReturnType<typeof awqadaHayat>;
-  questionHandler: ReturnType<typeof istadaaSail>;
-  healthMonitor: ReturnType<typeof istadaaRaqib>;
-  abortController: AbortController;
+  mudirJalasat: ReturnType<typeof istadaaKatib>;
+  munaffidh: ReturnType<typeof istadaaMunaffidh>;
+  munadi: ReturnType<typeof istadaaMunadi>;
+  hayat: ReturnType<typeof awqadaHayat>;
+  sail: ReturnType<typeof istadaaSail>;
+  raqib: ReturnType<typeof istadaaRaqib>;
+  mutahakkimIlgha: AbortController;
 }
 
-async function checkConnectivity(ctx: DaemonContext): Promise<boolean> {
+async function tahaqqaqIttisaal(ctx: SiyaqKhadim): Promise<boolean> {
   let allGood = true;
 
   console.log("\nChecking connectivity...\n");
@@ -73,7 +73,7 @@ async function checkConnectivity(ctx: DaemonContext): Promise<boolean> {
     allGood = false;
   }
 
-  if (ctx.config.notifications.telegram.enabled) {
+  if (ctx.tasmim.notifications.telegram.enabled) {
     process.stdout.write("  Telegram bot... ");
     const telegramValid = await ctx.telegram.tahaqqaqToken();
     if (telegramValid) {
@@ -86,10 +86,10 @@ async function checkConnectivity(ctx: DaemonContext): Promise<boolean> {
     console.log("  Telegram bot... (disabled)");
   }
 
-  if (ctx.config.notifications.ntfy.enabled) {
+  if (ctx.tasmim.notifications.ntfy.enabled) {
     process.stdout.write("  ntfy server... ");
     try {
-      const response = await fetch(ctx.config.notifications.ntfy.server);
+      const response = await fetch(ctx.tasmim.notifications.ntfy.server);
       if (response.ok) {
         console.log("✓");
       } else {
@@ -104,9 +104,9 @@ async function checkConnectivity(ctx: DaemonContext): Promise<boolean> {
     console.log("  ntfy server... (disabled)");
   }
 
-  if (ctx.config.issueTracker.apiKey) {
+  if (ctx.tasmim.issueTracker.apiKey) {
     process.stdout.write("  Issue tracker... ");
-    const authenticated = await ctx.issueTracker.isAuthenticated();
+    const authenticated = await ctx.mutabiWasfa.isAuthenticated();
     if (authenticated) {
       console.log("✓");
     } else {
@@ -131,16 +131,16 @@ async function checkConnectivity(ctx: DaemonContext): Promise<boolean> {
   return allGood;
 }
 
-async function runCheck(ctx: DaemonContext): Promise<void> {
+async function naffadhFahs(ctx: SiyaqKhadim): Promise<void> {
   console.log(`\nIksir v${VERSION} - Configuration Check\n`);
   console.log(`Config file: ${masarMilafAlTasmim()}`);
 
   console.log("\nConfiguration:");
-  console.log(`  OpenCode server: ${ctx.config.opencode.server}`);
+  console.log(`  OpenCode server: ${ctx.tasmim.opencode.server}`);
 
-  console.log(`  Quiet hours: ${ctx.config.quietHours.start} - ${ctx.config.quietHours.end} (${ctx.config.quietHours.timezone})`);
+  console.log(`  Quiet hours: ${ctx.tasmim.quietHours.start} - ${ctx.tasmim.quietHours.end} (${ctx.tasmim.quietHours.timezone})`);
 
-  const allGood = await checkConnectivity(ctx);
+  const allGood = await tahaqqaqIttisaal(ctx);
 
   if (allGood) {
     console.log("All checks passed! ✓\n");
@@ -150,20 +150,20 @@ async function runCheck(ctx: DaemonContext): Promise<void> {
   }
 }
 
-async function setupSignalHandlers(ctx: DaemonContext): Promise<void> {
+async function addaIsharat(ctx: SiyaqKhadim): Promise<void> {
   const ighlaaq = async (signal: string) => {
     await logger.info("main", `Received ${signal}, shutting down...`);
 
-    ctx.abortController.abort();
+    ctx.mutahakkimIlgha.abort();
     ctx.telegram.stopPolling();
-    ctx.ipcProcessor.awqafMuaalaja();
-    ctx.healthMonitor.awqaf();
+    ctx.munaffidh.awqafMuaalaja();
+    ctx.raqib.awqaf();
 
     await logger.info("main", "Saving state...");
     await Promise.all([
-      ctx.sessionManager.hafizaHala(),
-      ctx.ipcProcessor.hafizaHala(),
-      ctx.questionHandler.hafizaHala(),
+      ctx.mudirJalasat.hafizaHala(),
+      ctx.munaffidh.hafizaHala(),
+      ctx.sail.hafizaHala(),
     ]);
 
     aghlaaqQaidatBayanat();
@@ -186,26 +186,26 @@ async function setupSignalHandlers(ctx: DaemonContext): Promise<void> {
 /**
  * Subscribe to OpenCode SSE events and route question events to handler.
  */
-async function subscribeToHadathOpenCodes(ctx: DaemonContext): Promise<void> {
+async function ishtarakAhdath(ctx: SiyaqKhadim): Promise<void> {
   await logger.info("sse", "Starting OpenCode SSE subscription");
 
   let backoffMs = INITIAL_BACKOFF_MS;
   
 
-  while (!ctx.abortController.signal.aborted) {
+  while (!ctx.mutahakkimIlgha.signal.aborted) {
     try {
-      for await (const event of ctx.opencode.subscribeToEvents(ctx.abortController.signal)) {
+      for await (const event of ctx.opencode.subscribeToEvents(ctx.mutahakkimIlgha.signal)) {
         backoffMs = INITIAL_BACKOFF_MS;
 
         if (event.type === "question.asked") {
           const questionEvent = event as unknown as HadathSualMatlub;
-          await ctx.questionHandler.aalajSualMatlub(questionEvent);
+          await ctx.sail.aalajSualMatlub(questionEvent);
         }
 
         if (event.type === "session.compacted") {
           const sessionId = (event.properties as { sessionID?: string })?.sessionID;
           if (sessionId) {
-            ctx.sessionManager.aalajaDamj(sessionId).catch(async (e) =>
+            ctx.mudirJalasat.aalajaDamj(sessionId).catch(async (e) =>
               await logger.error("sse", "Failed to handle compaction event", {
                 sessionId,
                 error: String(e),
@@ -215,7 +215,7 @@ async function subscribeToHadathOpenCodes(ctx: DaemonContext): Promise<void> {
         }
       }
     } catch (error) {
-      if (ctx.abortController.signal.aborted) {
+      if (ctx.mutahakkimIlgha.signal.aborted) {
         break;
       }
       await logger.warn("sse", `SSE connection lost, reconnecting in ${backoffMs / 1000}s`, {
@@ -229,7 +229,7 @@ async function subscribeToHadathOpenCodes(ctx: DaemonContext): Promise<void> {
   await logger.info("sse", "OpenCode SSE subscription stopped");
 }
 
-async function runDaemon(ctx: DaemonContext): Promise<void> {
+async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
   await logger.info("main", `Iksir v${VERSION} starting`);
   await logger.info("main", `Config loaded from ${masarMilafAlTasmim()}`);
 
@@ -243,39 +243,39 @@ async function runDaemon(ctx: DaemonContext): Promise<void> {
   const version = await ctx.opencode.getVersion();
   await logger.info("main", `Connected to OpenCode v${version}`);
 
-  await setupSignalHandlers(ctx);
+  await addaIsharat(ctx);
 
-  if (ctx.config.notifications.telegram.enabled) {
-    setupTelegramHandlers(ctx);
+  if (ctx.tasmim.notifications.telegram.enabled) {
+    addaMualijatTelegram(ctx);
     ctx.telegram.startPolling().catch(async (error) => {
       await logger.error("telegram", "Polling error", { error: String(error) });
     });
   }
 
-  ctx.ipcProcessor.badaaMuaalaja(ctx.abortController.signal).catch(async (error) => {
+  ctx.munaffidh.badaaMuaalaja(ctx.mutahakkimIlgha.signal).catch(async (error) => {
     await logger.error("tool-executor", "Processing error", { error: String(error) });
   });
 
-  subscribeToHadathOpenCodes(ctx).catch(async (error) => {
+  ishtarakAhdath(ctx).catch(async (error) => {
     await logger.error("sse", "Event subscription error", { error: String(error) });
   });
 
-  ctx.healthMonitor.badaa(ctx.abortController.signal);
+  ctx.raqib.badaa(ctx.mutahakkimIlgha.signal);
 
   await logger.info("main", "Entering main loop (Proactive Game)");
 
-  while (!ctx.abortController.signal.aborted) {
+  while (!ctx.mutahakkimIlgha.signal.aborted) {
     try {
-      await keepAliveCycle(ctx);
+      await dawraHayat(ctx);
     } catch (error) {
       await logger.error("main", "Keep-alive cycle error", { error: String(error) });
     }
 
-    await new Promise((resolve) => setTimeout(resolve, ctx.config.polling.defaultIntervalMs));
+    await new Promise((resolve) => setTimeout(resolve, ctx.tasmim.polling.defaultIntervalMs));
   }
 }
 
-function setupTelegramHandlers(ctx: DaemonContext): void {
+function addaMualijatTelegram(ctx: SiyaqKhadim): void {
   ctx.telegram.onMessage(async (message) => {
     if (!message.text) return;
 
@@ -293,7 +293,7 @@ function setupTelegramHandlers(ctx: DaemonContext): void {
     });
 
     if (isPrivateMessage) {
-      await handlePrivateChatMessage(ctx, message);
+      await aalajRisalaKhassa(ctx, message);
       return;
     }
 
@@ -303,18 +303,18 @@ function setupTelegramHandlers(ctx: DaemonContext): void {
     }
 
     if (isDispatchTopic) {
-      await handleDispatchTopicMessage(ctx, text, message.message_id);
+      await aalajRisalaMawduu(ctx, text, message.message_id);
       return;
     }
 
     if (topicId) {
       /** Resolve murshid from channel */
-      const murshid = ctx.sessionManager.wajadaMurshidBiQanat("telegram", String(topicId));
+      const murshid = ctx.mudirJalasat.wajadaMurshidBiQanat("telegram", String(topicId));
 
-      if (murshid && ctx.questionHandler.huwaYantazirIdkhal(murshid.identifier)) {
-        const handled = await ctx.questionHandler.aalajJawabKhass(murshid.identifier, text);
+      if (murshid && ctx.sail.huwaYantazirIdkhal(murshid.identifier)) {
+        const handled = await ctx.sail.aalajJawabKhass(murshid.identifier, text);
         if (handled) {
-          await ctx.messenger.send({ murshid: murshid.identifier }, "Answer submitted.");
+          await ctx.rasul.send({ murshid: murshid.identifier }, "Answer submitted.");
           return;
         }
       }
@@ -322,7 +322,7 @@ function setupTelegramHandlers(ctx: DaemonContext): void {
       if (murshid) {
         await logger.info("telegram", `Routing to murshid ${murshid.identifier} via topic ${topicId}`);
         
-        const success = await ctx.sessionManager.arsalaIlaMurshidById(murshid.identifier, text);
+        const success = await ctx.mudirJalasat.arsalaIlaMurshidById(murshid.identifier, text);
         if (!success) {
           await ctx.telegram.arsalaIlaMurshidTopic(
             topicId,
@@ -352,17 +352,17 @@ function setupTelegramHandlers(ctx: DaemonContext): void {
   ctx.telegram.onCallback(async (query) => {
     await logger.info("telegram", `Callback: ${query.data}`);
 
-    if (query.data && ctx.questionHandler.huwaIstijabaZirrSual(query.data)) {
-      const parsed = ctx.questionHandler.hallalIstijabaZirrSual(query.data);
+    if (query.data && ctx.sail.huwaIstijabaZirrSual(query.data)) {
+      const parsed = ctx.sail.hallalIstijabaZirrSual(query.data);
       if (parsed) {
         if (parsed.selectedLabel === "__custom__") {
           /** Resolve murshid from the topic */
           const topicId = query.message?.message_thread_id;
           const murshid = topicId
-            ? ctx.sessionManager.wajadaMurshidBiQanat("telegram", String(topicId))
+            ? ctx.mudirJalasat.wajadaMurshidBiQanat("telegram", String(topicId))
             : null;
           if (murshid) {
-            await ctx.questionHandler.allamIntizarIdkhal(murshid.identifier, parsed.questionId);
+            await ctx.sail.allamIntizarIdkhal(murshid.identifier, parsed.questionId);
             await ctx.telegram.answerCallback(query.id, "Type your answer as a reply...");
           } else {
             await ctx.telegram.answerCallback(query.id, "Cannot resolve murshid for custom input");
@@ -371,7 +371,7 @@ function setupTelegramHandlers(ctx: DaemonContext): void {
         }
 
         /** Handle option selection */
-        const success = await ctx.questionHandler.aalajIstijabaZirrSual(
+        const success = await ctx.sail.aalajIstijabaZirrSual(
           parsed.questionId,
           parsed.selectedLabel
         );
@@ -391,7 +391,7 @@ function setupTelegramHandlers(ctx: DaemonContext): void {
       query.data.startsWith("switch:") ||
       query.data === "cancel"
     )) {
-      const result = await ctx.dispatcher.aalajIstijabaZirr("telegram", query.data);
+      const result = await ctx.munadi.aalajIstijabaZirr("telegram", query.data);
       await ctx.telegram.answerCallback(query.id, "Received!");
       if (result.handled) {
         if (result.buttons) {
@@ -415,9 +415,9 @@ function setupTelegramHandlers(ctx: DaemonContext): void {
     await ctx.telegram.answerCallback(query.id, "Received!");
 
     /** Forward to murshid as a decision */
-    const murshid = ctx.sessionManager.wajadaMurshidFaail();
+    const murshid = ctx.mudirJalasat.wajadaMurshidFaail();
     if (murshid && query.data) {
-      await ctx.sessionManager.arsalaIlaMurshid(
+      await ctx.mudirJalasat.arsalaIlaMurshid(
         `Al-Kimyawi selected option: ${query.data}`
       );
     }
@@ -427,11 +427,11 @@ function setupTelegramHandlers(ctx: DaemonContext): void {
 /**
  * Handle private chat messages - list sessions, direct to group
  */
-async function handlePrivateChatMessage(
-  ctx: DaemonContext,
+async function aalajRisalaKhassa(
+  ctx: SiyaqKhadim,
   _message: { text?: string; message_id: number }
 ): Promise<void> {
-  const sessions = ctx.sessionManager.wajadaJalasatMurshid();
+  const sessions = ctx.mudirJalasat.wajadaJalasatMurshid();
   
   let response = "**Sessions**\n\n";
   
@@ -468,24 +468,24 @@ async function handlePrivateChatMessage(
 /**
  * Handle messages in the Dispatch topic - Linear URLs, commands
  */
-async function handleDispatchTopicMessage(
-  ctx: DaemonContext,
+async function aalajRisalaMawduu(
+  ctx: SiyaqKhadim,
   text: string,
   messageId: number
 ): Promise<void> {
   /** Check for ticket URLs first */
-  const ticketUrlMatch = text.match(ctx.issueTracker.getUrlPattern());
+  const ticketUrlMatch = text.match(ctx.mutabiWasfa.getUrlPattern());
   if (ticketUrlMatch) {
-    await handleTicketUrl(ctx, ticketUrlMatch[0], text);
+    await aalajRabitWasfa(ctx, ticketUrlMatch[0], text);
     return;
   }
 
   if (text.startsWith("/")) {
-    await handleDispatchCommand(ctx, text);
+    await aalajAmrMunadi(ctx, text);
     return;
   }
 
-  ctx.dispatcher.aalajRisalaIrsal({
+  ctx.munadi.aalajRisalaIrsal({
     source: "telegram",
     text,
     messageId,
@@ -521,7 +521,7 @@ async function handleDispatchTopicMessage(
 /**
  * Handle slash commands in Dispatch topic
  */
-async function handleDispatchCommand(ctx: DaemonContext, text: string): Promise<void> {
+async function aalajAmrMunadi(ctx: SiyaqKhadim, text: string): Promise<void> {
   const [command, ...args] = text.slice(1).split(" ");
 
   switch (command.toLowerCase()) {
@@ -532,14 +532,14 @@ async function handleDispatchCommand(ctx: DaemonContext, text: string): Promise<
           { parseMode: "Markdown" }
         );
       } else {
-        await handleTicketUrl(ctx, args[0], args.slice(1).join(" "));
+        await aalajRabitWasfa(ctx, args[0], args.slice(1).join(" "));
       }
       break;
 
     case "status":
     case "sessions": {
       /** Delegate to dispatcher — single source of truth for status rendering */
-      const result = await ctx.dispatcher.aalajRisalaIrsal({
+      const result = await ctx.munadi.aalajRisalaIrsal({
         source: "telegram",
         text: `/${command}`,
       });
@@ -568,11 +568,11 @@ Each murshid gets its own topic for conversation.
   }
 }
 
-async function handleTicketUrl(ctx: DaemonContext, url: string, additionalContext: string): Promise<void> {
+async function aalajRabitWasfa(ctx: SiyaqKhadim, url: string, additionalContext: string): Promise<void> {
   await ctx.telegram.sendToDispatch(`Analyzing: ${url}`);
 
   /** Parse URL to extract ticket ID */
-  const parsed = ctx.issueTracker.parseUrl(url);
+  const parsed = ctx.mutabiWasfa.parseUrl(url);
   if (!parsed) {
     await ctx.telegram.sendToDispatch("Could not parse ticket URL.");
     return;
@@ -581,7 +581,7 @@ async function handleTicketUrl(ctx: DaemonContext, url: string, additionalContex
   /** Resolve title from issue tracker */
   let title = parsed.id;
   if (parsed.type === "ticket") {
-    const issue = await ctx.issueTracker.getIssue(parsed.id);
+    const issue = await ctx.mutabiWasfa.getIssue(parsed.id);
     if (issue) {
       title = issue.title;
     }
@@ -591,7 +591,7 @@ async function handleTicketUrl(ctx: DaemonContext, url: string, additionalContex
    * Delegate to dispatcher — goes through the full switch protocol
    * (WIP commit, branch intaqalaIla, interrupt previous session, etc.)
    */
-  const result = await ctx.dispatcher.faaalLiRabitWasfa(
+  const result = await ctx.munadi.faaalLiRabitWasfa(
     parsed.id,
     title,
     url,
@@ -605,19 +605,19 @@ async function handleTicketUrl(ctx: DaemonContext, url: string, additionalContex
   }
 }
 
-async function keepAliveCycle(ctx: DaemonContext): Promise<void> {
+async function dawraHayat(ctx: SiyaqKhadim): Promise<void> {
   await logger.debug("main", "Running keep-alive cycle");
 
   try {
-    await ctx.keepAlive.dawra();
+    await ctx.hayat.dawra();
   } catch (error) {
     await logger.error("main", "Keep-alive cycle error", { error: String(error) });
   }
 }
 
 
-async function handlePRMerged(
-  ctx: DaemonContext,
+async function aalajDamjRisala(
+  ctx: SiyaqKhadim,
   session: JalsatMurshid,
   pr: RisalaMutaba
 ): Promise<void> {
@@ -629,7 +629,7 @@ async function handlePRMerged(
    * Check if any other PRs were stacked on this one (early push / pressure mode)
    * Those PRs need to be re-transmuted via mun_istihal onto codex
    */
-  const activePRs = ctx.sessionManager.wajadaRasaailFaailaLiMurshid(session.identifier);
+  const activePRs = ctx.mudirJalasat.wajadaRasaailFaailaLiMurshid(session.identifier);
   const stackedPRs = activePRs.filter(
     (p) => p.status === "draft" || p.status === "open"
   );
@@ -646,7 +646,7 @@ ${stackedPRs.map((p) => `- ${p.huwiyyatWasfa} (PR #${p.raqamRisala}): Use \`mun_
 Re-pushing will fix CI (now that base is on main).`;
   }
 
-  await ctx.sessionManager.arsalaIlaMurshidById(session.identifier, `## PR Merged - Ready for Next Slice
+  await ctx.mudirJalasat.arsalaIlaMurshidById(session.identifier, `## PR Merged - Ready for Next Slice
 
 **PR:** #${pr.raqamRisala}
 **Ticket:** ${pr.huwiyyatWasfa}
@@ -669,8 +669,8 @@ Query Linear for the ticket's blocking relations to determine next slice.`);
   }
 }
 
-async function handlePRClosed(
-  ctx: DaemonContext,
+async function aalajIghlaqRisala(
+  ctx: SiyaqKhadim,
   session: JalsatMurshid,
   pr: RisalaMutaba
 ): Promise<void> {
@@ -679,7 +679,7 @@ async function handlePRClosed(
     huwiyyatWasfa: pr.huwiyyatWasfa,
   });
 
-  await ctx.sessionManager.arsalaIlaMurshidById(session.identifier, `## PR Closed Without Merge
+  await ctx.mudirJalasat.arsalaIlaMurshidById(session.identifier, `## PR Closed Without Merge
 
 **PR:** #${pr.raqamRisala}
 **Ticket:** ${pr.huwiyyatWasfa}
@@ -690,8 +690,8 @@ This PR was closed without being merged. Investigate why:
 - Should the ticket status be updated?`);
 }
 
-async function handleAlKimyawiCommand(
-  ctx: DaemonContext,
+async function aalajAmrAlKimyawi(
+  ctx: SiyaqKhadim,
   session: JalsatMurshid,
   raqamRisala: number,
   comment: TaaliqMuraja
@@ -701,15 +701,15 @@ async function handleAlKimyawiCommand(
     body: comment.body.slice(0, 100),
   });
 
-  await ctx.sessionManager.arsalaIlaMurshidById(session.identifier, `## Al-Kimyawi command on PR #${raqamRisala}
+  await ctx.mudirJalasat.arsalaIlaMurshidById(session.identifier, `## Al-Kimyawi command on PR #${raqamRisala}
 
 ${comment.body}
 
 Execute this direction on the epic branch, then update the PR.`);
 }
 
-async function handleNewTaaliqMurajas(
-  ctx: DaemonContext,
+async function aalajTaaliqatJadida(
+  ctx: SiyaqKhadim,
   session: JalsatMurshid,
   raqamRisala: number,
   comments: TaaliqMuraja[]
@@ -724,7 +724,7 @@ async function handleNewTaaliqMurajas(
     .map((c) => `- @${c.author}: "${c.body.slice(0, 100)}${c.body.length > 100 ? "..." : ""}"`)
     .join("\n");
 
-  await ctx.sessionManager.arsalaIlaMurshidById(session.identifier, `## New Review Comments on PR #${raqamRisala}
+  await ctx.mudirJalasat.arsalaIlaMurshidById(session.identifier, `## New Review Comments on PR #${raqamRisala}
 
 ${commentText}
 
@@ -734,8 +734,8 @@ Analyze intent per command protocol:
 - Questions? Consider if you can answer or need al-Kimyawi`);
 }
 
-async function handlePRConflict(
-  ctx: DaemonContext,
+async function aalajTaarudRisala(
+  ctx: SiyaqKhadim,
   session: JalsatMurshid,
   pr: RisalaMutaba
 ): Promise<void> {
@@ -744,7 +744,7 @@ async function handlePRConflict(
     huwiyyatWasfa: pr.huwiyyatWasfa,
   });
 
-  await ctx.sessionManager.arsalaIlaMurshidById(session.identifier, `## PR Has Merge Conflicts
+  await ctx.mudirJalasat.arsalaIlaMurshidById(session.identifier, `## PR Has Merge Conflicts
 
 **PR:** #${pr.raqamRisala}
 **Ticket:** ${pr.huwiyyatWasfa}
@@ -755,8 +755,8 @@ The PR has conflicts with the base branch. Options:
 3. Notify al-Kimyawi if conflicts are complex`);
 }
 
-async function handleCIFailed(
-  ctx: DaemonContext,
+async function aalajFashalFahs(
+  ctx: SiyaqKhadim,
   session: JalsatMurshid,
   pr: RisalaMutaba
 ): Promise<void> {
@@ -765,7 +765,7 @@ async function handleCIFailed(
     huwiyyatWasfa: pr.huwiyyatWasfa,
   });
 
-  await ctx.sessionManager.arsalaIlaMurshidById(session.identifier, `## CI Checks Failing
+  await ctx.mudirJalasat.arsalaIlaMurshidById(session.identifier, `## CI Checks Failing
 
 **PR:** #${pr.raqamRisala}
 **Ticket:** ${pr.huwiyyatWasfa}
@@ -777,9 +777,9 @@ The PR has failing CI checks. Investigate:
 }
 
 
-async function handleMaintenanceModeRequest(ctx: DaemonContext): Promise<boolean> {
+async function aalajTalabSeyana(ctx: SiyaqKhadim): Promise<boolean> {
   /** Check if any murshid is active */
-  const activeId = ctx.dispatcher.hawiyyaFaila();
+  const activeId = ctx.munadi.hawiyyaFaila();
 
   if (activeId) {
     await logger.info("main", `Maintenance mode denied - ${activeId} is active`);
@@ -790,12 +790,12 @@ async function handleMaintenanceModeRequest(ctx: DaemonContext): Promise<boolean
   return true;
 }
 
-async function handleMaintenanceModeRelease(_ctx: DaemonContext): Promise<void> {
+async function aalajTahrirSeyana(_ctx: SiyaqKhadim): Promise<void> {
   await logger.info("main", "Maintenance mode released");
 }
 
-async function handleMaintenanceComplete(
-  ctx: DaemonContext,
+async function aalajIktimalSeyana(
+  ctx: SiyaqKhadim,
   results: NatijaSeyana[]
 ): Promise<void> {
   await logger.info("main", "Maintenance complete", {
@@ -874,7 +874,7 @@ ${(r.taarudat ?? []).map((f) => `- \`${f}\``).join("\n")}
 
 **Action required:** When you become active, resolve these conflicts manually, then use \`mun_istihal\` to refresh any open risalat.`;
 
-    await ctx.sessionManager.arsalaIlaMurshidById(r.huwiyya, conflictMsg);
+    await ctx.mudirJalasat.arsalaIlaMurshidById(r.huwiyya, conflictMsg);
   }
 }
 
@@ -883,7 +883,7 @@ ${(r.taarudat ?? []).map((f) => `- \`${f}\``).join("\n")}
  * Build a Telegram inline keyboard for a question.
  * Wraps question-handler's buildInlineKeyboard to create Telegram-specific markup.
  */
-function buildQuestionKeyboard(
+function banaLawhatSual(
   handler: ReturnType<typeof istadaaSail>,
   questionId: string,
   question: MaalumatSual,
@@ -894,7 +894,7 @@ function buildQuestionKeyboard(
 
 export const VERSION = "0.2.0";
 
-export async function startDaemon(opts: { check?: boolean } = {}): Promise<void> {
+export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   await logger.init();
 
   /** Load configuration */
@@ -951,7 +951,7 @@ export async function startDaemon(opts: { check?: boolean } = {}): Promise<void>
   await questionHandler.hammalaHala();
 
   questionHandler.wadaaIndaTahwilSual(async (pending: SualMuallaq, question: MaalumatSual) => {
-    const keyboard = buildQuestionKeyboard(questionHandler, pending.id, question);
+    const keyboard = banaLawhatSual(questionHandler, pending.id, question);
     const murshid = sessionManager.jalabMurshid(pending.huwiyyatMurshid);
     const topicId = murshid?.channels["telegram"];
     const messageId = await telegram.arsalaRisala("Use buttons below to answer:", {
@@ -972,21 +972,21 @@ export async function startDaemon(opts: { check?: boolean } = {}): Promise<void>
   });
 
   /** Create context (partial, keepAlive added after) */
-  const ctx: DaemonContext = {
-    config,
+  const ctx: SiyaqKhadim = {
+    tasmim: config,
     opencode,
     ntfy,
     telegram,
-    messenger,
-    issueTracker,
+    rasul: messenger,
+    mutabiWasfa: issueTracker,
     github,
-    sessionManager,
-    ipcProcessor,
-    dispatcher,
-    keepAlive: null as unknown as ReturnType<typeof awqadaHayat>,
-    questionHandler,
-    healthMonitor,
-    abortController,
+    mudirJalasat: sessionManager,
+    munaffidh: ipcProcessor,
+    munadi: dispatcher,
+    hayat: null as unknown as ReturnType<typeof awqadaHayat>,
+    sail: questionHandler,
+    raqib: healthMonitor,
+    mutahakkimIlgha: abortController,
   };
 
   /**
@@ -1001,48 +1001,48 @@ export async function startDaemon(opts: { check?: boolean } = {}): Promise<void>
     },
     {
       indaDamjRisala: async (session, pr) => {
-        await handlePRMerged(ctx, session, pr);
+        await aalajDamjRisala(ctx, session, pr);
       },
       indaIghlaqRisala: async (session, pr) => {
-        await handlePRClosed(ctx, session, pr);
+        await aalajIghlaqRisala(ctx, session, pr);
       },
       indaAmrAlKimyawi: async (session, raqamRisala, comment) => {
-        await handleAlKimyawiCommand(ctx, session, raqamRisala, comment);
+        await aalajAmrAlKimyawi(ctx, session, raqamRisala, comment);
       },
       indaTaaliqatJadida: async (session, raqamRisala, comments) => {
-        await handleNewTaaliqMurajas(ctx, session, raqamRisala, comments);
+        await aalajTaaliqatJadida(ctx, session, raqamRisala, comments);
       },
       indaTaarudRisala: async (session, pr) => {
-        await handlePRConflict(ctx, session, pr);
+        await aalajTaarudRisala(ctx, session, pr);
       },
       indaFashalFahs: async (session, pr) => {
-        await handleCIFailed(ctx, session, pr);
+        await aalajFashalFahs(ctx, session, pr);
       },
       utlubWadaSeyana: async () => {
-        return await handleMaintenanceModeRequest(ctx);
+        return await aalajTalabSeyana(ctx);
       },
       harrarWadaSeyana: async () => {
-        await handleMaintenanceModeRelease(ctx);
+        await aalajTahrirSeyana(ctx);
       },
       indaIktimalSeyana: async (results) => {
-        await handleMaintenanceComplete(ctx, results);
+        await aalajIktimalSeyana(ctx, results);
       },
     }
   );
 
-  ctx.keepAlive = keepAlive;
+  ctx.hayat = keepAlive;
 
   if (opts.check) {
-    await runCheck(ctx);
+    await naffadhFahs(ctx);
     return;
   }
 
-  await runDaemon(ctx);
+  await awqadKhadim(ctx);
 }
 
 if (import.meta.main) {
   const check = Deno.args.includes("--check");
-  startDaemon({ check }).catch(async (error) => {
+  abda({ check }).catch(async (error) => {
     await logger.error("main", "Fatal error", { error: String(error) });
     console.error("Fatal error:", error);
     Deno.exit(1);
