@@ -38,10 +38,10 @@ function buildContext() {
   });
 
   const dispatcher = new Munadi({
-    sessionManager,
-    intentResolver: intentResolver as never,
-    messenger,
-    ticketPattern: config.mutabiWasfa?.namatWasfa,
+    mudirJalasat: sessionManager,
+    arraf: intentResolver as never,
+    rasul: messenger,
+    namatWasfa: config.mutabiWasfa?.namatWasfa,
   });
 
   const questionHandler = new Sail({
@@ -63,9 +63,9 @@ Deno.test("smoke: /status with no sessions returns empty status", async () => {
       text: "/status",
     });
 
-    assertEquals(result.handled, true);
-    assertExists(result.response);
-    assertStringIncludes(result.response!, "none");
+    assertEquals(result.tuulija, true);
+    assertExists(result.radd);
+    assertStringIncludes(result.radd!, "none");
   });
 });
 
@@ -80,10 +80,10 @@ Deno.test("smoke: activateForTicketUrl creates session + topic", async () => {
       "https://linear.app/team/issue/TEAM-XXX"
     );
 
-    assertEquals(result.handled, true);
-    assertExists(result.response);
-    assertStringIncludes(result.response!, "TEAM-1000");
-    assertStringIncludes(result.response!, "Bab Al Shams Portal");
+    assertEquals(result.tuulija, true);
+    assertExists(result.radd);
+    assertStringIncludes(result.radd!, "TEAM-1000");
+    assertStringIncludes(result.radd!, "Bab Al Shams Portal");
 
     assertEquals(opencode._calls.khalaqaJalsa.length, 1);
     assertStringIncludes(opencode._calls.khalaqaJalsa[0].title, "TEAM-1000");
@@ -150,9 +150,9 @@ Deno.test("smoke: /status with active session shows identifier", async () => {
       text: "/status",
     });
 
-    assertEquals(result.handled, true);
-    assertExists(result.response);
-    assertStringIncludes(result.response!, "TEAM-3000");
+    assertEquals(result.tuulija, true);
+    assertExists(result.radd);
+    assertStringIncludes(result.radd!, "TEAM-3000");
   });
 });
 
@@ -183,8 +183,8 @@ Deno.test("smoke: dispatch message uses intent resolver for natural language", a
     assertEquals(intentResolver._calls.length, 1);
     assertEquals(intentResolver._calls[0].text, "work on the majlis refactor");
 
-    assertEquals(result.handled, true);
-    assertExists(result.response);
+    assertEquals(result.tuulija, true);
+    assertExists(result.radd);
 
     assertEquals(opencode._calls.khalaqaJalsa.length, 1);
   });

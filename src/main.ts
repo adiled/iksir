@@ -393,20 +393,20 @@ function addaMualijatTelegram(ctx: SiyaqKhadim): void {
     )) {
       const result = await ctx.munadi.aalajIstijabaZirr("telegram", query.data);
       await ctx.telegram.answerCallback(query.id, "Received!");
-      if (result.handled) {
+      if (result.tuulija) {
         if (result.buttons) {
           const keyboard = {
             inline_keyboard: result.buttons.map((b) => [{ text: b.text, callback_data: b.data }]),
           };
-          await ctx.telegram.sendToDispatch(result.response ?? "Choose:", {
+          await ctx.telegram.sendToDispatch(result.radd ?? "Choose:", {
             parseMode: "Markdown",
             keyboard,
           });
-        } else if (result.response) {
-          await ctx.telegram.sendToDispatch(result.response, { parseMode: "Markdown" });
+        } else if (result.radd) {
+          await ctx.telegram.sendToDispatch(result.radd, { parseMode: "Markdown" });
         }
-        if (result.error) {
-          await ctx.telegram.sendToDispatch(`Error: ${result.error}`);
+        if (result.khata) {
+          await ctx.telegram.sendToDispatch(`Error: ${result.khata}`);
         }
       }
       return;
@@ -490,18 +490,18 @@ async function aalajRisalaMawduu(
     text,
     messageId,
   }).then(async (result) => {
-    if (result.handled) {
-      if (result.response) {
-        await ctx.telegram.sendToDispatch(result.response, { parseMode: "Markdown" });
+    if (result.tuulija) {
+      if (result.radd) {
+        await ctx.telegram.sendToDispatch(result.radd, { parseMode: "Markdown" });
       }
-      if (result.error) {
-        await ctx.telegram.sendToDispatch(`Error: ${result.error}`);
+      if (result.khata) {
+        await ctx.telegram.sendToDispatch(`Error: ${result.khata}`);
       }
       if (result.buttons) {
         const keyboard = {
           inline_keyboard: result.buttons.map((b) => [{ text: b.text, callback_data: b.data }]),
         };
-        await ctx.telegram.sendToDispatch(result.response ?? "Choose:", {
+        await ctx.telegram.sendToDispatch(result.radd ?? "Choose:", {
           parseMode: "Markdown",
           keyboard,
         });
@@ -543,8 +543,8 @@ async function aalajAmrMunadi(ctx: SiyaqKhadim, text: string): Promise<void> {
         source: "telegram",
         text: `/${command}`,
       });
-      if (result.response) {
-        await ctx.telegram.sendToDispatch(result.response, { parseMode: "Markdown" });
+      if (result.radd) {
+        await ctx.telegram.sendToDispatch(result.radd, { parseMode: "Markdown" });
       }
       break;
     }
@@ -598,10 +598,10 @@ async function aalajRabitWasfa(ctx: SiyaqKhadim, url: string, additionalContext:
     additionalContext || undefined,
   );
 
-  if (result.error) {
-    await ctx.telegram.sendToDispatch(result.error);
-  } else if (result.response) {
-    await ctx.telegram.sendToDispatch(result.response, { parseMode: "Markdown" });
+  if (result.khata) {
+    await ctx.telegram.sendToDispatch(result.khata);
+  } else if (result.radd) {
+    await ctx.telegram.sendToDispatch(result.radd, { parseMode: "Markdown" });
   }
 }
 
@@ -932,10 +932,10 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
 
   /** Initialize dispatcher */
   const dispatcher = istadaaMunadi({
-    sessionManager,
-    intentResolver,
-    messenger,
-    ticketPattern: config.mutabiWasfa?.namatWasfa,
+    mudirJalasat: sessionManager,
+    arraf: intentResolver,
+    rasul: messenger,
+    namatWasfa: config.mutabiWasfa?.namatWasfa,
   });
 
   ipcProcessor.wadaaMunadi(dispatcher);
