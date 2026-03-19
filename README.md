@@ -2,7 +2,7 @@
 
 **Iksīr - The Elixir of Transformation**
 
-In the depths of the workshop, where sulfur meets mercury, where base metal yearns for gold, there exists an ancient art. Not the frantic bubbling of a thousand crucibles, but the patient work of a single athanor, tended with wisdom.
+In the depths where sulfur meets mercury, where base metal yearns for gold, there exists an ancient art. Not the frantic bubbling of a thousand crucibles, but the patient work of a single athanor, tended with wisdom.
 
 Iksīr is the philosopher's stone of code - an alchemical system where transformation happens through **transmutation, not chaos**. Multiple alchemists may prepare their formulae, each in their own vessel, but only one performs the Great Work at a time. When blocked by the mysteries of nature, they yield. When revelation comes, they demand the flame.
 
@@ -36,7 +36,7 @@ iksir verify            # verify the formulae and runes
 The kindling ritual creates XDG directories, copies sacred templates, installs the `iksir` CLI to `~/.local/bin/`, generates daemon services, and consecrates agent incantations. Run `./kindle` again after pulling new transmutations.
 
 ```
-~/.config/iksir/           Sacred vessels (iksir.json, AGENTS.md)
+~/.config/iksir/           Sacred vessels (iksir.yaml, AGENTS.md)
 ~/.local/share/iksir/      Sijill - The Register (SQLite)
 ~/.local/state/iksir/      Scrolls of observation (logs)
 ~/.local/bin/iksir         The Summoning Rod (CLI)
@@ -49,25 +49,28 @@ The kindling ritual creates XDG directories, copies sacred templates, installs t
 Iksīr transmutes raw **wasfa** (وصفة - formulae) into perfected **dhahab** (ذهب - gold) - the Murshidun (guides) laboring at their crucibles while you attend to higher mysteries.
 
 - **Ina'** (إناء - Vessels): Each murshid works in isolation, their own sacred vessel on their own branch, no contamination
-- **Sail** (سائل - The Oracle): Most questions are **khabath** (خبث - dross). Iksīr divines their nature and only brings forth what gleams as **dhahab**
+- **Saail** (سائل - The Oracle): Most questions are **khabath** (خبث - dross). Iksīr divines their nature and only brings forth what gleams as **dhahab**
 - **Hudud Muqaddasa** (حدود مقدسة - Sacred Boundaries): No murshid touches the source directly. Each transformation contained, each vessel sealed  
 - **Kitab al-Hikmah** (كتاب الحكمة - Book of Wisdom): The collective grimoire preserves all **hikma** across the ages of work
 - **Hakim, not Mubtadi** (حكيم، لا مبتدئ): You are summoned for **wahy** (revelation), not permission to grind powders
 
-## Warsha - The Workshop  
+## The Sacred Hierarchy
 
 ```
 Kimyawi (كيميائي - You, the Human Alchemist)
   |
 Iksīr (إكسير - The Elixir)
   | (Served by the Khuddām - خدّام - Sacred Servants)
-  |- Munadi      منادي - calls forth the workers
-  |- Katib       كاتب - inscribes all transformations  
-  |- Sail        سائل - divines truth from questions
-  |- Raqib       رقيب - guards against fasad (corruption)
-  '- Munaffidh   منفذ - executes the transmutation
+  |- Munadi      منادي  - calls forth the workers
+  |- Katib       كاتب   - inscribes all transformations
+  |- Arraf       عرّاف  - divines intent from utterances
+  |- Saail       سائل   - divines truth from questions
+  |- Mumayyiz   مميّز  - separates dhahab from khabath
+  |- Raqib       رقيب   - guards against fasad (corruption)
+  |- Hayat       حياة   - keeps vigil, performs the night rites
+  '- Munaffidh   منفذ   - executes the transmutation
   |
-Buwtaqa (بوتقة - The Crucible) 
+Buwtaqa (بوتقة - The Crucible)
   |
 Athanor (أثانور - The Sacred Furnace)
 ```
@@ -89,7 +92,7 @@ These are immutable, carved in stone:
 Iksīr provides the workshop, but the recipes are yours:
 
 - **Ta'lim** (تعليم): what your alchemists must know of your materials and methods
-- **Ruqya** (رقية): Murshid and Sani' incantations  
+- **Ruqya** (رقية): Murshid and Sani incantations  
 - **Qanawat** (قنوات): Telegram channels carry messages by default. Any conduit may be consecrated
 - **Sahifa** (صحيفة): Linear holds formulae by default. Other grimoires await binding
 - **Khatm** (ختم): vessel naming, formula patterns, divination tuning — all may be inscribed
@@ -118,7 +121,7 @@ A **Jawhar** can build upon other **Jawahir** (plural). A layered **istihal** as
 
 ### The Nature of Runes
 
-What the dull world calls "code" are actually **Runūz** (رموز) — ancient symbols of power inscribed on **Ahjār** (أحجار - stones). These stones contain **Ta'āwīdh** (تعاويذ - incantations) that perform actions, **'Uqūd** (عقود - contracts) that bind behavior, and **Ṣiyagh** (صيغ - formulae) that create entities. The Murshid reads the runūz, the Sunna' inscribe them, and the transmutation process extracts their **jawhar** for inscription into the eternal **kitab**.
+What the dull world calls "code" are actually **Runūz** (رموز) — ancient symbols of power inscribed on **Ahjār** (أحجار - stones). These stones contain **Ta'āwīdh** (تعاويذ - incantations) that perform actions, **'Uqūd** (عقود - contracts) that bind behavior, and **Ṣiyagh** (صيغ - formulae) that create entities. The Murshid reads the runūz, the Sani inscribes them, and the transmutation process extracts their **jawhar** for inscription into the eternal **kitab**.
 
 ## License
 
