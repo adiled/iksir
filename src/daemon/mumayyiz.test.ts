@@ -85,7 +85,7 @@ Deno.test("mayyazaTanbih: malformed JSON -> fail-open dhahab", async () => {
 
   const result = await mayyazaTanbih(oc as never, "Some message");
   assertEquals(result.dhahab, true);
-  assertEquals(result.sabab, "Tamyiz error");
+  assertEquals(result.sabab, "خطأ في التمييز");
 });
 
 Deno.test("mayyazaTanbih: LLM returns success:false -> fail-open", async () => {
@@ -96,7 +96,7 @@ Deno.test("mayyazaTanbih: LLM returns success:false -> fail-open", async () => {
 
   const result = await mayyazaTanbih(oc as never, "Some message");
   assertEquals(result.dhahab, true);
-  assertEquals(result.sabab, "Tamyiz failed");
+  assertEquals(result.sabab, "فشل التمييز");
 });
 
 Deno.test("mayyazaTanbih: LLM throws -> fail-open", async () => {
@@ -109,7 +109,7 @@ Deno.test("mayyazaTanbih: LLM throws -> fail-open", async () => {
 
   const result = await mayyazaTanbih(oc as never, "Some message");
   assertEquals(result.dhahab, true);
-  assertEquals(result.sabab, "Tamyiz error");
+  assertEquals(result.sabab, "خطأ في التمييز");
 });
 
 Deno.test("mayyazaTanbih: missing fields get defaults", async () => {
@@ -247,7 +247,7 @@ Deno.test("mayyazaSual: malformed JSON -> fail-open DHAHAB", async () => {
 
   const result = await mayyazaSual(oc as never, makeQuestion());
   assertEquals(result.tamyiz, "DHAHAB");
-  assertEquals(result.reason, "Tamyiz error");
+  assertEquals(result.reason, "خطأ في التمييز");
 });
 
 Deno.test("mayyazaSual: LLM throws -> fail-open DHAHAB", async () => {
@@ -260,7 +260,7 @@ Deno.test("mayyazaSual: LLM throws -> fail-open DHAHAB", async () => {
 
   const result = await mayyazaSual(oc as never, makeQuestion());
   assertEquals(result.tamyiz, "DHAHAB");
-  assertEquals(result.reason, "Tamyiz error");
+  assertEquals(result.reason, "خطأ في التمييز");
 });
 
 Deno.test("mayyazaSual: DHAHAB nullifies autoAnswer and rejection", async () => {

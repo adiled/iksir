@@ -164,7 +164,8 @@ interface NatijaTamyizTanbih {
 }
 
 /**
- * Mayyiz a tanbih as dhahab of the intibah al-Kimyawi or khabath.
+ * Assay an ishara — is it dhahab worthy of al-Kimyawi's gaze,
+ * or khabath to be returned to the murshid?
  */
 export async function mayyazaTanbih(
   opencode: OpenCodeClient,
@@ -172,7 +173,7 @@ export async function mayyazaTanbih(
 ): Promise<NatijaTamyizTanbih> {
   const md = await hammalWakala();
   if (!md) {
-    return { dhahab: true, sabab: "AGENTS.md unavailable", radd: null };
+    return { dhahab: true, sabab: "التعاليم غائبة", radd: null };
   }
 
   qalibTanbih = await hammalQalib(
@@ -190,10 +191,10 @@ export async function mayyazaTanbih(
   try {
     const result = await opencode.mayyaza(prompt);
     if (!result.success || !result.response) {
-      await logger.haDHHir("mumayyiz", "Ishara tamyiz failed, allowing", {
+      await logger.haDHHir("mumayyiz", "تمييز الإشارة فشل — السماح بالمرور", {
         error: result.error,
       });
-      return { dhahab: true, sabab: "Tamyiz failed", radd: null };
+      return { dhahab: true, sabab: "فشل التمييز", radd: null };
     }
 
     const parsed = JSON.parse(result.response.trim());
@@ -204,16 +205,17 @@ export async function mayyazaTanbih(
       radd: isDhahab ? null : (parsed.rejection ?? "Handle this autonomously."),
     };
   } catch (error) {
-    await logger.haDHHir("mumayyiz", "Ishara tamyiz error, allowing", {
+    await logger.haDHHir("mumayyiz", "خطأ في تمييز الإشارة — السماح بالمرور", {
       error: String(error),
     });
-    return { dhahab: true, sabab: "Tamyiz error", radd: null };
+    return { dhahab: true, sabab: "خطأ في التمييز", radd: null };
   }
 }
 
 
 /**
- * Mayyiz a sual as dhahab of the hukm al-Kimyawi or khabath.
+ * Assay a sual — does it require al-Kimyawi's hukm,
+ * or can the murshid answer it alone?
  */
 export async function mayyazaSual(
   opencode: OpenCodeClient,
@@ -221,7 +223,7 @@ export async function mayyazaSual(
 ): Promise<TasnifSual> {
   const md = await hammalWakala();
   if (!md) {
-    return { tamyiz: "DHAHAB", reason: "AGENTS.md unavailable", rejection: null, autoAnswer: null };
+    return { tamyiz: "DHAHAB", reason: "التعاليم غائبة", rejection: null, autoAnswer: null };
   }
 
   const optionsText = question.options
@@ -245,20 +247,20 @@ export async function mayyazaSual(
   try {
     const result = await opencode.mayyaza(prompt);
     if (!result.success || !result.response) {
-      await logger.haDHHir("mumayyiz", "Question tamyiz failed, allowing", {
+      await logger.haDHHir("mumayyiz", "تمييز السؤال فشل — السماح بالمرور", {
         error: result.error,
       });
-      return { tamyiz: "DHAHAB", reason: "Tamyiz failed", rejection: null, autoAnswer: null };
+      return { tamyiz: "DHAHAB", reason: "فشل التمييز", rejection: null, autoAnswer: null };
     }
 
-    /** Parse JSON — handle potential markdown wrapping */
+    /** Strip stink world markdown wrapping if present */
     let jsonStr = result.response.trim();
     if (jsonStr.startsWith("```")) {
       jsonStr = jsonStr.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
     }
     const parsed = JSON.parse(jsonStr);
 
-    /** Handle "pick recommended" / "pick first" shortcuts */
+    /** Resolve shorthand auto-answers to actual option labels */
     let autoAnswer = parsed.autoAnswer;
     if (autoAnswer && parsed.tamyiz === "KHABATH") {
       if (autoAnswer.toLowerCase() === "pick recommended") {
@@ -276,16 +278,14 @@ export async function mayyazaSual(
       autoAnswer: parsed.tamyiz === "KHABATH" ? autoAnswer : null,
     };
   } catch (error) {
-    await logger.haDHHir("mumayyiz", "Question tamyiz error, allowing", {
+    await logger.haDHHir("mumayyiz", "خطأ في تمييز السؤال — السماح بالمرور", {
       error: String(error),
     });
-    return { tamyiz: "DHAHAB", reason: "Tamyiz error", rejection: null, autoAnswer: null };
+    return { tamyiz: "DHAHAB", reason: "خطأ في التمييز", rejection: null, autoAnswer: null };
   }
 }
 
-/**
- * Reset cached templates (for testing).
- */
+/** Wipe the cached scrolls — for fahs only */
 export function _masahaDhakira(): void {
   muhtawaWakala = null;
   qalibTanbih = null;
