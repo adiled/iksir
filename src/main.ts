@@ -967,8 +967,8 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   /** Initialize health monitor (session stuck detection + auto-compaction) */
   const healthMonitor = istadaaRaqib({
     opencode,
-    messenger,
-    sessionManager,
+    rasul: messenger,
+    mudirJalasat: sessionManager,
   });
 
   /** Create context (partial, keepAlive added after) */
