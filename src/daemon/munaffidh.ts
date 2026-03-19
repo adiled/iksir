@@ -1,19 +1,16 @@
 /**
- * Munaffidh (منفذ) - The Executor
- * 
- * One of the sacred Khuddām (خدّام - Servants) of Iksīr.
- * Munaffidh executes the alchemical operations commanded by the Murshidun.
- * Git transmutations, Linear inscriptions, GitHub treatises - all sacred
- * operations flow through Munaffidh's careful hands.
- */
-
-/**
- * IPC Event Processor
+ * Munaffidh (منفذ) — The Executor
  *
- * Processes PM-MCP events from SQLite and executes them using issue tracker/GitHub clients.
- * Sends results back to murshid session.
+ * One of the sacred Khuddām (خدّام) of Iksīr.
  *
- * This is the bridge between PM-MCP tool calls and actual API operations.
+ * When a Murshid speaks a nidā — a tool call — it is inscribed
+ * as a hadath in the Sijill's ahdath table. Munaffidh watches the
+ * ahdath table on a heartbeat. When an unprocessed hadath appears,
+ * Munaffidh reads the nidā, performs the sacred operation — git,
+ * Linear, GitHub — and returns the natija to the Murshid's vessel.
+ *
+ * Munaffidh is the bridge between intention and reality.
+ * The hands that turn the Murshid's words into action.
  */
 
 import { GitHubClient } from "../github/gh.ts";
@@ -56,12 +53,12 @@ import type { Munadi } from "./munadi.ts";
 import * as git from "../git/operations.ts";
 
 interface MunaffidhDeps {
-  config: TasmimIksir;
-  issueTracker: MutabiWasfa;
+  tasmim: TasmimIksir;
+  mutabiWasfa: MutabiWasfa;
   github: GitHubClient;
-  messenger: RasulKharij;
+  rasul: RasulKharij;
   ntfy: NtfyClient;
-  sessionManager: MudirJalasat;
+  mudirJalasat: MudirJalasat;
   opencode: OpenCodeClient;
 }
 
@@ -69,7 +66,7 @@ interface MunaffidhDeps {
 
 export class Munaffidh {
   readonly #config: TasmimIksir;
-  mutabiWasfa: MutabiWasfa;
+  #mutabiWasfa: MutabiWasfa;
   #github: GitHubClient;
   #messenger: RasulKharij;
   #ntfy: NtfyClient;
@@ -77,15 +74,15 @@ export class Munaffidh {
   #opencode: OpenCodeClient;
   #iksir: Munadi | null = null;
 
-  mutahakkimIlgha: AbortController | null = null;
+  #mutahakkimIlgha: AbortController | null = null;
 
   constructor(deps: MunaffidhDeps) {
-    this.#config = deps.config;
-    this.mutabiWasfa = deps.issueTracker;
+    this.#config = deps.tasmim;
+    this.#mutabiWasfa = deps.mutabiWasfa;
     this.#github = deps.github;
-    this.#messenger = deps.messenger;
+    this.#messenger = deps.rasul;
     this.#ntfy = deps.ntfy;
-    this.#sessionManager = deps.sessionManager;
+    this.#sessionManager = deps.mudirJalasat;
     this.#opencode = deps.opencode;
   }
 
@@ -97,7 +94,7 @@ export class Munaffidh {
   }
 
   /** Access config for quiet hours checks etc. */
-  get config(): TasmimIksir {
+  get tasmim(): TasmimIksir {
     return this.#config;
   }
 
@@ -120,8 +117,8 @@ export class Munaffidh {
    * Start processing PM-MCP events
    */
   async badaaMuaalaja(signal: AbortSignal): Promise<void> {
-    this.mutahakkimIlgha = new AbortController();
-    const combinedSignal = AbortSignal.any([signal, this.mutahakkimIlgha.signal]);
+    this.#mutahakkimIlgha = new AbortController();
+    const combinedSignal = AbortSignal.any([signal, this.#mutahakkimIlgha.signal]);
 
     while (!combinedSignal.aborted) {
       try {
@@ -141,8 +138,8 @@ export class Munaffidh {
    * Stop processing
    */
   awqafMuaalaja(): void {
-    this.mutahakkimIlgha?.abort();
-    this.mutahakkimIlgha = null;
+    this.#mutahakkimIlgha?.abort();
+    this.#mutahakkimIlgha = null;
   }
 
   /**
@@ -244,10 +241,10 @@ export class Munaffidh {
           result = await this.aalajGitPush();
           break;
         case "mun_istihal":
-          result = await this.#handleIstihal(event);
+          result = await this.aalajIstihal(event);
           break;
         case "mun_istihal_mutabaqq":
-          result = await this.#handleIstihalMutabaqq(event);
+          result = await this.aalajIstihalMutabaqq(event);
           break;
         default:
           result = `Unknown tool: ${(event as { tool: string }).tool}`;
@@ -281,7 +278,7 @@ export class Munaffidh {
    * Handle pm_read_wasfa
    */
   async #aalajaQiraaatWasfa(call: NidaQiraatWasfa): Promise<string> {
-    const parsed = this.mutabiWasfa.parseUrl(call.url);
+    const parsed = this.#mutabiWasfa.parseUrl(call.url);
 
     if (!parsed) {
       return `Failed to parse URL: ${call.url}`;
@@ -294,7 +291,7 @@ export class Munaffidh {
     parts.push("");
 
     if (parsed.naw === "wasfa") {
-      const issue = await this.mutabiWasfa.getIssue(parsed.id);
+      const issue = await this.#mutabiWasfa.getIssue(parsed.id);
 
       if (!issue) {
         return `Issue not found: ${parsed.id}`;
@@ -340,7 +337,7 @@ export class Munaffidh {
       parts.push("");
 
     } else if (parsed.naw === "mashru") {
-      const project = await this.mutabiWasfa.getProject(parsed.id);
+      const project = await this.#mutabiWasfa.getProject(parsed.id);
 
       if (!project) {
         return `Project not found: ${parsed.id}`;
@@ -366,7 +363,7 @@ export class Munaffidh {
    * Handle pm_create_wasfa
    */
   async #aalajaKhalqWasfa(call: NidaKhalqWasfa): Promise<string> {
-    const issue = await this.mutabiWasfa.createIssue({
+    const issue = await this.#mutabiWasfa.createIssue({
       title: call.unwan,
       description: call.wasf,
       estimate: call.taqdir,
@@ -389,7 +386,7 @@ You can now set relations using pm_set_relations.`;
    * Handle pm_update_wasfa
    */
   async #aalajaTajdidWasfa(call: NidaTajdidWasfa): Promise<string> {
-    const issue = await this.mutabiWasfa.getIssue(call.huwiyyatWasfa);
+    const issue = await this.#mutabiWasfa.getIssue(call.huwiyyatWasfa);
     if (!issue) {
       return `Ticket not found: ${call.huwiyyatWasfa}`;
     }
@@ -405,7 +402,7 @@ You can now set relations using pm_set_relations.`;
       updatePayload.status = call.updates.hala;
     }
 
-    await this.mutabiWasfa.updateIssue(issue.id, updatePayload);
+    await this.#mutabiWasfa.updateIssue(issue.id, updatePayload);
 
     return `Ticket updated: ${call.huwiyyatWasfa}
 
@@ -422,7 +419,7 @@ Updated fields: ${Object.keys(call.updates).join(", ")}`;
       blockedBy: call.mahjoubBi,
     });
 
-    await this.mutabiWasfa.setRelations(
+    await this.#mutabiWasfa.setRelations(
       call.huwiyyatWasfa,
       call.yahjub,
       call.mahjoubBi
@@ -846,7 +843,7 @@ Remote: origin`;
   /**
    * Handle mun_istihal - transmute ahjar from buwtaqa into jawhar
    */
-  async #handleIstihal(call: NidaIstihal): Promise<string> {
+  async aalajIstihal(call: NidaIstihal): Promise<string> {
     await logger.akhbar("tool-executor", `Istihal for ${call.huwiyyatWasfa}`, {
       ahjar: call.ahjar.length,
     });
@@ -883,7 +880,7 @@ Next: Use mun_fasl to create the risala.`;
   /**
    * Handle mun_istihal_mutabaqq - layered istihal targeting parent jawhar
    */
-  async #handleIstihalMutabaqq(call: NidaIstihalMutabaqq): Promise<string> {
+  async aalajIstihalMutabaqq(call: NidaIstihalMutabaqq): Promise<string> {
     await logger.akhbar("tool-executor", `Layered istihal for ${call.huwiyyatWasfa}`, {
       parentTicketId: call.huwiyyatAbWasfa,
       ahjar: call.ahjar.length,

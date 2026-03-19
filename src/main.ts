@@ -917,12 +917,12 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
 
   /** Initialize IPC processor and istarjaa persisted state */
   const ipcProcessor = istadaaMunaffidh({
-    config,
-    issueTracker,
+    tasmim: config,
+    mutabiWasfa: issueTracker,
     github,
-    messenger,
+    rasul: messenger,
     ntfy,
-    sessionManager,
+    mudirJalasat: sessionManager,
     opencode,
   });
   await ipcProcessor.hammalaHala();
