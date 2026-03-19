@@ -945,8 +945,8 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   /** Initialize question handler (for question tool events from murshids) */
   const questionHandler = istadaaSail({
     opencode,
-    messenger,
-    sessionManager,
+    rasul: messenger,
+    mudirJalasat: sessionManager,
   });
   await questionHandler.hammalaHala();
 

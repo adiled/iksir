@@ -58,8 +58,8 @@ function makeEvent(overrides?: Partial<HadathSualMatlub["properties"]>): HadathS
 Deno.test("isQuestionCallback: returns true for q: prefix", () => {
   const qh = new Sail({
     opencode: mockOpenCodeClient() as never,
-    messenger: mockMessenger(),
-    sessionManager: mockMudirJalasat() as never,
+    rasul: mockMessenger(),
+    mudirJalasat: mockMudirJalasat() as never,
   });
 
   assertEquals(qh.huwaIstijabaZirrSual("q:abc:label"), true);
@@ -69,8 +69,8 @@ Deno.test("isQuestionCallback: returns true for q: prefix", () => {
 Deno.test("isQuestionCallback: returns false for other prefixes", () => {
   const qh = new Sail({
     opencode: mockOpenCodeClient() as never,
-    messenger: mockMessenger(),
-    sessionManager: mockMudirJalasat() as never,
+    rasul: mockMessenger(),
+    mudirJalasat: mockMudirJalasat() as never,
   });
 
   assertEquals(qh.huwaIstijabaZirrSual("other:data"), false);
@@ -82,8 +82,8 @@ Deno.test("isQuestionCallback: returns false for other prefixes", () => {
 Deno.test("wajadaSualMuallaq: returns undefined for unknown", () => {
   const qh = new Sail({
     opencode: mockOpenCodeClient() as never,
-    messenger: mockMessenger(),
-    sessionManager: mockMudirJalasat() as never,
+    rasul: mockMessenger(),
+    mudirJalasat: mockMudirJalasat() as never,
   });
 
   assertEquals(qh.wajadaSualMuallaq("nonexistent"), undefined);
@@ -93,8 +93,8 @@ Deno.test("wajadaSualMuallaq: returns undefined for unknown", () => {
 Deno.test("isAwaitingCustomInput: returns false initially", () => {
   const qh = new Sail({
     opencode: mockOpenCodeClient() as never,
-    messenger: mockMessenger(),
-    sessionManager: mockMudirJalasat() as never,
+    rasul: mockMessenger(),
+    mudirJalasat: mockMudirJalasat() as never,
   });
 
   assertEquals(qh.huwaYantazirIdkhal("TEAM-123"), false);
@@ -104,8 +104,8 @@ Deno.test("isAwaitingCustomInput: returns false initially", () => {
 Deno.test("buildInlineKeyboard: creates rows for each option + custom", () => {
   const qh = new Sail({
     opencode: mockOpenCodeClient() as never,
-    messenger: mockMessenger(),
-    sessionManager: mockMudirJalasat() as never,
+    rasul: mockMessenger(),
+    mudirJalasat: mockMudirJalasat() as never,
   });
 
   const question = makeMaalumatSual();
@@ -123,8 +123,8 @@ Deno.test("buildInlineKeyboard: creates rows for each option + custom", () => {
 Deno.test("buildInlineKeyboard: no custom button when custom=false", () => {
   const qh = new Sail({
     opencode: mockOpenCodeClient() as never,
-    messenger: mockMessenger(),
-    sessionManager: mockMudirJalasat() as never,
+    rasul: mockMessenger(),
+    mudirJalasat: mockMudirJalasat() as never,
   });
 
   const question = makeMaalumatSual({ custom: false });
@@ -136,8 +136,8 @@ Deno.test("buildInlineKeyboard: no custom button when custom=false", () => {
 Deno.test("parseQuestionCallback: resolves registered short IDs", () => {
   const qh = new Sail({
     opencode: mockOpenCodeClient() as never,
-    messenger: mockMessenger(),
-    sessionManager: mockMudirJalasat() as never,
+    rasul: mockMessenger(),
+    mudirJalasat: mockMudirJalasat() as never,
   });
 
   /** Register via buildInlineKeyboard */
@@ -154,8 +154,8 @@ Deno.test("parseQuestionCallback: resolves registered short IDs", () => {
 Deno.test("parseQuestionCallback: returns null for unknown short IDs", () => {
   const qh = new Sail({
     opencode: mockOpenCodeClient() as never,
-    messenger: mockMessenger(),
-    sessionManager: mockMudirJalasat() as never,
+    rasul: mockMessenger(),
+    mudirJalasat: mockMudirJalasat() as never,
   });
 
   const result = qh.hallalIstijabaZirrSual("q:unknown1:some label");
@@ -165,8 +165,8 @@ Deno.test("parseQuestionCallback: returns null for unknown short IDs", () => {
 Deno.test("parseQuestionCallback: handles labels with colons", () => {
   const qh = new Sail({
     opencode: mockOpenCodeClient() as never,
-    messenger: mockMessenger(),
-    sessionManager: mockMudirJalasat() as never,
+    rasul: mockMessenger(),
+    mudirJalasat: mockMudirJalasat() as never,
   });
 
   /** Register a question with a colon in the label */
@@ -187,8 +187,8 @@ Deno.test("handleQuestionAsked: unknown session -> rejects", async () => {
     const oc = mockOpenCodeClient();
     const qh = new Sail({
       opencode: oc as never,
-      messenger: mockMessenger(),
-      sessionManager: mockMudirJalasat([]) as never,
+      rasul: mockMessenger(),
+      mudirJalasat: mockMudirJalasat([]) as never,
     });
 
     await qh.aalajSualMatlub(makeEvent());
@@ -204,8 +204,8 @@ Deno.test("handleQuestionAsked: empty questions -> rejects", async () => {
     const session = makeSession();
     const qh = new Sail({
       opencode: oc as never,
-      messenger: mockMessenger(),
-      sessionManager: mockMudirJalasat([session]) as never,
+      rasul: mockMessenger(),
+      mudirJalasat: mockMudirJalasat([session]) as never,
     });
 
     await qh.aalajSualMatlub(makeEvent({ questions: [] }));
@@ -227,8 +227,8 @@ Deno.test("handleQuestionAsked: KHABATH -> auto-answers + injects guidance", asy
     const messenger = mockMessenger();
     const qh = new Sail({
       opencode: oc as never,
-      messenger,
-      sessionManager: mockMudirJalasat([session]) as never,
+      rasul: messenger,
+      mudirJalasat: mockMudirJalasat([session]) as never,
     });
 
     await qh.aalajSualMatlub(makeEvent());
@@ -259,8 +259,8 @@ Deno.test("handleQuestionAsked: DHAHAB -> forwards to al-Kimyawi", async () => {
 
     const qh = new Sail({
       opencode: oc as never,
-      messenger,
-      sessionManager: mockMudirJalasat([session]) as never,
+      rasul: messenger,
+      mudirJalasat: mockMudirJalasat([session]) as never,
     });
 
     qh.wadaaIndaTahwilSual(async () => {
@@ -303,8 +303,8 @@ Deno.test("handleQuestionCallback: answers question + marks in DB", async () => 
     seedSession();
     const qh = new Sail({
       opencode: oc as never,
-      messenger: mockMessenger(),
-      sessionManager: mockMudirJalasat([session]) as never,
+      rasul: mockMessenger(),
+      mudirJalasat: mockMudirJalasat([session]) as never,
     });
 
     await qh.aalajSualMatlub(makeEvent());
@@ -327,8 +327,8 @@ Deno.test("handleQuestionCallback: unknown question -> returns false", async () 
     const oc = mockOpenCodeClient();
     const qh = new Sail({
       opencode: oc as never,
-      messenger: mockMessenger(),
-      sessionManager: mockMudirJalasat() as never,
+      rasul: mockMessenger(),
+      mudirJalasat: mockMudirJalasat() as never,
     });
 
     const success = await qh.aalajIstijabaZirrSual("nonexistent", "anything");
@@ -351,8 +351,8 @@ Deno.test("markAwaitingCustomInput + handlePotentialCustomAnswer: end-to-end", a
     seedSession();
     const qh = new Sail({
       opencode: oc as never,
-      messenger: mockMessenger(),
-      sessionManager: mockMudirJalasat([session]) as never,
+      rasul: mockMessenger(),
+      mudirJalasat: mockMudirJalasat([session]) as never,
     });
 
     await qh.aalajSualMatlub(makeEvent());
@@ -375,8 +375,8 @@ Deno.test("handlePotentialCustomAnswer: returns false when not awaiting", async 
   await withTestDb(async () => {
     const qh = new Sail({
       opencode: mockOpenCodeClient() as never,
-      messenger: mockMessenger(),
-      sessionManager: mockMudirJalasat() as never,
+      rasul: mockMessenger(),
+      mudirJalasat: mockMudirJalasat() as never,
     });
 
     const result = await qh.aalajJawabKhass("TEAM-123", "some text");
@@ -393,8 +393,8 @@ Deno.test("loadState: rebuilds pendingQuestions from DB", async () => {
 
     const qh = new Sail({
       opencode: oc as never,
-      messenger: mockMessenger(),
-      sessionManager: mockMudirJalasat([session]) as never,
+      rasul: mockMessenger(),
+      mudirJalasat: mockMudirJalasat([session]) as never,
     });
 
     adkhalaSual({
@@ -424,8 +424,8 @@ Deno.test("loadState: rebuilds callbackIdMap (parseQuestionCallback works after 
 
     const qh = new Sail({
       opencode: oc as never,
-      messenger: mockMessenger(),
-      sessionManager: mockMudirJalasat([session]) as never,
+      rasul: mockMessenger(),
+      mudirJalasat: mockMudirJalasat([session]) as never,
     });
 
     adkhalaSual({
@@ -456,8 +456,8 @@ Deno.test("loadState: no questions -> no-op", async () => {
   await withTestDb(async () => {
     const qh = new Sail({
       opencode: mockOpenCodeClient() as never,
-      messenger: mockMessenger(),
-      sessionManager: mockMudirJalasat() as never,
+      rasul: mockMessenger(),
+      mudirJalasat: mockMudirJalasat() as never,
     });
 
     await qh.hammalaHala();
@@ -471,8 +471,8 @@ Deno.test("loadState: unknown session -> uses sessionId as huwiyyatMurshid fallb
 
     const qh = new Sail({
       opencode: mockOpenCodeClient() as never,
-      messenger: mockMessenger(),
-      sessionManager: mockMudirJalasat([]) as never,
+      rasul: mockMessenger(),
+      mudirJalasat: mockMudirJalasat([]) as never,
     });
 
     adkhalaSual({

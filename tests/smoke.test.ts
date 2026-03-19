@@ -46,8 +46,8 @@ function buildContext() {
 
   const questionHandler = new Sail({
     opencode: opencode as never,
-    messenger,
-    sessionManager: sessionManager as never,
+    rasul: messenger,
+    mudirJalasat: sessionManager as never,
   });
 
   return { config, opencode, telegram, messenger, sessionManager, dispatcher, intentResolver, questionHandler };

@@ -1,20 +1,17 @@
 /**
- * Sail (سائل) - The Oracle
- * 
- * One of the sacred Khuddām (خدّام - Servants) of Iksīr.
- * Sail divines the nature of questions, separating dhahab (gold) from
- * khabath (dross). Only questions of true worth are brought before the
- * Kimyawi (the Human Alchemist).
- */
-
-/**
- * Question Handler
+ * Sail (سائل) — The Oracle
  *
- * Handles question.asked events from OpenCode SSE.
- * Mayyiz questions as dhahab (forward to al-Kimyawi) or khabath (auto-answer).
+ * One of the sacred Khuddām (خدّام) of Iksīr.
  *
- * Similar to pm_notify filtering in tool-executor, but for the
- * question tool which presents MCQ-style decisions.
+ * When a Murshid pauses and turns to ask — Sail receives the sual.
+ * Not every question deserves al-Kimyawi's gaze. Sail passes the
+ * sual through the Mumayyiz's assay: dhahab is forwarded to
+ * al-Kimyawi with reverence; khabath is answered silently,
+ * the Murshid guided back to work without disturbance.
+ *
+ * Sail holds each unanswered sual in suspension — the aseilaMuallaqa —
+ * until al-Kimyawi speaks or the Murshid moves on. The sijill records
+ * every sual, every jawab, every silence.
  */
 
 import { logger } from "../logging/logger.ts";
@@ -39,8 +36,8 @@ import type {
 
 interface SailDeps {
   opencode: OpenCodeClient;
-  messenger: RasulKharij;
-  sessionManager: MudirJalasat;
+  rasul: RasulKharij;
+  mudirJalasat: MudirJalasat;
 }
 
 export class Sail {
@@ -49,12 +46,9 @@ export class Sail {
   #sessionManager: MudirJalasat;
 
   aseilaMuallaqa: Map<string, SualMuallaq> = new Map();
-
   kharitaIstijabaId: Map<string, string> = new Map();
-
   yantazirIdkhalKhass: Map<string, string> = new Map();
-
-  indaTahwilSual: ((pending: SualMuallaq, question: MaalumatSual) => Promise<void>) | null = null;
+  #indaTahwilSual: ((pending: SualMuallaq, question: MaalumatSual) => Promise<void>) | null = null;
 
   /**
    * Set callback for transport-specific question rendering.
@@ -63,7 +57,7 @@ export class Sail {
   wadaaIndaTahwilSual(
     callback: (pending: SualMuallaq, question: MaalumatSual) => Promise<void>,
   ): void {
-    this.indaTahwilSual = callback;
+    this.#indaTahwilSual = callback;
   }
 
   /**
@@ -85,8 +79,8 @@ export class Sail {
 
   constructor(deps: SailDeps) {
     this.#opencode = deps.opencode;
-    this.#messenger = deps.messenger;
-    this.#sessionManager = deps.sessionManager;
+    this.#messenger = deps.rasul;
+    this.#sessionManager = deps.mudirJalasat;
   }
 
   /**
@@ -222,8 +216,8 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
 
     await this.#messenger.arsalaMunassaq({ murshid: huwiyyatMurshid }, messageText);
 
-    if (this.indaTahwilSual) {
-      await this.indaTahwilSual(pending, primaryQuestion!);
+    if (this.#indaTahwilSual) {
+      await this.#indaTahwilSual(pending, primaryQuestion!);
     }
 
     await logger.akhbar("question-handler", `Forwarded question ${questionId}`, {
