@@ -37,7 +37,7 @@ import { istadaaMunaffidh } from "./daemon/munaffidh.ts";
 import { istadaaMunadi } from "./daemon/munadi.ts";
 import { istadaaArraf } from "./daemon/arraf.ts";
 import { awqadaHayat, type NatijaSeyana } from "./daemon/hayat.ts";
-import { istadaaSaail } from "./daemon/sail.ts";
+import { istadaaSaail } from "./daemon/saail.ts";
 import { istadaaRaqib } from "./daemon/raqib.ts";
 import type { TasmimIksir, TaaliqMuraja, JalsatMurshid, RisalaMutaba, HadathSualMatlub, MaalumatSual, SualMuallaq, MutabiWasfa } from "./types.ts";
 

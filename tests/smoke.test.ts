@@ -19,7 +19,7 @@ import {
 import { TelegramMessenger } from "../src/notifications/messenger.ts";
 import { MudirJalasat } from "../src/daemon/katib.ts";
 import { Munadi } from "../src/daemon/munadi.ts";
-import { Saail } from "../src/daemon/sail.ts";
+import { Saail } from "../src/daemon/saail.ts";
 import type { NiyyaMuhallala } from "../src/daemon/arraf.ts";
 import { jalabaAseilaGhairMujaba } from "../db/db.ts";
 

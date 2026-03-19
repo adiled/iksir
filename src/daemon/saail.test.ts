@@ -22,7 +22,7 @@ import {
   makeSession,
   seedSession,
 } from "../test-helpers.ts";
-import { Saail } from "./sail.ts";
+import { Saail } from "./saail.ts";
 import { jalabaAseilaGhairMujaba, adkhalaSual } from "../../db/db.ts";
 import type {
   HadathSualMatlub,
