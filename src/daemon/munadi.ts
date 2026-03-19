@@ -289,8 +289,8 @@ export class Munadi {
   rasul: RasulKharij;
   namatWasfa: RegExp;
 
-  huwiyyaFaila: string | null = null;
-  failMundhu: Date | null = null;
+  huwiyyaFaaila: string | null = null;
+  faailMundhu: Date | null = null;
 
   quflIrsal: Promise<void> = Promise.resolve();
 
@@ -399,12 +399,12 @@ export class Munadi {
 
     const basicIntent = preamble.intent;
 
-    if (this.huwiyyaFaila && !basicIntent.huwiyya) {
+    if (this.huwiyyaFaaila && !basicIntent.huwiyya) {
       const session = this.mudirJalasat.wajadaJalasatMurshid().find(
-        (s) => s.huwiyya === this.huwiyyaFaila
+        (s) => s.huwiyya === this.huwiyyaFaaila
       );
       if (session) {
-        await logger.akhbar("dispatcher", `Routing to active murshid: ${this.huwiyyaFaila}`);
+        await logger.akhbar("dispatcher", `Routing to active murshid: ${this.huwiyyaFaaila}`);
         const result = await this.wajjahIlaJalsa(session, msg);
         this.tatabbaRisala(msg.text, result.radd);
         return result;
@@ -502,11 +502,11 @@ export class Munadi {
         return this.#jalabJalsasStatus();
 
       case "fail": {
-        const activeId = this.huwiyyaFaila;
+        const activeId = this.huwiyyaFaaila;
         if (activeId) {
           return {
             tuulija: true,
-            radd: `Active session: ${activeId} (since ${this.failMundhu?.toISOString()})`,
+            radd: `Active session: ${activeId} (since ${this.faailMundhu?.toISOString()})`,
           };
         }
         return { tuulija: true, radd: "No active session." };
@@ -984,16 +984,16 @@ Work on the parent instead?`;
     try {
       await this.mudirJalasat.jaddadaḤalatMurshid(identifier, "fail");
       this.mudirJalasat.wadaaMurshidFaail(identifier);
-      this.huwiyyaFaila = identifier;
-      this.failMundhu = new Date();
+      this.huwiyyaFaaila = identifier;
+      this.faailMundhu = new Date();
     } catch (err) {
       void logger.sajjalKhata("dispatcher", `Failed to activate ${identifier}, rolling back`, { error: String(err) });
       if (previousSession) {
         await this.mudirJalasat.jaddadaḤalatMurshid(previousActive!, "fail").catch(() => {});
         this.mudirJalasat.wadaaMurshidFaail(previousActive);
       }
-      this.huwiyyaFaila = previousActive;
-      this.failMundhu = previousActive ? new Date() : null;
+      this.huwiyyaFaaila = previousActive;
+      this.faailMundhu = previousActive ? new Date() : null;
       return { tuulija: true, khata: `Failed to activate ${identifier}: ${err}` };
     }
 
@@ -1126,7 +1126,7 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
     let targetId: string | null = huwiyya;
 
     if (!targetId) {
-      targetId = this.huwiyyaFaila;
+      targetId = this.huwiyyaFaaila;
 
       if (!targetId) {
         return {
@@ -1151,7 +1151,7 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
       return this.wajjahIlaJalsa(session, msg);
     }
 
-    if (this.huwiyyaFaila !== targetId) {
+    if (this.huwiyyaFaaila !== targetId) {
       return this.ajjalAmaliyya(targetId, msg);
     }
 
@@ -1205,20 +1205,20 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
     return {
       tuulija: true,
       fiTtabur: true,
-      radd: `Queued. ${this.huwiyyaFaila} is currently active. Will notify when ${huwiyya} becomes active.`,
+      radd: `Queued. ${this.huwiyyaFaaila} is currently active. Will notify when ${huwiyya} becomes active.`,
     };
   }
 
 
   wadaaJalsaFaila(identifier: string | null): void {
-    this.huwiyyaFaila = identifier;
-    this.failMundhu = identifier ? new Date() : null;
+    this.huwiyyaFaaila = identifier;
+    this.faailMundhu = identifier ? new Date() : null;
     this.mudirJalasat.wadaaMurshidFaail(identifier);
     void logger.akhbar("dispatcher", `Active session set to ${identifier ?? "none"}`);
   }
 
   hawiyyaFaila(): string | null {
-    return this.huwiyyaFaila;
+    return this.huwiyyaFaaila;
   }
 
   /**
@@ -1256,7 +1256,7 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
       return { tuulija: true, radd: `No murshid for ${epicId}. Start one first.` };
     }
 
-    const previousEpicId = this.huwiyyaFaila;
+    const previousEpicId = this.huwiyyaFaaila;
 
     if (previousEpicId === epicId) {
       return {
@@ -1347,7 +1347,7 @@ You may now perform git operations.`;
 
 
   jalabHala(): NatijaIrsal {
-    const active = this.huwiyyaFaila;
+    const active = this.huwiyyaFaaila;
     const queueLen = this.tabur.length;
     const murshidun = this.mudirJalasat.wajadaJalasatMurshid();
 
@@ -1358,7 +1358,7 @@ You may now perform git operations.`;
       radd += `✅ **Active: ${active}**\n`;
       if (activeSession) {
         radd += `   Session: ${activeSession.id.slice(0, 16)}...\n`;
-        radd += `   Since: ${this.failMundhu?.toISOString()}\n`;
+        radd += `   Since: ${this.faailMundhu?.toISOString()}\n`;
       }
     } else {
       radd += `⚪ **Active: none**\n`;
@@ -1407,8 +1407,8 @@ You may now perform git operations.`;
       radd += "No murshidun.\n";
     } else {
       for (const o of murshidun) {
-        const yakunuFail = o.huwiyya === this.huwiyyaFaila;
-        if (yakunuFail) {
+        const yakunuFaail = o.huwiyya === this.huwiyyaFaaila;
+        if (yakunuFaail) {
           radd += `→ **${o.huwiyya}** (active)\n`;
           radd += `  ${escapeMarkdown(o.unwan)}\n\n`;
         } else {
@@ -1419,7 +1419,7 @@ You may now perform git operations.`;
     }
 
     /** Build buttons for idle sessions */
-    const idleSessions = murshidun.filter((o) => o.huwiyya !== this.huwiyyaFaila);
+    const idleSessions = murshidun.filter((o) => o.huwiyya !== this.huwiyyaFaaila);
     const buttons = idleSessions.map((o) => ({
       text: `Switch to ${o.huwiyya}`,
       data: `switch:${o.huwiyya}`,
@@ -1430,14 +1430,14 @@ You may now perform git operations.`;
 
   aradhMuntaqiTahwil(): NatijaIrsal {
     const murshidun = this.mudirJalasat.wajadaJalasatMurshid();
-    const idleSessions = murshidun.filter((o) => o.huwiyya !== this.huwiyyaFaila);
+    const idleSessions = murshidun.filter((o) => o.huwiyya !== this.huwiyyaFaaila);
 
     if (murshidun.length === 0) {
       return { tuulija: true, radd: "No murshidun to switch to." };
     }
 
     if (idleSessions.length === 0) {
-      const active = this.huwiyyaFaila;
+      const active = this.huwiyyaFaaila;
       return {
         tuulija: true,
         radd: `Only one murshid exists: ${active} (already active)`,
@@ -1446,9 +1446,9 @@ You may now perform git operations.`;
 
     let radd = "**Switch Active Session**\n\n";
 
-    if (this.huwiyyaFaila) {
-      const activeSession = murshidun.find((o) => o.huwiyya === this.huwiyyaFaila);
-      radd += `Current: **${this.huwiyyaFaila}**\n`;
+    if (this.huwiyyaFaaila) {
+      const activeSession = murshidun.find((o) => o.huwiyya === this.huwiyyaFaaila);
+      radd += `Current: **${this.huwiyyaFaaila}**\n`;
       if (activeSession) {
         radd += `${escapeMarkdown(activeSession.unwan)}\n`;
       }

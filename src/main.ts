@@ -37,7 +37,7 @@ import { istadaaMunaffidh } from "./daemon/munaffidh.ts";
 import { istadaaMunadi } from "./daemon/munadi.ts";
 import { istadaaArraf } from "./daemon/arraf.ts";
 import { awqadaHayat, type NatijaSeyana } from "./daemon/hayat.ts";
-import { istadaaSail } from "./daemon/sail.ts";
+import { istadaaSaail } from "./daemon/sail.ts";
 import { istadaaRaqib } from "./daemon/raqib.ts";
 import type { TasmimIksir, TaaliqMuraja, JalsatMurshid, RisalaMutaba, HadathSualMatlub, MaalumatSual, SualMuallaq, MutabiWasfa } from "./types.ts";
 
@@ -53,7 +53,7 @@ interface SiyaqKhadim {
   munaffidh: ReturnType<typeof istadaaMunaffidh>;
   munadi: ReturnType<typeof istadaaMunadi>;
   hayat: ReturnType<typeof awqadaHayat>;
-  sail: ReturnType<typeof istadaaSail>;
+  sail: ReturnType<typeof istadaaSaail>;
   raqib: ReturnType<typeof istadaaRaqib>;
   mutahakkimIlgha: AbortController;
 }
@@ -884,7 +884,7 @@ ${(r.taarudat ?? []).map((f) => `- \`${f}\``).join("\n")}
  * Wraps question-handler's buildInlineKeyboard to create Telegram-specific markup.
  */
 function banaLawhatSual(
-  handler: ReturnType<typeof istadaaSail>,
+  handler: ReturnType<typeof istadaaSaail>,
   questionId: string,
   question: MaalumatSual,
 ): { inline_keyboard: Array<Array<{ text: string; callback_data: string }>> } {
@@ -943,7 +943,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   await dispatcher.istarjaaIndaNashaat();
 
   /** Initialize question handler (for question tool events from murshids) */
-  const questionHandler = istadaaSail({
+  const questionHandler = istadaaSaail({
     opencode,
     rasul: messenger,
     mudirJalasat: sessionManager,

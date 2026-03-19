@@ -19,7 +19,7 @@ import {
 import { TelegramMessenger } from "../src/notifications/messenger.ts";
 import { MudirJalasat } from "../src/daemon/katib.ts";
 import { Munadi } from "../src/daemon/munadi.ts";
-import { Sail } from "../src/daemon/sail.ts";
+import { Saail } from "../src/daemon/sail.ts";
 import type { NiyyaMuhallala } from "../src/daemon/arraf.ts";
 import { jalabaAseilaGhairMujaba } from "../db/db.ts";
 
@@ -44,7 +44,7 @@ function buildContext() {
     namatWasfa: config.mutabiWasfa?.namatWasfa,
   });
 
-  const questionHandler = new Sail({
+  const questionHandler = new Saail({
     opencode: opencode as never,
     rasul: messenger,
     mudirJalasat: sessionManager as never,

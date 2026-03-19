@@ -40,7 +40,7 @@ interface SailDeps {
   mudirJalasat: MudirJalasat;
 }
 
-export class Sail {
+export class Saail {
   #opencode: OpenCodeClient;
   #messenger: RasulKharij;
   #sessionManager: MudirJalasat;
@@ -489,6 +489,6 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
 /**
  * Create a question handler instance.
  */
-export function istadaaSail(deps: SailDeps): Sail {
-  return new Sail(deps);
+export function istadaaSaail(deps: SailDeps): Saail {
+  return new Saail(deps);
 }
