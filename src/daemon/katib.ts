@@ -1,4 +1,13 @@
 /**
+ * Katib (كاتب) - The Scribe
+ * 
+ * One of the sacred Khuddām (خدّام - Servants) of the alchemical workshop.
+ * Katib inscribes all transformations, managing the vessels (sessions) where
+ * each Murshid performs their work. Every branch, every vessel naming, every
+ * state transition is recorded in the eternal register.
+ */
+
+/**
  * Session Manager
  *
  * Manages OpenCode murshid sessions.
@@ -13,10 +22,10 @@
 import { OpenCodeClient } from "../opencode/client.ts";
 import { logger } from "../logging/logger.ts";
 import { 
-  upsertSession,
-  getAllSessions,
-  upsertChannel,
-  getQararSijills,
+  haddathaAwAdkhalaJalsa,
+  jalabaKullJalasat,
+  haddathaAwAdkhalaQanat,
+  jalabaQararatSijill,
 } from "../../db/db.ts";
 import type {
   TasmimIksir,
@@ -57,11 +66,11 @@ export function generateBranchName(
     return `${getGitUserPrefix()}/${identifier}`;
   }
   if (type === "sandbox") {
-    // Sandbox: use slug if provided, otherwise extract from identifier
+    /** Sandbox: use slug if provided, otherwise extract from identifier */
     const name = slug ?? identifier.replace(/^SANDBOX-/i, "").toLowerCase();
     return `sandbox/${name}`;
   }
-  // Epic: use explicit slug, or derive from title
+  /** Epic: use explicit slug, or derive from title */
   const effectiveSlug = slug ?? (title
     ? title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30)
     : "work");
@@ -79,13 +88,10 @@ export class MudirJalasat {
   #opencode: OpenCodeClient;
   #messenger: RasulKharij;
 
-  // Murshid sessions (keyed by identifier, e.g., "TEAM-200")
   #murshidSessions: Map<string, JalsatMurshid> = new Map();
 
-  // Active murshid (currently only one at a time)
   #murshidFaailId: string | null = null;
 
-  // Git fence — blocks PM-MCP git ops during session switches
   #gitFenced = false;
 
   constructor(deps: TasmimMudirJalasat) {
@@ -109,9 +115,6 @@ export class MudirJalasat {
     this.#gitFenced = value;
   }
 
-  // ===========================================================================
-  // Murshid Session Management
-  // ===========================================================================
 
   /**
    * Get or create murshid session
@@ -124,27 +127,27 @@ export class MudirJalasat {
   ): Promise<{ session: JalsatMurshid; isNew: boolean; wasResumed: boolean; previousActive: string | null } | null> {
     const previousActive = this.#murshidFaailId;
 
-    // Step 1: Check if we already have this session tracked
+    /** Step 1: Check if we already have this session tracked */
     let session = this.#murshidSessions.get(identifier);
     if (session) {
-      // Verify session still exists in OpenCode
+      /** Verify session still exists in OpenCode */
       const existing = await this.#opencode.jalabJalsa(session.id);
       if (existing) {
         await logger.info("session-manager", `Resuming tracked murshid session for ${identifier}`, {
           sessionId: session.id,
         });
         this.#murshidFaailId = identifier;
-        // Ensure messaging channel exists (may have been created before channel support was added)
         await this.#ensureMessagingChannel(session);
         return { session, isNew: false, wasResumed: true, previousActive };
       }
-      // Session was deleted from OpenCode, remove from our tracking
       await logger.warn("session-manager", `Tracked session ${session.id} no longer exists in OpenCode`);
       this.#murshidSessions.delete(identifier);
     }
 
-    // Step 2: Check OpenCode for existing murshid session with matching title
-    // This handles cases where state wasn't persisted (crash, restart without save, etc.)
+    /**
+     * Step 2: Check OpenCode for existing murshid session with matching title
+     * This handles cases where state wasn't persisted (crash, restart without save, etc.)
+     */
     const existingSession = await this.#bahathaAnJalsatMurshid(identifier);
     if (existingSession) {
       await logger.info("session-manager", `Found existing murshid session in OpenCode for ${identifier}`, {
@@ -167,16 +170,13 @@ export class MudirJalasat {
       this.#murshidSessions.set(identifier, session);
       this.#murshidFaailId = identifier;
 
-      // Persist the recovered state
       await this.saveState();
 
-      // Ensure messaging channel exists for recovered session
       await this.#ensureMessagingChannel(session);
 
       return { session, isNew: false, wasResumed: true, previousActive };
     }
 
-    // Step 3: Create new murshid session
     await logger.info("session-manager", `Creating new murshid session for ${identifier}`);
 
     const sessionTitle = `[Murshid] ${identifier}: ${title}`;
@@ -203,13 +203,10 @@ export class MudirJalasat {
     this.#murshidSessions.set(identifier, session);
     this.#murshidFaailId = identifier;
 
-    // Persist state
     await this.saveState();
 
-    // Create messaging channel for new murshid
     await this.#ensureMessagingChannel(session);
 
-    // Send initial murshid prompt
     await this.#arsalaTasisMurshid(session);
 
     return { session, isNew: true, wasResumed: false, previousActive };
@@ -227,7 +224,7 @@ export class MudirJalasat {
     const sessions = await this.#opencode.listSessions();
     const pattern = `[Murshid] ${epicId}:`;
 
-    // Find sessions matching the pattern, sorted by most recent
+    /** Find sessions matching the pattern, sorted by most recent */
     const matches = sessions
       .filter((s) => s.title.includes(pattern))
       .sort((a, b) => b.lastMessageAt.getTime() - a.lastMessageAt.getTime());
@@ -236,10 +233,9 @@ export class MudirJalasat {
       return null;
     }
 
-    // Return the most recent one
+    /** Return the most recent one */
     const match = matches[0];
 
-    // Log if there are orphaned duplicates
     if (matches.length > 1) {
       await logger.warn("session-manager", `Found ${matches.length} murshid sessions for ${epicId}, using most recent`, {
         sessionIds: matches.map((m) => m.id),
@@ -284,7 +280,6 @@ export class MudirJalasat {
    * Creates one if missing. Called automatically when murshid starts.
    */
   async #ensureMessagingChannel(session: JalsatMurshid): Promise<void> {
-    // Already has a channel
     if (this.#messenger.yamlikQanatMurshid(session.identifier)) {
       return;
     }
@@ -298,18 +293,16 @@ export class MudirJalasat {
       session.channels["telegram"] = channelId;
       await this.saveState();
 
-      // Send welcome message to the new channel
       await this.#messenger.send(
         { murshid: session.identifier },
         `Murshid session started for ${session.identifier}.\n\nAll messages for this epic will appear here.`,
       );
 
-      // Notify the murshid LLM session about its channel
       await this.#opencode.sendPromptAsync(
         session.id,
         `SYSTEM: Your messaging channel is now active. ` +
         `All pm_reply and pm_notify messages will appear there. ` +
-        `Operator is listening. If you have pending status updates or responses, please send them now using pm_reply.`,
+        `Al-Kimyawi is listening. If you have pending status updates or responses, please send them now using pm_reply.`,
       );
     }
   }
@@ -346,7 +339,6 @@ export class MudirJalasat {
     if (blockedReason !== undefined) {
       session.blockedReason = blockedReason;
     } else if (status !== "masdud" && status !== "muntazir") {
-      // Clear blocked reason when not blocked/waiting
       session.blockedReason = undefined;
     }
 
@@ -358,9 +350,6 @@ export class MudirJalasat {
     return true;
   }
 
-  // ===========================================================================
-  // PR Tracking (for Keepalive / Delayed Optics)
-  // ===========================================================================
 
   /**
    * Register a new PR for tracking.
@@ -376,7 +365,7 @@ export class MudirJalasat {
       return false;
     }
 
-    // Check if PR already tracked
+    /** Check if PR already tracked */
     const existing = session.activePRs.find((p) => p.raqamRisala === pr.raqamRisala);
     if (existing) {
       await logger.warn("session-manager", `PR #${pr.raqamRisala} already tracked for ${epicId}`);
@@ -427,7 +416,7 @@ export class MudirJalasat {
       if (pr) {
         const previousStatus = pr.status;
         if (previousStatus === status) {
-          return null; // No change
+          return null;
         }
 
         pr.status = status;
@@ -528,8 +517,8 @@ export class MudirJalasat {
 
 <system-reminder>
 Your murshid ID is: ${session.identifier}
-IMPORTANT: This message is from the operator via Telegram. You MUST use pm_reply to respond.
-Do NOT output text directly - The operator cannot see your text output, only pm_reply messages.
+IMPORTANT: This message is from al-Kimyawi via Telegram. You MUST use pm_reply to respond.
+Do NOT output text directly - Al-Kimyawi cannot see your text output, only pm_reply messages.
 </system-reminder>`;
   }
 
@@ -547,7 +536,7 @@ Do NOT output text directly - The operator cannot see your text output, only pm_
 
 Please use \`pm_read_ticket\` to fetch the full epic details and begin planning.
 
-Awaiting direction from operator...`
+Awaiting direction from al-Kimyawi...`
       : `# Chore Assignment
 
 ## Chore Details
@@ -559,16 +548,13 @@ This is a standalone task (chore), not an epic. No sub-tickets needed.
 Please use \`pm_read_ticket\` to fetch the full details, then implement directly.
 When done, use \`pm_ssp\` to create a PR.
 
-Awaiting direction from operator...`;
+Awaiting direction from al-Kimyawi...`;
 
     await this.#opencode.sendPromptAsync(session.id, prompt, {
       agent: "iksir-murshid",
     });
   }
 
-  // ===========================================================================
-  // State Access
-  // ===========================================================================
 
   /**
    * Get murshid by OpenCode session ID (reverse lookup).
@@ -594,32 +580,31 @@ Awaiting direction from operator...`;
    */
   async handleCompaction(sessionId: string): Promise<void> {
     const session = this.wajadaMurshidBiHuwiyyatJalsa(sessionId);
-    if (!session) return; // Not a Munadi murshid session
+    if (!session) return;
 
     await logger.info("session-manager", `Post-compaction diary reload for ${session.identifier}`, {
       sessionId,
     });
 
-    // Fetch diary entries for this murshid
-    const entries = getQararSijills({
+    /** Fetch diary entries for this murshid */
+    const entries = jalabaQararatSijill({
       huwiyyatMurshid: session.identifier,
       limit: 15,
     });
 
     if (entries.length === 0) {
-      // No diary entries — just send a reminder about identity
       await this.#opencode.sendPromptAsync(session.id,
         `<system-reminder>
 Context compaction occurred. Your conversation history was summarized.
 Your murshid ID is: ${session.identifier}
-Use pm_reply to respond to the operator — direct text output is invisible.
+Use pm_reply to respond to al-Kimyawi — direct text output is invisible.
 Use pm_read_diary to reload full decision history if needed.
 </system-reminder>`
       );
       return;
     }
 
-    // Format diary entries
+    /** Format diary entries */
     const diaryBlock = entries
       .map(
         (e) =>
@@ -634,7 +619,7 @@ Context compaction occurred. Key diary decisions for your reference:
 ${diaryBlock}
 
 Your murshid ID is: ${session.identifier}
-Use pm_reply to respond to the operator — direct text output is invisible.
+Use pm_reply to respond to al-Kimyawi — direct text output is invisible.
 Call pm_read_diary for full decision history with reasoning.
 </system-reminder>`
     );
@@ -678,21 +663,17 @@ Call pm_read_diary for full decision history with reasoning.
     }
   }
 
-  // ===========================================================================
-  // Persistence
-  // ===========================================================================
 
   /**
    * Save session state to SQLite
    */
   async saveState(): Promise<void> {
     try {
-      // Save each murshid session to SQLite
       for (const session of this.#murshidSessions.values()) {
-        // Handle legacy sessions that might have epicTitle instead of title
+        /** Handle legacy sessions that might have epicTitle instead of title */
         const title = session.title || (session as unknown as { epicTitle?: string }).epicTitle || "";
         
-        upsertSession({
+        haddathaAwAdkhalaJalsa({
           id: session.id,
           identifier: session.identifier,
           title,
@@ -707,9 +688,8 @@ Call pm_read_diary for full decision history with reasoning.
           },
         });
 
-        // Persist channels to the channels table
         for (const [provider, channelId] of Object.entries(session.channels)) {
-          upsertChannel(session.identifier, provider, channelId);
+          haddathaAwAdkhalaQanat(session.identifier, provider, channelId);
         }
       }
 
@@ -729,24 +709,24 @@ Call pm_read_diary for full decision history with reasoning.
    */
   async loadState(): Promise<void> {
     try {
-      const dbSessions = getAllSessions();
+      const dbSessions = jalabaKullJalasat();
       
       if (dbSessions.length === 0) {
         await logger.info("session-manager", "No existing session state found");
         return;
       }
 
-      // Validate murshid sessions still exist in OpenCode
+      /** Validate murshid sessions still exist in OpenCode */
       const murshidunṢalihun: JalsatMurshid[] = [];
       for (const dbSession of dbSessions) {
         const exists = await this.#opencode.jalabJalsa(dbSession.id);
         if (exists) {
-          // Parse metadata
+          /** Parse metadata */
           const metadata = JSON.parse(dbSession.metadata || "{}") as {
             activePRs?: RisalaMutaba[];
           };
 
-          // Hydrate channels from the channels table
+          /** Hydrate channels from the channels table */
           const channels = this.#messenger.hammalQanawatLilJalsa(dbSession.identifier);
 
           const session: JalsatMurshid = {
@@ -770,12 +750,11 @@ Call pm_read_diary for full decision history with reasoning.
         }
       }
 
-      // Import tahaqqaqd state
       this.importState({
         murshidun: murshidunṢalihun,
       });
 
-      // Find active murshid (one with status="fail")
+      /** Find active murshid (one with status="fail") */
       const activeSession = murshidunṢalihun.find(s => s.status === "fail");
       if (activeSession) {
         this.#murshidFaailId = activeSession.identifier;
@@ -786,7 +765,6 @@ Call pm_read_diary for full decision history with reasoning.
         active: this.#murshidFaailId,
       });
 
-      // Ensure messaging channels exist for all loaded murshidun
       for (const session of murshidunṢalihun) {
         await this.#ensureMessagingChannel(session);
       }

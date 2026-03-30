@@ -54,7 +54,7 @@ export async function transmute(
 ): Promise<TransmutationResult> {
   const defaultBranch = await getDefaultBranch();
   
-  // Step 1: Record crucible
+  /** Step 1: Record crucible */
   const crucibleBranch = await getCurrentBranch();
   if (!crucibleBranch) {
     return { 
@@ -64,13 +64,13 @@ export async function transmute(
     };
   }
 
-  // Safety: helper to always return to crucible
+  /** Safety: helper to always return to crucible */
   const returnToForge = async () => {
     await exec(["checkout", crucibleBranch]);
   };
 
   try {
-    // Step 2: Fetch and merge default branch into crucible (surfaces conflicts)
+    /** Step 2: Fetch and merge default branch into crucible (surfaces conflicts) */
     const fetchResult = await exec(["fetch", "origin", `${defaultBranch}:${defaultBranch}`]);
     if (!fetchResult.success) {
       return {
@@ -86,13 +86,12 @@ export async function transmute(
       const mergeOutput = mergeResult.stdout + mergeResult.stderr;
 
       if (mergeOutput.includes("CONFLICT")) {
-        // Get conflicted files
+        /** Get conflicted files */
         const conflictResult = await exec(["diff", "--name-only", "--diff-filter=U"]);
         const conflicts = conflictResult.success
           ? conflictResult.stdout.trim().split("\n").filter(f => f)
           : [];
 
-        // Abort the merge so working directory is clean
         await exec(["merge", "--abort"]);
 
         return {
@@ -114,7 +113,6 @@ export async function transmute(
       };
     }
 
-    // Step 2b: If stacked (baseBranch provided), fetch the parent artifact branch
     if (baseBranch) {
       const fetchBase = await exec(["fetch", "origin", baseBranch]);
       if (!fetchBase.success) {
@@ -127,7 +125,7 @@ export async function transmute(
       }
     }
 
-    // Step 3: Create/reset artifact branch at base HEAD
+    /** Step 3: Create/reset artifact branch at base HEAD */
     const baseRef = baseBranch ? `origin/${baseBranch}` : defaultBranch;
     const branchResult = await exec(["branch", "-f", essenceBranch, baseRef]);
     if (!branchResult.success) {
@@ -139,7 +137,7 @@ export async function transmute(
       };
     }
 
-    // Step 4: Checkout artifact branch
+    /** Step 4: Checkout artifact branch */
     const checkoutResult = await exec(["checkout", essenceBranch]);
     if (!checkoutResult.success) {
       return {
@@ -150,7 +148,7 @@ export async function transmute(
       };
     }
 
-    // Step 5: Restore specified files from crucible
+    /** Step 5: Restore specified files from crucible */
     const istarjaaResult = await exec(["istarjaa", `--source=${crucibleBranch}`, "--", ...files]);
     if (!istarjaaResult.success) {
       await returnToForge();
@@ -163,7 +161,7 @@ export async function transmute(
       };
     }
 
-    // Step 6: Stage and commit
+    /** Step 6: Stage and commit */
     const addResult = await exec(["add", "."]);
     if (!addResult.success) {
       await returnToForge();
@@ -188,7 +186,7 @@ export async function transmute(
       };
     }
 
-    // Step 7: Force push
+    /** Step 7: Force push */
     const pushResult = await exec(["push", "--force", "-u", "origin", essenceBranch]);
     if (!pushResult.success) {
       await returnToForge();
@@ -201,7 +199,6 @@ export async function transmute(
       };
     }
 
-    // Step 8: Return to crucible
     await returnToForge();
 
     await logger.info("git", `Files plucked successfully: ${essenceBranch}`, {
@@ -217,7 +214,6 @@ export async function transmute(
       materialsTransmuted: files.length,
     };
   } catch (error) {
-    // Always try to return to crucible on unexpected errors
     await returnToForge();
     return {
       success: false,

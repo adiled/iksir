@@ -6,7 +6,7 @@
  *
  *   POST /pm → PM-MCP server
  *
- * OpenCode connects via type: "remote" with url: "http://localhost:{port}/pm"
+ * OpenCode connects via type: "remote" with url: "http://localhost:3100/"
  */
 
 interface McpServer {
@@ -39,9 +39,7 @@ export function startMcpHttpServer(options: McpHttpServerOptions): Deno.HttpServ
     const url = new URL(req.url);
     const path = url.pathname;
 
-    // Only accept POST
     if (req.method !== "POST") {
-      // GET on root returns server info (health check)
       if (req.method === "GET" && path === "/") {
         return Response.json({
           name: "munadi-mcp",
@@ -53,7 +51,6 @@ export function startMcpHttpServer(options: McpHttpServerOptions): Deno.HttpServ
       return new Response("Method not allowed", { status: 405 });
     }
 
-    // Route to PM-MCP server
     if (path !== "/pm") {
       return new Response("Not found", { status: 404 });
     }
@@ -61,7 +58,6 @@ export function startMcpHttpServer(options: McpHttpServerOptions): Deno.HttpServ
     try {
       const body = await req.json();
 
-      // Handle batch requests (array of JSON-RPC messages)
       if (Array.isArray(body)) {
         const responses = await Promise.all(
           body.map((msg: Record<string, unknown>) =>
@@ -73,13 +69,13 @@ export function startMcpHttpServer(options: McpHttpServerOptions): Deno.HttpServ
         });
       }
 
-      // Single request
+      /** Single request */
       const response = await pmServer.handleRequest(body);
       return Response.json(response, {
         headers: { "Content-Type": "application/json" },
       });
     } catch (error) {
-      // JSON parse error or unexpected error
+      /** JSON parse error or unexpected error */
       const errorResponse = {
         jsonrpc: "2.0" as const,
         id: null,

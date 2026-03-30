@@ -14,14 +14,13 @@
 import { assertEquals } from "@std/assert";
 import { mockOpenCodeClient, writeTempFile } from "../test-helpers.ts";
 import { classifyNotification, classifyQuestion } from "./classifier.ts";
-import type { QuestionInfo } from "../types.ts";
+import type { MaalumatSual } from "../types.ts";
 
-// =============================================================================
-// Setup — provide AGENTS.md fixture before first call
-// =============================================================================
 
-// The classifier has a module-level cache: once AGENTS.md is loaded, it persists.
-// We set MUNADI_AGENTS_MD_PATH to a temp fixture so loadAgentsMd() finds content.
+/**
+ * The classifier has a module-level cache: once AGENTS.md is loaded, it persists.
+ * We set MUNADI_AGENTS_MD_PATH to a temp fixture so loadAgentsMd() finds content.
+ */
 let fixtureFile: string | null = null;
 
 async function ensureFixture(): Promise<void> {
@@ -30,14 +29,9 @@ async function ensureFixture(): Promise<void> {
   Deno.env.set("MUNADI_AGENTS_MD_PATH", fixtureFile);
 }
 
-// NOTE: Because the classifier caches AGENTS.md at module level (line 16-21),
-// all tests share the same cached content. This is fine — it matches production.
 
-// =============================================================================
-// Helper: make a QuestionInfo
-// =============================================================================
 
-function makeQuestion(overrides?: Partial<QuestionInfo>): QuestionInfo {
+function makeQuestion(overrides?: Partial<MaalumatSual>): MaalumatSual {
   return {
     header: "Test question",
     question: "Should we do X or Y?",
@@ -49,9 +43,6 @@ function makeQuestion(overrides?: Partial<QuestionInfo>): QuestionInfo {
   };
 }
 
-// =============================================================================
-// classifyNotification
-// =============================================================================
 
 Deno.test("classifyNotification: WORTHY response parsed correctly", async () => {
   await ensureFixture();
@@ -150,9 +141,6 @@ Deno.test("classifyNotification: CRY_BABY missing rejection gets default", async
   assertEquals(result.rejection, "Handle this autonomously.");
 });
 
-// =============================================================================
-// classifyQuestion
-// =============================================================================
 
 Deno.test("classifyQuestion: WORTHY response parsed correctly", async () => {
   await ensureFixture();
@@ -277,7 +265,7 @@ Deno.test("classifyQuestion: LLM throws -> fail-open WORTHY", async () => {
 
 Deno.test("classifyQuestion: WORTHY nullifies autoAnswer and rejection", async () => {
   await ensureFixture();
-  // LLM returns WORTHY but also includes autoAnswer (shouldn't happen, but defensive)
+  /** LLM returns WORTHY but also includes autoAnswer (shouldn't happen, but defensive) */
   const oc = mockOpenCodeClient({
     classify: async () => ({
       success: true,

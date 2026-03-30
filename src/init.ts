@@ -9,9 +9,6 @@ import { join } from "jsr:@std/path";
 import { exists } from "jsr:@std/fs";
 import { execCommand } from "./utils/exec.ts";
 
-// =============================================================================
-// Terminal helpers
-// =============================================================================
 
 const DIM = "\x1b[2m";
 const RESET = "\x1b[0m";
@@ -45,7 +42,6 @@ async function prompt(label: string, defaultValue = ""): Promise<string> {
 
 async function promptSecret(label: string): Promise<string> {
   Deno.stdout.writeSync(new TextEncoder().encode(`  ${label}: `));
-  // Deno doesn't have native hidden input, but we can use raw mode
   try {
     Deno.stdin.setRaw(true);
     const chars: number[] = [];
@@ -54,13 +50,13 @@ async function promptSecret(label: string): Promise<string> {
       const n = await Deno.stdin.read(buf);
       if (n === null || n === 0) break;
       const c = buf[0];
-      if (c === 13 || c === 10) break; // Enter
-      if (c === 3) { // Ctrl+C
+      if (c === 13 || c === 10) break;
+      if (c === 3) {
         Deno.stdin.setRaw(false);
         console.log("");
         Deno.exit(1);
       }
-      if (c === 127 || c === 8) { // Backspace
+      if (c === 127 || c === 8) {
         if (chars.length > 0) {
           chars.pop();
           Deno.stdout.writeSync(new TextEncoder().encode("\b \b"));
@@ -74,7 +70,6 @@ async function promptSecret(label: string): Promise<string> {
     console.log("");
     return new TextDecoder().decode(new Uint8Array(chars));
   } catch {
-    // Fallback if setRaw not available (piped input)
     Deno.stdin.setRaw?.(false);
     const buf = new Uint8Array(1024);
     const n = await Deno.stdin.read(buf);
@@ -96,9 +91,6 @@ function pause(msg = "Press Enter to continue...") {
   console.log("");
 }
 
-// =============================================================================
-// API helpers
-// =============================================================================
 
 async function telegramApi(token: string, method: string): Promise<{ ok: boolean; result?: unknown; description?: string }> {
   try {
@@ -125,9 +117,6 @@ async function linearApi(apiKey: string, query: string): Promise<{ data?: unknow
   }
 }
 
-// =============================================================================
-// Steps
-// =============================================================================
 
 interface InitState {
   telegramBotToken: string;
@@ -165,7 +154,6 @@ async function stepTelegram(state: InitState): Promise<void> {
   console.log(`  ${dim("3.")} Copy the token you receive`);
   console.log("");
 
-  // Get and tahaqqaq token
   while (true) {
     const token = await promptSecret("Bot token");
     if (!token) {
@@ -188,21 +176,18 @@ async function stepTelegram(state: InitState): Promise<void> {
     }
   }
 
-  // Auto-detect chat ID
   console.log("");
   console.log(`  Now send any message to ${bold(`@${state.telegramBotName}`)} on Telegram.`);
   pause("Then press Enter here...");
 
   console.log(`  ${dim("Detecting your chat ID...")}`);
 
-  // Clear old updates first
   await telegramApi(state.telegramBotToken, "getUpdates?offset=-1");
-  // Small delay then fetch
   await new Promise((r) => setTimeout(r, 500));
 
   const updates = await telegramApi(state.telegramBotToken, "getUpdates?limit=5&timeout=10");
   if (updates.ok && Array.isArray(updates.result) && updates.result.length > 0) {
-    // Get the most recent message
+    /** Get the most recent message */
     const last = updates.result[updates.result.length - 1] as {
       message?: { chat: { id: number; first_name?: string } };
     };
@@ -214,7 +199,6 @@ async function stepTelegram(state: InitState): Promise<void> {
     }
   }
 
-  // Fallback: manual entry
   warn("Could not auto-detect. You may need to send the message and try again,");
   warn("or enter your chat ID manually.");
   console.log("");
@@ -253,7 +237,7 @@ async function stepMutabiWasfa(state: InitState): Promise<void> {
       continue;
     }
 
-    // Validate + fetch teams
+    /** Validate + fetch teams */
     const result = await linearApi(key, "{ teams { nodes { id key name } } }");
     if (result.errors || !result.data) {
       fail("Invalid API key or network error");
@@ -302,7 +286,7 @@ async function stepGithub(state: InitState): Promise<void> {
     return;
   }
 
-  // Check gh CLI
+  /** Check gh CLI */
   const ghCheck = await execCommand("gh", ["auth", "status"]);
   if (!ghCheck.success) {
     warn("gh CLI not authenticated.");
@@ -321,7 +305,7 @@ async function stepGithub(state: InitState): Promise<void> {
     state.githubOwner = owner;
     state.githubRepo = repo;
 
-    // Validate repo access
+    /** Validate repo access */
     const check = await execCommand("gh", ["repo", "view", ownerRepo, "--json", "name"]);
     if (check.success) {
       ok(`Repository accessible: ${bold(ownerRepo)}`);
@@ -342,7 +326,7 @@ async function stepAgent(state: InitState): Promise<void> {
   console.log(`  Munadi delegates code to an agent runtime (OpenCode).`);
   console.log("");
 
-  state.opencodeServer = await prompt("Server URL", "http://localhost:4096");
+  state.opencodeServer = await prompt("Server URL", "http://localhost:5173");
 
   try {
     const resp = await fetch(`${state.opencodeServer}/health`, { signal: AbortSignal.timeout(3000) });
@@ -351,7 +335,6 @@ async function stepAgent(state: InitState): Promise<void> {
       return;
     }
   } catch {
-    // not running
   }
 
   warn("Agent runtime not reachable (it may not be running yet).");
@@ -370,7 +353,7 @@ async function stepFinalize(state: InitState): Promise<void> {
   const envPath = join(repoPath, ".env");
   const configPath = join(configDir, "munadi.json");
 
-  // Build .env content
+  /** Build .env content */
   const envLines: string[] = ["# Generated by munadi init", ""];
   if (state.telegramBotToken) {
     envLines.push(`TELEGRAM_BOT_TOKEN=${state.telegramBotToken}`);
@@ -381,7 +364,7 @@ async function stepFinalize(state: InitState): Promise<void> {
   }
   envLines.push("");
 
-  // Build munadi.json
+  /** Build munadi.json */
   const config: Record<string, unknown> = {
     $schema: "./munadi.schema.json",
   };
@@ -393,10 +376,10 @@ async function stepFinalize(state: InitState): Promise<void> {
     config.github = {
       owner: state.githubOwner,
       repo: state.githubRepo,
-      operatorUsername: state.githubUsername,
+      ismKimyawi: state.githubUsername,
     };
   }
-  if (state.opencodeServer !== "http://localhost:4096") {
+  if (state.opencodeServer !== "http://localhost:5173") {
     config.opencode = { server: state.opencodeServer };
   }
   if (state.telegramBotToken) {
@@ -405,10 +388,9 @@ async function stepFinalize(state: InitState): Promise<void> {
     };
   }
 
-  // Write files
+  /** Write files */
   const envContent = envLines.join("\n") + "\n";
 
-  // Check for existing .env — merge if present
   if (await exists(envPath)) {
     const existing = await Deno.readTextFile(envPath);
     if (existing.includes("TELEGRAM_BOT_TOKEN") || existing.includes("LINEAR_API_KEY")) {
@@ -420,7 +402,6 @@ async function stepFinalize(state: InitState): Promise<void> {
         ok(`.env written: ${dim(envPath)}`);
       }
     } else {
-      // Append to existing
       await Deno.writeTextFile(envPath, existing.trimEnd() + "\n\n" + envContent);
       ok(`.env updated: ${dim(envPath)}`);
     }
@@ -429,14 +410,12 @@ async function stepFinalize(state: InitState): Promise<void> {
     ok(`.env created: ${dim(envPath)}`);
   }
 
-  // Write munadi.json (only if non-trivial config)
   if (Object.keys(config).length > 1) {
     await Deno.mkdir(configDir, { recursive: true });
     await Deno.writeTextFile(configPath, JSON.stringify(config, null, 2) + "\n");
     ok(`Config written: ${dim(configPath)}`);
   }
 
-  // Summary
   console.log("");
   console.log(`  ${DIM}${"─".repeat(50)}${RESET}`);
   console.log("");
@@ -462,9 +441,6 @@ async function stepFinalize(state: InitState): Promise<void> {
   console.log("");
 }
 
-// =============================================================================
-// Main
-// =============================================================================
 
 export async function runInit(): Promise<void> {
   console.log("");
@@ -480,7 +456,7 @@ export async function runInit(): Promise<void> {
     githubOwner: "",
     githubRepo: "",
     githubUsername: "",
-    opencodeServer: "http://localhost:4096",
+    opencodeServer: "http://localhost:5173",
     skippedTelegram: false,
     skippedMutabiWasfa: false,
     skippedGithub: false,

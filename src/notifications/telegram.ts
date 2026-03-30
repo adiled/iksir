@@ -11,7 +11,8 @@
 import { logger } from "../logging/logger.ts";
 import { execCommand } from "../utils/exec.ts";
 import { escapeMarkdown, escapeMarkdownV2 } from "../utils/strings.ts";
-import type { TasmimIksir, Notification, ReviewComment } from "../types.ts";
+import type { TasmimIksir, Ishara, TaaliqMuraja } from "../types.ts";
+import { PROTOCOL_SOCKS5, TELEGRAM_API_BASE } from "../constants.ts";
 
 /**
  * Fetch wrapper that uses SOCKS5 proxy for Telegram API if configured.
@@ -22,12 +23,11 @@ async function proxyFetch(
   proxy: string,
   options?: RequestInit
 ): Promise<Response> {
-  // If no proxy configured, use standard fetch
   if (!proxy) {
     return fetch(url, options);
   }
 
-  // Use curl with SOCKS5 proxy
+  /** Use curl with SOCKS5 proxy */
   const method = options?.method ?? "GET";
   const headers = options?.headers as Record<string, string> | undefined;
   const body = options?.body as string | undefined;
@@ -35,23 +35,20 @@ async function proxyFetch(
   const args = [
     "--silent",
     "--show-error",
-    "--socks5", proxy.replace("socks5://", ""),
+    "--socks5", proxy.replace(PROTOCOL_SOCKS5, ""),
     "-X", method,
   ];
 
-  // Add headers
   if (headers) {
     for (const [key, value] of Object.entries(headers)) {
       args.push("-H", `${key}: ${value}`);
     }
   }
 
-  // Add body for POST requests
   if (body) {
     args.push("-d", body);
   }
 
-  // Include response headers in output
   args.push("-i");
   args.push(url);
 
@@ -63,23 +60,22 @@ async function proxyFetch(
     throw new Error(`curl failed: ${result.stderr}`);
   }
 
-  // Parse curl -i output (headers + body)
+  /** Parse curl -i output (headers + body) */
   const output = result.stdout;
   const headerEndIndex = output.indexOf("\r\n\r\n");
 
   if (headerEndIndex === -1) {
-    // No headers found, treat entire output as body
     return new Response(output, { status: 200 });
   }
 
   const headerSection = output.slice(0, headerEndIndex);
   const bodySection = output.slice(headerEndIndex + 4);
 
-  // Parse status from first line (e.g., "HTTP/1.1 200 OK")
+  /** Parse status from first line (e.g., "HTTP/1.1 200 OK") */
   const statusMatch = headerSection.match(/HTTP\/[\d.]+ (\d+)/);
   const status = statusMatch ? parseInt(statusMatch[1], 10) : 200;
 
-  // Parse headers
+  /** Parse headers */
   const responseHeaders = new Headers();
   const headerLines = headerSection.split("\r\n").slice(1);
   for (const line of headerLines) {
@@ -179,7 +175,7 @@ export class TelegramClient {
     this.dispatchTopicId = config.notifications.telegram.dispatchTopicId;
     this.enabled = config.notifications.telegram.enabled;
     this.proxy = config.notifications.telegram.proxy ?? "";
-    this.baseUrl = `https://api.telegram.org/bot${this.botToken}`;
+    this.baseUrl = `${TELEGRAM_API_BASE}/bot${this.botToken}`;
   }
 
   /**
@@ -269,7 +265,7 @@ export class TelegramClient {
       return null;
     }
 
-    // Use provided chatId, or group if available, or private chat
+    /** Use provided chatId, or group if available, or private chat */
     const targetChatId = options?.chatId ?? this.getEffectiveChatId();
 
     const body: Record<string, unknown> = {
@@ -328,7 +324,7 @@ export class TelegramClient {
       chatId?: string;
     }
   ): Promise<number | null> {
-    // Try Markdown first
+    /** Try Markdown first */
     const result = await this.arsalaRisala(text, {
       ...options,
       parseMode: "Markdown",
@@ -338,7 +334,6 @@ export class TelegramClient {
       return result;
     }
 
-    // Markdown failed, try plain text
     await logger.warn("telegram", "Markdown failed, retrying as plain text");
     return this.arsalaRisala(text, {
       ...options,
@@ -357,11 +352,9 @@ export class TelegramClient {
     }
   ): Promise<number | null> {
     if (!this.isGroupMode()) {
-      // Fall back to private chat
       return this.arsalaRisalaWithFallback(text, options);
     }
 
-    // Use fallback chain for dispatch messages (may contain user-generated titles)
     return this.arsalaRisalaWithFallback(text, {
       ...options,
       chatId: this.groupId,
@@ -381,7 +374,6 @@ export class TelegramClient {
     }
   ): Promise<number | null> {
     if (!this.groupId) {
-      // Fall back to private chat (no topic)
       return this.arsalaRisala(text, options);
     }
 
@@ -392,9 +384,6 @@ export class TelegramClient {
     });
   }
 
-  // ===========================================================================
-  // Forum Topic Management
-  // ===========================================================================
 
   /**
    * Create a forum topic for an orchestrator session.
@@ -415,7 +404,7 @@ export class TelegramClient {
 
     const body: Record<string, unknown> = {
       chat_id: this.groupId,
-      name: name.slice(0, 128), // Telegram limit
+      name: name.slice(0, 128),
     };
 
     if (options?.iconColor) {
@@ -573,7 +562,6 @@ export class TelegramClient {
    * Check if a message is from the General topic (or no topic)
    */
   isGeneralTopic(message: TelegramMessage): boolean {
-    // message_thread_id = 1 is General, or undefined means topics not enabled
     return !message.message_thread_id || message.message_thread_id === 1;
   }
 
@@ -631,7 +619,7 @@ export class TelegramClient {
   /**
    * Send a notification (unified interface)
    */
-  async sendNotification(notification: Notification): Promise<number | null> {
+  async sendNotification(notification: Ishara): Promise<number | null> {
     const emoji = this.getCategoryEmoji(notification.category);
     const text = `${emoji} *${notification.title}*\n\n${notification.body}`;
 
@@ -642,7 +630,7 @@ export class TelegramClient {
     return this.arsalaRisala(text, {
       parseMode: "Markdown",
       keyboard,
-      disableNotification: notification.priority === "min" || notification.priority === "low",
+      disableNotification: notification.awwaliyya === "min" || notification.awwaliyya === "low",
     });
   }
 
@@ -667,7 +655,7 @@ export class TelegramClient {
    * Build an inline keyboard
    */
   private buildKeyboard(buttons: Array<{ text: string; callback_data?: string; url?: string }>): InlineKeyboardMarkup {
-    // Arrange buttons in rows of 2
+    /** Arrange buttons in rows of 2 */
     const rows: InlineKeyboardButton[][] = [];
     for (let i = 0; i < buttons.length; i += 2) {
       rows.push(buttons.slice(i, i + 2));
@@ -746,8 +734,8 @@ Overall: ${percent}% complete`;
   /**
    * Send review comments summary
    */
-  async sendReviewComments(raqamRisala: number, comments: ReviewComment[]): Promise<number | null> {
-    const byAuthor = new Map<string, ReviewComment[]>();
+  async sendTaaliqMurajas(raqamRisala: number, comments: TaaliqMuraja[]): Promise<number | null> {
+    const byAuthor = new Map<string, TaaliqMuraja[]>();
     for (const comment of comments) {
       const existing = byAuthor.get(comment.author) ?? [];
       existing.push(comment);
@@ -828,7 +816,6 @@ Overall: ${percent}% complete`;
           break;
         }
         await logger.error("telegram", "Polling error", { error: String(error) });
-        // Wait before retrying
         await new Promise((resolve) => setTimeout(resolve, 5000));
       }
     }
@@ -851,7 +838,7 @@ Overall: ${percent}% complete`;
    * Handle an incoming update
    */
   private async handleUpdate(update: TelegramUpdate): Promise<void> {
-    // Validate chat ID for security - allow private chat OR group
+    /** Validate chat ID for security - allow private chat OR group */
     const chatId = update.message?.chat.id ?? update.callback_query?.message?.chat.id;
     const chatIdStr = chatId ? String(chatId) : undefined;
     

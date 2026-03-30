@@ -1,9 +1,6 @@
 import { assertEquals } from "@std/assert";
 import { escapeMarkdown, escapeMarkdownV2, truncate } from "./strings.ts";
 
-// =============================================================================
-// escapeMarkdown
-// =============================================================================
 
 Deno.test("escapeMarkdown: escapes underscore", () => {
   assertEquals(escapeMarkdown("hello_world"), "hello\\_world");
@@ -40,12 +37,8 @@ Deno.test("escapeMarkdown: combined special chars", () => {
   );
 });
 
-// =============================================================================
-// escapeMarkdownV2
-// =============================================================================
 
 Deno.test("escapeMarkdownV2: escapes full Telegram charset", () => {
-  // All special chars: _ * [ ] ( ) ~ ` > # + = | { } . ! \ -
   assertEquals(escapeMarkdownV2("_"), "\\_");
   assertEquals(escapeMarkdownV2("*"), "\\*");
   assertEquals(escapeMarkdownV2("["), "\\[");
@@ -77,9 +70,6 @@ Deno.test("escapeMarkdownV2: combined realistic message", () => {
   assertEquals(escapeMarkdownV2(input), expected);
 });
 
-// =============================================================================
-// truncate
-// =============================================================================
 
 Deno.test("truncate: returns original if under limit", () => {
   assertEquals(truncate("hello", 10), "hello");

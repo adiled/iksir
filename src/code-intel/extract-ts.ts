@@ -17,7 +17,7 @@ async function fileHash(content: string): Promise<string> {
 
 function extractImports(content: string): string[] {
   const imports: string[] = [];
-  // Match: import ... from "..."  and  import "..."  and  export ... from "..."
+  /** Match: import ... from "..."  and  import "..."  and  export ... from "..." */
   const re = /(?:import|export)\s+.*?from\s+["']([^"']+)["']|import\s+["']([^"']+)["']/g;
   let m;
   while ((m = re.exec(content)) !== null) {
@@ -26,7 +26,7 @@ function extractImports(content: string): string[] {
   return imports;
 }
 
-// deno-lint-ignore no-explicit-any
+/** deno-lint-ignore no-explicit-any */
 function mapDocNode(node: any, exported: boolean): CodeSymbol | null {
   const name: string = node.name ?? "";
   const line: number = node.location?.line ?? 0;
@@ -34,7 +34,6 @@ function mapDocNode(node: any, exported: boolean): CodeSymbol | null {
   switch (node.kind) {
     case "function": {
       const params = (node.functionDef?.params ?? [])
-        // deno-lint-ignore no-explicit-any
         .map((p: any) => {
           const pName = p.name ?? p.left?.name ?? "_";
           const pType = p.tsType?.repr ?? p.tsType?.keyword ?? "";
@@ -80,7 +79,7 @@ export async function extractTypeScript(filePath: string, repoPath: string): Pro
   const imports = extractImports(content);
   const symbols: CodeSymbol[] = [];
 
-  // Use deno doc for exported symbols
+  /** Use deno doc for exported symbols */
   const denoBin = Deno.execPath();
   const result = await execCommand(denoBin, ["doc", "--json", filePath], { cwd: repoPath });
   if (result.success) {
@@ -93,20 +92,18 @@ export async function extractTypeScript(filePath: string, repoPath: string): Pro
         }
       }
     } catch {
-      // Parse failed, fall through to regex
     }
   }
 
-  // Regex fallback for non-exported top-level declarations
+  /** Regex fallback for non-exported top-level declarations */
   const lines = content.split("\n");
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const lineNum = i + 1;
 
-    // Skip if already captured as export
+    /** Skip if already captured as export */
     const isExported = line.trimStart().startsWith("export ");
 
-    // Top-level function/class/interface/type/const (not indented)
     if (line.match(/^(?:export\s+)?(?:async\s+)?function\s+(\w+)/)) {
       const name = line.match(/function\s+(\w+)/)?.[1];
       if (name && !symbols.find((s) => s.name === name)) {

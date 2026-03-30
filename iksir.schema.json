@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://munadi.dev/munadi.schema.json",
+  "$id": "https://iksir.dev/iksir.schema.json",
   "title": "Munadi Configuration",
   "description": "Configuration for the Munadi autonomous agent orchestration system.",
   "type": "object",
@@ -85,7 +85,7 @@
             "topic": {
               "type": "string",
               "description": "Ntfy topic name.",
-              "default": "munadi"
+              "default": "iksir"
             },
             "server": {
               "type": "string",

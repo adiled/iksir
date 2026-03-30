@@ -33,7 +33,7 @@ interface SessionRow {
 
 const MUNADI_DB_PATH =
   process.env.MUNADI_DB_PATH ??
-  `${process.env.HOME ?? "/root"}/.config/iksir/state/munadi.sqlite`
+  `${process.env.HOME ?? "/root"}/.config/iksir/state/iksir.sqlite`
 
 /**
  * Resolve murshid identifier from an OpenCode session ID.
@@ -56,7 +56,6 @@ function resolveMurshid(
       .get(sessionId) as SessionRow | null
     if (row) return row
   } catch {
-    // Table might not exist or schema mismatch — fall through
   }
   return null
 }
@@ -92,23 +91,21 @@ function formatDiary(entries: DiaryRow[]): string {
     .join("\n\n")
 }
 
-export const munadiCompaction: Plugin = async (_ctx) => {
+export const iksirCompaction: Plugin = async (_ctx) => {
   return {
     "experimental.session.compacting": async (input, output) => {
       let db: Database | null = null
       try {
         db = new Database(MUNADI_DB_PATH, { readonly: true })
       } catch {
-        // DB not available — degrade gracefully, inject static rules only
         output.context.push(STATIC_RULES)
         return
       }
 
       try {
-        // Resolve which murshid owns this session
+        /** Resolve which murshid owns this session */
         const session = resolveMurshid(db, input.sessionID)
         if (!session) {
-          // Not a Munadi murshid session (classifier, etc.) — skip
           db.close()
           return
         }
@@ -117,7 +114,7 @@ export const munadiCompaction: Plugin = async (_ctx) => {
         const entries = getDiaryEntries(db, orchId)
         db.close()
 
-        // Build the context injection
+        /** Build the context injection */
         const parts: string[] = []
 
         parts.push(`## Munadi Murshid Context
@@ -140,7 +137,6 @@ ${formatDiary(entries)}`)
 
         output.context.push(parts.join("\n\n"))
       } catch {
-        // Any error — close DB, inject static rules as fallback
         db?.close()
         output.context.push(STATIC_RULES)
       }

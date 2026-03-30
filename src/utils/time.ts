@@ -31,7 +31,6 @@ export function nowInTz(tz: string): { hours: number; minutes: number } {
  * @returns Date string in YYYY-MM-DD format
  */
 export function todayInTz(tz: string): string {
-  // en-CA locale produces YYYY-MM-DD format
   return new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date());
 }
 
@@ -53,7 +52,6 @@ export function isInTimeRange(tz: string, start: string, end: string): boolean {
   const startMin = startH * 60 + startM;
   const endMin = endH * 60 + endM;
 
-  // Handle overnight spans (e.g., 22:00-07:00)
   if (startMin > endMin) {
     return current >= startMin || current < endMin;
   }
@@ -77,6 +75,6 @@ export function minutesUntil(tz: string, end: string): number {
   const endMin = endH * 60 + endM;
 
   let diff = endMin - current;
-  if (diff < 0) diff += 1440; // wrap past midnight
+  if (diff < 0) diff += 1440;
   return diff;
 }

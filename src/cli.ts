@@ -4,9 +4,9 @@
  * Single entry point for all Munadi operations.
  *
  * Usage:
- *   munadi start              Start all services
- *   munadi start mcp          Start just the MCP service
- *   munadi stop               Stop all services
+ *   iksir start              Start all services
+ *   iksir start mcp          Start just the MCP service
+ *   iksir stop               Stop all services
  *   munadi restart             Restart all services
  *   munadi status              Show service and session status
  *   munadi check               Validate config, type check, run tests
@@ -18,7 +18,7 @@
 import { VERSION } from "./main.ts";
 import { loadConfig, getConfigPath } from "./config.ts";
 import { runInit } from "./init.ts";
-import { initDatabase, closeDatabase, getAllSessions, getUnansweredQuestions } from "../db/db.ts";
+import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, jalabaKullJalasat, jalabaAseilaGhairMujaba } from "../db/db.ts";
 import { execCommand } from "./utils/exec.ts";
 import { join } from "jsr:@std/path";
 
@@ -49,9 +49,6 @@ Maintenance:
 Run './install' for first-time setup.
 `;
 
-// =============================================================================
-// Service management
-// =============================================================================
 
 /** Returns ["--user"] for non-root, [] for root. */
 function systemctlMode(): string[] {
@@ -93,8 +90,10 @@ async function cmdServiceAction(action: string): Promise<void> {
   const target = resolveTarget(Deno.args[1]);
   const services = serviceName(target);
 
-  // For start/restart, order matters: mcp → agent → daemon
-  // For stop, reverse: daemon → agent → mcp
+  /**
+   * For start/restart, order matters: mcp → agent → daemon
+   * For stop, reverse: daemon → agent → mcp
+   */
   const ordered = action === "stop" ? [...services].reverse() : services;
 
   console.log(`${action === "start" ? "Starting" : action === "stop" ? "Stopping" : "Restarting"} ${target === "all" ? "all services" : target}...`);
@@ -105,9 +104,6 @@ async function cmdServiceAction(action: string): Promise<void> {
   }
 }
 
-// =============================================================================
-// Status
-// =============================================================================
 
 async function cmdStatus(): Promise<void> {
   const mode = systemctlMode();
@@ -120,9 +116,9 @@ async function cmdStatus(): Promise<void> {
   }
 
   try {
-    await initDatabase();
-    const sessions = getAllSessions();
-    const questions = getUnansweredQuestions();
+    await baddaaQaidatBayanat();
+    const sessions = jalabaKullJalasat();
+    const questions = jalabaAseilaGhairMujaba();
     console.log(`\nSessions: ${sessions.length}`);
     for (const s of sessions) {
       console.log(`  ${s.identifier} [${s.status}] branch:${s.branch ?? "none"}`);
@@ -133,15 +129,12 @@ async function cmdStatus(): Promise<void> {
         console.log(`  ${q.id} (${q.session_id})`);
       }
     }
-    closeDatabase();
+    aghlaaqQaidatBayanat();
   } catch {
     console.log("\nDatabase: not tahyiad");
   }
 }
 
-// =============================================================================
-// Check
-// =============================================================================
 
 async function cmdCheck(): Promise<void> {
   const repoPath = Deno.env.get("MUNADI_REPO_PATH") ?? ".";
@@ -188,9 +181,6 @@ async function cmdCheck(): Promise<void> {
   if (failures > 0) Deno.exit(1);
 }
 
-// =============================================================================
-// Sync
-// =============================================================================
 
 async function cmdSync(): Promise<void> {
   const repoPath = Deno.env.get("MUNADI_REPO_PATH") ?? Deno.cwd();
@@ -225,20 +215,15 @@ async function cmdSync(): Promise<void> {
       }
     }
   } catch {
-    // plugins dir may not exist
   }
 
   console.log(`\nSynced ${synced} file(s).`);
 }
 
-// =============================================================================
-// Update
-// =============================================================================
 
 async function cmdUpdate(): Promise<void> {
   const repoPath = Deno.env.get("MUNADI_REPO_PATH") ?? Deno.cwd();
 
-  // Pull latest
   console.log("Pulling latest...");
   const pull = await execCommand("git", ["pull"], { cwd: repoPath });
   if (!pull.success) {
@@ -248,11 +233,9 @@ async function cmdUpdate(): Promise<void> {
   const summary = pull.stdout.trim();
   console.log(`  ${summary.includes("Already up to date") ? "Already up to date." : summary.split("\n")[0]}`);
 
-  // Sync prompts
   console.log("Syncing prompts...");
   await cmdSync();
 
-  // Reload and restart services
   console.log("Restarting services...");
   const mode = systemctlMode();
   await execCommand("systemctl", [...mode, "daemon-reload"]);
@@ -268,9 +251,6 @@ async function cmdUpdate(): Promise<void> {
   console.log("\nUpdate complete.");
 }
 
-// =============================================================================
-// Config
-// =============================================================================
 
 async function cmdConfig(): Promise<void> {
   const config = await loadConfig();
@@ -281,9 +261,6 @@ async function cmdConfig(): Promise<void> {
   console.log(JSON.stringify(config, null, 2));
 }
 
-// =============================================================================
-// Router
-// =============================================================================
 
 const command = Deno.args[0] ?? "help";
 

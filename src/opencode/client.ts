@@ -38,7 +38,6 @@ export class OpenCodeClient {
    * Get server version (not available via SDK, returns null)
    */
   async getVersion(): Promise<string | null> {
-    // Version info not exposed via SDK API
     return null;
   }
 
@@ -93,7 +92,7 @@ export class OpenCodeClient {
         projectId: response.data.projectID,
         huwiyyatWasfa: "",
         title: response.data.title ?? "",
-        status: "sakin", // Would need to check session status endpoint
+        status: "sakin",
         createdAt: new Date(response.data.time.created),
         lastMessageAt: new Date(response.data.time.updated),
       };
@@ -163,7 +162,7 @@ export class OpenCodeClient {
         return { success: false, error: "No response data" };
       }
 
-      // Extract text from response parts (with safety for undefined/empty parts)
+      /** Extract text from response parts (with safety for undefined/empty parts) */
       const parts = response.data.parts ?? [];
       const textParts = parts
         .filter((p: { type: string }) => p.type === "text")
@@ -266,7 +265,7 @@ export class OpenCodeClient {
     try {
       const response = await this.client.session.status();
       if (!response.data) return {};
-      // Response is Record<sessionId, { type: string }>
+      /** Response is Record<sessionId, { type: string }> */
       const result: Record<string, string> = {};
       for (const [id, status] of Object.entries(response.data)) {
         result[id] = (status as { type: string }).type;
@@ -278,7 +277,6 @@ export class OpenCodeClient {
     }
   }
 
-  // Classifier session ID (lazy-tahyiad)
   private classifierSessionId: string | null = null;
 
   /**
@@ -287,12 +285,12 @@ export class OpenCodeClient {
    */
   private async getClassifierSession(): Promise<string | null> {
     if (this.classifierSessionId) {
-      // Verify it still exists
+      /** Verify it still exists */
       const session = await this.jalabJalsa(this.classifierSessionId);
       if (session) return this.classifierSessionId;
     }
 
-    // Create new classifier session
+    /** Create new classifier session */
     const session = await this.khalaqaJalsa("munadi-classifier", "Munadi Classification");
     if (session) {
       this.classifierSessionId = session.id;
@@ -325,7 +323,7 @@ export class OpenCodeClient {
     const controller = new AbortController();
     this.eventAbortController = controller;
 
-    // Combine signals if provided
+    /** Combine signals if provided */
     const combinedSignal = signal
       ? AbortSignal.any([signal, controller.signal])
       : controller.signal;
@@ -365,7 +363,6 @@ export class OpenCodeClient {
                 timestamp: new Date(),
               };
             } catch {
-              // Skip malformed events
             }
           }
         }
@@ -391,9 +388,6 @@ export class OpenCodeClient {
     }
   }
 
-  // ===========================================================================
-  // Question Tool Support
-  // ===========================================================================
 
   /**
    * Reply to a question from the question tool.
@@ -409,9 +403,11 @@ export class OpenCodeClient {
     answers: Array<{ questionIndex: number; selected: string[]; custom?: string }>
   ): Promise<boolean> {
     try {
-      // Convert from our internal format to SDK format
-      // SDK expects: answers: Array<Array<string>> (QuestionAnswer[])
-      // Each inner array contains the selected labels for that question
+      /**
+       * Convert from our internal format to SDK format
+       * SDK expects: answers: Array<Array<string>> (JawabSual[])
+       * Each inner array contains the selected labels for that question
+       */
       const sdkAnswers = answers.map((a) => {
         if (a.custom) {
           return [a.custom];
@@ -475,9 +471,6 @@ export class OpenCodeClient {
     }
   }
 
-  // ===========================================================================
-  // Session Health & Compaction
-  // ===========================================================================
 
   /**
    * Get message count for a session.
@@ -531,7 +524,6 @@ export class OpenCodeClient {
 
       if (!response.data) return null;
 
-      // Find the last assistant message (messages are returned in order)
       for (let i = response.data.length - 1; i >= 0; i--) {
         const msg = response.data[i];
         if (msg.info.role === "assistant") {
@@ -544,7 +536,6 @@ export class OpenCodeClient {
           };
           return {
             id: info.id,
-            // OpenCode SDK returns Unix epoch in seconds (Go convention) — convert to ms
             createdAt: info.time.created * 1000,
             completedAt: info.time.completed ? info.time.completed * 1000 : undefined,
             tokensOutput: info.tokens.output,

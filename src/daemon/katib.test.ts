@@ -1,11 +1,7 @@
 import { assertEquals } from "@std/assert";
 import { generateBranchName } from "./katib.ts";
 
-// =============================================================================
-// generateBranchName — pure function, single source of truth for branch naming
-// =============================================================================
 
-// Epic branches
 
 Deno.test("generateBranchName: epic with explicit slug", () => {
   assertEquals(
@@ -31,7 +27,7 @@ Deno.test("generateBranchName: epic title slug strips special chars", () => {
 Deno.test("generateBranchName: epic title slug truncates at 30 chars", () => {
   const longTitle = "This is an extremely long title that should be truncated";
   const branch = generateBranchName("TEAM-1", "epic", undefined, longTitle);
-  // Slug portion should be at most 30 chars
+  /** Slug portion should be at most 30 chars */
   const slug = branch.replace("epic/team-1-", "");
   assertEquals(slug.length <= 30, true);
 });
@@ -50,7 +46,6 @@ Deno.test("generateBranchName: epic identifier is lowercased", () => {
   );
 });
 
-// Chore branches
 
 Deno.test("generateBranchName: chore uses IKSIR_GIT_USER prefix", () => {
   const prev = Deno.env.get("IKSIR_GIT_USER");
@@ -93,7 +88,6 @@ Deno.test("generateBranchName: chore preserves identifier case", () => {
   }
 });
 
-// Sandbox branches
 
 Deno.test("generateBranchName: sandbox with explicit slug", () => {
   assertEquals(

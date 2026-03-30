@@ -15,9 +15,6 @@
 
 import type { CodeIndex, QueryResult, CodeSymbol, FileEntry } from "./types.ts";
 
-// =============================================================================
-// Query classification
-// =============================================================================
 
 type QueryIntent =
   | { type: "symbol_lookup"; name: string }
@@ -30,7 +27,7 @@ type QueryIntent =
 function classify(query: string): QueryIntent {
   const q = query.toLowerCase().trim();
 
-  // "where is X" / "who exports X" / "find X" / "X definition"
+  /** "where is X" / "who exports X" / "find X" / "X definition" */
   const symbolMatch = q.match(
     /(?:where\s+is|who\s+exports?|find|locate|definition\s+of|where\s+does)\s+[`"']?(\w+)[`"']?/
   );
@@ -38,7 +35,7 @@ function classify(query: string): QueryIntent {
     return { type: "symbol_lookup", name: symbolMatch[1] };
   }
 
-  // "what depends on X" / "who imports X" / "reverse deps of X" / "importers of X"
+  /** "what depends on X" / "who imports X" / "reverse deps of X" / "importers of X" */
   const reverseDepsMatch = q.match(
     /(?:what|who)\s+(?:depends\s+on|imports?|uses)\s+[`"']?([^\s`"']+)[`"']?|(?:reverse\s+deps?|importers?|dependents?)\s+(?:of\s+)?[`"']?([^\s`"']+)[`"']?/
   );
@@ -46,7 +43,7 @@ function classify(query: string): QueryIntent {
     return { type: "reverse_deps", file: reverseDepsMatch[1] ?? reverseDepsMatch[2] };
   }
 
-  // "what does X import" / "deps of X" / "dependencies of X"
+  /** "what does X import" / "deps of X" / "dependencies of X" */
   const forwardDepsMatch = q.match(
     /what\s+does\s+[`"']?([^\s`"']+)[`"']?\s+import|(?:deps|dependencies)\s+(?:of\s+)?[`"']?([^\s`"']+)[`"']?/
   );
@@ -54,7 +51,7 @@ function classify(query: string): QueryIntent {
     return { type: "forward_deps", file: forwardDepsMatch[1] ?? forwardDepsMatch[2] };
   }
 
-  // "exports of X" / "what does X export" / "symbols in X"
+  /** "exports of X" / "what does X export" / "symbols in X" */
   const exportsMatch = q.match(
     /(?:exports?|symbols?)\s+(?:of|in|from)\s+[`"']?([^\s`"']+)[`"']?|what\s+does\s+[`"']?([^\s`"']+)[`"']?\s+export/
   );
@@ -62,7 +59,7 @@ function classify(query: string): QueryIntent {
     return { type: "exports", file: exportsMatch[1] ?? exportsMatch[2] };
   }
 
-  // "impact of changing X" / "what breaks if I change X" / "change impact X"
+  /** "impact of changing X" / "what breaks if I change X" / "change impact X" */
   const impactMatch = q.match(
     /impact\s+(?:of\s+)?(?:changing\s+)?[`"']?(\w+)[`"']?|what\s+breaks\s+if\s+(?:I\s+)?change\s+[`"']?(\w+)[`"']?/
   );
@@ -70,12 +67,11 @@ function classify(query: string): QueryIntent {
     return { type: "impact", name: impactMatch[1] ?? impactMatch[2] };
   }
 
-  // If query looks like a bare symbol name (single word, PascalCase or camelCase)
   if (/^\w+$/.test(q) && /[A-Z]/.test(query)) {
     return { type: "symbol_lookup", name: query.trim() };
   }
 
-  // Fallback: search by terms
+  /** Fallback: search by terms */
   const terms = q.split(/\s+/).filter((t) => t.length > 2 && !STOP_WORDS.has(t));
   return { type: "search", terms };
 }
@@ -87,28 +83,23 @@ const STOP_WORDS = new Set([
   "about", "related", "files", "code",
 ]);
 
-// =============================================================================
-// Query executors
-// =============================================================================
 
 function findFile(index: CodeIndex, fileHint: string): FileEntry | null {
-  // Exact match
   if (index.files[fileHint]) return index.files[fileHint];
 
-  // Partial match — prefer exact filename, then shortest path
+  /** Partial match — prefer exact filename, then shortest path */
   const matches = Object.values(index.files).filter((f) =>
     f.path.endsWith(fileHint) || f.path.endsWith("/" + fileHint) || f.path.includes(fileHint)
   );
 
   if (matches.length <= 1) return matches[0] ?? null;
 
-  // Prefer exact basename match (e.g. "types.ts" matches "src/types.ts" over "src/code-intel/types.ts")
+  /** Prefer exact basename match (e.g. "types.ts" matches "src/types.ts" over "src/code-intel/types.ts") */
   const basenameMatches = matches.filter((f) => {
     const basename = f.path.split("/").pop();
     return basename === fileHint;
   });
   if (basenameMatches.length > 0) {
-    // Shortest path wins (closer to root = more likely the main one)
     basenameMatches.sort((a, b) => a.path.length - b.path.length);
     return basenameMatches[0];
   }
@@ -126,7 +117,6 @@ function findSymbol(index: CodeIndex, name: string): { file: FileEntry; symbol: 
       }
     }
   }
-  // Exported symbols first, then by file path
   results.sort((a, b) => {
     if (a.symbol.exported && !b.symbol.exported) return -1;
     if (!a.symbol.exported && b.symbol.exported) return 1;
@@ -144,9 +134,8 @@ function findReverseDeps(index: CodeIndex, fileHint: string): FileEntry[] {
 
   for (const file of Object.values(index.files)) {
     if (file.path === targetPath) continue;
-    // Check if any import resolves to the target
     for (const imp of file.imports) {
-      if (imp.includes(targetPath) || targetPath.includes(imp.replace(/^\.\//, "").replace(/\.\w+$/, ""))) {
+      if (imp.includes(targetPath) || targetPath.includes(imp.replace(/^\.\//, ""))) {
         results.push(file);
         break;
       }
@@ -166,13 +155,11 @@ function searchByTerms(index: CodeIndex, terms: string[]): { file: FileEntry; sc
     for (const term of terms) {
       const termLower = term.toLowerCase();
 
-      // File path match
       if (file.path.toLowerCase().includes(termLower)) {
         score += 3;
         matchReasons.push(`path contains "${term}"`);
       }
 
-      // Symbol name match
       for (const sym of file.symbols) {
         if (sym.name.toLowerCase().includes(termLower)) {
           score += sym.exported ? 2 : 1;
@@ -194,9 +181,6 @@ function searchByTerms(index: CodeIndex, terms: string[]): { file: FileEntry; sc
   return results.slice(0, 15);
 }
 
-// =============================================================================
-// Format results
-// =============================================================================
 
 function formatSymbol(sym: CodeSymbol, filePath: string): string {
   const exp = sym.exported ? "exported" : "internal";
@@ -204,9 +188,6 @@ function formatSymbol(sym: CodeSymbol, filePath: string): string {
   return `${sym.kind} ${sym.name}${sig} (${exp}, ${filePath}:${sym.line})`;
 }
 
-// =============================================================================
-// Main query function
-// =============================================================================
 
 export function queryIndex(index: CodeIndex, query: string): QueryResult {
   const intent = classify(query);
@@ -293,13 +274,13 @@ export function queryIndex(index: CodeIndex, query: string): QueryResult {
     }
 
     case "impact": {
-      // Find where the symbol is defined
+      /** Find where the symbol is defined */
       const hits = findSymbol(index, intent.name);
       if (hits.length === 0) {
         return { answer: `Symbol "${intent.name}" not found.`, files: [], symbols: [] };
       }
 
-      // Find all files that import from the defining file(s)
+      /** Find all files that import from the defining file(s) */
       const defFiles = new Set(hits.map((h) => h.file.path));
       const impacted: Set<string> = new Set();
 

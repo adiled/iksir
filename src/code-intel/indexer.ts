@@ -75,12 +75,10 @@ export async function buildIndex(repoPath: string): Promise<CodeIndex> {
   const indexPath = getIndexPath();
   let existing: CodeIndex | null = null;
 
-  // Load existing index for incremental update
   if (await exists(indexPath)) {
     try {
       const content = await Deno.readTextFile(indexPath);
       existing = JSON.parse(content) as CodeIndex;
-      // Only reuse if same repo
       if (existing.repoPath !== repoPath) existing = null;
     } catch {
       existing = null;
@@ -99,14 +97,12 @@ export async function buildIndex(repoPath: string): Promise<CodeIndex> {
   let reused = 0;
 
   for (const filePath of sourceFiles) {
-    // Check if file changed since last index
     if (existing) {
       const relativePath = filePath.startsWith(repoPath)
         ? filePath.slice(repoPath.length + 1)
         : filePath;
       const prev = existing.files[relativePath];
       if (prev) {
-        // Quick hash check — read file and compute hash
         try {
           const content = await Deno.readTextFile(filePath);
           const data = new TextEncoder().encode(content);
@@ -119,7 +115,6 @@ export async function buildIndex(repoPath: string): Promise<CodeIndex> {
             continue;
           }
         } catch {
-          // Re-extract on error
         }
       }
     }
@@ -131,7 +126,6 @@ export async function buildIndex(repoPath: string): Promise<CodeIndex> {
     }
   }
 
-  // Persist
   await ensureDir(join(indexPath, ".."));
   await Deno.writeTextFile(indexPath, JSON.stringify(index, null, 2));
 

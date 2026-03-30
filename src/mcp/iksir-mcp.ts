@@ -30,15 +30,15 @@ import type {
   MunToolCall,
   QararSijill,
   NawMurshid,
-  McpToolDefinition,
-  McpToolHandler,
-  ToolRegistry,
+  TaarifAlatMcp,
+  MuaallijAlatMcp,
+  SijillAlat,
 } from "../types.ts";
 import { generateBranchName } from "../daemon/katib.ts";
 import { loadIndex } from "../code-intel/indexer.ts";
 import { queryIndex } from "../code-intel/query.ts";
 
-// MCP Protocol types
+/** MCP Protocol types */
 interface McpRequest {
   jsonrpc: "2.0";
   id: number | string;
@@ -54,33 +54,30 @@ interface McpResponse {
 }
 
 import {
-  insertEvent,
-  addQararSijill,
-  getQararSijills,
+  adkhalaHadath,
+  adhafaQararSijill,
+  jalabaQararatSijill,
   qiraStatus,
 } from "../../db/db.ts";
 
-// =============================================================================
-// Tool Registry Implementation
-// =============================================================================
 
-class IksirToolRegistry implements ToolRegistry {
-  #tools = new Map<string, { definition: McpToolDefinition; handler: McpToolHandler }>();
+class IksirSijillAlat implements SijillAlat {
+  #tools = new Map<string, { definition: TaarifAlatMcp; handler: MuaallijAlatMcp }>();
   #forwarder: (call: MunToolCall) => void;
 
   constructor(forwarder: (call: MunToolCall) => void) {
     this.#forwarder = forwarder;
   }
 
-  register(tool: McpToolDefinition, handler: McpToolHandler): void {
+  register(tool: TaarifAlatMcp, handler: MuaallijAlatMcp): void {
     this.#tools.set(tool.name, { definition: tool, handler });
   }
 
-  getTools(): McpToolDefinition[] {
+  getTools(): TaarifAlatMcp[] {
     return Array.from(this.#tools.values()).map((t) => t.definition);
   }
 
-  getHandler(name: string): McpToolHandler | undefined {
+  getHandler(name: string): MuaallijAlatMcp | undefined {
     return this.#tools.get(name)?.handler;
   }
 
@@ -93,18 +90,13 @@ class IksirToolRegistry implements ToolRegistry {
   }
 }
 
-// =============================================================================
-// PM-MCP Server
-// =============================================================================
 
 export class IksirMunMcpServer {
-  #registry: IksirToolRegistry;
+  #registry: IksirSijillAlat;
 
   constructor() {
-    // Create the registry with our IPC forwarder
-    this.#registry = new IksirToolRegistry((call) => this.#forwardToDaemon(call));
+    this.#registry = new IksirSijillAlat((call) => this.#forwardToDaemon(call));
 
-    // Register all core tools including artifact crafting
     this.#registerCoreTools();
     this.#registerAlchemicalTools();
   }
@@ -112,13 +104,10 @@ export class IksirMunMcpServer {
   /**
    * Expose the registry for external access (e.g., serve.ts health check).
    */
-  get registry(): ToolRegistry {
+  get registry(): SijillAlat {
     return this.#registry;
   }
 
-  // ===========================================================================
-  // MCP Protocol Handlers
-  // ===========================================================================
 
   /**
    * Handle incoming MCP request
@@ -208,7 +197,6 @@ export class IksirMunMcpServer {
     const args = params?.arguments ?? {};
 
     try {
-      // Validate required fields before dispatching
       this.#tahaqqaqArgs(toolName, args);
 
       const handler = this.#registry.getHandler(toolName);
@@ -238,17 +226,11 @@ export class IksirMunMcpServer {
     }
   }
 
-  // ===========================================================================
-  // Core Tool Registration
-  // ===========================================================================
 
   /**
    * Register all 16 core PM-MCP tools.
    */
   #registerCoreTools(): void {
-    // =========================================================================
-    // Wasfa (Formula) Management
-    // =========================================================================
 
     this.#registry.register(
       {
@@ -394,9 +376,6 @@ Use this as your primary way to understand ticket entities.`,
       (args) => this.#aalajaQiraaatWasfa(args),
     );
 
-    // =========================================================================
-    // PR Management
-    // =========================================================================
 
     this.#registry.register(
       {
@@ -460,15 +439,12 @@ Use this as your primary way to understand ticket entities.`,
       (args) => this.#handleCheckBranchStatus(args),
     );
 
-    // =========================================================================
-    // Communication
-    // =========================================================================
 
     this.#registry.register(
       {
         name: "mun_notify",
         description:
-          "Send a notification to the operator. Use for blockers, decisions needed, and milestones.",
+          "Send a notification to al-Kimyawi. Use for blockers, decisions needed, and milestones.",
         inputSchema: {
           type: "object",
           properties: {
@@ -480,10 +456,10 @@ Use this as your primary way to understand ticket entities.`,
               type: "string",
               description: "Message content",
             },
-            priority: {
+            awwaliyya: {
               type: "string",
               enum: ["min", "low", "default", "high", "urgent"],
-              description: "Notification priority",
+              description: "Ishara awwaliyya",
             },
             actions: {
               type: "array",
@@ -498,7 +474,7 @@ Use this as your primary way to understand ticket entities.`,
               description: "Action buttons for the notification",
             },
           },
-          required: ["huwiyyatMurshid", "message", "priority"],
+          required: ["huwiyyatMurshid", "message", "awwaliyya"],
         },
       },
       (args) => this.#handleNotify(args),
@@ -508,7 +484,7 @@ Use this as your primary way to understand ticket entities.`,
       {
         name: "mun_reply",
         description:
-          "Send a conversational response to the operator. Use this when the operator asks a question (not a command). Questions seek information; commands direct action.",
+          "Send a conversational response to al-Kimyawi. Use this when al-Kimyawi asks a question (not a command). Questions seek information; commands direct action.",
         inputSchema: {
           type: "object",
           properties: {
@@ -614,9 +590,6 @@ The diary is a shared knowledge pool across all murshidun. Use it to:
       (args) => this.#handleReadDiary(args),
     );
 
-    // =========================================================================
-    // Control Handover
-    // =========================================================================
 
     this.#registry.register(
       {
@@ -624,7 +597,7 @@ The diary is a shared knowledge pool across all murshidun. Use it to:
         description: `Yield control voluntarily when blocked or waiting.
 
 Use this when:
-- All your formulae are blocked waiting for operator decisions → reason: "masdud"
+- All your formulae are blocked waiting for qarar al-Kimyawis → reason: "masdud"
 - All treatises created and waiting for review/merge → reason: "muntazir"
 
 This allows other murshidun with actionable work to become active.
@@ -643,7 +616,7 @@ You will continue receiving issue tracker/GitHub updates even while idle.`,
             },
             details: {
               type: "string",
-              description: "Specific reason (e.g., 'Waiting for operator decision on Figma specs')",
+              description: "Specific reason (e.g., 'Waiting for qarar al-Kimyawi on Figma specs')",
             },
             suggestNext: {
               type: "string",
@@ -668,7 +641,7 @@ Use this when:
 
 This signals to the daemon that you want to become active.
 If no other murshid is active, you'll be granted control immediately.
-If another murshid is working, Operator will be asked to approve the switch.`,
+If another murshid is working, Al-Kimyawi will be asked to approve the switch.`,
         inputSchema: {
           type: "object",
           properties: {
@@ -680,21 +653,18 @@ If another murshid is working, Operator will be asked to approve the switch.`,
               type: "string",
               description: "Why demanding control (e.g., 'Blocker resolved - Figma specs received')",
             },
-            priority: {
+            awwaliyya: {
               type: "string",
               enum: ["normal", "urgent"],
-              description: "Priority: normal (can wait for current to yield) or urgent (request immediate switch)",
+              description: "Awwaliyya: normal (can wait for current to yield) or urgent (request immediate switch)",
             },
           },
-          required: ["huwiyyatMurshid", "reason", "priority"],
+          required: ["huwiyyatMurshid", "reason", "awwaliyya"],
         },
       },
       (args) => this.#handleDemandControl(args),
     );
 
-    // =========================================================================
-    // Git Operations (Daemon-Managed)
-    // =========================================================================
 
     this.#registry.register(
       {
@@ -808,9 +778,6 @@ You should only call this once per murshid, at the start.`,
       (args) => this.#handleGitPush(args),
     );
 
-    // =========================================================================
-    // Code Intelligence
-    // =========================================================================
 
     this.#registry.register(
       {
@@ -835,12 +802,8 @@ You should only call this once per murshid, at the start.`,
     );
   }
 
-  // ===========================================================================
-  // Alchemical Tools
-  // ===========================================================================
 
   #registerAlchemicalTools(): void {
-    // mun_istikhas - Draw materials from the crucible
     this.#registry.register(
       {
         name: "mun_istikhas",
@@ -871,7 +834,6 @@ You should only call this once per murshid, at the start.`,
       (args) => this.#handleExtract(args),
     );
 
-    // mun_talaum - Discover what the extraction needs for stability
     this.#registry.register(
       {
         name: "mun_talaum",
@@ -902,7 +864,6 @@ You should only call this once per murshid, at the start.`,
       (args) => this.#handleAttune(args),
     );
 
-    // mun_istihal - Transform raw materials into essence
     this.#registry.register(
       {
         name: "mun_istihal",
@@ -933,7 +894,6 @@ You should only call this once per murshid, at the start.`,
       (args) => this.#handleTransmute(args),
     );
 
-    // mun_istihal_mutabaqq - Layered transmutation
     this.#registry.register(
       {
         name: "mun_istihal_mutabaqq",
@@ -968,7 +928,6 @@ You should only call this once per murshid, at the start.`,
       (args) => this.#handleTransmuteStacked(args),
     );
 
-    // mun_fasl - Transfer essence for examination
     this.#registry.register(
       {
         name: "mun_fasl",
@@ -1007,9 +966,6 @@ You should only call this once per murshid, at the start.`,
     );
   }
 
-  // ===========================================================================
-  // Ticket Management Handlers
-  // ===========================================================================
 
   async #aalajaKhalqWasfa(args: Record<string, unknown>): Promise<string> {
     const call: NidaKhalqWasfa = {
@@ -1090,11 +1046,11 @@ Relations control execution order: blocked tickets wait for blockers to complete
 
     this.#forwardToDaemon(call);
 
-    // Extract ticket ID from URL if possible (heuristic)
+    /** Extract ticket ID from URL if possible (heuristic) */
     const ticketMatch = call.url.match(/([A-Z]+-\d+)/);
     const huwiyyatWasfa = ticketMatch?.[1];
 
-    // Check implementation status from SQLite
+    /** Check implementation status from SQLite */
     let localContext = "";
     if (huwiyyatWasfa) {
       const status = qiraStatus(huwiyyatWasfa);
@@ -1122,9 +1078,6 @@ Daemon will:
 Awaiting daemon response...`;
   }
 
-  // ===========================================================================
-  // PR Management Handlers
-  // ===========================================================================
 
   async #aalajaKhalqRisala(args: Record<string, unknown>): Promise<string> {
     const call: NidaKhalqRisala = {
@@ -1172,16 +1125,13 @@ Daemon will return:
 - Any merge conflicts`;
   }
 
-  // ===========================================================================
-  // Communication Handlers
-  // ===========================================================================
 
   async #handleNotify(args: Record<string, unknown>): Promise<string> {
     const call: MunNotifyCall = {
       tool: "mun_notify",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       message: args.message as string,
-      priority: args.priority as MunNotifyCall["priority"],
+      awwaliyya: args.awwaliyya as MunNotifyCall["awwaliyya"],
       actions: args.actions as MunNotifyCall["actions"],
     };
 
@@ -1191,12 +1141,12 @@ Daemon will return:
       ? `\nActions: ${call.actions.map((a) => a.label).join(", ")}`
       : "";
 
-    return `Notification sent to operator.
+    return `Ishara sent to al-Kimyawi.
 
-Priority: ${call.priority}
+Awwaliyya: ${call.awwaliyya}
 Message: ${call.message}${actionsText}
 
-Operator will receive this via Telegram/ntfy.`;
+Al-Kimyawi will receive this via Telegram/ntfy.`;
   }
 
   async #handleReply(args: Record<string, unknown>): Promise<string> {
@@ -1208,7 +1158,7 @@ Operator will receive this via Telegram/ntfy.`;
 
     this.#forwardToDaemon(call);
 
-    return `Response sent to operator.
+    return `Response sent to al-Kimyawi.
 
 ${call.message}`;
   }
@@ -1223,7 +1173,7 @@ ${call.message}`;
       metadata: args.metadata as Record<string, unknown> | undefined,
     };
 
-    // Log to diary directly
+    /** Log to diary directly */
     const decision: QararSijill = {
       timestamp: new Date().toISOString(),
       type: call.type,
@@ -1234,7 +1184,6 @@ ${call.message}`;
 
     this.#appendQararSijill(decision, call.huwiyyatMurshid);
 
-    // Also forward to daemon for any additional handling
     this.#forwardToDaemon(call);
 
     return `Decision logged to diary.
@@ -1257,7 +1206,7 @@ This decision is now part of the persistent record.`;
       since: args.since as string | undefined,
     };
 
-    const decisions = getQararSijills({
+    const decisions = jalabaQararatSijill({
       huwiyyatMurshid: call.filterOrchestrator,
       type: call.type,
       search: call.search,
@@ -1293,9 +1242,6 @@ This decision is now part of the persistent record.`;
     return response;
   }
 
-  // ===========================================================================
-  // Control Handover Handlers
-  // ===========================================================================
 
   async #handleYield(args: Record<string, unknown>): Promise<string> {
     const call: MunYieldCall = {
@@ -1309,7 +1255,7 @@ This decision is now part of the persistent record.`;
     this.#forwardToDaemon(call);
 
     const stateDescription = call.reason === "masdud"
-      ? "You are now in BLOCKED state. Operator will be notified of the blockers."
+      ? "You are now in BLOCKED state. Al-Kimyawi will be notified of the blockers."
       : "You are now in WAITING state. Monitoring for PR events.";
 
     return `Control yielded.
@@ -1322,7 +1268,7 @@ ${stateDescription}
 
 What happens next:
 - If queue has pending work → another murshid becomes active
-- If other murshidun have work → Operator can approve switch
+- If other murshidun have work → Al-Kimyawi can approve switch
 - If nobody has work → system idles until external event
 
 You will continue receiving issue tracker/GitHub updates.
@@ -1334,7 +1280,7 @@ Use \`mun_demand_control\` when you have actionable work again.`;
       tool: "mun_demand_control",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       reason: args.reason as string,
-      priority: args.priority as "normal" | "urgent",
+      awwaliyya: args.awwaliyya as "normal" | "urgent",
     };
 
     this.#forwardToDaemon(call);
@@ -1342,21 +1288,18 @@ Use \`mun_demand_control\` when you have actionable work again.`;
     return `Control demand submitted.
 
 Reason: ${call.reason}
-Priority: ${call.priority}
+Awwaliyya: ${call.awwaliyya}
 
 Daemon will:
 1. If no active murshid → grant control immediately
 2. If active is blocked/waiting → grant control (graceful snatch)
 3. If active is working:
-   - Normal: queue demand, notify operator
-   - Urgent: request immediate switch from operator
+   - Normal: queue demand, notify al-Kimyawi
+   - Urgent: request immediate switch from al-Kimyawi
 
 You will be notified when control is granted.`;
   }
 
-  // ===========================================================================
-  // Git Operations Handlers
-  // ===========================================================================
 
   async #handleCreateBranch(args: Record<string, unknown>): Promise<string> {
     const murshidType = args.type as NawMurshid;
@@ -1434,13 +1377,12 @@ Daemon will create the commit.`;
 Daemon will push current branch to origin.`;
   }
 
-  // ===========================================================================
-  // Artifact Crafting Handlers
-  // ===========================================================================
 
   async #handleExtract(args: Record<string, unknown>): Promise<string> {
-    // For now, extraction is just validation and planning
-    // The actual file operations happen in mun_istihal
+    /**
+     * For now, extraction is just validation and planning
+     * The actual file operations happen in mun_istihal
+     */
     const huwiyyatWasfa = args.huwiyyatWasfa as string;
     const files = args.files as string[];
 
@@ -1455,8 +1397,10 @@ Next steps:
   }
 
   async #handleAttune(args: Record<string, unknown>): Promise<string> {
-    // TODO: Implement smart dependency discovery
-    // For now, return a placeholder that suggests manual review
+    /**
+     * TODO: Implement smart dependency discovery
+     * For now, return a placeholder that suggests manual review
+     */
     const huwiyyatWasfa = args.huwiyyatWasfa as string;
     const files = args.files as string[];
 
@@ -1539,7 +1483,7 @@ Note: CI may fail if parent PR is unmerged. This is expected for incremental rev
   }
 
   async #handleDecant(args: Record<string, unknown>): Promise<string> {
-    // This is essentially mun_create_risala with better terminology
+    /** This is essentially mun_create_risala with better terminology */
     const huwiyyatWasfa = args.huwiyyatWasfa as string;
     const essenceBranch = generateBranchName(huwiyyatWasfa, "chore");
 
@@ -1549,7 +1493,7 @@ Note: CI may fail if parent PR is unmerged. This is expected for incremental rev
       huwiyyatWasfa: huwiyyatWasfa,
       title: args.title as string,
       body: args.body as string,
-      base: "main", // Will be overridden by daemon if stacked
+      base: "main",
       head: essenceBranch,
     };
 
@@ -1565,25 +1509,22 @@ Daemon will create a ${args.draft !== false ? "draft " : ""}pull request.
 You will be notified with the PR URL once created.`;
   }
 
-  // ===========================================================================
-  // IPC & Diary Helpers
-  // ===========================================================================
 
   /**
    * Forward a tool call to the Iksir daemon via SQLite
    */
   #forwardToDaemon(call: MunToolCall): void {
-    // Extract huwiyyatMurshid if present (for routing)
+    /** Extract huwiyyatMurshid if present (for routing) */
     const huwiyyatMurshid = "huwiyyatMurshid" in call ? (call as { huwiyyatMurshid?: string }).huwiyyatMurshid : undefined;
 
-    insertEvent("pm", call.tool, call as unknown as Record<string, unknown>, huwiyyatMurshid);
+    adkhalaHadath("pm", call.tool, call as unknown as Record<string, unknown>, huwiyyatMurshid);
   }
 
   /**
    * Append a decision to the diary (SQLite)
    */
   #appendQararSijill(decision: QararSijill, huwiyyatMurshid: string = "unknown"): void {
-    addQararSijill({
+    adhafaQararSijill({
       huwiyyatMurshid,
       type: decision.type,
       decision: decision.decision,
@@ -1592,9 +1533,6 @@ You will be notified with the PR URL once created.`;
     });
   }
 
-  // ===========================================================================
-  // Code Intelligence Handler
-  // ===========================================================================
 
   async #handleCodeQuery(args: Record<string, unknown>): Promise<string> {
     const query = args.query as string;

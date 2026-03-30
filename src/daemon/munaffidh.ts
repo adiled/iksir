@@ -1,4 +1,13 @@
 /**
+ * Munaffidh (منفذ) - The Executor
+ * 
+ * One of the sacred Khuddām (خدّام - Servants) of the alchemical workshop.
+ * Munaffidh executes the alchemical operations commanded by the Murshidun.
+ * Git transmutations, Linear inscriptions, GitHub treatises - all sacred
+ * operations flow through Munaffidh's careful hands.
+ */
+
+/**
  * IPC Event Processor
  *
  * Processes PM-MCP events from SQLite and executes them using issue tracker/GitHub clients.
@@ -8,18 +17,18 @@
  */
 
 import { GitHubClient } from "../github/gh.ts";
-import type { RasulKharij, MutabiWasfa, UpdateIssueInput } from "../types.ts";
+import type { RasulKharij, MutabiWasfa, MudkhalTahdithQadiya } from "../types.ts";
 import { NtfyClient } from "../notifications/ntfy.ts";
 import { OpenCodeClient } from "../opencode/client.ts";
 import { logger } from "../logging/logger.ts";
 import { 
-  getUnprocessedEvents, 
-  markEventProcessed,
+  jalabaAhdathGhairMuaalaja, 
+  allamaHadathMuaalaj,
   qiraStatus,
   naqshStatus,
-  upsertPendingDemand,
+  haddathaAwAdkhalaMatlabMuallaq,
   removePendingDemand,
-  getPendingDemands,
+  jalabaMatalebMuallaq,
 } from "../../db/db.ts";
 import type {
   TasmimIksir,
@@ -59,11 +68,9 @@ interface MunaffidhDeps {
   opencode: OpenCodeClient;
 }
 
-// Path to AGENTS.md for classification context
 
 
 export class Munaffidh {
-  // Config stored for future use (quiet hours, etc.)
   readonly #config: TasmimIksir;
   #issueTracker: MutabiWasfa;
   #github: GitHubClient;
@@ -110,7 +117,6 @@ export class Munaffidh {
    * With SQLite, processed events are already marked - nothing to persist separately.
    */
   async saveState(): Promise<void> {
-    // No-op: SQLite handles persistence automatically
   }
 
   /**
@@ -146,24 +152,23 @@ export class Munaffidh {
    * Process unprocessed events from SQLite
    */
   async #processEvents(): Promise<void> {
-    const events = getUnprocessedEvents("pm");
+    const events = jalabaAhdathGhairMuaalaja("pm");
     
     if (events.length === 0) {
-      return; // No new events
+      return;
     }
 
     for (const dbEvent of events) {
       try {
         const event = JSON.parse(dbEvent.payload) as MunToolCall & { timestamp: string };
         await this.#handleEvent(event);
-        markEventProcessed(dbEvent.id);
+        allamaHadathMuaalaj(dbEvent.id);
       } catch (error) {
         await logger.warn("tool-executor", "Failed to process event", { 
           error: String(error),
           eventId: dbEvent.id,
         });
-        // Mark as processed anyway to avoid infinite retry loops
-        markEventProcessed(dbEvent.id);
+        allamaHadathMuaalaj(dbEvent.id);
       }
     }
   }
@@ -179,7 +184,6 @@ export class Munaffidh {
   async #handleEvent(event: MunToolCall): Promise<void> {
     await logger.debug("tool-executor", `Processing: ${event.tool}`);
 
-    // Block git-mutating tools during session switch (git fence)
     if (Munaffidh.GIT_TOOLS.has(event.tool) && this.#sessionManager.isGitFenced()) {
       const msg = `Git operation blocked: a session switch is in progress. Try again in a few seconds.`;
       const targetId = ("huwiyyatMurshid" in event && event.huwiyyatMurshid)
@@ -226,7 +230,6 @@ export class Munaffidh {
           result = await this.#handleReply(event);
           break;
         case "mun_log_decision":
-          // Already handled by PM-MCP server directly, skip
           return;
         case "mun_yield":
           result = await this.#handleYield(event);
@@ -262,7 +265,7 @@ export class Munaffidh {
           result = `Unknown tool: ${(event as { tool: string }).tool}`;
       }
 
-      // Send result back to the originating murshid (not necessarily the active one)
+      /** Send result back to the originating murshid (not necessarily the active one) */
       const targetId = ("huwiyyatMurshid" in event && event.huwiyyatMurshid)
         ? event.huwiyyatMurshid as string
         : null;
@@ -285,9 +288,6 @@ export class Munaffidh {
     }
   }
 
-  // ===========================================================================
-  // Tool Handlers
-  // ===========================================================================
 
   /**
    * Handle pm_read_wasfa
@@ -338,7 +338,7 @@ export class Munaffidh {
         parts.push("");
       }
 
-      // Implementation context from local DB
+      /** Implementation context from local DB */
       const implStatusDb = qiraStatus(issue.identifier);
       parts.push(`## Context`);
       if (implStatusDb) {
@@ -406,8 +406,8 @@ You can now set relations using pm_set_relations.`;
       return `Ticket not found: ${call.huwiyyatWasfa}`;
     }
 
-    // Build update payload
-    const updatePayload: UpdateIssueInput = {};
+    /** Build update payload */
+    const updatePayload: MudkhalTahdithQadiya = {};
 
     if (call.updates.title) updatePayload.title = call.updates.title;
     if (call.updates.description) updatePayload.description = call.updates.description;
@@ -450,8 +450,6 @@ ${call.blockedBy?.length ? `**Blocked by:** ${call.blockedBy.join(", ")}` : ""}`
    * Handle pm_slice_for_pr
    */
   async #handleSliceForPr(call: MunSliceForPrCall): Promise<string> {
-    // Verify files exist by checking git status
-    // This is a placeholder - real implementation would use git commands
 
     await logger.info("tool-executor", "Slicing for PR", {
       huwiyyatWasfa: call.huwiyyatWasfa,
@@ -482,7 +480,7 @@ Ready for pm_create_risala.`;
       return `Failed to create PR for ${call.huwiyyatWasfa}. Check GitHub authentication and branch status.`;
     }
 
-    // Update implementation status with PR info
+    /** Update implementation status with PR info */
     const activeOrch = this.#sessionManager.wajadaMurshidFaail();
     naqshStatus({
       huwiyyatWasfa: call.huwiyyatWasfa,
@@ -491,8 +489,10 @@ Ready for pm_create_risala.`;
       summary: `PR #${result.number}`,
     });
 
-    // Register PR for keepalive tracking (PR tracking)
-    // This enables merge detection to trigger next PR cycle
+    /**
+     * Register PR for keepalive tracking (PR tracking)
+     * This enables merge detection to trigger next PR cycle
+     */
     const murshidFaail = this.#sessionManager.wajadaMurshidFaail();
     if (murshidFaail) {
       await this.#sessionManager.sajjalRisala(murshidFaail.identifier, {
@@ -539,35 +539,32 @@ ${comparison.behind > 0 ? "⚠️ Branch is behind - consider rebasing before PR
 
   /**
    * Handle pm_notify
-   * Filters cry-baby notifications, routes worthy ones to operator's topic.
+   * Filters cry-baby notifications, routes worthy ones to mawdu al-Kimyawi.
    */
   async #handleNotify(call: MunNotifyCall): Promise<string> {
-    // Step 1: Classify the notification
+    /** Step 1: Classify the notification */
     const classification = await classifyNotification(this.#opencode, call.message);
 
     if (!classification.worthy) {
-      // Rejected - return guidance to murshid
-      await logger.info("tool-executor", "Notification rejected as cry-baby", {
+      await logger.info("tool-executor", "Ishara rejected as cry-baby", {
         reason: classification.reason,
         messagePreview: call.message.slice(0, 100),
       });
 
       return `REJECTED: ${classification.rejection}
 
-Your message was not forwarded to operator. This appears to be within your autonomy.
+Your message was not forwarded to al-Kimyawi. This appears to be within your autonomy.
 
 Reason: ${classification.reason}`;
     }
 
-    // Step 2: Worthy notification - forward to operator
-    await logger.info("tool-executor", "Notification approved", {
+    await logger.info("tool-executor", "Ishara approved", {
       reason: classification.reason,
       messagePreview: call.message.slice(0, 100),
     });
 
     const sent: string[] = [];
 
-    // Send via messenger (routed to murshid's channel if available)
     if (this.#messenger.mumakkan()) {
       try {
         await this.#messenger.send(
@@ -582,13 +579,12 @@ Reason: ${classification.reason}`;
       }
     }
 
-    // Send via ntfy
     if (this.#ntfy.mumakkan()) {
       const success = await this.#ntfy.send({
         category: "decision",
         title: "Murshid Message",
         body: call.message,
-        priority: call.priority,
+        awwaliyya: call.awwaliyya,
       });
       if (success) {
         sent.push("ntfy");
@@ -599,15 +595,15 @@ Reason: ${classification.reason}`;
       return "Warning: No notification channels are enabled. Message not delivered.";
     }
 
-    return `Notification sent to operator via: ${sent.join(", ")}
+    return `Ishara sent to al-Kimyawi via: ${sent.join(", ")}
 
-Priority: ${call.priority}
+Awwaliyya: ${call.awwaliyya}
 Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "..." : ""}`;
   }
 
   /**
    * Handle pm_reply
-   * Direct response to operator's question - no filtering, just route to topic.
+   * Direct response to al-Kimyawi's question - no filtering, just route to topic.
    * Uses fallback chain: Markdown → MarkdownV2 → plain text
    */
   async #handleReply(call: MunReplyCall): Promise<string> {
@@ -616,23 +612,22 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
     }
 
     try {
-      // Send with markdown formatting (adapter handles fallback)
       await this.#messenger.arsalaMunassaq(
         { murshid: call.huwiyyatMurshid },
         call.message,
       );
 
-      await logger.info("tool-executor", "Reply sent to operator", {
+      await logger.info("tool-executor", "Reply sent to al-Kimyawi", {
         huwiyyatMurshid: call.huwiyyatMurshid,
         messagePreview: call.message.slice(0, 100),
       });
-      return `Reply sent to operator (${call.huwiyyatMurshid}).`;
+      return `Reply sent to al-Kimyawi (${call.huwiyyatMurshid}).`;
     } catch (err) {
-      await logger.error("tool-executor", "Failed to send reply to operator", {
+      await logger.error("tool-executor", "Failed to send reply to al-Kimyawi", {
         huwiyyatMurshid: call.huwiyyatMurshid,
         error: String(err),
       });
-      return "Failed to send reply to operator.";
+      return "Failed to send reply to al-Kimyawi.";
     }
   }
 
@@ -647,13 +642,12 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
     const yielderId = call.huwiyyatMurshid;
     const activeEpicId = this.#munadi.getActiveIdentifier();
 
-    // Verify caller is the active murshid
     if (yielderId !== activeEpicId) {
       await logger.warn("tool-executor", `Non-active murshid ${yielderId} tried to yield (active: ${activeEpicId})`);
       return `Cannot yield: you (${yielderId}) are not the active murshid. Active: ${activeEpicId ?? "none"}.`;
     }
 
-    // Update session status
+    /** Update session status */
     const newStatus = call.reason === "masdud" ? "masdud" : "muntazir";
     await this.#sessionManager.jaddadaḤalatMurshid(yielderId, newStatus, call.details);
 
@@ -662,8 +656,8 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
       suggestNext: call.suggestNext,
     });
 
-    // Check pending demands first (persisted in SQLite, sorted by priority then time)
-    const demands = getPendingDemands();
+    /** Check pending demands first (persisted in SQLite, sorted by awwaliyya then time) */
+    const demands = jalabaMatalebMuallaq();
     if (demands.length > 0) {
       const demand = demands[0];
       removePendingDemand(demand.huwiyat_murshid);
@@ -677,7 +671,6 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
       }
     }
 
-    // Check suggestNext
     if (call.suggestNext) {
       const murshidun = this.#sessionManager.wajadaJalasatMurshid();
       const suggested = murshidun.find((o) => o.identifier === call.suggestNext);
@@ -687,20 +680,19 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
       }
     }
 
-    // Check for idle sessions
+    /** Check for idle sessions */
     const murshidun = this.#sessionManager.wajadaJalasatMurshid();
     const idleSessions = murshidun.filter(
       (o) => o.identifier !== yielderId && o.status === "sakin"
     );
 
     if (idleSessions.length > 0) {
-      // Notify operator
+      /** Notify al-Kimyawi */
       const msg = `${yielderId} yielded (${call.reason}). ${idleSessions.length} idle session(s) available:\n${idleSessions.map(s => `• ${s.identifier}`).join("\n")}`;
       await this.#messenger.send("dispatch", msg);
-      return `Yielded control. ${idleSessions.length} idle session(s) available. Operator can /switch to one.`;
+      return `Yielded control. ${idleSessions.length} idle session(s) available. Al-Kimyawi can /switch to one.`;
     }
 
-    // Nobody to switch to — clear active
     this.#munadi.setActiveSession(null);
 
     await this.#messenger.send("dispatch", `${yielderId} yielded (${call.reason}). No other sessions available — system idle.`);
@@ -727,11 +719,10 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
 
     await logger.info("tool-executor", `Murshid ${demanderId} demands control`, {
       reason: call.reason,
-      priority: call.priority,
+      awwaliyya: call.awwaliyya,
       currentActive: activeEpicId,
     });
 
-    // Case 1: No active — grant immediately
     if (!activeEpicId) {
       const result = await this.#munadi.handleCallback("cli", `switch:${demanderId}`);
       if (result.handled) {
@@ -740,12 +731,11 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
       return "Failed to grant control.";
     }
 
-    // Case 2: Demander is already active
     if (activeEpicId === demanderId) {
       return `You (${demanderId}) are already the active murshid.`;
     }
 
-    // Case 3: Current active is blocked/waiting — graceful snatch
+    /** Case 3: Current active is blocked/waiting — graceful snatch */
     const currentActive = this.#sessionManager.jalabMurshid(activeEpicId);
     if (currentActive && (currentActive.status === "masdud" || currentActive.status === "muntazir")) {
       const result = await this.#munadi.handleCallback("cli", `switch:${demanderId}`);
@@ -755,28 +745,24 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
       return "Failed to grant control.";
     }
 
-    // Case 4: Current active is working — queue the demand (persisted to SQLite)
-    upsertPendingDemand(demanderId, call.reason, call.priority);
+    haddathaAwAdkhalaMatlabMuallaq(demanderId, call.reason, call.awwaliyya);
 
-    const queueLength = getPendingDemands().length;
+    const queueLength = jalabaMatalebMuallaq().length;
     await logger.info("tool-executor", `Queued demand from ${demanderId}`, {
       queueLength,
     });
 
-    if (call.priority === "urgent") {
+    if (call.awwaliyya === "urgent") {
       await this.#messenger.send("dispatch",
         `URGENT: ${demanderId} demands control.\n\nReason: ${call.reason}\nCurrent active: ${activeEpicId}\n\nApprove with /switch ${demanderId}`
       );
 
-      return `Urgent demand queued and Operator notified. Current active: ${activeEpicId}.\n\nYou will be activated when ${activeEpicId} yields or operator approves.`;
+      return `Urgent demand queued and al-Kimyawi mubalagh. Current active: ${activeEpicId}.\n\nYou will be activated when ${activeEpicId} yields or al-Kimyawi yuwafiq.`;
     }
 
     return `Demand queued. Current active: ${activeEpicId}.\n\nYou will be activated when ${activeEpicId} yields.`;
   }
 
-  // ===========================================================================
-  // Git Operations Handlers
-  // ===========================================================================
 
   /**
    * Handle pm_create_branch - create epic, chore, or sandbox branch
@@ -786,14 +772,13 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
 
     await logger.info("tool-executor", `Creating branch: ${branchName}`);
 
-    // Check if dirty first
     if (await git.isDirty()) {
       return `Error: Working directory is dirty. Cannot create branch.
 
 Please commit or stash changes first.`;
     }
 
-    // Checkout default branch and pull
+    /** Checkout default branch and pull */
     const defaultBranch = await git.getDefaultBranch();
     const checkoutMain = await git.checkout(defaultBranch);
     if (!checkoutMain) {
@@ -802,13 +787,13 @@ Please commit or stash changes first.`;
 
     await git.pull(defaultBranch);
 
-    // Create new branch
+    /** Create new branch */
     const checkoutNew = await git.checkout(branchName);
     if (!checkoutNew) {
       return `Error: Failed to create branch ${branchName}.`;
     }
 
-    // Push with -u
+    /** Push with -u */
     const pushed = await git.push(branchName, true);
     if (!pushed) {
       return `Branch created locally but failed to push.
@@ -818,7 +803,7 @@ Branch: ${branchName}
 Try: git push -u origin ${branchName}`;
     }
 
-    // Update session with branch name
+    /** Update session with branch name */
     const session = this.#sessionManager.jalabMurshid(call.identifier);
     if (session) {
       session.branch = branchName;
@@ -995,7 +980,7 @@ When parent merges, use mun_ssp to re-push this slice onto ${await git.getDefaul
 
     const prBranch = generateBranchName(call.huwiyyatWasfa, "chore");
     
-    // Use the new transmute utility from craft.ts
+    /** Use the new transmute utility from craft.ts */
     const { transmute } = await import("../git/alchemy.ts");
     const result = await transmute(prBranch, call.files);
 
@@ -1042,7 +1027,7 @@ Next: Use mun_fasl to transfer the essence for examination.`;
     const prBranch = generateBranchName(call.huwiyyatWasfa, "chore");
     const parentBranch = generateBranchName(call.parentTicketId, "chore");
     
-    // Use transmute with parent branch as base
+    /** Use transmute with parent branch as base */
     const { transmute } = await import("../git/alchemy.ts");
     const result = await transmute(prBranch, call.files, parentBranch);
 

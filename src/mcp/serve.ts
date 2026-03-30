@@ -11,8 +11,8 @@
  *   GET  /   → Health check
  */
 
-import { initDatabase } from "../../db/db.ts";
-import { MunadiMunMcpServer } from "./mun-server.ts";
+import { baddaaQaidatBayanat } from "../../db/db.ts";
+import { IksirMunMcpServer } from "./iksir-mcp.ts";
 import { startMcpHttpServer } from "./http-transport.ts";
 
 const DEFAULT_PORT = 3100;
@@ -34,16 +34,16 @@ function getPort(): number {
 
 
 export async function startMcpServer(opts: { port?: number } = {}): Promise<void> {
-  await initDatabase();
+  await baddaaQaidatBayanat();
 
   const port = opts.port ?? getPort();
-  const pmServer = new MunadiMunMcpServer();
+  const pmServer = new IksirMunMcpServer();
 
   const toolCount = pmServer.registry.getTools().length;
   const server = startMcpHttpServer({ port, pmServer });
 
-  console.log(`Munadi MCP server listening on http://127.0.0.1:${port}`);
-  console.log(`  PM-MCP: POST http://127.0.0.1:${port}/pm`);
+  console.log(`Iksir MCP server listening on http://localhost:${port}`);
+  console.log(`  PM-MCP: POST http://localhost:${port}/pm`);
   console.log(`  Tools: ${toolCount} registered`);
 
   const ighlaaq = () => {

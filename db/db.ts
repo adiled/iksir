@@ -3,15 +3,15 @@
  *
  * Centralized state persistence using SQLite with WAL mode.
  *
- * All state is stored in a single munadi.sqlite file:
- *   ~/.config/iksir/state/munadi.sqlite
+ * All state is stored in a single iksir.sqlite file:
+ *   ~/.config/iksir/state/iksir.sqlite
  *
  * Tables:
  *   - schema_version: Migration tracking
  *   - sessions: Murshid sessions
  *   - channels: Per-murshid messaging channels (provider → channel_id)
  *   - events: IPC event log (pm channel)
- *   - questions: Pending questions awaiting operator response
+ *   - questions: Pending questions awaiting al-Kimyawi response
  *   - diary_decisions: Per-murshid decision log
  *   - diary_impl_status: Implementation status tracking
  */
@@ -20,43 +20,35 @@ import { Database } from "@db/sqlite";
 import { join } from "jsr:@std/path";
 import { logger } from "../src/logging/logger.ts";
 
-// ---------------------------------------------------------------------------
-// Database singleton
-// ---------------------------------------------------------------------------
 
 function getStateDir(): string {
   return Deno.env.get("MUNADI_STATE_DIR") ??
-    join(Deno.env.get("XDG_DATA_HOME") ?? join(Deno.env.get("HOME") ?? "/root", ".local", "share"), "munadi");
+    join(Deno.env.get("XDG_DATA_HOME") ?? join(Deno.env.get("HOME") ?? "/root", ".local", "share"), "iksir");
 }
 
 let db: Database | null = null;
 
 function getDb(): Database {
   if (!db) {
-    throw new Error("Database not tahyiad. Call initDatabase() first.");
+    throw new Error("Database not tahyiad. Call baddaaQaidatBayanat() first.");
   }
   return db;
 }
 
-// ---------------------------------------------------------------------------
-// Initialization & teardown
-// ---------------------------------------------------------------------------
 
 /**
  * Initialize the SQLite database, create tables if needed, enable WAL mode.
  * Must be called once at startup before any other database function.
  * Fully idempotent — safe to call on every restart.
  */
-export async function initDatabase(): Promise<void> {
+export async function baddaaQaidatBayanat(): Promise<void> {
   const stateDir = getStateDir();
-  const dbPath = join(stateDir, "munadi.sqlite");
+  const dbPath = join(stateDir, "iksir.sqlite");
 
-  // Ensure state directory exists
   await Deno.mkdir(stateDir, { recursive: true });
 
   db = new Database(dbPath);
 
-  // Performance pragmas
   db.exec("PRAGMA journal_mode=WAL");
   db.exec("PRAGMA synchronous=NORMAL");
   db.exec("PRAGMA foreign_keys=ON");
@@ -94,7 +86,6 @@ function applySchema(d: Database): void {
     )
   `);
 
-  // NOTE: RisalaMutaba data is stored in sessions.metadata JSON, not a dedicated table.
 
   d.exec(`
     CREATE TABLE IF NOT EXISTS channels (
@@ -160,12 +151,11 @@ function applySchema(d: Database): void {
     CREATE TABLE IF NOT EXISTS pending_demands (
       huwiyat_murshid TEXT PRIMARY KEY,
       reason TEXT NOT NULL,
-      priority TEXT NOT NULL,
+      awwaliyya TEXT NOT NULL,
       demanded_at TEXT NOT NULL
     )
   `);
 
-  // Indexes
   d.exec(
     "CREATE INDEX IF NOT EXISTS idx_events_unprocessed ON events(processed, type) WHERE processed = 0",
   );
@@ -177,7 +167,6 @@ function applySchema(d: Database): void {
   d.exec("CREATE INDEX IF NOT EXISTS idx_diary_murshid ON diary_decisions(huwiyat_murshid)");
   d.exec("CREATE INDEX IF NOT EXISTS idx_channels_lookup ON channels(provider, channel_id)");
 
-  // Mark schema version (for future migrations)
   d.prepare("INSERT OR IGNORE INTO schema_version VALUES (?, ?)").run(
     2,
     new Date().toISOString(),
@@ -187,22 +176,19 @@ function applySchema(d: Database): void {
 /**
  * Close the database connection. Call during ighlaaq.
  */
-export function closeDatabase(): void {
+export function aghlaaqQaidatBayanat(): void {
   if (db) {
     db.close();
     db = null;
   }
 }
 
-// ---------------------------------------------------------------------------
-// Events (IPC channel)
-// ---------------------------------------------------------------------------
 
 /**
  * Insert an IPC event into the events table.
  * Used by MCP servers to forward tool calls to the daemon.
  */
-export function insertEvent(
+export function adkhalaHadath(
   channel: "pm",
   toolName: string,
   payload: Record<string, unknown>,
@@ -221,39 +207,36 @@ export function insertEvent(
  * Get all unprocessed events for a given channel, ordered by creation time.
  * Returns objects with { id, payload } where payload is a JSON string.
  */
-export function getUnprocessedEvents(
+export function jalabaAhdathGhairMuaalaja(
   channel: "pm",
 ): Array<{ id: number; payload: string }> {
   const d = getDb();
 
-  // Note: callers expect `id` as number but our schema uses TEXT UUIDs.
-  // The callers only pass id back to markEventProcessed, so we return rowid
-  // alongside payload for compatibility. Actually, looking at the callers:
-  //   dbEvent.id is passed to markEventProcessed(dbEvent.id)
-  //   dbEvent.payload is JSON.parse'd
-  // We use the TEXT id (UUID) since that's the primary key.
+  /**
+   * Note: callers expect `id` as number but our schema uses TEXT UUIDs.
+   * The callers only pass id back to allamaHadathMuaalaj, so we return rowid
+   * alongside payload for compatibility. Actually, looking at the callers:
+   * dbEvent.id is passed to allamaHadathMuaalaj(dbEvent.id)
+   * dbEvent.payload is JSON.parse'd
+   * We use the TEXT id (UUID) since that's the primary key.
+   */
   const rows = d
     .prepare(
       "SELECT id, payload FROM events WHERE processed = 0 AND type = ? ORDER BY created_at ASC",
     )
     .all(channel) as Array<{ id: string; payload: string }>;
 
-  // Callers use dbEvent.id with markEventProcessed — it accepts string|number.
-  // Return as-is; the id is a UUID string.
   return rows as unknown as Array<{ id: number; payload: string }>;
 }
 
 /**
  * Mark an event as processed by its ID.
  */
-export function markEventProcessed(eventId: number | string): void {
+export function allamaHadathMuaalaj(eventId: number | string): void {
   const d = getDb();
   d.prepare("UPDATE events SET processed = 1 WHERE id = ?").run(String(eventId));
 }
 
-// ---------------------------------------------------------------------------
-// Sessions
-// ---------------------------------------------------------------------------
 
 interface UpsertSessionArgs {
   id: string;
@@ -270,9 +253,9 @@ interface UpsertSessionArgs {
 
 /**
  * Upsert an murshid session. Creates or updates by primary key (id).
- * Channel state is persisted separately via upsertChannel().
+ * Channel state is persisted separately via haddathaAwAdkhalaQanat().
  */
-export function upsertSession(args: UpsertSessionArgs): void {
+export function haddathaAwAdkhalaJalsa(args: UpsertSessionArgs): void {
   const d = getDb();
   d.prepare(`
     INSERT INTO sessions (id, identifier, title, type, status, branch, blocked_reason, created_at, updated_at, last_message_at, metadata)
@@ -318,19 +301,16 @@ interface DbSession {
 /**
  * Get all murshid sessions from the database.
  */
-export function getAllSessions(): DbSession[] {
+export function jalabaKullJalasat(): DbSession[] {
   const d = getDb();
   return d.prepare("SELECT id, identifier, title, type, status, branch, blocked_reason, created_at, last_message_at, metadata FROM sessions").all() as DbSession[];
 }
 
-// ---------------------------------------------------------------------------
-// Channels (messaging abstraction)
-// ---------------------------------------------------------------------------
 
 /**
  * Upsert a channel for an murshid. One channel per provider per session.
  */
-export function upsertChannel(
+export function haddathaAwAdkhalaQanat(
   sessionIdentifier: string,
   provider: string,
   channelId: string,
@@ -355,7 +335,7 @@ export function upsertChannel(
 /**
  * Get channel ID for an murshid + provider, or null if none.
  */
-export function getChannel(
+export function jalabaQanat(
   sessionIdentifier: string,
   provider: string,
 ): string | null {
@@ -369,7 +349,7 @@ export function getChannel(
 /**
  * Get all channels for an murshid as a Record<provider, channelId>.
  */
-export function getChannelsForSession(
+export function jalabaQanatsForSession(
   sessionIdentifier: string,
 ): Record<string, string> {
   const d = getDb();
@@ -411,9 +391,6 @@ export function mahaqaQanat(
     .run(sessionIdentifier, provider);
 }
 
-// ---------------------------------------------------------------------------
-// Questions
-// ---------------------------------------------------------------------------
 
 interface InsertQuestionArgs {
   id: string;
@@ -426,7 +403,7 @@ interface InsertQuestionArgs {
 /**
  * Insert a pending question into the database.
  */
-export function insertQuestion(args: InsertQuestionArgs): void {
+export function adkhalaSual(args: InsertQuestionArgs): void {
   const d = getDb();
   d.prepare(`
     INSERT OR IGNORE INTO questions (id, session_id, question, options, telegram_message_id, created_at)
@@ -453,7 +430,7 @@ interface DbUnansweredQuestion {
 /**
  * Get all unanswered questions.
  */
-export function getUnansweredQuestions(): DbUnansweredQuestion[] {
+export function jalabaAseilaGhairMujaba(): DbUnansweredQuestion[] {
   const d = getDb();
   return d
     .prepare(
@@ -465,7 +442,7 @@ export function getUnansweredQuestions(): DbUnansweredQuestion[] {
 /**
  * Mark a question as answered in the database.
  */
-export function markQuestionAnswered(questionId: string, answer: string): void {
+export function allamaJawabSual(questionId: string, answer: string): void {
   const d = getDb();
   d.prepare(
     "UPDATE questions SET answer = ?, answered_at = ? WHERE id = ?",
@@ -475,16 +452,13 @@ export function markQuestionAnswered(questionId: string, answer: string): void {
 /**
  * Update the telegram_message_id for a question (set after sending to Telegram).
  */
-export function updateQuestionTelegramMessageId(questionId: string, messageId: number): void {
+export function haddathaHuwiyyatRisalaSual(questionId: string, messageId: number): void {
   const d = getDb();
   d.prepare(
     "UPDATE questions SET telegram_message_id = ? WHERE id = ?",
   ).run(messageId, questionId);
 }
 
-// ---------------------------------------------------------------------------
-// Diary — decisions
-// ---------------------------------------------------------------------------
 
 interface AddQararSijillArgs {
   huwiyyatMurshid: string;
@@ -497,7 +471,7 @@ interface AddQararSijillArgs {
 /**
  * Append a decision to the diary log.
  */
-export function addQararSijill(args: AddQararSijillArgs): void {
+export function adhafaQararSijill(args: AddQararSijillArgs): void {
   const d = getDb();
   d.prepare(`
     INSERT INTO diary_decisions (huwiyat_murshid, type, decision, reasoning, metadata, created_at)
@@ -512,16 +486,13 @@ export function addQararSijill(args: AddQararSijillArgs): void {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Diary — query decisions (collective knowledge pool)
-// ---------------------------------------------------------------------------
 
 interface KhiyaratJalabQararatSijill {
-  huwiyyatMurshid?: string;  // filter by murshid (omit for collective)
-  type?: string;            // filter by decision type
-  search?: string;          // free-text search in decision + reasoning
-  limit?: number;           // default 20
-  since?: string;           // ISO date cutoff
+  huwiyyatMurshid?: string;
+  type?: string;
+  search?: string;
+  limit?: number;
+  since?: string;
 }
 
 interface QararSijillDb {
@@ -538,7 +509,7 @@ interface QararSijillDb {
  * Query diary decisions. Returns most recent first.
  * Supports filtering by murshid, type, and free-text search.
  */
-export function getQararSijills(opts: KhiyaratJalabQararatSijill = {}): QararSijillDb[] {
+export function jalabaQararatSijill(opts: KhiyaratJalabQararatSijill = {}): QararSijillDb[] {
   const d = getDb();
   const conditions: string[] = [];
   const params: (string | number | null)[] = [];
@@ -573,9 +544,6 @@ export function getQararSijills(opts: KhiyaratJalabQararatSijill = {}): QararSij
   ).all(...params) as QararSijillDb[];
 }
 
-// ---------------------------------------------------------------------------
-// Diary — implementation status
-// ---------------------------------------------------------------------------
 
 interface UpsertImplStatusArgs {
   huwiyyatWasfa: string;
@@ -626,34 +594,31 @@ export function qiraStatus(huwiyyatWasfa: string): DbImplStatus | null {
   return row ?? null;
 }
 
-// ---------------------------------------------------------------------------
-// Pending Demands (control handover)
-// ---------------------------------------------------------------------------
 
 interface PendingDemand {
   huwiyat_murshid: string;
   reason: string;
-  priority: string;
+  awwaliyya: string;
   demanded_at: string;
 }
 
 /**
  * Upsert a pending demand (one per murshid).
  */
-export function upsertPendingDemand(
+export function haddathaAwAdkhalaMatlabMuallaq(
   huwiyyatMurshid: string,
   reason: string,
-  priority: "normal" | "urgent",
+  awwaliyya: "normal" | "urgent",
 ): void {
   const d = getDb();
   d.prepare(`
-    INSERT INTO pending_demands (huwiyat_murshid, reason, priority, demanded_at)
+    INSERT INTO pending_demands (huwiyat_murshid, reason, awwaliyya, demanded_at)
     VALUES (?, ?, ?, ?)
     ON CONFLICT(huwiyat_murshid) DO UPDATE SET
       reason = excluded.reason,
-      priority = excluded.priority,
+      awwaliyya = excluded.awwaliyya,
       demanded_at = excluded.demanded_at
-  `).run(huwiyyatMurshid, reason, priority, new Date().toISOString());
+  `).run(huwiyyatMurshid, reason, awwaliyya, new Date().toISOString());
 }
 
 /**
@@ -665,15 +630,15 @@ export function removePendingDemand(huwiyyatMurshid: string): void {
 }
 
 /**
- * Get all pending demands, sorted by priority (urgent first) then time.
+ * Get all pending demands, sorted by awwaliyya (urgent first) then time.
  */
-export function getPendingDemands(): PendingDemand[] {
+export function jalabaMatalebMuallaq(): PendingDemand[] {
   const d = getDb();
   return d.prepare(
-    `SELECT huwiyat_murshid, reason, priority, demanded_at
+    `SELECT huwiyat_murshid, reason, awwaliyya, demanded_at
      FROM pending_demands
      ORDER BY
-       CASE priority WHEN 'urgent' THEN 0 ELSE 1 END,
+       CASE awwaliyya WHEN 'urgent' THEN 0 ELSE 1 END,
        demanded_at ASC`
   ).all() as PendingDemand[];
 }

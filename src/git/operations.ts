@@ -29,7 +29,7 @@ export async function isDirty(): Promise<boolean> {
   const result = await exec(["status", "--porcelain"]);
   if (!result.success) {
     await logger.error("git", "Failed to check status", { stderr: result.stderr });
-    return false; // Assume clean on error (safer than WIP commit on mystery state)
+    return false;
   }
   return result.stdout.trim().length > 0;
 }
@@ -51,17 +51,16 @@ export async function getCurrentBranch(): Promise<string | null> {
  * Returns true if commit was created, false if nothing to commit or error
  */
 export async function createWipCommit(identifier: string): Promise<boolean> {
-  // Stage all changes
+  /** Stage all changes */
   const addResult = await exec(["add", "-A"]);
   if (!addResult.success) {
     await logger.error("git", "Failed to stage changes", { stderr: addResult.stderr });
     return false;
   }
 
-  // Create commit
+  /** Create commit */
   const commitResult = await exec(["commit", "-m", `[WIP] ${identifier}`]);
   if (!commitResult.success) {
-    // "nothing to commit" is not an error
     if (commitResult.stdout.includes("nothing to commit")) {
       return false;
     }
@@ -78,15 +77,13 @@ export async function createWipCommit(identifier: string): Promise<boolean> {
  * Creates the branch if it doesn't exist
  */
 export async function checkout(branch: string): Promise<boolean> {
-  // Try to checkout existing branch
+  /** Try to checkout existing branch */
   let result = await exec(["checkout", branch]);
   
   if (!result.success) {
-    // Branch might not exist, try to create it
     if (result.stderr.includes("did not match any file") || 
         result.stderr.includes("pathspec") ||
         result.stderr.includes("not a valid")) {
-      // Create branch from current HEAD
       result = await exec(["checkout", "-b", branch]);
       
       if (result.success) {
@@ -111,8 +108,6 @@ export async function pull(branch: string): Promise<boolean> {
   const result = await exec(["pull", "origin", branch, "--ff-only"]);
   
   if (!result.success) {
-    // "Already up to date" is not an error
-    // "Couldn't find remote ref" means branch doesn't exist on remote yet (OK)
     if (result.stderr.includes("Couldn't find remote ref")) {
       await logger.info("git", `Branch ${branch} not on remote yet, skipping pull`);
       return true;
@@ -165,7 +160,6 @@ export async function commit(
   message: string,
   files?: string[],
 ): Promise<{ success: boolean; hash?: string; error?: string }> {
-  // Stage files if provided
   if (files && files.length > 0) {
     const addResult = await gitAdd(files);
     if (!addResult.success) {
@@ -182,7 +176,7 @@ export async function commit(
     return { success: false, error: result.stderr };
   }
 
-  // Parse commit hash from output
+  /** Parse commit hash from output */
   const hashMatch = result.stdout.match(/\[[\w/-]+ ([a-f0-9]+)\]/);
   const hash = hashMatch ? hashMatch[1] : undefined;
 
@@ -230,7 +224,7 @@ interface MergeResult {
 export async function mergeMain(): Promise<MergeResult> {
   const defaultBranch = await getDefaultBranch();
 
-  // First try the merge
+  /** First try the merge */
   const mergeResult = await exec(["merge", `origin/${defaultBranch}`, "--no-edit"]);
   
   if (mergeResult.success) {
@@ -242,15 +236,13 @@ export async function mergeMain(): Promise<MergeResult> {
     };
   }
   
-  // Check if it's a conflict
   if (mergeResult.stderr.includes("CONFLICT") || mergeResult.stdout.includes("CONFLICT")) {
-    // Get list of conflicted files
+    /** Get list of conflicted files */
     const statusResult = await exec(["diff", "--name-only", "--diff-filter=U"]);
     const conflicts = statusResult.success 
       ? statusResult.stdout.trim().split("\n").filter(f => f)
       : [];
     
-    // Abort the merge
     await exec(["merge", "--abort"]);
     
     return {
@@ -261,7 +253,6 @@ export async function mergeMain(): Promise<MergeResult> {
     };
   }
   
-  // Some other error
   return {
     success: false,
     conflicts: [],
@@ -270,9 +261,6 @@ export async function mergeMain(): Promise<MergeResult> {
   };
 }
 
-// =============================================================================
-// Default Branch Detection
-// =============================================================================
 
 /**
  * Get the default branch name (master or main).
@@ -281,10 +269,10 @@ export async function mergeMain(): Promise<MergeResult> {
 export async function getDefaultBranch(): Promise<string> {
   if (_defaultBranch) return _defaultBranch;
 
-  // Try origin/HEAD (set by git clone)
+  /** Try origin/HEAD (set by git clone) */
   const result = await exec(["symbolic-ref", "refs/remotes/origin/HEAD", "--short"]);
   if (result.success) {
-    // Returns "origin/master" or "origin/main"
+    /** Returns "origin/master" or "origin/main" */
     const branch = result.stdout.trim().replace("origin/", "");
     if (branch) {
       _defaultBranch = branch;
@@ -292,21 +280,17 @@ export async function getDefaultBranch(): Promise<string> {
     }
   }
 
-  // Fallback: check if origin/master exists
+  /** Fallback: check if origin/master exists */
   const masterCheck = await exec(["rev-parse", "--verify", "origin/master"]);
   if (masterCheck.success) {
     _defaultBranch = "master";
     return "master";
   }
 
-  // Last resort
   _defaultBranch = "main";
   return "main";
 }
 
-// =============================================================================
-// DEPRECATED: SSP - Use pluckFiles from craft.ts instead
-// =============================================================================
 
 interface SspResult {
   success: boolean;
@@ -341,19 +325,19 @@ export async function ssp(
 ): Promise<SspResult> {
   const defaultBranch = await getDefaultBranch();
 
-  // Step 1: Record epic branch
+  /** Step 1: Record epic branch */
   const epicBranch = (await getCurrentBranch());
   if (!epicBranch) {
     return { success: false, error: "Could not determine current branch", errorType: "checkout_failed" };
   }
 
-  // Safety: helper to always return to epic branch
+  /** Safety: helper to always return to epic branch */
   const returnToEpic = async () => {
     await exec(["checkout", epicBranch]);
   };
 
   try {
-    // Step 2: Fetch and merge default branch into epic (always — surfaces conflicts)
+    /** Step 2: Fetch and merge default branch into epic (always — surfaces conflicts) */
     const fetchResult = await exec(["fetch", "origin", `${defaultBranch}:${defaultBranch}`]);
     if (!fetchResult.success) {
       return {
@@ -369,13 +353,12 @@ export async function ssp(
       const mergeOutput = mergeResult.stdout + mergeResult.stderr;
 
       if (mergeOutput.includes("CONFLICT")) {
-        // Get conflicted files
+        /** Get conflicted files */
         const conflictResult = await exec(["diff", "--name-only", "--diff-filter=U"]);
         const conflicts = conflictResult.success
           ? conflictResult.stdout.trim().split("\n").filter(f => f)
           : [];
 
-        // Abort the merge so working directory is clean
         await exec(["merge", "--abort"]);
 
         return {
@@ -397,7 +380,6 @@ export async function ssp(
       };
     }
 
-    // Step 2b: If stacked (baseBranch provided), fetch the parent PR branch
     if (baseBranch) {
       const fetchBase = await exec(["fetch", "origin", baseBranch]);
       if (!fetchBase.success) {
@@ -410,7 +392,7 @@ export async function ssp(
       }
     }
 
-    // Step 3: Create/reset PR branch at base HEAD
+    /** Step 3: Create/reset PR branch at base HEAD */
     const baseRef = baseBranch ? `origin/${baseBranch}` : defaultBranch;
     const branchResult = await exec(["branch", "-f", prBranch, baseRef]);
     if (!branchResult.success) {
@@ -422,7 +404,7 @@ export async function ssp(
       };
     }
 
-    // Step 4: Checkout PR branch
+    /** Step 4: Checkout PR branch */
     const checkoutResult = await exec(["checkout", prBranch]);
     if (!checkoutResult.success) {
       return {
@@ -433,7 +415,7 @@ export async function ssp(
       };
     }
 
-    // Step 5: Restore specified files from epic branch
+    /** Step 5: Restore specified files from epic branch */
     const istarjaaResult = await exec(["istarjaa", `--source=${epicBranch}`, "--", ...files]);
     if (!istarjaaResult.success) {
       await returnToEpic();
@@ -446,7 +428,7 @@ export async function ssp(
       };
     }
 
-    // Step 6: Stage and commit
+    /** Step 6: Stage and commit */
     const addResult = await exec(["add", "."]);
     if (!addResult.success) {
       await returnToEpic();
@@ -471,7 +453,7 @@ export async function ssp(
       };
     }
 
-    // Step 7: Force push
+    /** Step 7: Force push */
     const pushResult = await exec(["push", "--force", "-u", "origin", prBranch]);
     if (!pushResult.success) {
       await returnToEpic();
@@ -484,7 +466,6 @@ export async function ssp(
       };
     }
 
-    // Step 8: Return to epic branch
     await returnToEpic();
 
     await logger.info("git", `SSP complete: ${prBranch}`, {
@@ -500,7 +481,6 @@ export async function ssp(
       filesSliced: files.length,
     };
   } catch (error) {
-    // Always try to return to epic branch on unexpected errors
     await returnToEpic();
     return {
       success: false,

@@ -2,15 +2,18 @@
  * Munadi Configuration
  *
  * Loads and tahaqqaqs configuration from JSON file and environment variables.
- * Schema: munadi.schema.json
+ * Schema: iksir.schema.json
  */
 
 import { join } from "jsr:@std/path";
 import { exists } from "jsr:@std/fs";
 import type { TasmimIksir } from "./types.ts";
 import { logger } from "./logging/logger.ts";
+import { DEFAULT_OPENCODE_SERVER, DEFAULT_NTFY_SERVER } from "./constants.ts";
+const DEFAULT_POLL_INTERVAL_MS = 300000;
+const DEFAULT_PR_POLL_INTERVAL_MS = 60000;
 
-const CONFIG_FILENAME = "munadi.json";
+const CONFIG_FILENAME = "iksir.json";
 
 function getConfigDir(): string {
   const envDir = Deno.env.get("MUNADI_CONFIG_DIR");
@@ -18,14 +21,12 @@ function getConfigDir(): string {
 
   const home = Deno.env.get("HOME") ?? Deno.env.get("USERPROFILE") ?? "/root";
 
-  // Platform-specific config location
   if (Deno.build.os === "darwin") {
-    return join(home, ".config", "munadi");
+    return join(home, ".config", "iksir");
   } else if (Deno.build.os === "windows") {
-    return join(home, "AppData", "Local", "munadi");
+    return join(home, "AppData", "Local", "iksir");
   }
-  // Linux and others
-  return join(home, ".config", "munadi");
+  return join(home, ".config", "iksir");
 }
 
 function resolveEnvVars(value: string): string {
@@ -54,8 +55,8 @@ function resolveEnvVarsDeep(obj: unknown): unknown {
 function getDefaultConfig(): TasmimIksir {
   return {
     polling: {
-      defaultIntervalMs: 5 * 60 * 1000, // 5 minutes
-      prPollIntervalMs: 60 * 1000, // 1 minute per PR
+      defaultIntervalMs: 5 * 60 * 1000,
+      prPollIntervalMs: 60 * 1000,
     },
     quietHours: {
       enabled: true,
@@ -68,8 +69,8 @@ function getDefaultConfig(): TasmimIksir {
     notifications: {
       ntfy: {
         enabled: false,
-        topic: "munadi",
-        server: "https://ntfy.sh",
+        topic: "iksir",
+        server: DEFAULT_NTFY_SERVER,
       },
       telegram: {
         enabled: false,
@@ -86,10 +87,10 @@ function getDefaultConfig(): TasmimIksir {
     github: {
       owner: "",
       repo: "",
-      operatorUsername: "",
+      ismKimyawi: "",
     },
     opencode: {
-      server: "http://localhost:4096",
+      server: DEFAULT_OPENCODE_SERVER,
     },
     prompts: {},
   };
@@ -112,10 +113,8 @@ function deepMerge(target: TasmimIksir, source: Partial<TasmimIksir>): TasmimIks
       typeof targetValue === "object" &&
       !Array.isArray(targetValue)
     ) {
-      // deno-lint-ignore no-explicit-any
       (result as any)[key] = { ...targetValue, ...sourceValue };
     } else if (sourceValue !== undefined) {
-      // deno-lint-ignore no-explicit-any
       (result as any)[key] = sourceValue;
     }
   }
@@ -126,12 +125,10 @@ function deepMerge(target: TasmimIksir, source: Partial<TasmimIksir>): TasmimIks
 function tahaqqaqConfig(config: TasmimIksir): string[] {
   const errors: string[] = [];
 
-  // Required for any operation
   if (!config.opencode.server) {
     errors.push("opencode.server is required");
   }
 
-  // Required for notifications
   if (config.notifications.telegram.enabled) {
     if (!config.notifications.telegram.botToken) {
       errors.push("telegram.botToken is required when Telegram is enabled");
@@ -147,18 +144,16 @@ function tahaqqaqConfig(config: TasmimIksir): string[] {
     }
   }
 
-  // Required for issue tracker operations
   if (config.issueTracker.apiKey && !config.issueTracker.teamId) {
     errors.push("issueTracker.teamId is required when API key is provided");
   }
 
-  // Required for GitHub operations (gh CLI handles its own auth)
   if (config.github.owner) {
     if (!config.github.repo) {
       errors.push("github.repo is required when github.owner is set");
     }
-    if (!config.github.operatorUsername) {
-      errors.push("github.operatorUsername is required when github.owner is set");
+    if (!config.github.ismKimyawi) {
+      errors.push("github.ismKimyawi is required when github.owner is set");
     }
   }
 
@@ -171,7 +166,6 @@ export async function loadConfig(): Promise<TasmimIksir> {
 
   let config = getDefaultConfig();
 
-  // Load from file if exists
   if (await exists(configPath)) {
     try {
       const content = await Deno.readTextFile(configPath);
@@ -189,7 +183,7 @@ export async function loadConfig(): Promise<TasmimIksir> {
     await logger.warn("config", `Config file not found at ${configPath}, using defaults`);
   }
 
-  // Override with environment variables
+  /** Override with environment variables */
   const envOverrides: Partial<TasmimIksir> = {};
 
   if (Deno.env.get("MUNADI_OPENCODE_SERVER")) {
@@ -265,13 +259,11 @@ export async function loadConfig(): Promise<TasmimIksir> {
 
   config = deepMerge(config, envOverrides);
 
-  // Validate
   const errors = tahaqqaqConfig(config);
   if (errors.length > 0) {
     for (const error of errors) {
       await logger.error("config", `Validation error: ${error}`);
     }
-    // Don't throw - allow partial config for development
     await logger.warn("config", `Config has ${errors.length} validation errors, some features may not work`);
   }
 

@@ -4,18 +4,15 @@
  * Type definitions for the Munadi autonomous agent orchestration system.
  */
 
-// =============================================================================
-// Configuration
-// =============================================================================
 
 export interface TasmimIksir {
   polling: TasmimIstiftaa;
   quietHours: TasmimSaatSukun;
   notifications: TasmimIsharat;
-  issueTracker: MutabiWasfaConfig;
+  issueTracker: TasmimMutabiWasfa;
   github: TasmimGitHub;
   opencode: TasmimOpenCode;
-  prompts: PromptsConfig;
+  prompts: TasmimHaththat;
 }
 
 export interface TasmimIstiftaa {
@@ -26,8 +23,8 @@ export interface TasmimIstiftaa {
 
 export interface TasmimSaatSukun {
   enabled: boolean;
-  start: string; // "22:00"
-  end: string; // "07:00"
+  start: string;
+  end: string;
   timezone: string;
   blockersPassthrough: boolean;
   /** How many minutes before quiet hours end to run maintenance. Default: 60 */
@@ -35,11 +32,11 @@ export interface TasmimSaatSukun {
 }
 
 export interface TasmimIsharat {
-  ntfy: NtfyConfig;
+  ntfy: TasmimNtfy;
   telegram: TasmimTelegram;
 }
 
-export interface NtfyConfig {
+export interface TasmimNtfy {
   enabled: boolean;
   topic: string;
   server: string;
@@ -57,7 +54,7 @@ export interface TasmimTelegram {
   proxy?: string;
 }
 
-export interface MutabiWasfaConfig {
+export interface TasmimMutabiWasfa {
   /** Provider name: "linear" | "jira" | "github" */
   provider?: string;
   apiKey: string;
@@ -66,9 +63,6 @@ export interface MutabiWasfaConfig {
   ticketPattern?: string;
 }
 
-// =============================================================================
-// Issue Tracker Interface (provider-agnostic)
-// =============================================================================
 
 export type NawKiyan = "ticket" | "epic" | "milestone" | "project" | "unknown";
 
@@ -85,7 +79,7 @@ export interface WasfaMutaba {
   estimate?: number;
 }
 
-export interface TrackerProject {
+export interface MashruMutabi {
   id: string;
   name: string;
   description?: string;
@@ -93,7 +87,7 @@ export interface TrackerProject {
   issueCount?: number;
 }
 
-export interface TrackerMilestone {
+export interface MaalimMutabi {
   id: string;
   name: string;
   url?: string;
@@ -101,12 +95,12 @@ export interface TrackerMilestone {
   endsAt?: string;
 }
 
-export interface ParsedTicketUrl {
+export interface RabitWasfaMuhallal {
   type: NawKiyan;
   id: string;
 }
 
-export interface CreateIssueInput {
+export interface MudkhalKhalqQadiya {
   title: string;
   description?: string;
   estimate?: number;
@@ -115,14 +109,14 @@ export interface CreateIssueInput {
   parentId?: string;
 }
 
-export interface UpdateIssueInput {
+export interface MudkhalTahdithQadiya {
   title?: string;
   description?: string;
   estimate?: number;
   status?: string;
 }
 
-export interface IssueFilters {
+export interface MurashihatQadiya {
   assigneeId?: string;
   status?: string;
   cycleId?: string;
@@ -132,54 +126,46 @@ export interface MutabiWasfa {
   readonly provider: string;
   isAuthenticated(): Promise<boolean>;
 
-  // Read
   getIssue(identifier: string): Promise<WasfaMutaba | null>;
-  getProject(id: string): Promise<TrackerProject | null>;
+  getProject(id: string): Promise<MashruMutabi | null>;
   searchIssues(query: string, limit?: number): Promise<WasfaMutaba[]>;
-  searchProjects(query: string): Promise<TrackerProject[]>;
+  searchProjects(query: string): Promise<MashruMutabi[]>;
 
-  // Write
-  createIssue(input: CreateIssueInput): Promise<WasfaMutaba>;
-  updateIssue(id: string, input: UpdateIssueInput): Promise<WasfaMutaba>;
+  createIssue(input: MudkhalKhalqQadiya): Promise<WasfaMutaba>;
+  updateIssue(id: string, input: MudkhalTahdithQadiya): Promise<WasfaMutaba>;
   setRelations(identifier: string, blocks?: string[], blockedBy?: string[]): Promise<void>;
 
-  // URL handling
-  parseUrl(url: string): ParsedTicketUrl | null;
+  parseUrl(url: string): RabitWasfaMuhallal | null;
   getUrlPattern(): RegExp;
 
-  // Workflow states
   getStateId(name: string): Promise<string | null>;
 
-  // Search (optional — not all providers have these)
-  searchMilestones?(query: string): Promise<TrackerMilestone[]>;
-  getActiveMilestone?(): Promise<TrackerMilestone | null>;
-  getFilteredIssues?(filters: IssueFilters, limit?: number): Promise<WasfaMutaba[]>;
+  searchMilestones?(query: string): Promise<MaalimMutabi[]>;
+  getActiveMilestone?(): Promise<MaalimMutabi | null>;
+  getFilteredIssues?(filters: MurashihatQadiya, limit?: number): Promise<WasfaMutaba[]>;
 }
 
 export interface TasmimGitHub {
   owner: string;
   repo: string;
-  operatorUsername: string;
+  ismKimyawi: string;
 }
 
 export interface TasmimOpenCode {
   server: string;
 }
 
-export interface PromptsConfig {
+export interface TasmimHaththat {
   /** Path to notification classification prompt template */
   classifyNotification?: string;
   /** Path to question classification prompt template */
   classifyQuestion?: string;
 }
 
-// =============================================================================
-// Notifications
-// =============================================================================
 
-export type NotificationPriority = "min" | "low" | "default" | "high" | "urgent";
+export type AwwaliyyatIshara = "min" | "low" | "default" | "high" | "urgent";
 
-export type NotificationCategory =
+export type SinfIshara =
   | "blocker"
   | "decision"
   | "progress"
@@ -189,28 +175,25 @@ export type NotificationCategory =
   | "external_change"
   | "quiet_hours_exit";
 
-export interface Notification {
-  category: NotificationCategory;
+export interface Ishara {
+  category: SinfIshara;
   title: string;
   body: string;
-  priority: NotificationPriority;
-  actions?: NotificationAction[];
+  awwaliyya: AwwaliyyatIshara;
+  actions?: FiilIshara[];
   url?: string;
   projectId?: string;
   huwiyyatWasfa?: string;
 }
 
-export interface NotificationAction {
+export interface FiilIshara {
   label: string;
-  action: string; // Callback identifier
-  url?: string; // For HTTP action buttons
+  action: string;
+  url?: string;
 }
 
-// =============================================================================
-// Review Comments
-// =============================================================================
 
-export interface ReviewComment {
+export interface TaaliqMuraja {
   id: string;
   raqamRisala: number;
   author: string;
@@ -219,38 +202,35 @@ export interface ReviewComment {
   line?: number;
   createdAt: Date;
   isOperator: boolean;
-  assessment: CommentAssessment;
+  assessment: TaqyimTaaliq;
 }
 
-export interface CommentAssessment {
+export interface TaqyimTaaliq {
   isCommand: boolean;
   intent: "command" | "suggestion" | "question" | "praise" | "concern" | "neutral";
-  confidence: number; // 0-1
+  confidence: number;
   reasoning: string;
 }
 
-// =============================================================================
-// Events & Logging
-// =============================================================================
 
-export type LogLevel = "debug" | "info" | "warn" | "error";
+export type MustawaSijill = "debug" | "info" | "warn" | "error";
 
-export interface LogEntry {
+export interface MudkhalSijill {
   timestamp: Date;
-  level: LogLevel;
+  level: MustawaSijill;
   category: string;
   message: string;
   context?: Record<string, unknown>;
 }
 
-export interface DecisionLogEntry extends LogEntry {
+export interface DecisionMudkhalSijill extends MudkhalSijill {
   event: string;
   interpretation: string;
   action: string;
   reasoning: string;
 }
 
-export interface ExternalChangeEntry extends LogEntry {
+export interface MudkhalTaghyirKhariji extends MudkhalSijill {
   source: "linear" | "github" | "figma" | "notion";
   entityType: string;
   entityId: string;
@@ -259,9 +239,6 @@ export interface ExternalChangeEntry extends LogEntry {
   impact: string;
 }
 
-// =============================================================================
-// OpenCode Integration
-// =============================================================================
 
 export interface JalsatOpenCode {
   id: string;
@@ -279,24 +256,21 @@ export interface HadathOpenCode {
   timestamp: Date;
 }
 
-// =============================================================================
-// Question Tool Events (from OpenCode SSE)
-// =============================================================================
 
 /** A single question option */
-export interface QuestionOption {
+export interface KhiyarSual {
   label: string;
   description: string;
 }
 
 /** A single question in a question request */
-export interface QuestionInfo {
+export interface MaalumatSual {
   /** Very short label (max 30 chars) */
   header: string;
   /** The full question text */
   question: string;
   /** Available choices */
-  options: QuestionOption[];
+  options: KhiyarSual[];
   /** Allow selecting multiple choices */
   multiple?: boolean;
   /** Allow custom text answer (default true) */
@@ -304,7 +278,7 @@ export interface QuestionInfo {
 }
 
 /** A question.asked event from OpenCode SSE */
-export interface QuestionAskedEvent {
+export interface HadathSualMatlub {
   type: "question.asked";
   properties: {
     /** Unique question request ID */
@@ -312,7 +286,7 @@ export interface QuestionAskedEvent {
     /** Session that asked the question */
     sessionID: string;
     /** The questions being asked */
-    questions: QuestionInfo[];
+    questions: MaalumatSual[];
     /** Tool context if from a tool call */
     tool?: {
       messageID: string;
@@ -322,7 +296,7 @@ export interface QuestionAskedEvent {
 }
 
 /** An answer to a question */
-export interface QuestionAnswer {
+export interface JawabSual {
   /** Index of the question in the questions array */
   questionIndex: number;
   /** Selected option labels */
@@ -332,7 +306,7 @@ export interface QuestionAnswer {
 }
 
 /** Classification result for a question */
-export interface QuestionClassification {
+export interface TasnifSual {
   classification: "WORTHY" | "CRY_BABY";
   reason: string;
   /** Terse guidance if CRY_BABY */
@@ -342,18 +316,15 @@ export interface QuestionClassification {
 }
 
 /** Pending question state */
-export interface PendingQuestion {
+export interface SualMuallaq {
   id: string;
   sessionID: string;
   huwiyyatMurshid: string;
-  questions: QuestionInfo[];
+  questions: MaalumatSual[];
   telegramMessageId?: number;
   createdAt: string;
 }
 
-// =============================================================================
-// MUN-MCP Tool Calls
-// =============================================================================
 
 /**
  * Tool calls made by orchestrators via MUN-MCP.
@@ -427,17 +398,17 @@ export interface MunCheckBranchStatusCall {
   branch: string;
 }
 
-/** Send a notification to the operator */
+/** Send a notification to al-Kimyawi */
 export interface MunNotifyCall {
   tool: "mun_notify";
   /** Your orchestrator ID (e.g., TEAM-100, SANDBOX-pos-simulator) */
   huwiyyatMurshid: string;
   message: string;
-  priority: "min" | "low" | "default" | "high" | "urgent";
+  awwaliyya: "min" | "low" | "default" | "high" | "urgent";
   actions?: Array<{ label: string; action: string }>;
 }
 
-/** Send a conversational response to the operator (for answering questions) */
+/** Send a conversational response to al-Kimyawi (for answering questions) */
 export interface MunReplyCall {
   tool: "mun_reply";
   /** Your orchestrator ID (e.g., TEAM-100, SANDBOX-pos-simulator) */
@@ -477,7 +448,7 @@ export interface MunYieldCall {
   huwiyyatMurshid: string;
   reason: "masdud" | "muntazir";
   details: string;
-  suggestNext?: string; // Optional suggestion for which epic to switch to
+  suggestNext?: string;
 }
 
 /** Demand control back (when unblocked and have actionable work) */
@@ -485,16 +456,16 @@ export interface MunDemandControlCall {
   tool: "mun_demand_control";
   huwiyyatMurshid: string;
   reason: string;
-  priority: "normal" | "urgent";
+  awwaliyya: "normal" | "urgent";
 }
 
 /** Create branch for orchestrator (called once when starting work) */
 export interface MunCreateBranchCall {
   tool: "mun_create_branch";
   huwiyyatMurshid: string;
-  identifier: string;        // e.g., "TEAM-200"
-  type: NawMurshid;    // "epic" or "chore"
-  slug?: string;             // e.g., "bab-al-shams" (required for epic, optional for chore)
+  identifier: string;
+  type: NawMurshid;
+  slug?: string;
 }
 
 /** Run SSP to slice files into a PR branch (targets main) */
@@ -530,14 +501,14 @@ export interface MunCommitCall {
   tool: "mun_commit";
   huwiyyatMurshid: string;
   message: string;
-  files?: string[]; // If provided, only commit these files
+  files?: string[];
 }
 
 /** Git add files */
 export interface MunGitAddCall {
   tool: "mun_git_add";
   huwiyyatMurshid: string;
-  files: string[]; // Files to stage
+  files: string[];
 }
 
 /** Git push current branch */
@@ -546,9 +517,6 @@ export interface MunGitPushCall {
   huwiyyatMurshid: string;
 }
 
-// =============================================================================
-// Artifact Crafting Tools
-// =============================================================================
 
 /** Extract files from forge for artifact creation */
 export interface MunIstikhasCall {
@@ -619,12 +587,9 @@ export type MunToolCall =
   | MunIstihalMutabaqqCall
   | MunFaslCall;
 
-// =============================================================================
-// MUN-MCP Tool Registry
-// =============================================================================
 
 /** MCP tool definition (JSON Schema for tool input) */
-export interface McpToolDefinition {
+export interface TaarifAlatMcp {
   name: string;
   description: string;
   inputSchema: {
@@ -635,22 +600,22 @@ export interface McpToolDefinition {
 }
 
 /** Handler function for a registered MCP tool */
-export type McpToolHandler = (args: Record<string, unknown>) => Promise<string> | string;
+export type MuaallijAlatMcp = (args: Record<string, unknown>) => Promise<string> | string;
 
 /**
  * Tool registry — all tools are core, built into the MUN-MCP server.
  *
  * MUN-MCP server delegates tool listing and dispatch to this registry.
  */
-export interface ToolRegistry {
+export interface SijillAlat {
   /** Register a tool definition + its handler */
-  register(tool: McpToolDefinition, handler: McpToolHandler): void;
+  register(tool: TaarifAlatMcp, handler: MuaallijAlatMcp): void;
 
   /** Get all registered tool definitions (for tools/list) */
-  getTools(): McpToolDefinition[];
+  getTools(): TaarifAlatMcp[];
 
   /** Get a specific handler by name (for tools/call) */
-  getHandler(name: string): McpToolHandler | undefined;
+  getHandler(name: string): MuaallijAlatMcp | undefined;
 
   /** Check if a tool name is registered */
   has(name: string): boolean;
@@ -659,9 +624,6 @@ export interface ToolRegistry {
   getForwarder(): (call: MunToolCall) => void;
 }
 
-// =============================================================================
-// Orchestrator Diary
-// =============================================================================
 
 export interface QararSijill {
   timestamp: string;
@@ -693,15 +655,12 @@ export interface SijillMurshid {
   implementationStatus: Record<string, HalatTanfidhSijill>;
 }
 
-// =============================================================================
-// Messaging Abstraction
-// =============================================================================
 
 /** Where a message should be routed */
 export type QanatRisala =
-  | "dispatch"                    // Control plane (Telegram dispatch topic, Slack #munadi, etc.)
-  | "operator"                      // Direct to operator (private chat)
-  | { murshid: string };     // Orchestrator's channel (Telegram topic, Slack thread, etc.)
+  | "dispatch"
+  | "kimyawi"
+  | { murshid: string };
 
 /** Outbound messaging interface — what daemon modules depend on */
 export interface RasulKharij {
@@ -727,9 +686,6 @@ export interface RasulKharij {
   hallJalsaBilQanat(provider: string, channelId: string): string | null;
 }
 
-// =============================================================================
-// Session Management
-// =============================================================================
 
 /** Orchestrator status for control handover */
 export type HalatMurshid = "sakin" | "fail" | "masdud" | "muntazir";

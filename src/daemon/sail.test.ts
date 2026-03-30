@@ -22,18 +22,15 @@ import {
   makeSession,
   seedSession,
 } from "../test-helpers.ts";
-import { Sail } from "./question-handler.ts";
-import { getUnansweredQuestions, insertQuestion } from "../../db/db.ts";
+import { Sail } from "./sail.ts";
+import { jalabaAseilaGhairMujaba, adkhalaSual } from "../../db/db.ts";
 import type {
-  QuestionAskedEvent,
-  QuestionInfo,
+  HadathSualMatlub,
+  MaalumatSual,
 } from "../types.ts";
 
-// =============================================================================
-// Shared fixtures
-// =============================================================================
 
-function makeQuestionInfo(overrides?: Partial<QuestionInfo>): QuestionInfo {
+function makeMaalumatSual(overrides?: Partial<MaalumatSual>): MaalumatSual {
   return {
     header: "Choose approach",
     question: "Should we use pattern A or B?",
@@ -45,21 +42,18 @@ function makeQuestionInfo(overrides?: Partial<QuestionInfo>): QuestionInfo {
   };
 }
 
-function makeEvent(overrides?: Partial<QuestionAskedEvent["properties"]>): QuestionAskedEvent {
+function makeEvent(overrides?: Partial<HadathSualMatlub["properties"]>): HadathSualMatlub {
   return {
     type: "question.asked",
     properties: {
       id: "q-001",
       sessionID: "session-001",
-      questions: [makeQuestionInfo()],
+      questions: [makeMaalumatSual()],
       ...overrides,
     },
   };
 }
 
-// =============================================================================
-// Pure logic: isQuestionCallback
-// =============================================================================
 
 Deno.test("isQuestionCallback: returns true for q: prefix", () => {
   const qh = new Sail({
@@ -84,23 +78,17 @@ Deno.test("isQuestionCallback: returns false for other prefixes", () => {
   assertEquals(qh.isQuestionCallback("qx:abc"), false);
 });
 
-// =============================================================================
-// Pure logic: getPendingQuestion
-// =============================================================================
 
-Deno.test("getPendingQuestion: returns undefined for unknown", () => {
+Deno.test("wajadaSualMuallaq: returns undefined for unknown", () => {
   const qh = new Sail({
     opencode: mockOpenCodeClient() as never,
     messenger: mockMessenger(),
     sessionManager: mockMudirJalasat() as never,
   });
 
-  assertEquals(qh.getPendingQuestion("nonexistent"), undefined);
+  assertEquals(qh.wajadaSualMuallaq("nonexistent"), undefined);
 });
 
-// =============================================================================
-// Pure logic: isAwaitingCustomInput
-// =============================================================================
 
 Deno.test("isAwaitingCustomInput: returns false initially", () => {
   const qh = new Sail({
@@ -112,9 +100,6 @@ Deno.test("isAwaitingCustomInput: returns false initially", () => {
   assertEquals(qh.isAwaitingCustomInput("TEAM-123"), false);
 });
 
-// =============================================================================
-// buildInlineKeyboard + parseQuestionCallback
-// =============================================================================
 
 Deno.test("buildInlineKeyboard: creates rows for each option + custom", () => {
   const qh = new Sail({
@@ -123,16 +108,14 @@ Deno.test("buildInlineKeyboard: creates rows for each option + custom", () => {
     sessionManager: mockMudirJalasat() as never,
   });
 
-  const question = makeQuestionInfo();
+  const question = makeMaalumatSual();
   const keyboard = qh.buildInlineKeyboard("q-001", question);
 
-  // 2 options + 1 custom = 3 rows
   assertEquals(keyboard.inline_keyboard.length, 3);
   assertEquals(keyboard.inline_keyboard[0][0].text, "Pattern A (Recommended)");
   assertEquals(keyboard.inline_keyboard[1][0].text, "Pattern B");
   assertEquals(keyboard.inline_keyboard[2][0].text, "Type answer...");
 
-  // Callback data starts with q:
   assertEquals(keyboard.inline_keyboard[0][0].callback_data.startsWith("q:"), true);
   assertEquals(keyboard.inline_keyboard[2][0].callback_data.endsWith("__custom__"), true);
 });
@@ -144,10 +127,9 @@ Deno.test("buildInlineKeyboard: no custom button when custom=false", () => {
     sessionManager: mockMudirJalasat() as never,
   });
 
-  const question = makeQuestionInfo({ custom: false });
+  const question = makeMaalumatSual({ custom: false });
   const keyboard = qh.buildInlineKeyboard("q-002", question);
 
-  // 2 options, no custom
   assertEquals(keyboard.inline_keyboard.length, 2);
 });
 
@@ -158,15 +140,14 @@ Deno.test("parseQuestionCallback: resolves registered short IDs", () => {
     sessionManager: mockMudirJalasat() as never,
   });
 
-  // Register via buildInlineKeyboard
-  const question = makeQuestionInfo();
+  /** Register via buildInlineKeyboard */
+  const question = makeMaalumatSual();
   const keyboard = qh.buildInlineKeyboard("q-full-uuid-001", question);
 
-  // Parse the first button's callback_data
+  /** Parse the first button's callback_data */
   const parsed = qh.parseQuestionCallback(keyboard.inline_keyboard[0][0].callback_data);
   assertExists(parsed);
   assertEquals(parsed.questionId, "q-full-uuid-001");
-  // The label may be truncated but should start with the option label
   assertEquals(parsed.selectedLabel.startsWith("Pattern A"), true);
 });
 
@@ -188,8 +169,8 @@ Deno.test("parseQuestionCallback: handles labels with colons", () => {
     sessionManager: mockMudirJalasat() as never,
   });
 
-  // Register a question with a colon in the label
-  const question = makeQuestionInfo({
+  /** Register a question with a colon in the label */
+  const question = makeMaalumatSual({
     options: [{ label: "Option:With:Colons", description: "test" }],
     custom: false,
   });
@@ -200,9 +181,6 @@ Deno.test("parseQuestionCallback: handles labels with colons", () => {
   assertEquals(parsed.selectedLabel, "Option:With:Colons");
 });
 
-// =============================================================================
-// handleQuestionAsked: classification routing
-// =============================================================================
 
 Deno.test("handleQuestionAsked: unknown session -> rejects", async () => {
   await withTestDb(async () => {
@@ -210,7 +188,7 @@ Deno.test("handleQuestionAsked: unknown session -> rejects", async () => {
     const qh = new Sail({
       opencode: oc as never,
       messenger: mockMessenger(),
-      sessionManager: mockMudirJalasat([]) as never, // no sessions
+      sessionManager: mockMudirJalasat([]) as never,
     });
 
     await qh.handleQuestionAsked(makeEvent());
@@ -237,11 +215,8 @@ Deno.test("handleQuestionAsked: empty questions -> rejects", async () => {
 });
 
 Deno.test("handleQuestionAsked: CRY_BABY -> auto-answers + injects guidance", async () => {
-  // Set up fixture for classifier (AGENTS.md path must be set from classifier_test
-  // or pre-existing — classifier module caches at module level)
   await withTestDb(async () => {
     const oc = mockOpenCodeClient({
-      // classifyQuestion calls opencode.classify internally
       classify: async () => ({
         success: true,
         response: '{"classification":"CRY_BABY","reason":"obvious","rejection":"Check docs.","autoAnswer":"Pattern B"}',
@@ -258,20 +233,17 @@ Deno.test("handleQuestionAsked: CRY_BABY -> auto-answers + injects guidance", as
 
     await qh.handleQuestionAsked(makeEvent());
 
-    // Should auto-answer via replyToQuestion
     assertEquals(oc._calls.replyToQuestion.length, 1);
     assertEquals(oc._calls.replyToQuestion[0].questionId, "q-001");
 
-    // Should inject guidance via sendPromptAsync
     assertEquals(oc._calls.sendPromptAsync.length, 1);
     assertEquals(oc._calls.sendPromptAsync[0].prompt.includes("auto-answered"), true);
 
-    // Should NOT forward to messenger
     assertEquals(messenger._calls.arsalaMunassaq.length, 0);
   });
 });
 
-Deno.test("handleQuestionAsked: WORTHY -> forwards to operator", async () => {
+Deno.test("handleQuestionAsked: WORTHY -> forwards to al-Kimyawi", async () => {
   await withTestDb(async () => {
     const oc = mockOpenCodeClient({
       classify: async () => ({
@@ -281,7 +253,7 @@ Deno.test("handleQuestionAsked: WORTHY -> forwards to operator", async () => {
     });
 
     const session = makeSession();
-    seedSession(); // FK: questions.session_id -> sessions.id
+    seedSession();
     const messenger = mockMessenger();
     let forwardedCount = 0;
 
@@ -297,32 +269,26 @@ Deno.test("handleQuestionAsked: WORTHY -> forwards to operator", async () => {
 
     await qh.handleQuestionAsked(makeEvent());
 
-    // Should send formatted message via messenger
     assertEquals(messenger._calls.arsalaMunassaq.length, 1);
     const sentChannel = messenger._calls.arsalaMunassaq[0].channel;
     assertEquals(sentChannel, { murshid: "TEAM-1234" });
 
-    // Should persist question in DB
-    const dbQuestions = getUnansweredQuestions();
+    /** Should persist question in DB */
+    const dbQuestions = jalabaAseilaGhairMujaba();
     assertEquals(dbQuestions.length, 1);
     assertEquals(dbQuestions[0].id, "q-001");
 
-    // Should call onQuestionForwarded callback
     assertEquals(forwardedCount, 1);
 
-    // Should NOT auto-answer
     assertEquals(oc._calls.replyToQuestion.length, 0);
 
-    // Question should be pending
-    const pending = qh.getPendingQuestion("q-001");
+    /** Question should be pending */
+    const pending = qh.wajadaSualMuallaq("q-001");
     assertExists(pending);
     assertEquals(pending.huwiyyatMurshid, "TEAM-1234");
   });
 });
 
-// =============================================================================
-// handleQuestionCallback
-// =============================================================================
 
 Deno.test("handleQuestionCallback: answers question + marks in DB", async () => {
   await withTestDb(async () => {
@@ -334,29 +300,25 @@ Deno.test("handleQuestionCallback: answers question + marks in DB", async () => 
     });
 
     const session = makeSession();
-    seedSession(); // FK: questions.session_id -> sessions.id
+    seedSession();
     const qh = new Sail({
       opencode: oc as never,
       messenger: mockMessenger(),
       sessionManager: mockMudirJalasat([session]) as never,
     });
 
-    // Forward a question first to make it pending
     await qh.handleQuestionAsked(makeEvent());
 
-    // Now answer it
+    /** Now answer it */
     const success = await qh.handleQuestionCallback("q-001", "Pattern A (Recommended)");
     assertEquals(success, true);
 
-    // Should have called replyToQuestion
     assertEquals(oc._calls.replyToQuestion.length, 1);
     assertEquals(oc._calls.replyToQuestion[0].answers[0].selected, ["Pattern A (Recommended)"]);
 
-    // Should be removed from pending
-    assertEquals(qh.getPendingQuestion("q-001"), undefined);
+    assertEquals(qh.wajadaSualMuallaq("q-001"), undefined);
 
-    // DB should show 0 unanswered
-    assertEquals(getUnansweredQuestions().length, 0);
+    assertEquals(jalabaAseilaGhairMujaba().length, 0);
   });
 });
 
@@ -375,9 +337,6 @@ Deno.test("handleQuestionCallback: unknown question -> returns false", async () 
   });
 });
 
-// =============================================================================
-// Custom input flow
-// =============================================================================
 
 Deno.test("markAwaitingCustomInput + handlePotentialCustomAnswer: end-to-end", async () => {
   await withTestDb(async () => {
@@ -389,30 +348,25 @@ Deno.test("markAwaitingCustomInput + handlePotentialCustomAnswer: end-to-end", a
     });
 
     const session = makeSession();
-    seedSession(); // FK: questions.session_id -> sessions.id
+    seedSession();
     const qh = new Sail({
       opencode: oc as never,
       messenger: mockMessenger(),
       sessionManager: mockMudirJalasat([session]) as never,
     });
 
-    // Forward a question
     await qh.handleQuestionAsked(makeEvent());
 
-    // Mark as awaiting custom input
     await qh.markAwaitingCustomInput("TEAM-1234", "q-001");
     assertEquals(qh.isAwaitingCustomInput("TEAM-1234"), true);
 
-    // Submit custom answer
+    /** Submit custom answer */
     const success = await qh.handlePotentialCustomAnswer("TEAM-1234", "My custom answer");
     assertEquals(success, true);
 
-    // Should no longer be awaiting
     assertEquals(qh.isAwaitingCustomInput("TEAM-1234"), false);
 
-    // Should have replied with custom text
     assertEquals(oc._calls.replyToQuestion.length, 1);
-    // Custom answers use __custom__ label with custom text
     assertEquals(oc._calls.replyToQuestion[0].answers[0].custom, "My custom answer");
   });
 });
@@ -430,14 +384,11 @@ Deno.test("handlePotentialCustomAnswer: returns false when not awaiting", async 
   });
 });
 
-// =============================================================================
-// loadState: rebuild from DB
-// =============================================================================
 
 Deno.test("loadState: rebuilds pendingQuestions from DB", async () => {
   await withTestDb(async () => {
     const session = makeSession({ id: "sess-abc", identifier: "TEAM-900" });
-    seedSession({ id: "sess-abc", identifier: "TEAM-900" }); // FK
+    seedSession({ id: "sess-abc", identifier: "TEAM-900" });
     const oc = mockOpenCodeClient();
 
     const qh = new Sail({
@@ -446,19 +397,17 @@ Deno.test("loadState: rebuilds pendingQuestions from DB", async () => {
       sessionManager: mockMudirJalasat([session]) as never,
     });
 
-    // Insert a question directly in DB (simulating prior run)
-    insertQuestion({
+    adkhalaSual({
       id: "q-istarjaad",
       sessionId: "sess-abc",
       question: "Should we refactor?",
       options: ["Yes", "No"],
     });
 
-    // Load state
     await qh.loadState();
 
-    // Should be in pending questions
-    const pending = qh.getPendingQuestion("q-istarjaad");
+    /** Should be in pending questions */
+    const pending = qh.wajadaSualMuallaq("q-istarjaad");
     assertExists(pending);
     assertEquals(pending.sessionID, "sess-abc");
     assertEquals(pending.huwiyyatMurshid, "TEAM-900");
@@ -470,7 +419,7 @@ Deno.test("loadState: rebuilds pendingQuestions from DB", async () => {
 Deno.test("loadState: rebuilds callbackIdMap (parseQuestionCallback works after load)", async () => {
   await withTestDb(async () => {
     const session = makeSession({ id: "sess-xyz", identifier: "TEAM-950" });
-    seedSession({ id: "sess-xyz", identifier: "TEAM-950" }); // FK
+    seedSession({ id: "sess-xyz", identifier: "TEAM-950" });
     const oc = mockOpenCodeClient();
 
     const qh = new Sail({
@@ -479,8 +428,7 @@ Deno.test("loadState: rebuilds callbackIdMap (parseQuestionCallback works after 
       sessionManager: mockMudirJalasat([session]) as never,
     });
 
-    // Insert question in DB
-    insertQuestion({
+    adkhalaSual({
       id: "q-callback-test",
       sessionId: "sess-xyz",
       question: "Pick one",
@@ -489,12 +437,14 @@ Deno.test("loadState: rebuilds callbackIdMap (parseQuestionCallback works after 
 
     await qh.loadState();
 
-    // Build keyboard to get the short ID format
-    const pending = qh.getPendingQuestion("q-callback-test");
+    /** Build keyboard to get the short ID format */
+    const pending = qh.wajadaSualMuallaq("q-callback-test");
     assertExists(pending);
 
-    // The short callback ID should be registered by loadState via #shortCallbackId
-    // We can verify by building a keyboard and parsing its callback
+    /**
+     * The short callback ID should be registered by loadState via #shortCallbackId
+     * We can verify by building a keyboard and parsing its callback
+     */
     const keyboard = qh.buildInlineKeyboard("q-callback-test", pending.questions[0]);
     const parsed = qh.parseQuestionCallback(keyboard.inline_keyboard[0][0].callback_data);
     assertExists(parsed);
@@ -510,24 +460,22 @@ Deno.test("loadState: no questions -> no-op", async () => {
       sessionManager: mockMudirJalasat() as never,
     });
 
-    // Should not throw
     await qh.loadState();
-    assertEquals(qh.getPendingQuestion("anything"), undefined);
+    assertEquals(qh.wajadaSualMuallaq("anything"), undefined);
   });
 });
 
 Deno.test("loadState: unknown session -> uses sessionId as huwiyyatMurshid fallback", async () => {
   await withTestDb(async () => {
-    // Session exists in DB (FK) but not in sessionManager's in-memory list
     seedSession({ id: "sess-unknown", identifier: "ORPHAN" });
 
     const qh = new Sail({
       opencode: mockOpenCodeClient() as never,
       messenger: mockMessenger(),
-      sessionManager: mockMudirJalasat([]) as never, // no sessions in-memory
+      sessionManager: mockMudirJalasat([]) as never,
     });
 
-    insertQuestion({
+    adkhalaSual({
       id: "q-orphan",
       sessionId: "sess-unknown",
       question: "Orphan question",
@@ -536,9 +484,8 @@ Deno.test("loadState: unknown session -> uses sessionId as huwiyyatMurshid fallb
 
     await qh.loadState();
 
-    const pending = qh.getPendingQuestion("q-orphan");
+    const pending = qh.wajadaSualMuallaq("q-orphan");
     assertExists(pending);
-    // Falls back to sessionId when no orchestrator found
     assertEquals(pending.huwiyyatMurshid, "sess-unknown");
   });
 });

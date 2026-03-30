@@ -7,7 +7,7 @@
  *
  * Channel resolution:
  *   "dispatch"              → TelegramClient.sendToDispatch()
- *   "operator"                → TelegramClient.arsalaRisala() (private chat)
+ *   "kimyawi"                → TelegramClient.arsalaRisala() (private chat)
  *   { murshid: id }    → lookup channels table, arsalaIlaMurshidTopic()
  *                              fallback: dispatch with [id] prefix
  */
@@ -15,15 +15,15 @@
 import { logger } from "../logging/logger.ts";
 import { TelegramClient, TOPIC_COLORS } from "./telegram.ts";
 import {
-  upsertChannel,
-  getChannel,
-  getChannelsForSession,
+  haddathaAwAdkhalaQanat,
+  jalabaQanat,
+  jalabaQanatsForSession,
   jalabJalsaByChannel,
 } from "../../db/db.ts";
 import type { RasulKharij, QanatRisala } from "../types.ts";
 
-// Re-export for convenience — channel DB functions used by main.ts for inbound routing
-export { getChannel, getChannelsForSession, jalabJalsaByChannel } from "../../db/db.ts";
+/** Re-export for convenience — channel DB functions used by main.ts for inbound routing */
+export { jalabaQanat, jalabaQanatsForSession, jalabJalsaByChannel } from "../../db/db.ts";
 
 export class TelegramMessenger implements RasulKharij {
   #telegram: TelegramClient;
@@ -38,9 +38,6 @@ export class TelegramMessenger implements RasulKharij {
     this.#telegram = telegram;
   }
 
-  // ===========================================================================
-  // RasulKharij interface
-  // ===========================================================================
 
   mumakkan(): boolean {
     return this.#telegram.mumakkan();
@@ -54,17 +51,16 @@ export class TelegramMessenger implements RasulKharij {
       return;
     }
 
-    if (channel === "operator") {
+    if (channel === "kimyawi") {
       await this.#telegram.arsalaRisala(text);
       return;
     }
 
-    // { murshid: id }
+    /** { murshid: id } */
     const topicId = this.#resolveOrchestratorTopic(channel.murshid);
     if (topicId !== null) {
       await this.#telegram.arsalaIlaMurshidTopic(topicId, text);
     } else {
-      // No topic — fallback to dispatch with identifier prefix
       await this.#telegram.sendToDispatch(`[${channel.murshid}] ${text}`);
     }
   }
@@ -77,12 +73,12 @@ export class TelegramMessenger implements RasulKharij {
       return;
     }
 
-    if (channel === "operator") {
+    if (channel === "kimyawi") {
       await this.#telegram.arsalaRisala(text, { parseMode: "Markdown" });
       return;
     }
 
-    // { murshid: id }
+    /** { murshid: id } */
     const topicId = this.#resolveOrchestratorTopic(channel.murshid);
     if (topicId !== null) {
       await this.#telegram.arsalaIlaMurshidTopic(topicId, text, { parseMode: "Markdown" });
@@ -108,13 +104,11 @@ export class TelegramMessenger implements RasulKharij {
 
     const channelId = String(topic.message_thread_id);
 
-    // Persist to DB
-    upsertChannel(identifier, "telegram", channelId, {
+    haddathaAwAdkhalaQanat(identifier, "telegram", channelId, {
       name: topicName,
       iconColor: TOPIC_COLORS.blue,
     });
 
-    // Update caches
     this.#cacheChannel(identifier, "telegram", channelId);
 
     await logger.info("messenger", `Created Telegram topic for ${identifier}`, {
@@ -125,11 +119,11 @@ export class TelegramMessenger implements RasulKharij {
   }
 
   yamlikQanatMurshid(identifier: string): boolean {
-    // Check cache first, then DB
+    /** Check cache first, then DB */
     const cached = this.#sessionChannels.get(identifier);
     if (cached && cached["telegram"]) return true;
 
-    const dbChannel = getChannel(identifier, "telegram");
+    const dbChannel = jalabaQanat(identifier, "telegram");
     if (dbChannel) {
       this.#cacheChannel(identifier, "telegram", dbChannel);
       return true;
@@ -137,16 +131,13 @@ export class TelegramMessenger implements RasulKharij {
     return false;
   }
 
-  // ===========================================================================
-  // Channel cache management
-  // ===========================================================================
 
   /**
    * Load all channels from DB into cache. Call once at startup.
-   * Uses getChannelsForSession for each known identifier.
+   * Uses jalabaQanatsForSession for each known identifier.
    */
   hammalQanawatLilJalsa(identifier: string): Record<string, string> {
-    const channels = getChannelsForSession(identifier);
+    const channels = jalabaQanatsForSession(identifier);
     this.#sessionChannels.set(identifier, channels);
     for (const [provider, channelId] of Object.entries(channels)) {
       this.#channelCache.set(`${provider}:${channelId}`, identifier);
@@ -179,19 +170,15 @@ export class TelegramMessenger implements RasulKharij {
     return this.#telegram;
   }
 
-  // ===========================================================================
-  // Internal
-  // ===========================================================================
 
   #resolveOrchestratorTopic(identifier: string): number | null {
-    // Check cache
+    /** Check cache */
     const cached = this.#sessionChannels.get(identifier);
     if (cached?.["telegram"]) {
       return parseInt(cached["telegram"], 10);
     }
 
-    // Check DB
-    const dbChannel = getChannel(identifier, "telegram");
+    const dbChannel = jalabaQanat(identifier, "telegram");
     if (dbChannel) {
       this.#cacheChannel(identifier, "telegram", dbChannel);
       return parseInt(dbChannel, 10);
@@ -201,12 +188,11 @@ export class TelegramMessenger implements RasulKharij {
   }
 
   #cacheChannel(identifier: string, provider: string, channelId: string): void {
-    // Update session → channels cache
+    /** Update session → channels cache */
     const existing = this.#sessionChannels.get(identifier) ?? {};
     existing[provider] = channelId;
     this.#sessionChannels.set(identifier, existing);
 
-    // Update reverse lookup cache
     this.#channelCache.set(`${provider}:${channelId}`, identifier);
   }
 }

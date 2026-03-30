@@ -46,20 +46,21 @@ The kindling ritual creates XDG directories, copies sacred templates, installs t
 
 ## Amal Kabir - The Great Work
 
-Iksīr transmutes raw **wasfa** (وصفة - formulae) into perfected **dhahab** (ذهب - gold) - autonomous kimyawiyun laboring at their crucibles while you attend to higher mysteries.
+Iksīr transmutes raw **wasfa** (وصفة - formulae) into perfected **dhahab** (ذهب - gold) - the Murshidun (guides) laboring at their crucibles while you attend to higher mysteries.
 
-- **Ina'** (إناء - Vessels): Each kimyawi works in isolation, their own sacred vessel on their own branch, no contamination
+- **Ina'** (إناء - Vessels): Each murshid works in isolation, their own sacred vessel on their own branch, no contamination
 - **Sail** (سائل - The Oracle): Most questions are **khabath** (خبث - dross). Iksīr divines their nature and only brings forth what gleams as **dhahab**
-- **Hudud Muqaddasa** (حدود مقدسة - Sacred Boundaries): No kimyawi touches the source directly. Each transformation contained, each vessel sealed  
+- **Hudud Muqaddasa** (حدود مقدسة - Sacred Boundaries): No murshid touches the source directly. Each transformation contained, each vessel sealed  
 - **Kitab al-Hikmah** (كتاب الحكمة - Book of Wisdom): The collective grimoire preserves all **hikma** across the ages of work
 - **Hakim, not Mubtadi** (حكيم، لا مبتدئ): You are summoned for **wahy** (revelation), not permission to grind powders
 
 ## Warsha - The Workshop  
 
 ```
-Kimyawi (كيميائي - You, the Alchemist)
+Kimyawi (كيميائي - You, the Human Alchemist)
   |
 Iksīr (إكسير - The Elixir)
+  | (Served by the Khuddām - خدّام - Sacred Servants)
   |- Munadi      منادي - calls forth the workers
   |- Katib       كاتب - inscribes all transformations  
   |- Sail        سائل - divines truth from questions

@@ -1,10 +1,10 @@
 {
   "$schema": "https://deno.land/x/deno/cli/schemas/config-file.v1.json",
-  "name": "@munadi/core",
+  "name": "@iksir/core",
   "version": "0.1.0",
   "exports": "./src/cli.ts",
   "tasks": {
-    "munadi": "deno run --allow-all --env=.env src/cli.ts",
+    "iksir": "deno run --allow-all --env=.env src/cli.ts",
     "start": "deno run --allow-all --env=.env src/cli.ts start",
     "stop": "deno run --allow-all --env=.env src/cli.ts stop",
     "restart": "deno run --allow-all --env=.env src/cli.ts restart",
@@ -12,7 +12,7 @@
     "check": "deno run --allow-all --env=.env src/cli.ts check",
     "sync": "deno run --allow-all --env=.env src/cli.ts sync",
     "test": "deno test --allow-all",
-    "typecheck": "deno check src/main.ts src/mcp/mun-server.ts src/mcp/serve.ts src/cli.ts",
+    "typecheck": "deno check src/main.ts src/mcp/iksir-mcp.ts src/mcp/serve.ts src/cli.ts",
     "fmt": "deno fmt",
     "lint": "deno lint"
   },

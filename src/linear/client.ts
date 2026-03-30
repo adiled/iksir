@@ -10,20 +10,18 @@ import type {
   TasmimIksir,
   MutabiWasfa,
   WasfaMutaba,
-  TrackerProject,
-  TrackerMilestone,
-  ParsedTicketUrl,
-  CreateIssueInput,
-  UpdateIssueInput,
-  IssueFilters,
+  MashruMutabi,
+  MaalimMutabi,
+  RabitWasfaMuhallal,
+  MudkhalKhalqQadiya,
+  MudkhalTahdithQadiya,
+  MurashihatQadiya,
   NawKiyan,
 } from "../types.ts";
+import { LINEAR_API_BASE } from "../constants.ts";
 
-const LINEAR_API_URL = "https://api.linear.app/graphql";
+const LINEAR_API_URL = `${LINEAR_API_BASE}/graphql`;
 
-// =============================================================================
-// GraphQL Response Types
-// =============================================================================
 
 interface LinearIssue {
   id: string;
@@ -32,7 +30,7 @@ interface LinearIssue {
   description: string | null;
   state: { name: string; type: string };
   estimate: number | null;
-  priority: number;
+  awwaliyya: number;
   url: string;
   createdAt: string;
   updatedAt: string;
@@ -71,9 +69,6 @@ interface GraphQLResponse<T> {
   errors?: Array<{ message: string; path?: string[] }>;
 }
 
-// =============================================================================
-// Client
-// =============================================================================
 
 export class LinearClient implements MutabiWasfa {
   readonly provider = "linear";
@@ -150,9 +145,6 @@ export class LinearClient implements MutabiWasfa {
     return result?.viewer ?? null;
   }
 
-  // ===========================================================================
-  // Team & States
-  // ===========================================================================
 
   /**
    * Get team info and cache workflow states
@@ -175,7 +167,6 @@ export class LinearClient implements MutabiWasfa {
     );
 
     if (result?.team) {
-      // Cache states for later lookups
       for (const state of result.team.states.nodes) {
         this.stateCache.set(state.name.toLowerCase(), state);
       }
@@ -188,20 +179,16 @@ export class LinearClient implements MutabiWasfa {
    * Get workflow state ID by name
    */
   async getStateId(stateName: string): Promise<string | null> {
-    // Check cache first
+    /** Check cache first */
     const cached = this.stateCache.get(stateName.toLowerCase());
     if (cached) return cached.id;
 
-    // Fetch team to populate cache
     await this.getTeam();
 
     const state = this.stateCache.get(stateName.toLowerCase());
     return state?.id ?? null;
   }
 
-  // ===========================================================================
-  // Issue Operations
-  // ===========================================================================
 
   private readonly issueFragment = `
     fragment IssueFields on Issue {
@@ -211,7 +198,7 @@ export class LinearClient implements MutabiWasfa {
       description
       state { name type }
       estimate
-      priority
+      awwaliyya
       url
       createdAt
       updatedAt
@@ -280,7 +267,7 @@ export class LinearClient implements MutabiWasfa {
    * Search issues by text
    */
   async searchIssues(searchTerm: string, limit: number = 20): Promise<WasfaMutaba[]> {
-    // searchIssues returns IssueSearchResult which has a subset of fields
+    /** searchIssues returns IssueSearchResult which has a subset of fields */
     const result = await this.query<{
        searchIssues: {
         nodes: Array<{
@@ -290,7 +277,7 @@ export class LinearClient implements MutabiWasfa {
           description: string | null;
           state: { name: string; type: string };
           estimate: number | null;
-          priority: number;
+          awwaliyya: number;
           url: string;
           parent: { id: string; identifier: string; title: string } | null;
           children: { nodes: Array<{ id: string; identifier: string }> };
@@ -308,7 +295,7 @@ export class LinearClient implements MutabiWasfa {
             description
             state { name type }
             estimate
-            priority
+            awwaliyya
             url
             parent { id identifier title }
             children { nodes { id identifier } }
@@ -334,20 +321,17 @@ export class LinearClient implements MutabiWasfa {
   /**
    * Get issues with filters (assignee, status, cycle)
    */
-  async getFilteredIssues(filters: IssueFilters, limit: number = 20): Promise<WasfaMutaba[]> {
-    // Build filter object
+  async getFilteredIssues(filters: MurashihatQadiya, limit: number = 20): Promise<WasfaMutaba[]> {
+    /** Build filter object */
     const filterParts: string[] = [];
     const variables: Record<string, unknown> = { first: limit };
 
-    // Team filter (always apply)
     filterParts.push(`team: { key: { eq: "${this.teamId}" } }`);
 
-    // Assignee filter
     if (filters.assigneeId) {
       filterParts.push("assignee: { isMe: { eq: true } }");
     }
 
-    // Status filter - map to Linear state types
     if (filters.status) {
       const stateTypeMap: Record<string, string> = {
         backlog: "backlog",
@@ -361,7 +345,6 @@ export class LinearClient implements MutabiWasfa {
       }
     }
 
-    // Cycle filter
     if (filters.cycleId) {
       filterParts.push(`cycle: { id: { eq: "${filters.cycleId}" } }`);
     }
@@ -377,7 +360,7 @@ export class LinearClient implements MutabiWasfa {
           description: string | null;
           state: { name: string; type: string };
           estimate: number | null;
-          priority: number;
+          awwaliyya: number;
           url: string;
           parent: { id: string; identifier: string; title: string } | null;
           children: { nodes: Array<{ id: string; identifier: string }> };
@@ -395,7 +378,7 @@ export class LinearClient implements MutabiWasfa {
             description
             state { name type }
             estimate
-            priority
+            awwaliyya
             url
             parent { id identifier title }
             children { nodes { id identifier } }
@@ -437,7 +420,7 @@ export class LinearClient implements MutabiWasfa {
       query($teamKey: String!) {
         cycles(filter: { 
           team: { key: { eq: $teamKey } },
-          isActive: { eq: true }
+          yakunuFail: { eq: true }
         }, first: 1) {
           nodes {
             id
@@ -500,16 +483,18 @@ export class LinearClient implements MutabiWasfa {
   /**
    * Create a new issue
    */
-  async createIssue(input: CreateIssueInput): Promise<WasfaMutaba> {
-    // Resolve status name to Linear stateId if provided
+  async createIssue(input: MudkhalKhalqQadiya): Promise<WasfaMutaba> {
+    /** Resolve status name to Linear stateId if provided */
     let stateId: string | undefined;
     if (input.status) {
       const resolved = await this.getStateId(input.status);
       if (resolved) stateId = resolved;
     }
 
-    // Resolve label names to IDs (Linear createIssue takes labelIds)
-    // For now, pass labels through — callers who need labelIds should resolve them
+    /**
+     * Resolve label names to IDs (Linear createIssue takes labelIds)
+     * For now, pass labels through — callers who need labelIds should resolve them
+     */
     const linearInput: Record<string, unknown> = {
       title: input.title,
       description: input.description,
@@ -551,9 +536,9 @@ export class LinearClient implements MutabiWasfa {
    */
   async updateIssue(
     issueId: string,
-    input: UpdateIssueInput
+    input: MudkhalTahdithQadiya
   ): Promise<WasfaMutaba> {
-    // Resolve status name to Linear stateId if provided
+    /** Resolve status name to Linear stateId if provided */
     const linearInput: Record<string, unknown> = {};
     if (input.title !== undefined) linearInput.title = input.title;
     if (input.description !== undefined) linearInput.description = input.description;
@@ -616,9 +601,6 @@ export class LinearClient implements MutabiWasfa {
     return result?.commentCreate?.success ?? false;
   }
 
-  // ===========================================================================
-  // Relation Operations
-  // ===========================================================================
 
   /**
    * Create a relation between two issues
@@ -756,16 +738,15 @@ export class LinearClient implements MutabiWasfa {
     let added = 0;
     let removed = 0;
 
-    // Get the issue to resolve UUID
+    /** Get the issue to resolve UUID */
     const issue = await this.getLinearIssue(identifier);
     if (!issue) {
       throw new Error(`Issue not found: ${identifier}`);
     }
 
-    // Get current relations
+    /** Get current relations */
     const currentRelations = await this.getIssueRelations(issue.id);
 
-    // Process "blocks" relations
     if (blocks !== undefined) {
       const currentBlocks = currentRelations
         .filter((r) => r.type === "blocks" && r.issueIdentifier === identifier)
@@ -775,7 +756,6 @@ export class LinearClient implements MutabiWasfa {
       const toAdd = blocks.filter((id) => !currentBlockIds.includes(id));
       const toRemove = currentBlocks.filter((r) => !blocks.includes(r.targetIdentifier));
 
-      // Remove outdated
       for (const rel of toRemove) {
         const deleted = await this.deleteRelation(rel.id);
         if (deleted) {
@@ -785,7 +765,6 @@ export class LinearClient implements MutabiWasfa {
         }
       }
 
-      // Add new
       for (const targetIdentifier of toAdd) {
         const targetIssue = await this.getLinearIssue(targetIdentifier);
         if (!targetIssue) {
@@ -801,12 +780,7 @@ export class LinearClient implements MutabiWasfa {
       }
     }
 
-    // Process "blocked_by" relations (inverse: we create "blocks" on the other issue)
     if (blockedBy !== undefined) {
-      // "blocked_by X" means X blocks us, so we need X.blocks(us)
-      // When A blocks B, the relation is stored as:
-      //   - issueId: A, relatedIssueId: B, type: "blocks"
-      // So for "B is blocked by A", we create relation on A pointing to B
       
       const currentBlockedBy = currentRelations
         .filter((r) => r.type === "blocks" && r.relatedIssueIdentifier === identifier)
@@ -816,7 +790,6 @@ export class LinearClient implements MutabiWasfa {
       const toAdd = blockedBy.filter((id) => !currentBlockerIds.includes(id));
       const toRemove = currentBlockedBy.filter((r) => !blockedBy.includes(r.blockerIdentifier));
 
-      // Remove outdated
       for (const rel of toRemove) {
         const deleted = await this.deleteRelation(rel.id);
         if (deleted) {
@@ -826,14 +799,13 @@ export class LinearClient implements MutabiWasfa {
         }
       }
 
-      // Add new (create "blocks" relation on the blocker issue)
       for (const blockerIdentifier of toAdd) {
         const blockerIssue = await this.getLinearIssue(blockerIdentifier);
         if (!blockerIssue) {
           errors.push(`Blocker issue not found: ${blockerIdentifier}`);
           continue;
         }
-        // Create: blocker.blocks(this)
+        /** Create: blocker.blocks(this) */
         const created = await this.createRelation(blockerIssue.id, issue.id, "blocks");
         if (created) {
           added++;
@@ -854,14 +826,11 @@ export class LinearClient implements MutabiWasfa {
     }
   }
 
-  // ===========================================================================
-  // Project Operations
-  // ===========================================================================
 
   /**
    * Get project by ID
    */
-  async getProject(projectId: string): Promise<TrackerProject | null> {
+  async getProject(projectId: string): Promise<MashruMutabi | null> {
     const result = await this.query<{ project: LinearProject }>(
       `
       ${this.issueFragment}
@@ -895,7 +864,7 @@ export class LinearClient implements MutabiWasfa {
   /**
    * Search projects by name
    */
-  async searchProjects(name: string): Promise<TrackerProject[]> {
+  async searchProjects(name: string): Promise<MashruMutabi[]> {
     const result = await this.query<{ projects: { nodes: LinearProject[] } }>(
       `
       query($name: String!) {
@@ -921,9 +890,6 @@ export class LinearClient implements MutabiWasfa {
     }));
   }
 
-  // ===========================================================================
-  // URL Parsing
-  // ===========================================================================
 
   /**
    * Get regex pattern matching Linear URLs
@@ -936,7 +902,7 @@ export class LinearClient implements MutabiWasfa {
    * Parse a Linear URL and extract entity type and ID
    * Supports: /issue/TEAM-123, /project/abc123, etc.
    */
-  parseUrl(url: string): ParsedTicketUrl | null {
+  parseUrl(url: string): RabitWasfaMuhallal | null {
     try {
       const parsed = new URL(url);
 
@@ -946,19 +912,19 @@ export class LinearClient implements MutabiWasfa {
 
       const pathParts = parsed.pathname.split("/").filter(Boolean);
 
-      // /issue/TEAM-123 or /TEAM/issue/TEAM-123
+      /** /issue/TEAM-123 or /TEAM/issue/TEAM-123 */
       const issueIndex = pathParts.indexOf("issue");
       if (issueIndex !== -1 && pathParts[issueIndex + 1]) {
         return { type: "ticket" as NawKiyan, id: pathParts[issueIndex + 1] };
       }
 
-      // /project/uuid
+      /** /project/uuid */
       const projectIndex = pathParts.indexOf("project");
       if (projectIndex !== -1 && pathParts[projectIndex + 1]) {
         return { type: "project" as NawKiyan, id: pathParts[projectIndex + 1] };
       }
 
-      // Direct identifier like /TEAM-123
+      /** Direct identifier like /TEAM-123 */
       const identifierMatch = pathParts.find((p) => /^[A-Z]+-\d+$/.test(p));
       if (identifierMatch) {
         return { type: "ticket" as NawKiyan, id: identifierMatch };
@@ -970,14 +936,11 @@ export class LinearClient implements MutabiWasfa {
     }
   }
 
-  // ===========================================================================
-  // Milestone / Cycle Operations
-  // ===========================================================================
 
   /**
    * Search milestones (cycles in Linear terminology)
    */
-  async searchMilestones(query: string): Promise<TrackerMilestone[]> {
+  async searchMilestones(query: string): Promise<MaalimMutabi[]> {
     const result = await this.query<{
       cycles: {
         nodes: Array<{
@@ -1023,7 +986,7 @@ export class LinearClient implements MutabiWasfa {
   /**
    * Get the currently active milestone (cycle)
    */
-  async getActiveMilestone(): Promise<TrackerMilestone | null> {
+  async getActiveMilestone(): Promise<MaalimMutabi | null> {
     const cycle = await this.getCurrentCycle();
     if (!cycle) return null;
     return {
@@ -1032,9 +995,6 @@ export class LinearClient implements MutabiWasfa {
     };
   }
 
-  // ===========================================================================
-  // Internal Helpers
-  // ===========================================================================
 
   /**
    * Map a LinearIssue to the normalized WasfaMutaba type

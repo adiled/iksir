@@ -1,8 +1,17 @@
 /**
+ * Sail (سائل) - The Oracle
+ * 
+ * One of the sacred Khuddām (خدّام - Servants) of the alchemical workshop.
+ * Sail divines the nature of questions, separating dhahab (gold) from
+ * khabath (dross). Only questions of true worth are brought before the
+ * Kimyawi (the Human Alchemist).
+ */
+
+/**
  * Question Handler
  *
  * Handles question.asked events from OpenCode SSE.
- * Classifies questions as worthy (forward to operator) or cry-baby (auto-answer).
+ * Classifies questions as worthy (forward to al-Kimyawi) or cry-baby (auto-answer).
  *
  * Similar to pm_notify filtering in tool-executor, but for the
  * question tool which presents MCQ-style decisions.
@@ -11,18 +20,18 @@
 import { logger } from "../logging/logger.ts";
 import { OpenCodeClient } from "../opencode/client.ts";
 import {
-  insertQuestion as dbInsertQuestion,
-  getUnansweredQuestions,
-  markQuestionAnswered as dbMarkQuestionAnswered,
+  adkhalaSual as dbInsertQuestion,
+  jalabaAseilaGhairMujaba,
+  allamaJawabSual as dbMarkJawabSualed,
 } from "../../db/db.ts";
 import { classifyQuestion } from "./classifier.ts";
 import type { MudirJalasat } from "./katib.ts";
 import type {
-  QuestionAskedEvent,
-  QuestionInfo,
-  QuestionAnswer,
-  QuestionClassification,
-  PendingQuestion,
+  HadathSualMatlub,
+  MaalumatSual,
+  JawabSual,
+  TasnifSual,
+  SualMuallaq,
   RasulKharij,
 } from "../types.ts";
 
@@ -39,29 +48,20 @@ export class Sail {
   #messenger: RasulKharij;
   #sessionManager: MudirJalasat;
 
-  // Pending questions awaiting operator response (keyed by question ID)
-  #pendingQuestions: Map<string, PendingQuestion> = new Map();
+  #pendingQuestions: Map<string, SualMuallaq> = new Map();
 
-  // Short callback ID → full question ID mapping.
-  // Telegram callback_data is limited to 64 bytes; full UUIDs (36 chars)
-  // plus prefix and label would exceed this. We use 8-char short IDs instead.
   #callbackIdMap: Map<string, string> = new Map();
 
-  // Questions awaiting custom text input (keyed by murshid identifier)
-  // When the operator clicks "Type answer...", we store the question ID here
-  // and the next text message in that murshid's channel becomes the custom answer
   #awaitingCustomInput: Map<string, string> = new Map();
 
-  // Transport-layer callback for rich question rendering (inline keyboards, etc.)
-  // Set by main.ts to handle Telegram-specific UI.
-  #onQuestionForwarded: ((pending: PendingQuestion, question: QuestionInfo) => Promise<void>) | null = null;
+  #onQuestionForwarded: ((pending: SualMuallaq, question: MaalumatSual) => Promise<void>) | null = null;
 
   /**
    * Set callback for transport-specific question rendering.
-   * Called after a question is forwarded to operator via messenger.
+   * Called after a question is forwarded to al-Kimyawi via messenger.
    */
   setOnQuestionForwarded(
-    callback: (pending: PendingQuestion, question: QuestionInfo) => Promise<void>,
+    callback: (pending: SualMuallaq, question: MaalumatSual) => Promise<void>,
   ): void {
     this.#onQuestionForwarded = callback;
   }
@@ -91,9 +91,9 @@ export class Sail {
 
   /**
    * Handle a question.asked event from OpenCode SSE.
-   * Classifies the question and either auto-answers or forwards to operator.
+   * Classifies the question and either auto-answers or forwards to al-Kimyawi.
    */
-  async handleQuestionAsked(event: QuestionAskedEvent): Promise<void> {
+  async handleQuestionAsked(event: HadathSualMatlub): Promise<void> {
     const { id, sessionID, questions } = event.properties;
 
     await logger.info("question-handler", `Received question ${id}`, {
@@ -101,20 +101,21 @@ export class Sail {
       questionCount: questions.length,
     });
 
-    // Find which murshid this session belongs to
+    /** Find which murshid this session belongs to */
     const murshid = this.#sessionManager.wajadaJalasatMurshid().find(
       (o) => o.id === sessionID
     );
 
     if (!murshid) {
       await logger.warn("question-handler", `Question from unknown session ${sessionID}`);
-      // Reject - we don't know which murshid this is
       await this.#opencode.rejectQuestion(sessionID, id);
       return;
     }
 
-    // Classify each question (for now, treat all questions in batch as one)
-    // Take the first question as representative (most question calls have 1 question)
+    /**
+     * Classify each question (for now, treat all questions in batch as one)
+     * Take the first question as representative (most question calls have 1 question)
+     */
     const primaryQuestion = questions[0];
     if (!primaryQuestion) {
       await logger.warn("question-handler", `Question ${id} has no questions array`);
@@ -130,10 +131,8 @@ export class Sail {
     });
 
     if (classification.classification === "CRY_BABY") {
-      // Auto-answer and inject guidance
       await this.#handleCryBaby(sessionID, id, questions, classification);
     } else {
-      // Forward to operator via messenger
       await this.#forwardToDaemon(sessionID, id, questions, murshid.identifier);
     }
   }
@@ -144,19 +143,18 @@ export class Sail {
   async #handleCryBaby(
     sessionID: string,
     questionId: string,
-    questions: QuestionInfo[],
-    classification: QuestionClassification
+    questions: MaalumatSual[],
+    classification: TasnifSual
   ): Promise<void> {
-    // Build auto-answers
-    const answers: QuestionAnswer[] = questions.map((q, index) => {
-      // Find the recommended option or use autoAnswer from classification
+    /** Build auto-answers */
+    const answers: JawabSual[] = questions.map((q, index) => {
+      /** Find the recommended option or use autoAnswer from classification */
       let selectedLabel: string;
 
       if (classification.autoAnswer) {
-        // Use classifier's suggested answer
         selectedLabel = classification.autoAnswer;
       } else {
-        // Find option marked as "(Recommended)" or pick first
+        /** Find option marked as "(Recommended)" or pick first */
         const recommended = q.options.find((o) => o.label.includes("(Recommended)"));
         selectedLabel = recommended?.label ?? q.options[0]?.label ?? "";
       }
@@ -167,7 +165,7 @@ export class Sail {
       };
     });
 
-    // Reply with auto-answer
+    /** Reply with auto-answer */
     const replied = await this.#opencode.replyToQuestion(sessionID, questionId, answers);
 
     if (replied) {
@@ -175,12 +173,11 @@ export class Sail {
         autoAnswer: classification.autoAnswer,
       });
     } else {
-      // Fallback: reject
       await this.#opencode.rejectQuestion(sessionID, questionId);
       await logger.warn("question-handler", `Failed to auto-answer, rejected ${questionId}`);
     }
 
-    // Inject guidance as follow-up message
+    /** Inject guidance as follow-up message */
     const guidance = `Your question was auto-answered. Reason: ${classification.reason}
 
 ${classification.rejection ?? "Proceed autonomously using your judgment."}
@@ -191,18 +188,18 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
   }
 
   /**
-   * Forward a worthy question to operator via messenger.
+   * Forward a worthy question to al-Kimyawi via messenger.
    * Sends formatted text. Transport-specific rendering (inline keyboards)
    * is handled by the onQuestionForwarded callback if set.
    */
   async #forwardToDaemon(
     sessionID: string,
     questionId: string,
-    questions: QuestionInfo[],
+    questions: MaalumatSual[],
     huwiyyatMurshid: string,
   ): Promise<void> {
-    // Store as pending
-    const pending: PendingQuestion = {
+    /** Store as pending */
+    const pending: SualMuallaq = {
       id: questionId,
       sessionID,
       huwiyyatMurshid,
@@ -211,7 +208,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
     };
     this.#pendingQuestions.set(questionId, pending);
 
-    // Persist to SQLite immediately so we don't lose pending questions on crash
+    /** Persist to SQLite immediately so we don't lose pending questions on crash */
     const primaryQuestion = questions[0];
     dbInsertQuestion({
       id: questionId,
@@ -220,13 +217,11 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
       options: primaryQuestion?.options.map(o => o.label) ?? [],
     });
 
-    // Build question text
+    /** Build question text */
     const messageText = this.#formatQuestionMessage(primaryQuestion!, huwiyyatMurshid);
 
-    // Send via messenger
     await this.#messenger.arsalaMunassaq({ murshid: huwiyyatMurshid }, messageText);
 
-    // Notify transport layer for rich rendering (inline keyboards, etc.)
     if (this.#onQuestionForwarded) {
       await this.#onQuestionForwarded(pending, primaryQuestion!);
     }
@@ -239,7 +234,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
   /**
    * Format a question for Telegram display.
    */
-  #formatQuestionMessage(question: QuestionInfo, huwiyyatMurshid: string): string {
+  #formatQuestionMessage(question: MaalumatSual, huwiyyatMurshid: string): string {
     let msg = `**${question.header}** (${huwiyyatMurshid})\n\n`;
     msg += `${question.question}\n\n`;
     msg += `_Options:_\n`;
@@ -266,15 +261,16 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
    */
   buildInlineKeyboard(
     questionId: string,
-    question: QuestionInfo
+    question: MaalumatSual
   ): { inline_keyboard: Array<Array<{ text: string; callback_data: string }>> } {
     const rows: Array<Array<{ text: string; callback_data: string }>> = [];
-    // Use short 8-char ID to stay within Telegram's 64-byte callback_data limit.
-    // Format: "q:{8}:{label}" — 11 chars overhead, leaving 53 for label.
+    /**
+     * Use short 8-char ID to stay within Telegram's 64-byte callback_data limit.
+     * Format: "q:{8}:{label}" — 11 chars overhead, leaving 53 for label.
+     */
     const shortId = this.#shortCallbackId(questionId);
-    const maxLabelLen = 64 - 2 - shortId.length - 1; // q: + shortId + :
+    const maxLabelLen = 64 - 2 - shortId.length - 1;
 
-    // One button per option
     for (const opt of question.options) {
       const shortLabel = opt.label.slice(0, maxLabelLen);
       rows.push([
@@ -285,7 +281,6 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
       ]);
     }
 
-    // Add custom answer button if allowed
     if (question.custom !== false) {
       rows.push([
         {
@@ -313,14 +308,14 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
       return false;
     }
 
-    // Build answer
-    const answers: QuestionAnswer[] = pending.questions.map((_, index) => ({
+    /** Build answer */
+    const answers: JawabSual[] = pending.questions.map((_, index) => ({
       questionIndex: index,
       selected: selectedLabel === "__custom__" && customText ? [] : [selectedLabel],
       custom: selectedLabel === "__custom__" ? customText : undefined,
     }));
 
-    // Reply to OpenCode
+    /** Reply to OpenCode */
     const replied = await this.#opencode.replyToQuestion(
       pending.sessionID,
       questionId,
@@ -329,9 +324,9 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
 
     if (replied) {
       this.#pendingQuestions.delete(questionId);
-      // Mark answered in SQLite
+      /** Mark answered in SQLite */
       const answerText = selectedLabel === "__custom__" && customText ? customText : selectedLabel;
-      dbMarkQuestionAnswered(questionId, answerText);
+      dbMarkJawabSualed(questionId, answerText);
       await logger.info("question-handler", `Answered question ${questionId}`, {
         selected: selectedLabel,
         custom: customText?.slice(0, 50),
@@ -362,18 +357,18 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
     const shortId = parts[1];
     const fullId = this.#resolveCallbackId(shortId);
     if (!fullId) {
-      return null; // Unknown short ID (daemon restarted and mapping lost — question still in SQLite)
+      return null;
     }
     return {
       questionId: fullId,
-      selectedLabel: parts.slice(2).join(":"), // Handle labels with colons
+      selectedLabel: parts.slice(2).join(":"),
     };
   }
 
   /**
    * Get pending question by ID.
    */
-  getPendingQuestion(questionId: string): PendingQuestion | undefined {
+  wajadaSualMuallaq(questionId: string): SualMuallaq | undefined {
     return this.#pendingQuestions.get(questionId);
   }
 
@@ -383,7 +378,6 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
    */
   async markAwaitingCustomInput(huwiyyatMurshid: string, questionId: string): Promise<void> {
     this.#awaitingCustomInput.set(huwiyyatMurshid, questionId);
-    // Persist state so we remember awaiting input after restart
     await this.saveState();
   }
 
@@ -404,10 +398,9 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
       return false;
     }
 
-    // Clear the awaiting state
     this.#awaitingCustomInput.delete(huwiyyatMurshid);
 
-    // Submit the custom answer
+    /** Submit the custom answer */
     const success = await this.handleQuestionCallback(questionId, "__custom__", text);
 
     if (success) {
@@ -416,24 +409,19 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
       });
     }
 
-    // Persist state after clearing awaiting input
     await this.saveState();
 
     return success;
   }
 
-  // ===========================================================================
-  // State Persistence (Resumability)
-  // ===========================================================================
 
   /**
    * Save question handler state.
    * Questions are persisted to SQLite on insert (dbInsertQuestion) and on
-   * answer (dbMarkQuestionAnswered), so this is a no-op kept for interface
+   * answer (dbMarkJawabSualed), so this is a no-op kept for interface
    * compatibility with the daemon lifecycle.
    */
   async saveState(): Promise<void> {
-    // No-op: SQLite writes happen inline in #forwardToDaemon and handleQuestionCallback
   }
 
   /**
@@ -442,26 +430,27 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
    */
   async loadState(): Promise<void> {
     try {
-      const dbQuestions = getUnansweredQuestions();
+      const dbQuestions = jalabaAseilaGhairMujaba();
       
       if (dbQuestions.length === 0) {
         await logger.info("question-handler", "No pending questions found");
         return;
       }
 
-      // Restore pending questions from SQLite
       this.#pendingQuestions.clear();
       for (const dbQ of dbQuestions) {
-        // Reconstruct PendingQuestion from SQLite
-        // Note: SQLite stores simplified version, in-memory has full structure
+        /**
+         * Reconstruct SualMuallaq from SQLite
+         * Note: SQLite stores simplified version, in-memory has full structure
+         */
         const options = dbQ.options ? JSON.parse(dbQ.options) as string[] : [];
 
-        // Resolve murshid identifier from session ID
+        /** Resolve murshid identifier from session ID */
         const murshid = this.#sessionManager.wajadaJalasatMurshid().find(
           (o) => o.id === dbQ.session_id
         );
         
-        const pendingQuestion: PendingQuestion = {
+        const pendingQuestion: SualMuallaq = {
           id: dbQ.id,
           sessionID: dbQ.session_id,
           huwiyyatMurshid: murshid?.identifier ?? dbQ.session_id,
@@ -475,11 +464,9 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
         };
         
         this.#pendingQuestions.set(dbQ.id, pendingQuestion);
-        // Rebuild short callback ID mapping for Telegram buttons
         this.#shortCallbackId(dbQ.id);
       }
 
-      // awaitingCustomInput is not persisted (short-lived state)
       this.#awaitingCustomInput.clear();
 
       await logger.info("question-handler", "Loaded question state", {
@@ -487,7 +474,6 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
         awaitingInput: this.#awaitingCustomInput.size,
       });
 
-      // Log details of pending questions for visibility
       if (this.#pendingQuestions.size > 0) {
         for (const [id, q] of this.#pendingQuestions) {
           await logger.info("question-handler", `Restored pending question: ${id}`, {

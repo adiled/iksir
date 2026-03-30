@@ -2,7 +2,7 @@
  * Shared Classification Service
  *
  * LLM-based gatekeeper for notifications and questions.
- * Classifies as WORTHY (forward to operator) or CRY_BABY (handle autonomously).
+ * Classifies as WORTHY (forward to al-Kimyawi) or CRY_BABY (handle autonomously).
  *
  * Prompt templates are loaded from files (configurable via env vars) with
  * inline fallbacks. AGENTS.md cache shared across all classification calls.
@@ -11,7 +11,7 @@
 import { logger } from "../logging/logger.ts";
 import { join } from "jsr:@std/path";
 import type { OpenCodeClient } from "../opencode/client.ts";
-import type { QuestionInfo, QuestionClassification } from "../types.ts";
+import type { MaalumatSual, TasnifSual } from "../types.ts";
 
 function getAgentsMdPath(): string {
   return Deno.env.get("MUNADI_AGENTS_MD_PATH") ??
@@ -22,9 +22,6 @@ function getRepoPath(): string {
   return Deno.env.get("MUNADI_REPO_PATH") ?? ".";
 }
 
-// =============================================================================
-// Template Loading
-// =============================================================================
 
 /** Cached content: null = not loaded, string = content, false = load failed */
 let agentsMdContent: string | null = null;
@@ -68,20 +65,17 @@ function renderTemplate(template: string, vars: Record<string, string>): string 
   return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? "");
 }
 
-// =============================================================================
-// Inline Fallback Templates
-// =============================================================================
 
-const NOTIFICATION_FALLBACK = `You are a gatekeeper protecting the operator's attention.
+const NOTIFICATION_FALLBACK = `You are a gatekeeper protecting the intibah al-Kimyawi.
 
-The operator handles:
+Al-Kimyawi handles:
 - Business decisions and priorities
 - Architecture boundaries (where features live, API surfaces)
 - Political timing (when to disclose PRs, who to loop in)
 - External blockers requiring human action (waiting on designer, other team, etc.)
 - Milestone completions worth celebrating
 
-The operator does NOT handle:
+Al-Kimyawi does NOT handle:
 - Implementation details ("should I use pattern X or Y?")
 - Self-answerable questions (check docs, precedents in codebase)
 - Progress updates (starting ticket, tests passing - expected, not newsworthy)
@@ -93,13 +87,13 @@ Reference guidelines the orchestrator should follow autonomously:
 {{agentGuidelines}}
 ---
 
-Orchestrator wants to send this message to the operator:
+Orchestrator wants to send this message to al-Kimyawi:
 ---
 {{message}}
 ---
 
 Classify this message:
-- WORTHY: Genuinely needs the operator's attention (architecture ambiguity, external blocker, political timing, milestone)
+- WORTHY: Genuinely needs the intibah al-Kimyawi (architecture ambiguity, external blocker, political timing, milestone)
 - CRY_BABY: Should be handled autonomously by orchestrator using specs, docs, and precedents
 
 If CRY_BABY, provide a terse rejection (1-2 sentences) with specific guidance. Reference file paths when applicable.
@@ -107,16 +101,16 @@ If CRY_BABY, provide a terse rejection (1-2 sentences) with specific guidance. R
 Respond ONLY with valid JSON (no markdown, no explanation):
 {"classification": "WORTHY" or "CRY_BABY", "reason": "brief explanation", "rejection": "terse guidance if CRY_BABY, null if WORTHY"}`;
 
-const QUESTION_FALLBACK = `You are a gatekeeper protecting the operator's attention.
+const QUESTION_FALLBACK = `You are a gatekeeper protecting the intibah al-Kimyawi.
 
-The operator handles:
+Al-Kimyawi handles:
 - Business decisions affecting scope, timeline, or resources
 - Architecture boundaries (which module owns a feature, API surface design)
 - Political timing (when to disclose PRs, who to involve in reviews)
 - External blockers requiring human action (waiting on designer, other team)
 - Tradeoffs that require human judgment (speed vs quality, now vs later)
 
-The operator does NOT handle:
+Al-Kimyawi does NOT handle:
 - Implementation details ("should I use pattern X or Y?")
 - Self-answerable questions (check docs, precedents, existing code)
 - Obvious choices (when one option is clearly better per guidelines)
@@ -136,7 +130,7 @@ Options:
 {{options}}
 
 Classify this question:
-- WORTHY: Genuinely needs the operator's judgment (business impact, architecture boundaries, political timing)
+- WORTHY: Genuinely needs the hukm al-Kimyawi (business impact, architecture boundaries, political timing)
 - CRY_BABY: Can be decided autonomously using specs, docs, precedents, or common sense
 
 If CRY_BABY:
@@ -151,9 +145,6 @@ Respond ONLY with valid JSON (no markdown, no explanation):
   "autoAnswer": "exact label of option to pick if CRY_BABY, null if WORTHY"
 }`;
 
-// =============================================================================
-// Notification Classification
-// =============================================================================
 
 interface NotificationClassification {
   worthy: boolean;
@@ -162,7 +153,7 @@ interface NotificationClassification {
 }
 
 /**
- * Classify a notification as worthy of the operator's attention or cry-baby.
+ * Classify a notification as worthy of the intibah al-Kimyawi or cry-baby.
  */
 export async function classifyNotification(
   opencode: OpenCodeClient,
@@ -188,7 +179,7 @@ export async function classifyNotification(
   try {
     const result = await opencode.classify(prompt);
     if (!result.success || !result.response) {
-      await logger.warn("classifier", "Notification classification failed, allowing", {
+      await logger.warn("classifier", "Ishara classification failed, allowing", {
         error: result.error,
       });
       return { worthy: true, reason: "Classification failed", rejection: null };
@@ -202,24 +193,21 @@ export async function classifyNotification(
       rejection: isWorthy ? null : (parsed.rejection ?? "Handle this autonomously."),
     };
   } catch (error) {
-    await logger.warn("classifier", "Notification classification error, allowing", {
+    await logger.warn("classifier", "Ishara classification error, allowing", {
       error: String(error),
     });
     return { worthy: true, reason: "Classification error", rejection: null };
   }
 }
 
-// =============================================================================
-// Question Classification
-// =============================================================================
 
 /**
- * Classify a question as worthy of the operator's judgment or cry-baby.
+ * Classify a question as worthy of the hukm al-Kimyawi or cry-baby.
  */
 export async function classifyQuestion(
   opencode: OpenCodeClient,
-  question: QuestionInfo,
-): Promise<QuestionClassification> {
+  question: MaalumatSual,
+): Promise<TasnifSual> {
   const md = await loadAgentsMd();
   if (!md) {
     return { classification: "WORTHY", reason: "AGENTS.md unavailable", rejection: null, autoAnswer: null };
@@ -252,14 +240,14 @@ export async function classifyQuestion(
       return { classification: "WORTHY", reason: "Classification failed", rejection: null, autoAnswer: null };
     }
 
-    // Parse JSON — handle potential markdown wrapping
+    /** Parse JSON — handle potential markdown wrapping */
     let jsonStr = result.response.trim();
     if (jsonStr.startsWith("```")) {
       jsonStr = jsonStr.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
     }
     const parsed = JSON.parse(jsonStr);
 
-    // Handle "pick recommended" / "pick first" shortcuts
+    /** Handle "pick recommended" / "pick first" shortcuts */
     let autoAnswer = parsed.autoAnswer;
     if (autoAnswer && parsed.classification === "CRY_BABY") {
       if (autoAnswer.toLowerCase() === "pick recommended") {

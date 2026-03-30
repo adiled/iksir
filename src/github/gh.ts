@@ -7,7 +7,7 @@
 
 import { logger } from "../logging/logger.ts";
 import { execCommand, type ExecResult } from "../utils/exec.ts";
-import type { TasmimIksir, ReviewComment, CommentAssessment } from "../types.ts";
+import type { TasmimIksir, TaaliqMuraja, TaqyimTaaliq } from "../types.ts";
 
 interface GhPullRequest {
   number: number;
@@ -45,12 +45,12 @@ interface GhCheckRun {
 export class GitHubClient {
   private owner: string;
   private repo: string;
-  private operatorUsername: string;
+  private ismKimyawi: string;
 
   constructor(config: TasmimIksir) {
     this.owner = config.github.owner;
     this.repo = config.github.repo;
-    this.operatorUsername = config.github.operatorUsername;
+    this.ismKimyawi = config.github.ismKimyawi;
   }
 
   /**
@@ -99,14 +99,11 @@ export class GitHubClient {
     const result = await this.exec(["auth", "status", "--show-token"]);
     if (!result.success) return null;
 
-    // Parse "Logged in to github.com account USERNAME"
+    /** Parse "Logged in to github.com account USERNAME" */
     const match = result.stderr.match(/account\s+(\S+)/);
     return match?.[1] ?? null;
   }
 
-  // ===========================================================================
-  // Pull Request Operations
-  // ===========================================================================
 
   /**
    * Create a draft pull request
@@ -141,8 +138,10 @@ export class GitHubClient {
       return null;
     }
 
-    // gh pr create prints the URL to stdout on success
-    // Format: https://github.com/owner/repo/pull/123
+    /**
+     * gh pr create prints the URL to stdout on success
+     * Format: https://github.com/owner/repo/pull/123
+     */
     const url = result.stdout.trim();
     const raqamRisalaMatch = url.match(/\/pull\/(\d+)$/);
 
@@ -237,22 +236,19 @@ export class GitHubClient {
     return result.success;
   }
 
-  // ===========================================================================
-  // Comments & Reviews
-  // ===========================================================================
 
   /**
    * Get PR comments (both review comments and issue comments)
    */
   async getPRComments(raqamRisala: number): Promise<GhPRComment[]> {
-    // Get review comments via API
+    /** Get review comments via API */
     const reviewComments = await this.execJson<GhPRComment[]>([
       "api",
       `repos/${this.owner}/${this.repo}/pulls/${raqamRisala}/comments`,
       "--jq", "[.[] | {id: .id, body: .body, author: {login: .user.login}, createdAt: .created_at, path: .path, line: .line, diffHunk: .diff_hunk}]",
     ]) ?? [];
 
-    // Get issue comments
+    /** Get issue comments */
     const issueComments = await this.execJson<GhPRComment[]>([
       "api",
       `repos/${this.owner}/${this.repo}/issues/${raqamRisala}/comments`,
@@ -265,19 +261,19 @@ export class GitHubClient {
   /**
    * Get new comments since a timestamp
    */
-  async getNewComments(raqamRisala: number, since: Date): Promise<ReviewComment[]> {
+  async getNewComments(raqamRisala: number, since: Date): Promise<TaaliqMuraja[]> {
     const allComments = await this.getPRComments(raqamRisala);
 
     return allComments
       .filter((c) => new Date(c.createdAt) > since)
-      .map((c) => this.toReviewComment(raqamRisala, c));
+      .map((c) => this.toTaaliqMuraja(raqamRisala, c));
   }
 
   /**
-   * Convert gh comment to ReviewComment type
+   * Convert gh comment to TaaliqMuraja type
    */
-  private toReviewComment(raqamRisala: number, comment: GhPRComment): ReviewComment {
-    const isOperator = comment.author.login === this.operatorUsername;
+  private toTaaliqMuraja(raqamRisala: number, comment: GhPRComment): TaaliqMuraja {
+    const huwaKimyawi = comment.author.login === this.ismKimyawi;
 
     return {
       id: String(comment.id),
@@ -287,21 +283,23 @@ export class GitHubClient {
       path: comment.path,
       line: comment.line,
       createdAt: new Date(comment.createdAt),
-      isOperator,
-      assessment: this.assessComment(comment.body, isOperator),
+      isOperator: huwaKimyawi,
+      assessment: this.assessComment(comment.body, huwaKimyawi),
     };
   }
 
   /**
    * Basic comment assessment (can be enhanced with LLM later)
    */
-  private assessComment(body: string, isOperator: boolean): CommentAssessment {
+  private assessComment(body: string, huwaKimyawi: boolean): TaqyimTaaliq {
     const lowerBody = body.toLowerCase().trim();
 
-    // Check for command patterns — applies to ALL comments including the operator.s.
-    // The operator leaves PR commands that orchestrators must execute.
-    // The `isOperator` flag on ReviewComment tells consumers WHO wrote it;
-    // the assessment tells them WHAT was written.
+    /**
+     * Check for command patterns — applies to ALL comments including the operator.s.
+     * The operator leaves PR commands that orchestrators must execute.
+     * The `huwaKimyawi` flag on TaaliqMuraja tells consumers WHO wrote it;
+     * the assessment tells them WHAT was written.
+     */
     const commandPatterns = [
       /^(fix|update|change|remove|add|refactor|revert)\s/i,
       /^please\s+(fix|update|change|remove|add)/i,
@@ -314,16 +312,14 @@ export class GitHubClient {
       return {
         isCommand: true,
         intent: "command",
-        // Operator.s commands are authoritative — high confidence
-        confidence: isOperator ? 1.0 : 0.7,
-        reasoning: isOperator
+        confidence: huwaKimyawi ? 1.0 : 0.7,
+        reasoning: huwaKimyawi
           ? "Operator command on PR — execute immediately"
           : "Detected imperative language pattern",
       };
     }
 
-    // Non-command operator comments (acknowledgments, status updates) — neutral
-    if (isOperator) {
+    if (huwaKimyawi) {
       return {
         isCommand: false,
         intent: "neutral",
@@ -332,7 +328,6 @@ export class GitHubClient {
       };
     }
 
-    // Check for questions
     if (body.includes("?")) {
       return {
         isCommand: false,
@@ -342,7 +337,7 @@ export class GitHubClient {
       };
     }
 
-    // Check for praise
+    /** Check for praise */
     const praisePatterns = [/\b(lgtm|looks good|nice|great|awesome|perfect)\b/i];
     if (praisePatterns.some((p) => p.test(lowerBody))) {
       return {
@@ -353,7 +348,7 @@ export class GitHubClient {
       };
     }
 
-    // Check for concern
+    /** Check for concern */
     const concernPatterns = [
       /\b(concern|worried|issue|problem|bug|wrong|incorrect)\b/i,
       /\bwhat\s+if\b/i,
@@ -367,7 +362,7 @@ export class GitHubClient {
       };
     }
 
-    // Check for suggestion
+    /** Check for suggestion */
     const suggestionPatterns = [
       /\b(consider|maybe|could|might|suggest|what\s+about)\b/i,
       /\bhow\s+about\b/i,
@@ -401,9 +396,6 @@ export class GitHubClient {
     return result.success;
   }
 
-  // ===========================================================================
-  // Checks & Status
-  // ===========================================================================
 
   /**
    * Get PR check runs status
@@ -424,7 +416,7 @@ export class GitHubClient {
   async arePRChecksPassing(raqamRisala: number): Promise<boolean> {
     const checks = await this.getPRChecks(raqamRisala);
 
-    if (checks.length === 0) return true; // No checks configured
+    if (checks.length === 0) return true;
 
     return checks.every(
       (c) => c.status === "completed" && c.conclusion === "success"
@@ -457,9 +449,6 @@ export class GitHubClient {
     return { passed: false, checks };
   }
 
-  // ===========================================================================
-  // Branch Operations
-  // ===========================================================================
 
   /**
    * Check if a branch exists

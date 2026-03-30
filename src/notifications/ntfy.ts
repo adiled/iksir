@@ -1,14 +1,14 @@
 /**
- * ntfy.sh Notification Client
+ * ntfy.sh Ishara Client
  *
  * Send push notifications via ntfy.sh (self-hosted or cloud).
  * Supports action buttons, priorities, and tags.
  */
 
 import { logger } from "../logging/logger.ts";
-import type { TasmimIksir, Notification, NotificationAction, NotificationPriority } from "../types.ts";
+import type { TasmimIksir, Ishara, FiilIshara, AwwaliyyatIshara } from "../types.ts";
 
-const PRIORITY_MAP: Record<NotificationPriority, number> = {
+const PRIORITY_MAP: Record<AwwaliyyatIshara, number> = {
   min: 1,
   low: 2,
   default: 3,
@@ -49,7 +49,7 @@ export class NtfyClient {
    * Build action string for ntfy
    * Format: "action, label, url[, clear=true]"
    */
-  private buildActions(actions: NotificationAction[]): string {
+  private buildActions(actions: FiilIshara[]): string {
     return actions
       .map((action) => {
         const parts = ["http", action.label, action.url ?? `${this.server}/action/${action.action}`];
@@ -61,7 +61,7 @@ export class NtfyClient {
   /**
    * Send a notification
    */
-  async send(notification: Notification): Promise<boolean> {
+  async send(notification: Ishara): Promise<boolean> {
     if (!this.enabled) {
       await logger.warn("ntfy", "ntfy notifications are disabled, skipping");
       return false;
@@ -72,7 +72,7 @@ export class NtfyClient {
 
     const headers: Record<string, string> = {
       Title: notification.title,
-      Priority: String(PRIORITY_MAP[notification.priority]),
+      Awwaliyya: String(PRIORITY_MAP[notification.awwaliyya]),
       Tags: tags.join(","),
     };
 
@@ -120,7 +120,7 @@ export class NtfyClient {
     huwiyyatWasfa?: string,
     projectId?: string
   ): Promise<boolean> {
-    const actions: NotificationAction[] = options.map((opt, i) => ({
+    const actions: FiilIshara[] = options.map((opt, i) => ({
       label: opt,
       action: `blocker_${huwiyyatWasfa ?? "unknown"}_option_${i}`,
     }));
@@ -129,7 +129,7 @@ export class NtfyClient {
       category: "blocker",
       title,
       body,
-      priority: "urgent",
+      awwaliyya: "urgent",
       actions,
       huwiyyatWasfa,
       projectId,
@@ -146,7 +146,7 @@ export class NtfyClient {
     huwiyyatWasfa?: string,
     projectId?: string
   ): Promise<boolean> {
-    const actions: NotificationAction[] = options.map((opt, i) => ({
+    const actions: FiilIshara[] = options.map((opt, i) => ({
       label: opt,
       action: `decision_${huwiyyatWasfa ?? "unknown"}_option_${i}`,
     }));
@@ -155,7 +155,7 @@ export class NtfyClient {
       category: "decision",
       title,
       body,
-      priority: "high",
+      awwaliyya: "high",
       actions,
       huwiyyatWasfa,
       projectId,
@@ -175,7 +175,7 @@ export class NtfyClient {
       category: "pr_ready",
       title: `Draft PR Ready: #${raqamRisala}`,
       body: `${huwiyyatWasfa}\n\n${summary}`,
-      priority: "default",
+      awwaliyya: "default",
       url: prUrl,
       huwiyyatWasfa,
       actions: [
@@ -196,7 +196,7 @@ export class NtfyClient {
       category: "milestone",
       title: `Milestone Complete: ${projectId}`,
       body: `${title}\n\n${summary}`,
-      priority: "high",
+      awwaliyya: "high",
       projectId,
     });
   }
@@ -210,7 +210,7 @@ export class NtfyClient {
         ? `Current blockers:\n${blockedItems.map((b) => `• ${b}`).join("\n")}\n\nOptions:\n${options.map((o, i) => `${i + 1}. ${o}`).join("\n")}`
         : "No blockers. Ready to continue work.";
 
-    const actions: NotificationAction[] =
+    const actions: FiilIshara[] =
       blockedItems.length > 0
         ? options.map((_opt, i) => ({
             label: `Option ${i + 1}`,
@@ -222,7 +222,7 @@ export class NtfyClient {
       category: "quiet_hours_exit",
       title: "Good morning!",
       body,
-      priority: blockedItems.length > 0 ? "high" : "default",
+      awwaliyya: blockedItems.length > 0 ? "high" : "default",
       actions,
     });
   }

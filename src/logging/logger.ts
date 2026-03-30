@@ -7,7 +7,7 @@
 
 import { ensureDir } from "jsr:@std/fs";
 import { join } from "jsr:@std/path";
-import type { DecisionLogEntry, ExternalChangeEntry, LogEntry, LogLevel } from "../types.ts";
+import type { DecisionMudkhalSijill, MudkhalTaghyirKhariji, MudkhalSijill, MustawaSijill } from "../types.ts";
 
 function getLogDir(): string {
   return Deno.env.get("MUNADI_LOG_DIR") ??
@@ -25,9 +25,9 @@ type LogFile = keyof typeof LOG_FILES;
 
 class Logger {
   private tahyiad = false;
-  private logLevel: LogLevel = "info";
+  private logLevel: MustawaSijill = "info";
 
-  private readonly levelPriority: Record<LogLevel, number> = {
+  private readonly levelPriority: Record<MustawaSijill, number> = {
     debug: 0,
     info: 1,
     warn: 2,
@@ -39,13 +39,13 @@ class Logger {
     await ensureDir(getLogDir());
     this.tahyiad = true;
 
-    const level = Deno.env.get("MUNADI_LOG_LEVEL") as LogLevel | undefined;
+    const level = Deno.env.get("MUNADI_LOG_LEVEL") as MustawaSijill | undefined;
     if (level && this.levelPriority[level] !== undefined) {
       this.logLevel = level;
     }
   }
 
-  private shouldLog(level: LogLevel): boolean {
+  private shouldLog(level: MustawaSijill): boolean {
     return this.levelPriority[level] >= this.levelPriority[this.logLevel];
   }
 
@@ -53,12 +53,12 @@ class Logger {
     return date.toISOString();
   }
 
-  private formatForConsole(entry: LogEntry): string {
-    const levelColors: Record<LogLevel, string> = {
-      debug: "\x1b[90m", // gray
-      info: "\x1b[36m", // cyan
-      warn: "\x1b[33m", // yellow
-      error: "\x1b[31m", // red
+  private formatForConsole(entry: MudkhalSijill): string {
+    const levelColors: Record<MustawaSijill, string> = {
+      debug: "\x1b[90m",
+      info: "\x1b[36m",
+      warn: "\x1b[33m",
+      error: "\x1b[31m",
     };
     const reset = "\x1b[0m";
     const color = levelColors[entry.level];
@@ -73,7 +73,7 @@ class Logger {
     return line;
   }
 
-  private formatForFile(entry: LogEntry): string {
+  private formatForFile(entry: MudkhalSijill): string {
     return JSON.stringify({
       ...entry,
       timestamp: this.formatTimestamp(entry.timestamp),
@@ -86,17 +86,15 @@ class Logger {
     await Deno.writeTextFile(path, content + "\n", { append: true });
   }
 
-  private async writeEntry(file: LogFile, entry: LogEntry): Promise<void> {
+  private async writeEntry(file: LogFile, entry: MudkhalSijill): Promise<void> {
     if (!this.shouldLog(entry.level)) return;
 
-    // Console output
     console.log(this.formatForConsole(entry));
 
-    // File output
     await this.appendToFile(file, this.formatForFile(entry));
   }
 
-  // Main logger methods
+  /** Main logger methods */
   async debug(category: string, message: string, context?: Record<string, unknown>): Promise<void> {
     await this.writeEntry("main", {
       timestamp: new Date(),
@@ -137,16 +135,15 @@ class Logger {
     });
   }
 
-  // Decision audit log
-  async decision(entry: Omit<DecisionLogEntry, "timestamp" | "level" | "category">): Promise<void> {
-    const fullEntry: DecisionLogEntry = {
+  /** Decision audit log */
+  async decision(entry: Omit<DecisionMudkhalSijill, "timestamp" | "level" | "category">): Promise<void> {
+    const fullEntry: DecisionMudkhalSijill = {
       ...entry,
       timestamp: new Date(),
       level: "info",
       category: "decisions",
     };
 
-    // Also log to main for visibility
     await this.info("decisions", entry.message, {
       event: entry.event,
       interpretation: entry.interpretation,
@@ -154,16 +151,15 @@ class Logger {
       reasoning: entry.reasoning,
     });
 
-    // Write to dedicated decisions log
     await this.appendToFile("decisions", this.formatForFile(fullEntry));
   }
 
-  // External changes log
+  /** External changes log */
   async externalChange(
-    entry: Omit<ExternalChangeEntry, "timestamp" | "level" | "category" | "message">
+    entry: Omit<MudkhalTaghyirKhariji, "timestamp" | "level" | "category" | "message">
   ): Promise<void> {
     const message = `External change from ${entry.source}: ${entry.entityType} ${entry.entityId} by ${entry.author}`;
-    const fullEntry: ExternalChangeEntry = {
+    const fullEntry: MudkhalTaghyirKhariji = {
       ...entry,
       timestamp: new Date(),
       level: "info",
@@ -171,7 +167,6 @@ class Logger {
       message,
     };
 
-    // Also log to main for visibility
     await this.info("external_changes", message, {
       source: entry.source,
       entityType: entry.entityType,
@@ -181,11 +176,9 @@ class Logger {
       impact: entry.impact,
     });
 
-    // Write to dedicated external changes log
     await this.appendToFile("externalChanges", this.formatForFile(fullEntry));
   }
 
-  // Notification log
   async notification(
     channel: "ntfy" | "telegram",
     category: string,
@@ -193,7 +186,7 @@ class Logger {
     message: string,
     success: boolean
   ): Promise<void> {
-    const entry: LogEntry = {
+    const entry: MudkhalSijill = {
       timestamp: new Date(),
       level: success ? "info" : "error",
       category: "notifications",
@@ -208,8 +201,8 @@ class Logger {
     }
   }
 
-  // Read recent logs (for /log command)
-  async readRecent(file: LogFile = "main", lines = 50): Promise<LogEntry[]> {
+  /** Read recent logs (for /log command) */
+  async readRecent(file: LogFile = "main", lines = 50): Promise<MudkhalSijill[]> {
     if (!this.tahyiad) await this.init();
     const path = join(getLogDir(), LOG_FILES[file]);
 
@@ -220,11 +213,11 @@ class Logger {
 
       return recentLines.map((line) => {
         try {
-          return JSON.parse(line) as LogEntry;
+          return JSON.parse(line) as MudkhalSijill;
         } catch {
           return {
             timestamp: new Date(),
-            level: "error" as LogLevel,
+            level: "error" as MustawaSijill,
             category: "parser",
             message: `Failed to parse log line: ${line}`,
           };
@@ -239,5 +232,5 @@ class Logger {
   }
 }
 
-// Singleton instance
+/** Singleton instance */
 export const logger = new Logger();

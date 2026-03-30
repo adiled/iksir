@@ -1,4 +1,13 @@
 /**
+ * Raqib (رقيب) - The Watcher
+ * 
+ * One of the sacred Khuddām (خدّام - Servants) of the alchemical workshop.
+ * Raqib watches over the health of all transformations, detecting when
+ * a Murshid has become stuck in contemplation or lost in the labyrinth.
+ * The eternal guardian against fasād (corruption) in the work.
+ */
+
+/**
  * Session Health Monitor
  *
  * Detects stuck sessions and prevents context exhaustion.
@@ -13,7 +22,7 @@
  * - Checks all sessions with status "busy" against thresholds
  * - Auto-aborts sessions stuck for > STUCK_THRESHOLD_MS
  * - Auto-compacts sessions when message count > COMPACT_THRESHOLD
- * - Alerts operator on Telegram for stuck sessions
+ * - Alerts al-Kimyawi on Telegram for stuck sessions
  */
 
 import { logger } from "../logging/logger.ts";
@@ -21,9 +30,6 @@ import type { OpenCodeClient } from "../opencode/client.ts";
 import type { RasulKharij } from "../types.ts";
 import type { MudirJalasat } from "./katib.ts";
 
-// =============================================================================
-// Configuration
-// =============================================================================
 
 /** How long a session can be "busy" before considered stuck (5 minutes) */
 const STUCK_THRESHOLD_MS = 5 * 60 * 1000;
@@ -37,9 +43,6 @@ const COMPACT_COOLDOWN_MS = 30 * 60 * 1000;
 /** How long between health check ticks (60 seconds) */
 const TICK_INTERVAL_MS = 60 * 1000;
 
-// =============================================================================
-// Types
-// =============================================================================
 
 interface RaqibDeps {
   opencode: OpenCodeClient;
@@ -51,15 +54,12 @@ interface RaqibDeps {
 interface SessionHealthState {
   /** Last time we compacted this session */
   lastCompactedAt: number | null;
-  /** Whether we already alerted operator about this session being stuck */
+  /** Whether we already alerted al-Kimyawi about this session being stuck */
   alertedStuck: boolean;
   /** Whether we already auto-aborted this session */
   aborted: boolean;
 }
 
-// =============================================================================
-// Health Monitor
-// =============================================================================
 
 export class Raqib {
   #opencode: OpenCodeClient;
@@ -86,12 +86,10 @@ export class Raqib {
 
     void logger.info("health-monitor", "Starting health monitor");
 
-    // Initial tick
     this.#tick().catch(async (e) =>
       await logger.error("health-monitor", "Tick error", { error: String(e) })
     );
 
-    // Schedule recurring ticks
     this.#tickTimer = setInterval(() => {
       if (signal.aborted) {
         this.stop();
@@ -102,7 +100,6 @@ export class Raqib {
       );
     }, TICK_INTERVAL_MS);
 
-    // Cleanup on abort
     signal.addEventListener("abort", () => this.stop(), { once: true });
   }
 
@@ -122,10 +119,10 @@ export class Raqib {
    */
   async #tick(): Promise<void> {
     try {
-      // Get status of all sessions
+      /** Get status of all sessions */
       const statuses = await this.#opencode.jalabJalsaStatuses();
 
-      // Check each murshid session
+      /** Check each murshid session */
       const murshidun = this.#sessionManager.wajadaJalasatMurshid();
 
       for (const orch of murshidun) {
@@ -135,7 +132,7 @@ export class Raqib {
         await this.#checkSession(orch.id, orch.identifier, status);
       }
 
-      // Clean up health state for sessions that no longer exist
+      /** Clean up health state for sessions that no longer exist */
       const allSessionIds = new Set(
         murshidun.map((o) => o.id),
       );
@@ -160,17 +157,16 @@ export class Raqib {
     const state = this.#getOrCreateState(sessionId);
     const now = Date.now();
 
-    // =========================================================================
-    // Stuck Detection
-    // =========================================================================
 
     if (status === "busy") {
-      // Check the last assistant message to determine if truly stuck.
-      // A session is stuck when its last assistant message has tokens_out=0,
-      // isn't completed, and was created more than STUCK_THRESHOLD_MS ago.
-      // This is more accurate than tracking busySince — it uses the message's
-      // own timestamp, avoiding false positives from daemon restarts or
-      // sessions that were already busy when the health monitor started.
+      /**
+       * Check the last assistant message to determine if truly stuck.
+       * A session is stuck when its last assistant message has tokens_out=0,
+       * isn't completed, and was created more than STUCK_THRESHOLD_MS ago.
+       * This is more accurate than tracking busySince — it uses the message's
+       * own timestamp, avoiding false positives from daemon restarts or
+       * sessions that were already busy when the health monitor started.
+       */
       const lastMsg = await this.#opencode.getLastAssistantMessage(sessionId);
 
       const isStuck =
@@ -180,7 +176,6 @@ export class Raqib {
         (now - lastMsg.createdAt) >= STUCK_THRESHOLD_MS;
 
       if (!isStuck) {
-        // Busy but making progress — reset flags
         state.alertedStuck = false;
         state.aborted = false;
         return;
@@ -188,7 +183,6 @@ export class Raqib {
 
       const stuckMinutes = Math.round((now - lastMsg.createdAt) / 60000);
 
-      // Alert operator (once)
       if (!state.alertedStuck) {
         await logger.warn("health-monitor", `Session ${identifier} appears stuck`, {
           sessionId,
@@ -206,7 +200,6 @@ export class Raqib {
         state.alertedStuck = true;
       }
 
-      // Auto-abort (once, after alert)
       if (state.alertedStuck && !state.aborted) {
         await logger.warn("health-monitor", `Auto-aborting stuck session ${identifier}`, {
           sessionId,
@@ -230,16 +223,11 @@ export class Raqib {
         }
       }
     } else {
-      // Not busy — reset stuck tracking
       state.alertedStuck = false;
       state.aborted = false;
     }
 
-    // =========================================================================
-    // Auto-Compaction
-    // =========================================================================
 
-    // Only compact idle sessions (don't interrupt busy ones)
     if (status === "sakin") {
       await this.#checkCompaction(sessionId, identifier, state, now);
     }
@@ -254,12 +242,11 @@ export class Raqib {
     state: SessionHealthState,
     now: number
   ): Promise<void> {
-    // Cooldown check
     if (state.lastCompactedAt && now - state.lastCompactedAt < COMPACT_COOLDOWN_MS) {
       return;
     }
 
-    // Get message count
+    /** Get message count */
     const counts = await this.#opencode.jalabRisalaCount(sessionId);
     if (!counts) return;
 

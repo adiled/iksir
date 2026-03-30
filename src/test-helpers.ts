@@ -6,13 +6,11 @@
  * and MudirJalasat. Uses real temp DB instances (same pattern as db_test.ts).
  */
 
-import { initDatabase, closeDatabase, upsertSession } from "../db/db.ts";
+import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, haddathaAwAdkhalaJalsa } from "../db/db.ts";
 import { execCommand } from "./utils/exec.ts";
-import type { RasulKharij, QanatRisala, JalsatMurshid, QuestionAnswer } from "./types.ts";
+import type { RasulKharij, QanatRisala, JalsatMurshid, JawabSual } from "./types.ts";
+import { DEFAULT_OPENCODE_SERVER } from "./constants.ts";
 
-// =============================================================================
-// Temp DB helper (same pattern as db_test.ts)
-// =============================================================================
 
 /**
  * Run a test function with an isolated temp SQLite DB.
@@ -22,10 +20,10 @@ export async function withTestDb(fn: () => Promise<void> | void): Promise<void> 
   const tempDir = await Deno.makeTempDir({ prefix: "munadi-test-" });
   Deno.env.set("MUNADI_STATE_DIR", tempDir);
   try {
-    await initDatabase();
+    await baddaaQaidatBayanat();
     await fn();
   } finally {
-    closeDatabase();
+    aghlaaqQaidatBayanat();
     Deno.env.delete("MUNADI_STATE_DIR");
     await Deno.remove(tempDir, { recursive: true });
   }
@@ -45,13 +43,12 @@ export async function withTestRepo(fn: () => Promise<void> | void): Promise<void
   Deno.env.set("MUNADI_REPO_PATH", tempDir);
   Deno.env.set("MUNADI_STATE_DIR", tempDir);
   try {
-    // Initialize a bare git repo so git operations succeed
     await execCommand("git", ["init"], { cwd: tempDir });
     await execCommand("git", ["commit", "--allow-empty", "-m", "init"], { cwd: tempDir });
-    await initDatabase();
+    await baddaaQaidatBayanat();
     await fn();
   } finally {
-    closeDatabase();
+    aghlaaqQaidatBayanat();
     Deno.env.delete("MUNADI_STATE_DIR");
     if (prevRepo) Deno.env.set("MUNADI_REPO_PATH", prevRepo);
     else Deno.env.delete("MUNADI_REPO_PATH");
@@ -59,9 +56,6 @@ export async function withTestRepo(fn: () => Promise<void> | void): Promise<void
   }
 }
 
-// =============================================================================
-// OpenCode Client Mock
-// =============================================================================
 
 /** Minimal session shape returned by OpenCode mock */
 interface MockJalsatOpenCode {
@@ -76,7 +70,7 @@ export interface MockOpenCodeClient {
   replyToQuestion(
     sessionId: string,
     questionId: string,
-    answers: QuestionAnswer[],
+    answers: JawabSual[],
   ): Promise<boolean>;
   rejectQuestion(sessionId: string, questionId: string): Promise<boolean>;
   sendPromptAsync(sessionId: string, prompt: string, options?: unknown): Promise<boolean>;
@@ -89,10 +83,9 @@ export interface MockOpenCodeClient {
   jalabJalsa(sessionId: string): Promise<MockJalsatOpenCode | null>;
   listSessions(): Promise<Array<{ id: string; title: string; createdAt: Date; lastMessageAt: Date }>>;
 
-  // Test inspection
   _calls: {
     classify: string[];
-    replyToQuestion: Array<{ sessionId: string; questionId: string; answers: QuestionAnswer[] }>;
+    replyToQuestion: Array<{ sessionId: string; questionId: string; answers: JawabSual[] }>;
     rejectQuestion: Array<{ sessionId: string; questionId: string }>;
     sendPromptAsync: Array<{ sessionId: string; prompt: string }>;
     sendPrompt: Array<{ sessionId: string; prompt: string }>;
@@ -110,7 +103,7 @@ export function mockOpenCodeClient(overrides?: {
   replyToQuestion?: (
     sessionId: string,
     questionId: string,
-    answers: QuestionAnswer[],
+    answers: JawabSual[],
   ) => Promise<boolean>;
   rejectQuestion?: (sessionId: string, questionId: string) => Promise<boolean>;
   sendPromptAsync?: (sessionId: string, prompt: string) => Promise<boolean>;
@@ -192,9 +185,6 @@ export function mockOpenCodeClient(overrides?: {
   };
 }
 
-// =============================================================================
-// Telegram Client Mock
-// =============================================================================
 
 export interface MockTelegramClient {
   mumakkan(): boolean;
@@ -217,7 +207,6 @@ export interface MockTelegramClient {
     options?: { iconColor?: number },
   ): Promise<{ message_thread_id: number; name: string } | null>;
 
-  // Test inspection
   _calls: {
     sendToDispatch: Array<{ text: string; options?: { parseMode?: string; keyboard?: unknown } }>;
     arsalaRisala: Array<{ text: string; options?: { parseMode?: string; keyboard?: unknown; topicId?: number; chatId?: string } }>;
@@ -281,16 +270,13 @@ export function mockTelegramClient(overrides?: {
   };
 }
 
-// =============================================================================
-// Messenger Mock
-// =============================================================================
 
 export interface MockMessenger extends RasulKharij {
   _calls: {
     send: Array<{ channel: QanatRisala; text: string }>;
     arsalaMunassaq: Array<{ channel: QanatRisala; text: string }>;
-    createOrchestratorChannel: Array<{ identifier: string; title: string }>;
-    hasOrchestratorChannel: string[];
+    khalaqaQanatMurshid: Array<{ identifier: string; title: string }>;
+    yamlikQanatMurshid: string[];
     hammalQanawatLilJalsa: string[];
     hallJalsaBilQanat: Array<{ provider: string; channelId: string }>;
   };
@@ -301,16 +287,16 @@ export interface MockMessenger extends RasulKharij {
  */
 export function mockMessenger(overrides?: {
   mumakkan?: boolean;
-  createOrchestratorChannel?: (id: string, title: string) => Promise<string | null>;
-  hasOrchestratorChannel?: (id: string) => boolean;
+  khalaqaQanatMurshid?: (id: string, title: string) => Promise<string | null>;
+  yamlikQanatMurshid?: (id: string) => boolean;
   hammalQanawatLilJalsa?: (id: string) => Record<string, string>;
   hallJalsaBilQanat?: (provider: string, channelId: string) => string | null;
 }): MockMessenger {
   const calls: MockMessenger["_calls"] = {
     send: [],
     arsalaMunassaq: [],
-    createOrchestratorChannel: [],
-    hasOrchestratorChannel: [],
+    khalaqaQanatMurshid: [],
+    yamlikQanatMurshid: [],
     hammalQanawatLilJalsa: [],
     hallJalsaBilQanat: [],
   };
@@ -330,15 +316,15 @@ export function mockMessenger(overrides?: {
       calls.arsalaMunassaq.push({ channel, text });
     },
 
-    async createOrchestratorChannel(identifier, title) {
-      calls.createOrchestratorChannel.push({ identifier, title });
-      if (overrides?.createOrchestratorChannel) return overrides.createOrchestratorChannel(identifier, title);
+    async khalaqaQanatMurshid(identifier, title) {
+      calls.khalaqaQanatMurshid.push({ identifier, title });
+      if (overrides?.khalaqaQanatMurshid) return overrides.khalaqaQanatMurshid(identifier, title);
       return "42";
     },
 
-    hasOrchestratorChannel(identifier) {
-      calls.hasOrchestratorChannel.push(identifier);
-      if (overrides?.hasOrchestratorChannel) return overrides.hasOrchestratorChannel(identifier);
+    yamlikQanatMurshid(identifier) {
+      calls.yamlikQanatMurshid.push(identifier);
+      if (overrides?.yamlikQanatMurshid) return overrides.yamlikQanatMurshid(identifier);
       return false;
     },
 
@@ -356,9 +342,6 @@ export function mockMessenger(overrides?: {
   };
 }
 
-// =============================================================================
-// Session Manager Mock
-// =============================================================================
 
 export interface MockMudirJalasat {
   wajadaJalasatMurshid(): JalsatMurshid[];
@@ -377,9 +360,6 @@ export function mockMudirJalasat(sessions: JalsatMurshid[] = []): MockMudirJalas
   };
 }
 
-// =============================================================================
-// Fixture helpers
-// =============================================================================
 
 /**
  * Create a minimal JalsatMurshid for testing.
@@ -406,7 +386,7 @@ export function makeSession(overrides?: Partial<JalsatMurshid>): JalsatMurshid {
  */
 export function seedSession(overrides?: Partial<JalsatMurshid>): void {
   const s = makeSession(overrides);
-  upsertSession({
+  haddathaAwAdkhalaJalsa({
     id: s.id,
     identifier: s.identifier,
     title: s.title,
@@ -429,9 +409,6 @@ export async function writeTempFile(content: string, prefix = "munadi-fixture-")
   return path;
 }
 
-// =============================================================================
-// Intent Resolver Mock
-// =============================================================================
 
 import type { NiyyaMuhallala } from "./daemon/arraf.ts";
 
@@ -468,9 +445,6 @@ export function mockArraf(): MockArraf {
   };
 }
 
-// =============================================================================
-// Config helper
-// =============================================================================
 
 import type { TasmimIksir } from "./types.ts";
 
@@ -480,7 +454,7 @@ import type { TasmimIksir } from "./types.ts";
  */
 export function makeConfig(overrides?: Partial<TasmimIksir>): TasmimIksir {
   return {
-    opencode: { server: "http://localhost:4096" },
+    opencode: { server: DEFAULT_OPENCODE_SERVER },
     quietHours: { start: "00:00", end: "06:00", timezone: "UTC" },
     issueTracker: { provider: "linear", apiKey: "", teamId: "" },
     notifications: {

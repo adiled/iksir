@@ -86,7 +86,6 @@ function extractSymbolsRegex(content: string): CodeSymbol[] {
     const line = lines[i];
     const lineNum = i + 1;
 
-    // Only top-level (no leading whitespace)
     if (line.startsWith(" ") || line.startsWith("\t")) continue;
 
     const funcMatch = line.match(/^(?:async\s+)?def\s+(\w+)\s*\(([^)]*)\)/);
@@ -145,7 +144,7 @@ export async function extractPython(filePath: string, repoPath: string): Promise
   let symbols: CodeSymbol[];
   let imports: string[];
 
-  // Try python3 AST
+  /** Try python3 AST */
   const tmpScript = await Deno.makeTempFile({ suffix: ".py" });
   try {
     await Deno.writeTextFile(tmpScript, AST_SCRIPT);
@@ -155,7 +154,6 @@ export async function extractPython(filePath: string, repoPath: string): Promise
       symbols = parsed.symbols;
       imports = parsed.imports;
     } else {
-      // Fallback to regex
       symbols = extractSymbolsRegex(content);
       imports = extractImportsRegex(content);
     }
