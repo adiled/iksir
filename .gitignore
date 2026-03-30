@@ -24,7 +24,7 @@ logs/
 deno.lock
 
 # Tooling artifacts
-/tools
+/tools/*.json
 /verify-all.sh
 
 # Editor
