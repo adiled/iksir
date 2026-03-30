@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Munadi installer
+# Iksir installer
 #
 # Generates systemd service files, creates XDG directories, installs CLI wrapper.
 # Run once to install, run again to update after pulling changes.
@@ -10,19 +10,19 @@
 #   ./install --defaults   # non-interactive, uses sensible defaults
 #
 # Directory layout (XDG conventions):
-#   ~/.munadi/src/                  Source code (this repo)
-#   ~/.config/munadi/               Configuration (munadi.json, AGENTS.md)
-#   ~/.local/share/munadi/          Data (SQLite database)
-#   ~/.local/state/munadi/          Logs
-#   ~/.local/bin/munadi             CLI wrapper
+#   ~/.iksir/src/                  Source code (this repo)
+#   ~/.config/iksir/               Configuration (iksir.json, AGENTS.md)
+#   ~/.local/share/iksir/          Data (SQLite database)
+#   ~/.local/state/iksir/          Logs
+#   ~/.local/bin/iksir             CLI wrapper
 #
 # Services installed:
-#   munadi-mcp.service     — PM-MCP HTTP server (tools for orchestrators)
-#   munadi-agent.service   — Agent runtime (OpenCode server)
-#   munadi.service         — Munadi daemon (session lifecycle, messaging, git)
+#   iksir-mcp.service     — PM-MCP HTTP server (tools for orchestrators)
+#   iksir-agent.service   — Agent runtime (OpenCode server)
+#   iksir.service         — Iksir daemon (session lifecycle, messaging, git)
 #
 # Optional:
-#   munadi-proxy.service   — SOCKS5 proxy (WireGuard + gost)
+#   iksir-proxy.service   — SOCKS5 proxy (WireGuard + gost)
 
 set -euo pipefail
 
@@ -52,9 +52,9 @@ DENO_BIN="${HOME_DIR}/.deno/bin/deno"
 OPENCODE_BIN="${HOME_DIR}/.opencode/bin/opencode"
 AGENT_PORT="4096"
 MCP_PORT="3100"
-CONFIG_DIR="$XDG_CONFIG_HOME/munadi"
-DATA_DIR="$XDG_DATA_HOME/munadi"
-STATE_DIR="$XDG_STATE_HOME/munadi"
+CONFIG_DIR="$XDG_CONFIG_HOME/iksir"
+DATA_DIR="$XDG_DATA_HOME/iksir"
+STATE_DIR="$XDG_STATE_HOME/iksir"
 INSTALL_PROXY="no"
 PROXY_BIN="/usr/local/bin/gost"
 PROXY_WG_IFACE="wg0"
@@ -65,9 +65,9 @@ PROXY_WG_IFACE="wg0"
 
 BOLD="\033[1m"
 RESET="\033[0m"
-info()  { echo -e "\033[36m[munadi]\033[0m $*"; }
-warn()  { echo -e "\033[33m[munadi]\033[0m $*"; }
-error() { echo -e "\033[31m[munadi]\033[0m $*" >&2; }
+info()  { echo -e "\033[36m[iksir]\033[0m $*"; }
+warn()  { echo -e "\033[33m[iksir]\033[0m $*"; }
+error() { echo -e "\033[31m[iksir]\033[0m $*" >&2; }
 die()   { error "$@"; exit 1; }
 
 prompt() {
@@ -76,7 +76,7 @@ prompt() {
     eval "$var=\"$default\""
     return
   fi
-  read -rp "$(echo -e "\033[36m[munadi]\033[0m $prompt_text [$default]: ")" value
+  read -rp "$(echo -e "\033[36m[iksir]\033[0m $prompt_text [$default]: ")" value
   eval "$var=\"${value:-$default}\""
 }
 
@@ -114,7 +114,7 @@ done
 # Gather configuration
 # =============================================================================
 
-info "Munadi installer"
+info "Iksir installer"
 echo ""
 
 prompt REPO_PATH    "Repository path"        "$REPO_PATH"
@@ -124,7 +124,7 @@ prompt AGENT_PORT   "Agent runtime port"     "$AGENT_PORT"
 prompt MCP_PORT     "MCP server port"        "$MCP_PORT"
 
 if [[ "$NONINTERACTIVE" != "1" ]]; then
-  read -rp "$(echo -e "\033[36m[munadi]\033[0m Install SOCKS5 proxy service? (for Telegram in restricted regions) [no]: ")" INSTALL_PROXY
+  read -rp "$(echo -e "\033[36m[iksir]\033[0m Install SOCKS5 proxy service? (for Telegram in restricted regions) [no]: ")" INSTALL_PROXY
   INSTALL_PROXY="${INSTALL_PROXY:-no}"
   if [[ "$INSTALL_PROXY" =~ ^[Yy] ]]; then
     INSTALL_PROXY="yes"
@@ -138,7 +138,7 @@ fi
 # =============================================================================
 
 [[ -d "$REPO_PATH" ]]             || die "Repository not found: $REPO_PATH"
-[[ -f "$REPO_PATH/src/main.ts" ]] || die "Not a Munadi repo: $REPO_PATH/src/main.ts missing"
+[[ -f "$REPO_PATH/src/main.ts" ]] || die "Not an Iksir repo: $REPO_PATH/src/main.ts missing"
 check_bin "Deno"     "$DENO_BIN"     || die "Install Deno: https://docs.deno.com/runtime/getting_started/installation/"
 check_bin "OpenCode" "$OPENCODE_BIN" || die "Install OpenCode: https://opencode.ai"
 
@@ -157,10 +157,10 @@ info "Data:    $DATA_DIR"
 info "Logs:    $STATE_DIR"
 
 # Copy example config if none exists
-if [[ ! -f "$CONFIG_DIR/munadi.json" ]]; then
-  if [[ -f "$REPO_PATH/munadi.json.example" ]]; then
-    cp "$REPO_PATH/munadi.json.example" "$CONFIG_DIR/munadi.json"
-    info "Created $CONFIG_DIR/munadi.json from example"
+if [[ ! -f "$CONFIG_DIR/iksir.json" ]]; then
+  if [[ -f "$REPO_PATH/iksir.json.example" ]]; then
+    cp "$REPO_PATH/iksir.json.example" "$CONFIG_DIR/iksir.json"
+    info "Created $CONFIG_DIR/iksir.json from example"
   fi
 fi
 
@@ -189,7 +189,7 @@ AGENT_PROMPT_DIR="${XDG_CONFIG_HOME}/opencode/agent"
 PLUGIN_DIR="${XDG_CONFIG_HOME}/opencode/plugins"
 mkdir -p "$AGENT_PROMPT_DIR" "$PLUGIN_DIR"
 
-for file in "$REPO_PATH"/prompts/munadi-*.md; do
+for file in "$REPO_PATH"/prompts/iksir-*.md; do
   [[ -f "$file" ]] && cp "$file" "$AGENT_PROMPT_DIR/$(basename "$file")"
 done
 
@@ -201,12 +201,12 @@ done
 # Install CLI wrapper
 # =============================================================================
 
-cat > "$BIN_DIR/munadi" <<EOF
+cat > "$BIN_DIR/iksir" <<EOF
 #!/bin/bash
 exec "$DENO_BIN" run --allow-all --env="$REPO_PATH/.env" "$REPO_PATH/src/cli.ts" "\$@"
 EOF
-chmod +x "$BIN_DIR/munadi"
-info "Installed CLI: $BIN_DIR/munadi"
+chmod +x "$BIN_DIR/iksir"
+info "Installed CLI: $BIN_DIR/iksir"
 
 # Check if BIN_DIR is on PATH
 if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
@@ -242,15 +242,15 @@ SERVICES_INSTALLED=()
 ENV_VARS="Environment=PATH=$(dirname "$DENO_BIN"):/usr/local/bin:/usr/bin:/bin
 Environment=DENO_DIR=${HOME_DIR}/.cache/deno
 Environment=HOME=$HOME_DIR
-Environment=MUNADI_CONFIG_DIR=$CONFIG_DIR
-Environment=MUNADI_STATE_DIR=$DATA_DIR
-Environment=MUNADI_LOG_DIR=$STATE_DIR
-Environment=MUNADI_REPO_PATH=$REPO_PATH"
+Environment=IKSIR_CONFIG_DIR=$CONFIG_DIR
+Environment=IKSIR_STATE_DIR=$DATA_DIR
+Environment=IKSIR_LOG_DIR=$STATE_DIR
+Environment=IKSIR_REPO_PATH=$REPO_PATH"
 
 # --- MCP Server ---
-cat > "$SYSTEMD_DIR/munadi-mcp.service" <<EOF
+cat > "$SYSTEMD_DIR/iksir-mcp.service" <<EOF
 [Unit]
-Description=Munadi MCP Server
+Description=Iksir MCP Server
 After=network.target
 
 [Service]
@@ -264,15 +264,15 @@ $ENV_VARS
 [Install]
 WantedBy=multi-user.target
 EOF
-SERVICES_INSTALLED+=(munadi-mcp)
-info "Generated munadi-mcp.service"
+SERVICES_INSTALLED+=(iksir-mcp)
+info "Generated iksir-mcp.service"
 
 # --- Agent Runtime ---
-cat > "$SYSTEMD_DIR/munadi-agent.service" <<EOF
+cat > "$SYSTEMD_DIR/iksir-agent.service" <<EOF
 [Unit]
-Description=Munadi Agent Runtime (OpenCode)
-After=network.target munadi-mcp.service
-Requires=munadi-mcp.service
+Description=Iksir Agent Runtime (OpenCode)
+After=network.target iksir-mcp.service
+Requires=iksir-mcp.service
 
 [Service]
 Type=simple
@@ -285,15 +285,15 @@ Environment=HOME=$HOME_DIR
 [Install]
 WantedBy=multi-user.target
 EOF
-SERVICES_INSTALLED+=(munadi-agent)
-info "Generated munadi-agent.service"
+SERVICES_INSTALLED+=(iksir-agent)
+info "Generated iksir-agent.service"
 
 # --- Daemon ---
-cat > "$SYSTEMD_DIR/munadi.service" <<EOF
+cat > "$SYSTEMD_DIR/iksir.service" <<EOF
 [Unit]
-Description=Munadi
-After=network.target munadi-agent.service
-Requires=munadi-agent.service
+Description=Iksir
+After=network.target iksir-agent.service
+Requires=iksir-agent.service
 
 [Service]
 Type=simple
@@ -306,16 +306,16 @@ $ENV_VARS
 [Install]
 WantedBy=multi-user.target
 EOF
-SERVICES_INSTALLED+=(munadi)
-info "Generated munadi.service"
+SERVICES_INSTALLED+=(iksir)
+info "Generated iksir.service"
 
 # --- Proxy (optional) ---
 if [[ "$INSTALL_PROXY" == "yes" ]]; then
-  cat > "$SYSTEMD_DIR/munadi-proxy.service" <<EOF
+  cat > "$SYSTEMD_DIR/iksir-proxy.service" <<EOF
 [Unit]
-Description=Munadi SOCKS5 Proxy (WireGuard + gost)
+Description=Iksir SOCKS5 Proxy (WireGuard + gost)
 After=network.target
-Before=munadi-mcp.service
+Before=iksir-mcp.service
 
 [Service]
 Type=simple
@@ -329,11 +329,11 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 
-  sed -i 's/After=network.target$/After=network.target munadi-proxy.service/' "$SYSTEMD_DIR/munadi-mcp.service"
-  sed -i '/\[Unit\]/a Requires=munadi-proxy.service' "$SYSTEMD_DIR/munadi-agent.service"
+  sed -i 's/After=network.target$/After=network.target iksir-proxy.service/' "$SYSTEMD_DIR/iksir-mcp.service"
+  sed -i '/\[Unit\]/a Requires=iksir-proxy.service' "$SYSTEMD_DIR/iksir-agent.service"
 
-  SERVICES_INSTALLED+=(munadi-proxy)
-  info "Generated munadi-proxy.service"
+  SERVICES_INSTALLED+=(iksir-proxy)
+  info "Generated iksir-proxy.service"
 fi
 
 # =============================================================================
@@ -351,16 +351,16 @@ info "Enabled services: ${SERVICES_INSTALLED[*]}"
 echo ""
 info "Installation complete."
 echo ""
-echo "  Start:    munadi start"
-echo "  Stop:     munadi stop"
-echo "  Status:   munadi status"
-echo "  Restart:  munadi restart"
+echo "  Start:    iksir start"
+echo "  Stop:     iksir stop"
+echo "  Status:   iksir status"
+echo "  Restart:  iksir restart"
 echo ""
-echo "  Config:   $CONFIG_DIR/munadi.json"
+echo "  Config:   $CONFIG_DIR/iksir.json"
 echo "  Data:     $DATA_DIR/"
 echo "  Logs:     $STATE_DIR/"
 echo "  Env:      $REPO_PATH/.env"
 echo ""
-echo "  First time? Run ${BOLD}munadi init${RESET} for guided setup."
+echo "  First time? Run ${BOLD}iksir init${RESET} for guided setup."
 echo ""
-info "Then: munadi start"
+info "Then: iksir start"
