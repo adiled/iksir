@@ -1,0 +1,43 @@
+# Private content
+/*.md
+!/README.md
+/docs
+/graveyard
+/backlog
+
+# Secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+credentials.json
+secrets.yaml
+
+# Logs
+logs/
+*.log
+*.pid
+
+# Deno cache
+.deno/
+deno.lock
+
+# Old/backup files
+*.old.ts
+*.bak
+*.backup
+
+# VPN/Proxy (local infrastructure)
+vpn/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

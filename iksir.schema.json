@@ -1,0 +1,210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://munadi.dev/munadi.schema.json",
+  "title": "Munadi Configuration",
+  "description": "Configuration for the Munadi autonomous agent orchestration system.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference (ignored at runtime)."
+    },
+    "polling": {
+      "type": "object",
+      "description": "Polling intervals for external services.",
+      "properties": {
+        "defaultIntervalMs": {
+          "type": "integer",
+          "description": "Default polling interval in milliseconds.",
+          "default": 300000,
+          "minimum": 1000
+        },
+        "prPollIntervalMs": {
+          "type": "integer",
+          "description": "Minimum interval between polls of the same PR (ms).",
+          "default": 60000,
+          "minimum": 1000
+        }
+      },
+      "additionalProperties": false
+    },
+    "quietHours": {
+      "type": "object",
+      "description": "Suppress non-urgent notifications during off hours.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable quiet hours.",
+          "default": true
+        },
+        "start": {
+          "type": "string",
+          "description": "Start time in HH:MM format (24h).",
+          "pattern": "^[0-2]\\d:[0-5]\\d$",
+          "default": "22:00"
+        },
+        "end": {
+          "type": "string",
+          "description": "End time in HH:MM format (24h).",
+          "pattern": "^[0-2]\\d:[0-5]\\d$",
+          "default": "07:00"
+        },
+        "timezone": {
+          "type": "string",
+          "description": "IANA timezone identifier.",
+          "default": "UTC",
+          "examples": ["UTC", "America/New_York", "Asia/Tokyo"]
+        },
+        "blockersPassthrough": {
+          "type": "boolean",
+          "description": "Allow urgent/blocker notifications during quiet hours.",
+          "default": true
+        },
+        "maintenanceWindowMinutes": {
+          "type": "integer",
+          "description": "Minutes before quiet hours end to run maintenance tasks.",
+          "default": 60,
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "notifications": {
+      "type": "object",
+      "description": "Notification backends.",
+      "properties": {
+        "ntfy": {
+          "type": "object",
+          "description": "Ntfy push notification backend.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable ntfy notifications.",
+              "default": false
+            },
+            "topic": {
+              "type": "string",
+              "description": "Ntfy topic name.",
+              "default": "munadi"
+            },
+            "server": {
+              "type": "string",
+              "description": "Ntfy server URL.",
+              "format": "uri",
+              "default": "https://ntfy.sh"
+            }
+          },
+          "additionalProperties": false
+        },
+        "telegram": {
+          "type": "object",
+          "description": "Telegram messaging backend.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable Telegram notifications.",
+              "default": false
+            },
+            "botToken": {
+              "type": "string",
+              "description": "Telegram bot token. Prefer TELEGRAM_BOT_TOKEN env var."
+            },
+            "chatId": {
+              "type": "string",
+              "description": "Telegram chat ID for direct messages. Prefer TELEGRAM_CHAT_ID env var."
+            },
+            "groupId": {
+              "type": "string",
+              "description": "Forum-enabled supergroup ID for topic-per-orchestrator mode."
+            },
+            "dispatchTopicId": {
+              "type": "integer",
+              "description": "Topic ID in the group for dispatching new orchestrators."
+            },
+            "proxy": {
+              "type": "string",
+              "description": "SOCKS5 proxy URL for Telegram API calls.",
+              "examples": ["socks5://localhost:1080"]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "issueTracker": {
+      "type": "object",
+      "description": "Issue tracker integration (Linear by default).",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "description": "Issue tracker provider.",
+          "default": "linear",
+          "enum": ["linear"]
+        },
+        "apiKey": {
+          "type": "string",
+          "description": "API key for the issue tracker. Prefer LINEAR_API_KEY env var."
+        },
+        "teamId": {
+          "type": "string",
+          "description": "Team identifier (the prefix in ticket IDs, e.g. 'ENG')."
+        },
+        "ticketPattern": {
+          "type": "string",
+          "description": "Regex pattern for matching ticket identifiers in messages.",
+          "default": "[A-Z]+-\\d+"
+        }
+      },
+      "additionalProperties": false
+    },
+    "github": {
+      "type": "object",
+      "description": "GitHub repository for PR operations. Auth handled by gh CLI.",
+      "properties": {
+        "owner": {
+          "type": "string",
+          "description": "GitHub repository owner (org or user)."
+        },
+        "repo": {
+          "type": "string",
+          "description": "GitHub repository name."
+        },
+        "operatorUsername": {
+          "type": "string",
+          "description": "GitHub username used by the operator for filtering own comments."
+        }
+      },
+      "additionalProperties": false
+    },
+    "opencode": {
+      "type": "object",
+      "description": "Agent runtime connection.",
+      "properties": {
+        "server": {
+          "type": "string",
+          "description": "OpenCode server URL.",
+          "format": "uri",
+          "default": "http://localhost:4096"
+        }
+      },
+      "additionalProperties": false
+    },
+    "prompts": {
+      "type": "object",
+      "description": "Override paths for prompt template files. Null or omitted = use bundled defaults.",
+      "properties": {
+        "classifyNotification": {
+          "type": "string",
+          "description": "Path to notification classification prompt template."
+        },
+        "classifyQuestion": {
+          "type": "string",
+          "description": "Path to question classification prompt template."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,5 @@
+[
+  { "file": "src/daemon/mumayyiz.ts", "line": 151, "col": 3, "new": "sabab" },
+  { "file": "src/daemon/mumayyiz.ts", "line": 152, "col": 3, "new": "radd" },
+  { "file": "src/daemon/mumayyiz.ts", "old": "_resetMumayyizCache", "new": "_masahaDhakira" }
+]

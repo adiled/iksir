@@ -1,0 +1,41 @@
+[
+  { "file": "src/types.ts", "line": 179, "col": 3, "new": "sinf" },
+  { "file": "src/types.ts", "line": 180, "col": 3, "new": "unwan" },
+  { "file": "src/types.ts", "line": 181, "col": 3, "new": "matn" },
+  { "file": "src/types.ts", "line": 183, "col": 3, "new": "afaal" },
+  { "file": "src/types.ts", "line": 185, "col": 3, "new": "huwiyyatMashru" },
+
+  { "file": "src/types.ts", "line": 599, "col": 3, "new": "waqt" },
+  { "file": "src/types.ts", "line": 600, "col": 3, "new": "naw" },
+  { "file": "src/types.ts", "line": 601, "col": 3, "new": "qarar" },
+  { "file": "src/types.ts", "line": 602, "col": 3, "new": "mantiq" },
+  { "file": "src/types.ts", "line": 603, "col": 3, "new": "bayyanat" },
+
+  { "file": "src/types.ts", "line": 607, "col": 3, "new": "ism" },
+  { "file": "src/types.ts", "line": 608, "col": 3, "new": "gharad" },
+  { "file": "src/types.ts", "line": 609, "col": 3, "new": "unshiaFi" },
+  { "file": "src/types.ts", "line": 610, "col": 3, "new": "matn" },
+
+  { "file": "src/types.ts", "line": 614, "col": 3, "new": "hala" },
+  { "file": "src/types.ts", "line": 615, "col": 3, "new": "huwiyyatJalsa" },
+  { "file": "src/types.ts", "line": 616, "col": 3, "new": "risala" },
+  { "file": "src/types.ts", "line": 617, "col": 3, "new": "illa" },
+
+  { "file": "src/types.ts", "line": 621, "col": 3, "new": "huwiyyatMalhamat" },
+  { "file": "src/types.ts", "line": 622, "col": 3, "new": "badaFi" },
+  { "file": "src/types.ts", "line": 623, "col": 3, "new": "qararat" },
+  { "file": "src/types.ts", "line": 624, "col": 3, "new": "nusakhMunshaa" },
+  { "file": "src/types.ts", "line": 625, "col": 3, "new": "halatTanfidh" },
+
+  { "file": "db/db.ts", "line": 233, "col": 3, "new": "huwiyya" },
+  { "file": "db/db.ts", "line": 234, "col": 3, "new": "unwan" },
+  { "file": "db/db.ts", "line": 235, "col": 3, "new": "naw" },
+  { "file": "db/db.ts", "line": 236, "col": 3, "new": "hala" },
+  { "file": "db/db.ts", "line": 237, "col": 3, "new": "far" },
+  { "file": "db/db.ts", "line": 238, "col": 3, "new": "illa" },
+  { "file": "db/db.ts", "line": 239, "col": 3, "new": "unshiaFi" },
+  { "file": "db/db.ts", "line": 240, "col": 3, "new": "akhirRisalaFi" },
+  { "file": "db/db.ts", "line": 241, "col": 3, "new": "halaMufassala" },
+
+  { "file": "src/daemon/munadi.ts", "line": 605, "col": 9, "new": "#aalajNiyyaMuhallala" }
+]

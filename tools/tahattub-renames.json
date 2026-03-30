@@ -1,0 +1,5 @@
+[
+  { "file": "plugins/iksir-compaction.ts", "old": "DiaryRow",    "new": "SaffMudawwana" },
+  { "file": "plugins/iksir-compaction.ts", "old": "SessionRow",  "new": "SaffJalsa" },
+  { "file": "plugins/iksir-compaction.ts", "old": "qawaidHifz",  "new": "qawaidTahattub" }
+]

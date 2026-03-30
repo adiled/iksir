@@ -1,0 +1,20 @@
+[
+  { "file": "src/types.ts", "old": "MunSetRelationsCall",      "new": "NidaWadaaAlaqat" },
+  { "file": "src/types.ts", "old": "MunCheckBranchStatusCall", "new": "NidaFahasFar" },
+  { "file": "src/types.ts", "old": "MunNotifyCall",            "new": "NidaTabligh" },
+  { "file": "src/types.ts", "old": "MunReplyCall",             "new": "NidaRadd" },
+  { "file": "src/types.ts", "old": "MunLogDecisionCall",       "new": "NidaSajjalQarar" },
+  { "file": "src/types.ts", "old": "MunReadDiaryCall",         "new": "NidaIqraMudawwana" },
+  { "file": "src/types.ts", "old": "MunYieldCall",             "new": "NidaTanazal" },
+  { "file": "src/types.ts", "old": "MunDemandControlCall",     "new": "NidaTalabTahakkum" },
+  { "file": "src/types.ts", "old": "MunCreateBranchCall",      "new": "NidaKhalqFar" },
+  { "file": "src/types.ts", "old": "MunCommitCall",            "new": "NidaIltazim" },
+  { "file": "src/types.ts", "old": "MunGitAddCall",            "new": "NidaRattib" },
+  { "file": "src/types.ts", "old": "MunGitPushCall",           "new": "NidaIdfa" },
+  { "file": "src/types.ts", "old": "MunIstikhasCall",          "new": "NidaIstikhlas" },
+  { "file": "src/types.ts", "old": "MunTalaumCall",            "new": "NidaTalaum" },
+  { "file": "src/types.ts", "old": "MunIstihalCall",           "new": "NidaIstihal" },
+  { "file": "src/types.ts", "old": "MunIstihalMutabaqqCall",   "new": "NidaIstihalMutabaqq" },
+  { "file": "src/types.ts", "old": "MunFaslCall",              "new": "NidaFasl" },
+  { "file": "src/types.ts", "old": "MunNaqshCall",             "new": "NidaNaqsh" }
+]

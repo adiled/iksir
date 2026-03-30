@@ -1,0 +1,39 @@
+{
+  "$schema": "./munadi.schema.json",
+  "polling": {
+    "defaultIntervalMs": 300000,
+    "prPollIntervalMs": 60000
+  },
+  "quietHours": {
+    "enabled": true,
+    "start": "22:00",
+    "end": "07:00",
+    "timezone": "UTC",
+    "blockersPassthrough": true
+  },
+  "notifications": {
+    "ntfy": {
+      "enabled": false,
+      "server": "https://ntfy.sh",
+      "topic": "munadi"
+    },
+    "telegram": {
+      "enabled": false,
+      "botToken": "${TELEGRAM_BOT_TOKEN}",
+      "chatId": "${TELEGRAM_CHAT_ID}"
+    }
+  },
+  "issueTracker": {
+    "provider": "linear",
+    "apiKey": "${LINEAR_API_KEY}",
+    "teamId": "ENG"
+  },
+  "github": {
+    "owner": "your-org",
+    "repo": "your-repo",
+    "operatorUsername": "your-github-username"
+  },
+  "opencode": {
+    "server": "http://localhost:4096"
+  }
+}

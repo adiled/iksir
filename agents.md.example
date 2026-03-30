@@ -1,0 +1,70 @@
+# Agent Guidelines
+
+Customize this file for your project. Munadi's classifier loads it via `MUNADI_AGENTS_MD_PATH`
+and injects it into classification prompts so the LLM knows your team's norms.
+
+---
+
+## About the Operator
+
+Describe the human operator's role, preferences, and working style. This helps the
+classifier distinguish questions/notifications that need human attention from ones
+the orchestrator should handle autonomously.
+
+**Key traits:**
+- What decisions does the operator own?
+- What communication style do they prefer?
+- What should agents handle without asking?
+
+---
+
+## Code & Architecture
+
+Project-specific coding standards and architecture decisions.
+
+1. **Types first** - Define interfaces before implementing.
+2. **Documentation lives with code** - Update docs as part of the change.
+3. **Agent prompts are first-class** - When adding tools, update the orchestrator prompt.
+4. **Daemon owns git** - Orchestrators don't run git directly. All git ops through PM-MCP tools.
+
+---
+
+## Process
+
+1. **Commit messages are knowledge** - Detailed commit messages with what changed, why, what's affected.
+2. **Ask when uncertain** - Prefer clarifying questions over guessing wrong.
+3. **Read the docs first** - Check existing documentation before implementing.
+
+---
+
+## Technical Discipline
+
+1. **Read imports before using them** - Never guess at module exports.
+2. **Check existing patterns** - Before adding a new handler, look at how similar ones are structured.
+3. **Type check incrementally** - Run type checks after each significant edit.
+4. **Verify before declaring done** - Run type checks and tests before saying implementation is complete.
+
+---
+
+## Project Structure
+
+Describe your project layout here. The classifier and orchestrator use this to
+give contextual guidance.
+
+```
+your-project/
+├── src/
+│   ├── main.ts
+│   └── ...
+├── tests/
+└── ...
+```
+
+---
+
+## When in Doubt
+
+- Read the file before editing
+- Ask for clarification
+- Preserve before deleting
+- Check tests pass

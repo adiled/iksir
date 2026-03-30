@@ -1,0 +1,20 @@
+[
+  { "file": "src/logging/logger.ts", "old": "getLogDir",       "new": "masarSijillAhdaq" },
+  { "file": "src/logging/logger.ts", "old": "LogFile",         "new": "MilafSijill" },
+  { "file": "src/logging/logger.ts", "old": "Logger",          "new": "Musjil" },
+  { "file": "src/logging/logger.ts", "old": "init",            "new": "baddaa" },
+  { "file": "src/logging/logger.ts", "old": "shouldLog",       "new": "yajibuTasjil" },
+  { "file": "src/logging/logger.ts", "old": "formatTimestamp", "new": "nassiqWaqt" },
+  { "file": "src/logging/logger.ts", "old": "formatForConsole","new": "nassiqLiWajiha" },
+  { "file": "src/logging/logger.ts", "old": "formatForFile",   "new": "nassiqLiMilaf" },
+  { "file": "src/logging/logger.ts", "old": "appendToFile",    "new": "adhifIlaMilaf" },
+  { "file": "src/logging/logger.ts", "old": "writeEntry",      "new": "uktubQayd" },
+  { "file": "src/logging/logger.ts", "old": "debug",           "new": "tatbeeq" },
+  { "file": "src/logging/logger.ts", "old": "info",            "new": "akhbar" },
+  { "file": "src/logging/logger.ts", "old": "warn",            "new": "haDHHir" },
+  { "file": "src/logging/logger.ts", "old": "error",           "new": "sajjalKhata" },
+  { "file": "src/logging/logger.ts", "old": "decision",        "new": "sajjalQarar" },
+  { "file": "src/logging/logger.ts", "old": "externalChange",  "new": "sajjalTaghyirKhariji" },
+  { "file": "src/logging/logger.ts", "old": "notification",    "new": "sajjalIshara" },
+  { "file": "src/logging/logger.ts", "old": "readRecent",      "new": "iqraAkhiran" }
+]

@@ -1,0 +1,7 @@
+[
+  { "file": "src/daemon/sail.ts", "old": "Sail", "new": "Saail" },
+  { "file": "src/daemon/sail.ts", "old": "istadaaSail", "new": "istadaaSaail" },
+  { "file": "src/daemon/munadi.ts", "old": "huwiyyaFaila", "new": "huwiyyaFaaila" },
+  { "file": "src/daemon/munadi.ts", "old": "failMundhu", "new": "faailMundhu" },
+  { "file": "src/daemon/munadi.ts", "old": "yakunuFail", "new": "yakunuFaail" }
+]
