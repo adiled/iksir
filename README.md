@@ -15,7 +15,7 @@ The modern world has forgotten the scent of real alchemy - the sharp bite of sul
 ---
 
 ```bash
-git clone https://github.com/iksir-dev/iksir.git ~/.iksir/sanctuary
+git clone https://github.com/adiled/iksir.git ~/.iksir/sanctuary
 cd ~/.iksir/sanctuary
 ./kindle
 iksir consecrate
