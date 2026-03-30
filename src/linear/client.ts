@@ -7,16 +7,16 @@
 
 import { logger } from "../logging/logger.ts";
 import type {
-  MunadiConfig,
-  IssueTracker,
-  TrackerIssue,
+  TasmimIksir,
+  MutabiWasfa,
+  WasfaMutaba,
   TrackerProject,
   TrackerMilestone,
   ParsedTicketUrl,
   CreateIssueInput,
   UpdateIssueInput,
   IssueFilters,
-  EntityType,
+  NawKiyan,
 } from "../types.ts";
 
 const LINEAR_API_URL = "https://api.linear.app/graphql";
@@ -75,13 +75,13 @@ interface GraphQLResponse<T> {
 // Client
 // =============================================================================
 
-export class LinearClient implements IssueTracker {
+export class LinearClient implements MutabiWasfa {
   readonly provider = "linear";
   private apiKey: string;
   private teamId: string;
   private stateCache: Map<string, { id: string; name: string; type: string }> = new Map();
 
-  constructor(config: MunadiConfig) {
+  constructor(config: TasmimIksir) {
     this.apiKey = config.issueTracker.apiKey;
     this.teamId = config.issueTracker.teamId;
   }
@@ -233,9 +233,9 @@ export class LinearClient implements IssueTracker {
   /**
    * Get issue by identifier (e.g., "TEAM-200")
    */
-  async getIssue(identifier: string): Promise<TrackerIssue | null> {
+  async getIssue(identifier: string): Promise<WasfaMutaba | null> {
     const issue = await this.getLinearIssue(identifier);
-    return issue ? this.toTrackerIssue(issue) : null;
+    return issue ? this.toWasfaMutaba(issue) : null;
   }
 
   /**
@@ -279,7 +279,7 @@ export class LinearClient implements IssueTracker {
   /**
    * Search issues by text
    */
-  async searchIssues(searchTerm: string, limit: number = 20): Promise<TrackerIssue[]> {
+  async searchIssues(searchTerm: string, limit: number = 20): Promise<WasfaMutaba[]> {
     // searchIssues returns IssueSearchResult which has a subset of fields
     const result = await this.query<{
        searchIssues: {
@@ -320,7 +320,7 @@ export class LinearClient implements IssueTracker {
       { term: searchTerm, first: limit }
     );
 
-    return (result?.searchIssues?.nodes ?? []).map((node) => this.toTrackerIssue({
+    return (result?.searchIssues?.nodes ?? []).map((node) => this.toWasfaMutaba({
       ...node,
       createdAt: "",
       updatedAt: "",
@@ -334,7 +334,7 @@ export class LinearClient implements IssueTracker {
   /**
    * Get issues with filters (assignee, status, cycle)
    */
-  async getFilteredIssues(filters: IssueFilters, limit: number = 20): Promise<TrackerIssue[]> {
+  async getFilteredIssues(filters: IssueFilters, limit: number = 20): Promise<WasfaMutaba[]> {
     // Build filter object
     const filterParts: string[] = [];
     const variables: Record<string, unknown> = { first: limit };
@@ -407,7 +407,7 @@ export class LinearClient implements IssueTracker {
       variables
     );
 
-    return (result?.issues?.nodes ?? []).map((node) => this.toTrackerIssue({
+    return (result?.issues?.nodes ?? []).map((node) => this.toWasfaMutaba({
       ...node,
       createdAt: "",
       updatedAt: "",
@@ -500,7 +500,7 @@ export class LinearClient implements IssueTracker {
   /**
    * Create a new issue
    */
-  async createIssue(input: CreateIssueInput): Promise<TrackerIssue> {
+  async createIssue(input: CreateIssueInput): Promise<WasfaMutaba> {
     // Resolve status name to Linear stateId if provided
     let stateId: string | undefined;
     if (input.status) {
@@ -540,7 +540,7 @@ export class LinearClient implements IssueTracker {
 
     if (result?.issueCreate?.success) {
       await logger.info("linear", `Created issue ${result.issueCreate.issue.identifier}`);
-      return this.toTrackerIssue(result.issueCreate.issue);
+      return this.toWasfaMutaba(result.issueCreate.issue);
     }
 
     throw new Error("Failed to create issue");
@@ -552,7 +552,7 @@ export class LinearClient implements IssueTracker {
   async updateIssue(
     issueId: string,
     input: UpdateIssueInput
-  ): Promise<TrackerIssue> {
+  ): Promise<WasfaMutaba> {
     // Resolve status name to Linear stateId if provided
     const linearInput: Record<string, unknown> = {};
     if (input.title !== undefined) linearInput.title = input.title;
@@ -579,7 +579,7 @@ export class LinearClient implements IssueTracker {
     );
 
     if (result?.issueUpdate?.success && result.issueUpdate.issue) {
-      return this.toTrackerIssue(result.issueUpdate.issue);
+      return this.toWasfaMutaba(result.issueUpdate.issue);
     }
 
     throw new Error(`Failed to update issue ${issueId}`);
@@ -949,22 +949,22 @@ export class LinearClient implements IssueTracker {
       // /issue/TEAM-123 or /TEAM/issue/TEAM-123
       const issueIndex = pathParts.indexOf("issue");
       if (issueIndex !== -1 && pathParts[issueIndex + 1]) {
-        return { type: "ticket" as EntityType, id: pathParts[issueIndex + 1] };
+        return { type: "ticket" as NawKiyan, id: pathParts[issueIndex + 1] };
       }
 
       // /project/uuid
       const projectIndex = pathParts.indexOf("project");
       if (projectIndex !== -1 && pathParts[projectIndex + 1]) {
-        return { type: "project" as EntityType, id: pathParts[projectIndex + 1] };
+        return { type: "project" as NawKiyan, id: pathParts[projectIndex + 1] };
       }
 
       // Direct identifier like /TEAM-123
       const identifierMatch = pathParts.find((p) => /^[A-Z]+-\d+$/.test(p));
       if (identifierMatch) {
-        return { type: "ticket" as EntityType, id: identifierMatch };
+        return { type: "ticket" as NawKiyan, id: identifierMatch };
       }
 
-      return { type: "unknown" as EntityType, id: pathParts.join("/") };
+      return { type: "unknown" as NawKiyan, id: pathParts.join("/") };
     } catch {
       return null;
     }
@@ -1037,9 +1037,9 @@ export class LinearClient implements IssueTracker {
   // ===========================================================================
 
   /**
-   * Map a LinearIssue to the normalized TrackerIssue type
+   * Map a LinearIssue to the normalized WasfaMutaba type
    */
-  private toTrackerIssue(issue: LinearIssue): TrackerIssue {
+  private toWasfaMutaba(issue: LinearIssue): WasfaMutaba {
     return {
       id: issue.id,
       identifier: issue.identifier,
@@ -1060,6 +1060,6 @@ export class LinearClient implements IssueTracker {
 /**
  * Create a Linear client instance
  */
-export function createLinearClient(config: MunadiConfig): IssueTracker {
+export function createLinearClient(config: TasmimIksir): MutabiWasfa {
   return new LinearClient(config);
 }

@@ -1,7 +1,7 @@
 /**
  * munadi init — Interactive onboarding wizard
  *
- * Walks through each integration step by step, validates credentials
+ * Walks through each integration step by step, tahaqqaqs credentials
  * live, auto-detects what it can, and writes config files.
  */
 
@@ -141,7 +141,7 @@ interface InitState {
   githubUsername: string;
   opencodeServer: string;
   skippedTelegram: boolean;
-  skippedIssueTracker: boolean;
+  skippedMutabiWasfa: boolean;
   skippedGithub: boolean;
 }
 
@@ -165,7 +165,7 @@ async function stepTelegram(state: InitState): Promise<void> {
   console.log(`  ${dim("3.")} Copy the token you receive`);
   console.log("");
 
-  // Get and validate token
+  // Get and tahaqqaq token
   while (true) {
     const token = await promptSecret("Bot token");
     if (!token) {
@@ -226,14 +226,14 @@ async function stepTelegram(state: InitState): Promise<void> {
   }
 }
 
-async function stepIssueTracker(state: InitState): Promise<void> {
+async function stepMutabiWasfa(state: InitState): Promise<void> {
   heading(2, TOTAL_STEPS, "Issue Tracker");
   console.log("");
   console.log(`  Munadi creates and manages tickets. Linear is the default provider.`);
   console.log("");
 
   if (!await confirm("Set up Linear?")) {
-    state.skippedIssueTracker = true;
+    state.skippedMutabiWasfa = true;
     warn("Skipped. You can configure the issue tracker later in .env");
     return;
   }
@@ -247,7 +247,7 @@ async function stepIssueTracker(state: InitState): Promise<void> {
     const key = await promptSecret("API key");
     if (!key) {
       if (await confirm("Skip Linear?", false)) {
-        state.skippedIssueTracker = true;
+        state.skippedMutabiWasfa = true;
         return;
       }
       continue;
@@ -447,7 +447,7 @@ async function stepFinalize(state: InitState): Promise<void> {
   }
   if (state.issueTrackerApiKey) {
     ok(`Issue tracker: ${state.issueTrackerTeamName} (Linear)`);
-  } else if (state.skippedIssueTracker) {
+  } else if (state.skippedMutabiWasfa) {
     warn("Issue tracker: skipped");
   }
   if (state.githubOwner) {
@@ -482,12 +482,12 @@ export async function runInit(): Promise<void> {
     githubUsername: "",
     opencodeServer: "http://localhost:4096",
     skippedTelegram: false,
-    skippedIssueTracker: false,
+    skippedMutabiWasfa: false,
     skippedGithub: false,
   };
 
   await stepTelegram(state);
-  await stepIssueTracker(state);
+  await stepMutabiWasfa(state);
   await stepGithub(state);
   await stepAgent(state);
   await stepFinalize(state);

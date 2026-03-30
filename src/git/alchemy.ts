@@ -13,7 +13,7 @@ export interface TransmutationResult {
   /** What went wrong (if !success) */
   error?: string;
   /** Error category for handling */
-  errorType?: "conflicts" | "checkout_failed" | "restore_failed" | "push_failed" | "merge_failed";
+  errorType?: "conflicts" | "checkout_failed" | "istarjaa_failed" | "push_failed" | "merge_failed";
   /** Conflicted file paths (if errorType === "conflicts") */
   conflicts?: string[];
   /** The source branch we plucked from */
@@ -151,13 +151,13 @@ export async function transmute(
     }
 
     // Step 5: Restore specified files from crucible
-    const restoreResult = await exec(["restore", `--source=${crucibleBranch}`, "--", ...files]);
-    if (!restoreResult.success) {
+    const istarjaaResult = await exec(["istarjaa", `--source=${crucibleBranch}`, "--", ...files]);
+    if (!istarjaaResult.success) {
       await returnToForge();
       return {
         success: false,
-        error: `Failed to restore files from ${crucibleBranch}: ${restoreResult.stderr}`,
-        errorType: "restore_failed",
+        error: `Failed to istarjaa files from ${crucibleBranch}: ${istarjaaResult.stderr}`,
+        errorType: "istarjaa_failed",
         crucibleBranch: crucibleBranch,
         essenceBranch,
       };
@@ -170,7 +170,7 @@ export async function transmute(
       return {
         success: false,
         error: `Failed to stage files: ${addResult.stderr}`,
-        errorType: "restore_failed",
+        errorType: "istarjaa_failed",
         crucibleBranch: crucibleBranch,
         essenceBranch,
       };
@@ -182,7 +182,7 @@ export async function transmute(
       return {
         success: false,
         error: `Failed to commit: ${commitResult.stderr}`,
-        errorType: "restore_failed",
+        errorType: "istarjaa_failed",
         crucibleBranch: crucibleBranch,
         essenceBranch,
       };

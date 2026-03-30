@@ -7,14 +7,14 @@
 
 import { createOpencodeClient, type OpencodeClient as Client } from "@opencode/sdk/v2";
 import { logger } from "../logging/logger.ts";
-import type { MunadiConfig, OpenCodeEvent, OpenCodeSession } from "../types.ts";
+import type { TasmimIksir, HadathOpenCode, JalsatOpenCode } from "../types.ts";
 
 export class OpenCodeClient {
   private client: Client;
   private serverUrl: string;
   private eventAbortController: AbortController | null = null;
 
-  constructor(config: MunadiConfig) {
+  constructor(config: TasmimIksir) {
     this.serverUrl = config.opencode.server;
     this.client = createOpencodeClient({
       baseUrl: this.serverUrl,
@@ -45,10 +45,10 @@ export class OpenCodeClient {
   /**
    * Create a new session for a ticket
    */
-  async createSession(ticketId: string, title: string): Promise<OpenCodeSession | null> {
+  async khalaqaJalsa(huwiyyatWasfa: string, title: string): Promise<JalsatOpenCode | null> {
     try {
       const response = await this.client.session.create({
-        title: `${ticketId}: ${title}`,
+        title: `${huwiyyatWasfa}: ${title}`,
       });
 
       if (!response.data) {
@@ -56,21 +56,21 @@ export class OpenCodeClient {
         return null;
       }
 
-      const session: OpenCodeSession = {
+      const session: JalsatOpenCode = {
         id: response.data.id,
         projectId: response.data.projectID,
-        ticketId,
+        huwiyyatWasfa,
         title,
-        status: "idle",
+        status: "sakin",
         createdAt: new Date(response.data.time.created),
         lastMessageAt: new Date(response.data.time.updated),
       };
 
-      await logger.info("opencode", `Created session ${session.id} for ${ticketId}`);
+      await logger.info("opencode", `Created session ${session.id} for ${huwiyyatWasfa}`);
       return session;
     } catch (error) {
       await logger.error("opencode", "Failed to create session", {
-        ticketId,
+        huwiyyatWasfa,
         error: String(error),
       });
       return null;
@@ -80,7 +80,7 @@ export class OpenCodeClient {
   /**
    * Get session by ID
    */
-  async getSession(sessionId: string): Promise<OpenCodeSession | null> {
+  async jalabJalsa(sessionId: string): Promise<JalsatOpenCode | null> {
     try {
       const response = await this.client.session.get({
         sessionID: sessionId,
@@ -91,9 +91,9 @@ export class OpenCodeClient {
       return {
         id: response.data.id,
         projectId: response.data.projectID,
-        ticketId: "",
+        huwiyyatWasfa: "",
         title: response.data.title ?? "",
-        status: "idle", // Would need to check session status endpoint
+        status: "sakin", // Would need to check session status endpoint
         createdAt: new Date(response.data.time.created),
         lastMessageAt: new Date(response.data.time.updated),
       };
@@ -109,7 +109,7 @@ export class OpenCodeClient {
   /**
    * List all sessions
    */
-  async listSessions(): Promise<OpenCodeSession[]> {
+  async listSessions(): Promise<JalsatOpenCode[]> {
     try {
       const response = await this.client.session.list();
       if (!response.data) return [];
@@ -117,9 +117,9 @@ export class OpenCodeClient {
       return response.data.map((s) => ({
         id: s.id,
         projectId: s.projectID,
-        ticketId: "",
+        huwiyyatWasfa: "",
         title: s.title ?? "",
-        status: "idle" as const,
+        status: "sakin" as const,
         createdAt: new Date(s.time.created),
         lastMessageAt: new Date(s.time.updated),
       }));
@@ -244,7 +244,7 @@ export class OpenCodeClient {
   /**
    * Delete a session
    */
-  async deleteSession(sessionId: string): Promise<boolean> {
+  async mahaqaJalsa(sessionId: string): Promise<boolean> {
     try {
       const response = await this.client.session.delete({
         sessionID: sessionId,
@@ -262,7 +262,7 @@ export class OpenCodeClient {
   /**
    * Get session status for all sessions
    */
-  async getSessionStatuses(): Promise<Record<string, string>> {
+  async jalabJalsaStatuses(): Promise<Record<string, string>> {
     try {
       const response = await this.client.session.status();
       if (!response.data) return {};
@@ -278,7 +278,7 @@ export class OpenCodeClient {
     }
   }
 
-  // Classifier session ID (lazy-initialized)
+  // Classifier session ID (lazy-tahyiad)
   private classifierSessionId: string | null = null;
 
   /**
@@ -288,12 +288,12 @@ export class OpenCodeClient {
   private async getClassifierSession(): Promise<string | null> {
     if (this.classifierSessionId) {
       // Verify it still exists
-      const session = await this.getSession(this.classifierSessionId);
+      const session = await this.jalabJalsa(this.classifierSessionId);
       if (session) return this.classifierSessionId;
     }
 
     // Create new classifier session
-    const session = await this.createSession("munadi-classifier", "Dispatcher Classification");
+    const session = await this.khalaqaJalsa("munadi-classifier", "Munadi Classification");
     if (session) {
       this.classifierSessionId = session.id;
       return session.id;
@@ -321,7 +321,7 @@ export class OpenCodeClient {
    * Note: Using raw fetch instead of SDK's event.subscribe() for better control
    * over abort signals and reconnection logic.
    */
-  async *subscribeToEvents(signal?: AbortSignal): AsyncGenerator<OpenCodeEvent> {
+  async *subscribeToEvents(signal?: AbortSignal): AsyncGenerator<HadathOpenCode> {
     const controller = new AbortController();
     this.eventAbortController = controller;
 
@@ -483,7 +483,7 @@ export class OpenCodeClient {
    * Get message count for a session.
    * Returns total messages and assistant message count.
    */
-  async getMessageCount(sessionId: string): Promise<{
+  async jalabRisalaCount(sessionId: string): Promise<{
     total: number;
     assistant: number;
     user: number;
@@ -610,6 +610,6 @@ export class OpenCodeClient {
 /**
  * Create an OpenCode client instance
  */
-export function createOpenCodeClient(config: MunadiConfig): OpenCodeClient {
+export function createOpenCodeClient(config: TasmimIksir): OpenCodeClient {
   return new OpenCodeClient(config);
 }

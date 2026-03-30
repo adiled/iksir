@@ -7,16 +7,16 @@ import {
   upsertChannel,
   getChannel,
   getChannelsForSession,
-  getSessionByChannel,
-  deleteChannel,
+  jalabJalsaByChannel,
+  mahaqaQanat,
   insertEvent,
   getUnprocessedEvents,
   markEventProcessed,
   insertQuestion,
   getUnansweredQuestions,
   markQuestionAnswered,
-  addDiaryDecision,
-  getDiaryDecisions,
+  addQararSijill,
+  getQararSijills,
   upsertPendingDemand,
   getPendingDemands,
   removePendingDemand,
@@ -50,7 +50,7 @@ Deno.test("sessions: upsert and retrieve", async () => {
       identifier: "TEAM-200",
       title: "Auto-login feature",
       type: "epic",
-      status: "active",
+      status: "fail",
       branch: "epic/stay-2189-auto-login",
       createdAt: "2026-03-01T00:00:00Z",
       lastMessageAt: "2026-03-01T12:00:00Z",
@@ -62,7 +62,7 @@ Deno.test("sessions: upsert and retrieve", async () => {
     assertEquals(sessions[0].identifier, "TEAM-200");
     assertEquals(sessions[0].title, "Auto-login feature");
     assertEquals(sessions[0].type, "epic");
-    assertEquals(sessions[0].status, "active");
+    assertEquals(sessions[0].status, "fail");
   });
 });
 
@@ -73,7 +73,7 @@ Deno.test("sessions: upsert updates existing", async () => {
       identifier: "TEAM-200",
       title: "Auto-login",
       type: "epic",
-      status: "active",
+      status: "fail",
       branch: "epic/stay-2189",
       createdAt: "2026-03-01T00:00:00Z",
       lastMessageAt: "2026-03-01T12:00:00Z",
@@ -85,7 +85,7 @@ Deno.test("sessions: upsert updates existing", async () => {
       identifier: "TEAM-200",
       title: "Auto-login v2",
       type: "epic",
-      status: "blocked",
+      status: "masdud",
       branch: "epic/stay-2189",
       blockedReason: "Missing specs",
       createdAt: "2026-03-01T00:00:00Z",
@@ -96,7 +96,7 @@ Deno.test("sessions: upsert updates existing", async () => {
     const sessions = getAllSessions();
     assertEquals(sessions.length, 1);
     assertEquals(sessions[0].title, "Auto-login v2");
-    assertEquals(sessions[0].status, "blocked");
+    assertEquals(sessions[0].status, "masdud");
     assertEquals(sessions[0].blocked_reason, "Missing specs");
   });
 });
@@ -145,23 +145,23 @@ Deno.test("channels: getChannelsForSession returns empty for unknown", async () 
   });
 });
 
-Deno.test("channels: getSessionByChannel reverse lookup", async () => {
+Deno.test("channels: jalabJalsaByChannel reverse lookup", async () => {
   await withTestDb(() => {
     upsertChannel("TEAM-200", "telegram", "12345");
     upsertChannel("TEAM-300", "telegram", "67890");
 
-    assertEquals(getSessionByChannel("telegram", "12345"), "TEAM-200");
-    assertEquals(getSessionByChannel("telegram", "67890"), "TEAM-300");
-    assertEquals(getSessionByChannel("telegram", "99999"), null);
+    assertEquals(jalabJalsaByChannel("telegram", "12345"), "TEAM-200");
+    assertEquals(jalabJalsaByChannel("telegram", "67890"), "TEAM-300");
+    assertEquals(jalabJalsaByChannel("telegram", "99999"), null);
   });
 });
 
-Deno.test("channels: deleteChannel", async () => {
+Deno.test("channels: mahaqaQanat", async () => {
   await withTestDb(() => {
     upsertChannel("TEAM-200", "telegram", "12345");
     assertEquals(getChannel("TEAM-200", "telegram"), "12345");
 
-    deleteChannel("TEAM-200", "telegram");
+    mahaqaQanat("TEAM-200", "telegram");
     assertEquals(getChannel("TEAM-200", "telegram"), null);
   });
 });
@@ -236,7 +236,7 @@ Deno.test("questions: insert and retrieve unanswered", async () => {
       identifier: "TEAM-200",
       title: "Test",
       type: "epic",
-      status: "active",
+      status: "fail",
       branch: "",
       createdAt: new Date().toISOString(),
       lastMessageAt: new Date().toISOString(),
@@ -264,7 +264,7 @@ Deno.test("questions: markQuestionAnswered removes from unanswered", async () =>
       identifier: "TEAM-200",
       title: "Test",
       type: "epic",
-      status: "active",
+      status: "fail",
       branch: "",
       createdAt: new Date().toISOString(),
       lastMessageAt: new Date().toISOString(),
@@ -291,21 +291,21 @@ Deno.test("questions: markQuestionAnswered removes from unanswered", async () =>
 
 Deno.test("diary: add and query decisions", async () => {
   await withTestDb(() => {
-    addDiaryDecision({
-      murshidId: "TEAM-200",
+    addQararSijill({
+      huwiyyatMurshid: "TEAM-200",
       type: "architecture",
       decision: "Use REST over GraphQL",
       reasoning: "Simpler for this use case",
     });
 
-    addDiaryDecision({
-      murshidId: "TEAM-200",
+    addQararSijill({
+      huwiyyatMurshid: "TEAM-200",
       type: "planning",
       decision: "Split into 3 tickets",
       reasoning: "Each screen is independent",
     });
 
-    const all = getDiaryDecisions({ murshidId: "TEAM-200" });
+    const all = getQararSijills({ huwiyyatMurshid: "TEAM-200" });
     assertEquals(all.length, 2);
     // Both decisions present (order may vary when timestamps are identical)
     const types = all.map(d => d.type).sort();
@@ -315,20 +315,20 @@ Deno.test("diary: add and query decisions", async () => {
 
 Deno.test("diary: filter by type", async () => {
   await withTestDb(() => {
-    addDiaryDecision({
-      murshidId: "TEAM-200",
+    addQararSijill({
+      huwiyyatMurshid: "TEAM-200",
       type: "architecture",
       decision: "d1",
       reasoning: "r1",
     });
-    addDiaryDecision({
-      murshidId: "TEAM-200",
+    addQararSijill({
+      huwiyyatMurshid: "TEAM-200",
       type: "planning",
       decision: "d2",
       reasoning: "r2",
     });
 
-    const arch = getDiaryDecisions({ type: "architecture" });
+    const arch = getQararSijills({ type: "architecture" });
     assertEquals(arch.length, 1);
     assertEquals(arch[0].decision, "d1");
   });
@@ -336,20 +336,20 @@ Deno.test("diary: filter by type", async () => {
 
 Deno.test("diary: search in decision and reasoning", async () => {
   await withTestDb(() => {
-    addDiaryDecision({
-      murshidId: "TEAM-200",
+    addQararSijill({
+      huwiyyatMurshid: "TEAM-200",
       type: "architecture",
       decision: "Use REST for the widget API",
       reasoning: "Performance matters",
     });
-    addDiaryDecision({
-      murshidId: "TEAM-200",
+    addQararSijill({
+      huwiyyatMurshid: "TEAM-200",
       type: "planning",
       decision: "Something else",
       reasoning: "Unrelated",
     });
 
-    const results = getDiaryDecisions({ search: "widget" });
+    const results = getQararSijills({ search: "widget" });
     assertEquals(results.length, 1);
     assertEquals(results[0].decision, "Use REST for the widget API");
   });
@@ -358,35 +358,35 @@ Deno.test("diary: search in decision and reasoning", async () => {
 Deno.test("diary: limit parameter", async () => {
   await withTestDb(() => {
     for (let i = 0; i < 5; i++) {
-      addDiaryDecision({
-        murshidId: "TEAM-200",
+      addQararSijill({
+        huwiyyatMurshid: "TEAM-200",
         type: "planning",
         decision: `decision ${i}`,
         reasoning: `reasoning ${i}`,
       });
     }
 
-    const limited = getDiaryDecisions({ limit: 3 });
+    const limited = getQararSijills({ limit: 3 });
     assertEquals(limited.length, 3);
   });
 });
 
-Deno.test("diary: collective query (no murshidId filter)", async () => {
+Deno.test("diary: collective query (no huwiyyatMurshid filter)", async () => {
   await withTestDb(() => {
-    addDiaryDecision({
-      murshidId: "TEAM-200",
+    addQararSijill({
+      huwiyyatMurshid: "TEAM-200",
       type: "architecture",
       decision: "d1",
       reasoning: "r1",
     });
-    addDiaryDecision({
-      murshidId: "TEAM-300",
+    addQararSijill({
+      huwiyyatMurshid: "TEAM-300",
       type: "architecture",
       decision: "d2",
       reasoning: "r2",
     });
 
-    const all = getDiaryDecisions({});
+    const all = getQararSijills({});
     assertEquals(all.length, 2);
   });
 });
@@ -401,7 +401,7 @@ Deno.test("demands: upsert and retrieve", async () => {
 
     const demands = getPendingDemands();
     assertEquals(demands.length, 1);
-    assertEquals(demands[0].murshid_id, "TEAM-200");
+    assertEquals(demands[0].huwiyat_murshid, "TEAM-200");
     assertEquals(demands[0].reason, "Need control for PR");
     assertEquals(demands[0].priority, "normal");
   });
@@ -414,8 +414,8 @@ Deno.test("demands: urgent sorted before normal", async () => {
 
     const demands = getPendingDemands();
     assertEquals(demands.length, 2);
-    assertEquals(demands[0].murshid_id, "TEAM-200"); // urgent first
-    assertEquals(demands[1].murshid_id, "TEAM-300");
+    assertEquals(demands[0].huwiyat_murshid, "TEAM-200"); // urgent first
+    assertEquals(demands[1].huwiyat_murshid, "TEAM-300");
   });
 });
 
@@ -447,7 +447,7 @@ Deno.test("demands: removePendingDemand", async () => {
 
 Deno.test("initDatabase: idempotent — safe to call twice", async () => {
   await withTestDb(async () => {
-    // Already initialized by withTestDb, call again
+    // Already tahyiad by withTestDb, call again
     await initDatabase();
     // Should not throw, tables should still work
     upsertChannel("test", "telegram", "123");

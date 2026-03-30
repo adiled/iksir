@@ -2,13 +2,13 @@
  * Shared Test Helpers
  *
  * Mock factories and utilities for Tier 2+ tests.
- * Provides typed mocks for OpenCodeClient, TelegramClient, MessengerOutbound,
- * and SessionManager. Uses real temp DB instances (same pattern as db_test.ts).
+ * Provides typed mocks for OpenCodeClient, TelegramClient, RasulKharij,
+ * and MudirJalasat. Uses real temp DB instances (same pattern as db_test.ts).
  */
 
 import { initDatabase, closeDatabase, upsertSession } from "../db/db.ts";
 import { execCommand } from "./utils/exec.ts";
-import type { MessengerOutbound, MessageChannel, OrchestratorSession, QuestionAnswer } from "./types.ts";
+import type { RasulKharij, QanatRisala, JalsatMurshid, QuestionAnswer } from "./types.ts";
 
 // =============================================================================
 // Temp DB helper (same pattern as db_test.ts)
@@ -16,7 +16,7 @@ import type { MessengerOutbound, MessageChannel, OrchestratorSession, QuestionAn
 
 /**
  * Run a test function with an isolated temp SQLite DB.
- * Sets MUNADI_STATE_DIR, initializes DB, runs fn, then cleans up.
+ * Sets MUNADI_STATE_DIR, tahyias DB, runs fn, then cleans up.
  */
 export async function withTestDb(fn: () => Promise<void> | void): Promise<void> {
   const tempDir = await Deno.makeTempDir({ prefix: "munadi-test-" });
@@ -34,7 +34,7 @@ export async function withTestDb(fn: () => Promise<void> | void): Promise<void> 
 /**
  * Run a test function with both an isolated DB and an isolated git repo.
  * Creates a temp dir with `git init`, sets MUNADI_REPO_PATH + MUNADI_STATE_DIR,
- * initializes DB, runs fn, then cleans up everything.
+ * tahyias DB, runs fn, then cleans up everything.
  *
  * Use this for tests that exercise code paths involving git operations
  * (e.g. dispatcher → session-manager → git checkout).
@@ -64,7 +64,7 @@ export async function withTestRepo(fn: () => Promise<void> | void): Promise<void
 // =============================================================================
 
 /** Minimal session shape returned by OpenCode mock */
-interface MockOpenCodeSession {
+interface MockJalsatOpenCode {
   id: string;
   title: string;
   createdAt: Date;
@@ -85,8 +85,8 @@ export interface MockOpenCodeClient {
     prompt: string,
     options?: unknown,
   ): Promise<{ success: boolean; response?: string; error?: string }>;
-  createSession(ticketId: string, title: string): Promise<MockOpenCodeSession | null>;
-  getSession(sessionId: string): Promise<MockOpenCodeSession | null>;
+  khalaqaJalsa(huwiyyatWasfa: string, title: string): Promise<MockJalsatOpenCode | null>;
+  jalabJalsa(sessionId: string): Promise<MockJalsatOpenCode | null>;
   listSessions(): Promise<Array<{ id: string; title: string; createdAt: Date; lastMessageAt: Date }>>;
 
   // Test inspection
@@ -96,14 +96,14 @@ export interface MockOpenCodeClient {
     rejectQuestion: Array<{ sessionId: string; questionId: string }>;
     sendPromptAsync: Array<{ sessionId: string; prompt: string }>;
     sendPrompt: Array<{ sessionId: string; prompt: string }>;
-    createSession: Array<{ ticketId: string; title: string }>;
+    khalaqaJalsa: Array<{ huwiyyatWasfa: string; title: string }>;
   };
-  _sessions: Map<string, MockOpenCodeSession>;
+  _sessions: Map<string, MockJalsatOpenCode>;
 }
 
 /**
  * Create a mock OpenCodeClient. Override specific methods via the overrides param.
- * Includes session management (createSession, getSession) for integration tests.
+ * Includes session management (khalaqaJalsa, jalabJalsa) for integration tests.
  */
 export function mockOpenCodeClient(overrides?: {
   classify?: (prompt: string) => Promise<{ success: boolean; response?: string; error?: string }>;
@@ -115,7 +115,7 @@ export function mockOpenCodeClient(overrides?: {
   rejectQuestion?: (sessionId: string, questionId: string) => Promise<boolean>;
   sendPromptAsync?: (sessionId: string, prompt: string) => Promise<boolean>;
   sendPrompt?: (sessionId: string, prompt: string) => Promise<{ success: boolean; response?: string; error?: string }>;
-  createSession?: (ticketId: string, title: string) => Promise<MockOpenCodeSession | null>;
+  khalaqaJalsa?: (huwiyyatWasfa: string, title: string) => Promise<MockJalsatOpenCode | null>;
 }): MockOpenCodeClient {
   const calls: MockOpenCodeClient["_calls"] = {
     classify: [],
@@ -123,10 +123,10 @@ export function mockOpenCodeClient(overrides?: {
     rejectQuestion: [],
     sendPromptAsync: [],
     sendPrompt: [],
-    createSession: [],
+    khalaqaJalsa: [],
   };
 
-  const sessions = new Map<string, MockOpenCodeSession>();
+  const sessions = new Map<string, MockJalsatOpenCode>();
   let sessionCounter = 0;
 
   return {
@@ -163,11 +163,11 @@ export function mockOpenCodeClient(overrides?: {
       return { success: true, response: "ok" };
     },
 
-    async createSession(ticketId, title) {
-      calls.createSession.push({ ticketId, title });
-      if (overrides?.createSession) return overrides.createSession(ticketId, title);
+    async khalaqaJalsa(huwiyyatWasfa, title) {
+      calls.khalaqaJalsa.push({ huwiyyatWasfa, title });
+      if (overrides?.khalaqaJalsa) return overrides.khalaqaJalsa(huwiyyatWasfa, title);
       sessionCounter++;
-      const session: MockOpenCodeSession = {
+      const session: MockJalsatOpenCode = {
         id: `mock-session-${sessionCounter}`,
         title,
         createdAt: new Date(),
@@ -177,7 +177,7 @@ export function mockOpenCodeClient(overrides?: {
       return session;
     },
 
-    async getSession(sessionId) {
+    async jalabJalsa(sessionId) {
       return sessions.get(sessionId) ?? null;
     },
 
@@ -197,17 +197,17 @@ export function mockOpenCodeClient(overrides?: {
 // =============================================================================
 
 export interface MockTelegramClient {
-  isEnabled(): boolean;
+  mumakkan(): boolean;
   isGroupMode(): boolean;
   sendToDispatch(
     text: string,
     options?: { parseMode?: string; keyboard?: unknown },
   ): Promise<number | null>;
-  sendMessage(
+  arsalaRisala(
     text: string,
     options?: { parseMode?: string; keyboard?: unknown; topicId?: number; chatId?: string },
   ): Promise<number | null>;
-  sendToOrchestratorTopic(
+  arsalaIlaMurshidTopic(
     topicId: number,
     text: string,
     options?: { parseMode?: string; keyboard?: unknown },
@@ -220,8 +220,8 @@ export interface MockTelegramClient {
   // Test inspection
   _calls: {
     sendToDispatch: Array<{ text: string; options?: { parseMode?: string; keyboard?: unknown } }>;
-    sendMessage: Array<{ text: string; options?: { parseMode?: string; keyboard?: unknown; topicId?: number; chatId?: string } }>;
-    sendToOrchestratorTopic: Array<{ topicId: number; text: string; options?: { parseMode?: string; keyboard?: unknown } }>;
+    arsalaRisala: Array<{ text: string; options?: { parseMode?: string; keyboard?: unknown; topicId?: number; chatId?: string } }>;
+    arsalaIlaMurshidTopic: Array<{ topicId: number; text: string; options?: { parseMode?: string; keyboard?: unknown } }>;
     createForumTopic: Array<{ name: string; options?: { iconColor?: number } }>;
   };
 }
@@ -230,25 +230,25 @@ export interface MockTelegramClient {
  * Create a mock TelegramClient.
  */
 export function mockTelegramClient(overrides?: {
-  isEnabled?: boolean;
+  mumakkan?: boolean;
   isGroupMode?: boolean;
   sendToDispatch?: (text: string, options?: unknown) => Promise<number | null>;
-  sendMessage?: (text: string, options?: unknown) => Promise<number | null>;
-  sendToOrchestratorTopic?: (topicId: number, text: string, options?: unknown) => Promise<number | null>;
+  arsalaRisala?: (text: string, options?: unknown) => Promise<number | null>;
+  arsalaIlaMurshidTopic?: (topicId: number, text: string, options?: unknown) => Promise<number | null>;
   createForumTopic?: (name: string, options?: unknown) => Promise<{ message_thread_id: number; name: string } | null>;
 }): MockTelegramClient {
   const calls: MockTelegramClient["_calls"] = {
     sendToDispatch: [],
-    sendMessage: [],
-    sendToOrchestratorTopic: [],
+    arsalaRisala: [],
+    arsalaIlaMurshidTopic: [],
     createForumTopic: [],
   };
 
   return {
     _calls: calls,
 
-    isEnabled() {
-      return overrides?.isEnabled ?? true;
+    mumakkan() {
+      return overrides?.mumakkan ?? true;
     },
 
     isGroupMode() {
@@ -261,15 +261,15 @@ export function mockTelegramClient(overrides?: {
       return 1;
     },
 
-    async sendMessage(text, options) {
-      calls.sendMessage.push({ text, options });
-      if (overrides?.sendMessage) return overrides.sendMessage(text, options);
+    async arsalaRisala(text, options) {
+      calls.arsalaRisala.push({ text, options });
+      if (overrides?.arsalaRisala) return overrides.arsalaRisala(text, options);
       return 1;
     },
 
-    async sendToOrchestratorTopic(topicId, text, options) {
-      calls.sendToOrchestratorTopic.push({ topicId, text, options });
-      if (overrides?.sendToOrchestratorTopic) return overrides.sendToOrchestratorTopic(topicId, text, options);
+    async arsalaIlaMurshidTopic(topicId, text, options) {
+      calls.arsalaIlaMurshidTopic.push({ topicId, text, options });
+      if (overrides?.arsalaIlaMurshidTopic) return overrides.arsalaIlaMurshidTopic(topicId, text, options);
       return 1;
     },
 
@@ -285,49 +285,49 @@ export function mockTelegramClient(overrides?: {
 // Messenger Mock
 // =============================================================================
 
-export interface MockMessenger extends MessengerOutbound {
+export interface MockMessenger extends RasulKharij {
   _calls: {
-    send: Array<{ channel: MessageChannel; text: string }>;
-    sendFormatted: Array<{ channel: MessageChannel; text: string }>;
+    send: Array<{ channel: QanatRisala; text: string }>;
+    arsalaMunassaq: Array<{ channel: QanatRisala; text: string }>;
     createOrchestratorChannel: Array<{ identifier: string; title: string }>;
     hasOrchestratorChannel: string[];
-    loadChannelsForSession: string[];
-    resolveSessionByChannel: Array<{ provider: string; channelId: string }>;
+    hammalQanawatLilJalsa: string[];
+    hallJalsaBilQanat: Array<{ provider: string; channelId: string }>;
   };
 }
 
 /**
- * Create a mock MessengerOutbound.
+ * Create a mock RasulKharij.
  */
 export function mockMessenger(overrides?: {
-  isEnabled?: boolean;
+  mumakkan?: boolean;
   createOrchestratorChannel?: (id: string, title: string) => Promise<string | null>;
   hasOrchestratorChannel?: (id: string) => boolean;
-  loadChannelsForSession?: (id: string) => Record<string, string>;
-  resolveSessionByChannel?: (provider: string, channelId: string) => string | null;
+  hammalQanawatLilJalsa?: (id: string) => Record<string, string>;
+  hallJalsaBilQanat?: (provider: string, channelId: string) => string | null;
 }): MockMessenger {
   const calls: MockMessenger["_calls"] = {
     send: [],
-    sendFormatted: [],
+    arsalaMunassaq: [],
     createOrchestratorChannel: [],
     hasOrchestratorChannel: [],
-    loadChannelsForSession: [],
-    resolveSessionByChannel: [],
+    hammalQanawatLilJalsa: [],
+    hallJalsaBilQanat: [],
   };
 
   return {
     _calls: calls,
 
-    isEnabled() {
-      return overrides?.isEnabled ?? true;
+    mumakkan() {
+      return overrides?.mumakkan ?? true;
     },
 
     async send(channel, text) {
       calls.send.push({ channel, text });
     },
 
-    async sendFormatted(channel, text) {
-      calls.sendFormatted.push({ channel, text });
+    async arsalaMunassaq(channel, text) {
+      calls.arsalaMunassaq.push({ channel, text });
     },
 
     async createOrchestratorChannel(identifier, title) {
@@ -342,15 +342,15 @@ export function mockMessenger(overrides?: {
       return false;
     },
 
-    loadChannelsForSession(identifier) {
-      calls.loadChannelsForSession.push(identifier);
-      if (overrides?.loadChannelsForSession) return overrides.loadChannelsForSession(identifier);
+    hammalQanawatLilJalsa(identifier) {
+      calls.hammalQanawatLilJalsa.push(identifier);
+      if (overrides?.hammalQanawatLilJalsa) return overrides.hammalQanawatLilJalsa(identifier);
       return {};
     },
 
-    resolveSessionByChannel(provider, channelId) {
-      calls.resolveSessionByChannel.push({ provider, channelId });
-      if (overrides?.resolveSessionByChannel) return overrides.resolveSessionByChannel(provider, channelId);
+    hallJalsaBilQanat(provider, channelId) {
+      calls.hallJalsaBilQanat.push({ provider, channelId });
+      if (overrides?.hallJalsaBilQanat) return overrides.hallJalsaBilQanat(provider, channelId);
       return null;
     },
   };
@@ -360,18 +360,18 @@ export function mockMessenger(overrides?: {
 // Session Manager Mock
 // =============================================================================
 
-export interface MockSessionManager {
-  getOrchestratorSessions(): OrchestratorSession[];
-  _sessions: OrchestratorSession[];
+export interface MockMudirJalasat {
+  wajadaJalasatMurshid(): JalsatMurshid[];
+  _sessions: JalsatMurshid[];
 }
 
 /**
- * Create a mock SessionManager with a fixed set of sessions.
+ * Create a mock MudirJalasat with a fixed set of sessions.
  */
-export function mockSessionManager(sessions: OrchestratorSession[] = []): MockSessionManager {
+export function mockMudirJalasat(sessions: JalsatMurshid[] = []): MockMudirJalasat {
   return {
     _sessions: sessions,
-    getOrchestratorSessions() {
+    wajadaJalasatMurshid() {
       return this._sessions;
     },
   };
@@ -382,16 +382,16 @@ export function mockSessionManager(sessions: OrchestratorSession[] = []): MockSe
 // =============================================================================
 
 /**
- * Create a minimal OrchestratorSession for testing.
+ * Create a minimal JalsatMurshid for testing.
  */
-export function makeSession(overrides?: Partial<OrchestratorSession>): OrchestratorSession {
+export function makeSession(overrides?: Partial<JalsatMurshid>): JalsatMurshid {
   return {
     id: "session-001",
     identifier: "TEAM-1234",
     title: "Test session",
     type: "epic",
     branch: "epic/stay-1234-test",
-    status: "active",
+    status: "fail",
     createdAt: new Date().toISOString(),
     lastMessageAt: new Date().toISOString(),
     activePRs: [],
@@ -404,7 +404,7 @@ export function makeSession(overrides?: Partial<OrchestratorSession>): Orchestra
  * Insert a session row in the DB (satisfies FK constraints for questions table).
  * Call inside withTestDb() before inserting questions.
  */
-export function seedSession(overrides?: Partial<OrchestratorSession>): void {
+export function seedSession(overrides?: Partial<JalsatMurshid>): void {
   const s = makeSession(overrides);
   upsertSession({
     id: s.id,
@@ -433,21 +433,21 @@ export async function writeTempFile(content: string, prefix = "munadi-fixture-")
 // Intent Resolver Mock
 // =============================================================================
 
-import type { ResolvedIntent } from "./daemon/intent-resolver.ts";
+import type { NiyyaMuhallala } from "./daemon/arraf.ts";
 
-export interface MockIntentResolver {
-  resolve(text: string, context?: unknown): Promise<ResolvedIntent>;
+export interface MockArraf {
+  resolve(text: string, context?: unknown): Promise<NiyyaMuhallala>;
   _calls: Array<{ text: string; context?: unknown }>;
-  _nextResult: ResolvedIntent | null;
+  _nextResult: NiyyaMuhallala | null;
 }
 
 /**
- * Create a mock IntentResolver.
+ * Create a mock Arraf.
  * Set `_nextResult` to control what resolve() returns.
  * Default: returns "not_found".
  */
-export function mockIntentResolver(): MockIntentResolver {
-  const calls: MockIntentResolver["_calls"] = [];
+export function mockArraf(): MockArraf {
+  const calls: MockArraf["_calls"] = [];
   return {
     _calls: calls,
     _nextResult: null,
@@ -472,13 +472,13 @@ export function mockIntentResolver(): MockIntentResolver {
 // Config helper
 // =============================================================================
 
-import type { MunadiConfig } from "./types.ts";
+import type { TasmimIksir } from "./types.ts";
 
 /**
- * Create a minimal MunadiConfig for testing.
+ * Create a minimal TasmimIksir for testing.
  * No real Telegram/Linear/OpenCode connections.
  */
-export function makeConfig(overrides?: Partial<MunadiConfig>): MunadiConfig {
+export function makeConfig(overrides?: Partial<TasmimIksir>): TasmimIksir {
   return {
     opencode: { server: "http://localhost:4096" },
     quietHours: { start: "00:00", end: "06:00", timezone: "UTC" },
@@ -500,5 +500,5 @@ export function makeConfig(overrides?: Partial<MunadiConfig>): MunadiConfig {
     },
     prompts: {},
     ...overrides,
-  } as MunadiConfig;
+  } as TasmimIksir;
 }

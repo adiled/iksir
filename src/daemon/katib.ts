@@ -7,7 +7,7 @@
  * - Create/resume murshid session per epic
  * - Track session-ticket-epic mappings
  * - Route messages to appropriate sessions
- * - Persist/restore session state via SQLite
+ * - Persist/istarjaa session state via SQLite
  */
 
 import { OpenCodeClient } from "../opencode/client.ts";
@@ -16,15 +16,15 @@ import {
   upsertSession,
   getAllSessions,
   upsertChannel,
-  getDiaryDecisions,
+  getQararSijills,
 } from "../../db/db.ts";
 import type {
-  TaṣmīmIksir,
+  TasmimIksir,
   JalsatMurshid,
-  TrackedPR,
-  TrackedPRStatus,
-  NawʿMurshid,
-  MessengerOutbound,
+  RisalaMutaba,
+  RisalaMutabaStatus,
+  NawMurshid,
+  RasulKharij,
 } from "../types.ts";
 
 /**
@@ -68,34 +68,34 @@ export function generateBranchName(
   return `epic/${identifier.toLowerCase()}-${effectiveSlug}`;
 }
 
-interface MudīrJalasātConfig {
-  config: TaṣmīmIksir;
+interface TasmimMudirJalasat {
+  config: TasmimIksir;
   opencode: OpenCodeClient;
-  messenger: MessengerOutbound;
+  messenger: RasulKharij;
 }
 
-export class MudīrJalasāt {
-  #config: TaṣmīmIksir;
+export class MudirJalasat {
+  #config: TasmimIksir;
   #opencode: OpenCodeClient;
-  #messenger: MessengerOutbound;
+  #messenger: RasulKharij;
 
   // Murshid sessions (keyed by identifier, e.g., "TEAM-200")
   #murshidSessions: Map<string, JalsatMurshid> = new Map();
 
   // Active murshid (currently only one at a time)
-  #murshidFāʿilId: string | null = null;
+  #murshidFaailId: string | null = null;
 
   // Git fence — blocks PM-MCP git ops during session switches
   #gitFenced = false;
 
-  constructor(deps: MudīrJalasātConfig) {
+  constructor(deps: TasmimMudirJalasat) {
     this.#config = deps.config;
     this.#opencode = deps.opencode;
     this.#messenger = deps.messenger;
   }
 
   /** Get config (for future use) */
-  get config(): TaṣmīmIksir {
+  get config(): TasmimIksir {
     return this.#config;
   }
 
@@ -122,18 +122,18 @@ export class MudīrJalasāt {
     title: string,
     type: "epic" | "chore" | "sandbox" = "epic"
   ): Promise<{ session: JalsatMurshid; isNew: boolean; wasResumed: boolean; previousActive: string | null } | null> {
-    const previousActive = this.#murshidFāʿilId;
+    const previousActive = this.#murshidFaailId;
 
     // Step 1: Check if we already have this session tracked
     let session = this.#murshidSessions.get(identifier);
     if (session) {
       // Verify session still exists in OpenCode
-      const existing = await this.#opencode.getSession(session.id);
+      const existing = await this.#opencode.jalabJalsa(session.id);
       if (existing) {
         await logger.info("session-manager", `Resuming tracked murshid session for ${identifier}`, {
           sessionId: session.id,
         });
-        this.#murshidFāʿilId = identifier;
+        this.#murshidFaailId = identifier;
         // Ensure messaging channel exists (may have been created before channel support was added)
         await this.#ensureMessagingChannel(session);
         return { session, isNew: false, wasResumed: true, previousActive };
@@ -145,7 +145,7 @@ export class MudīrJalasāt {
 
     // Step 2: Check OpenCode for existing murshid session with matching title
     // This handles cases where state wasn't persisted (crash, restart without save, etc.)
-    const existingSession = await this.#baḥathaʿAnJalsatMurshid(identifier);
+    const existingSession = await this.#bahathaAnJalsatMurshid(identifier);
     if (existingSession) {
       await logger.info("session-manager", `Found existing murshid session in OpenCode for ${identifier}`, {
         sessionId: existingSession.id,
@@ -157,15 +157,15 @@ export class MudīrJalasāt {
         title: existingSession.title,
         type,
         branch: generateBranchName(identifier, type, undefined, existingSession.title),
-        status: "fā'il",
+        status: "fail",
         createdAt: existingSession.createdAt.toISOString(),
         lastMessageAt: existingSession.lastMessageAt.toISOString(),
         activePRs: [],
-        channels: this.#messenger.loadChannelsForSession(identifier),
+        channels: this.#messenger.hammalQanawatLilJalsa(identifier),
       };
 
       this.#murshidSessions.set(identifier, session);
-      this.#murshidFāʿilId = identifier;
+      this.#murshidFaailId = identifier;
 
       // Persist the recovered state
       await this.saveState();
@@ -180,7 +180,7 @@ export class MudīrJalasāt {
     await logger.info("session-manager", `Creating new murshid session for ${identifier}`);
 
     const sessionTitle = `[Murshid] ${identifier}: ${title}`;
-    const openCodeSession = await this.#opencode.createSession(identifier, sessionTitle);
+    const openCodeSession = await this.#opencode.khalaqaJalsa(identifier, sessionTitle);
 
     if (!openCodeSession) {
       await logger.error("session-manager", `Failed to create murshid session for ${identifier}`);
@@ -193,7 +193,7 @@ export class MudīrJalasāt {
       title,
       type,
       branch: generateBranchName(identifier, type, undefined, title),
-      status: "fā'il",
+      status: "fail",
       createdAt: new Date().toISOString(),
       lastMessageAt: new Date().toISOString(),
       activePRs: [],
@@ -201,7 +201,7 @@ export class MudīrJalasāt {
     };
 
     this.#murshidSessions.set(identifier, session);
-    this.#murshidFāʿilId = identifier;
+    this.#murshidFaailId = identifier;
 
     // Persist state
     await this.saveState();
@@ -218,7 +218,7 @@ export class MudīrJalasāt {
   /**
    * Find an existing murshid session in OpenCode by searching titles
    */
-  async #baḥathaʿAnJalsatMurshid(epicId: string): Promise<{
+  async #bahathaAnJalsatMurshid(epicId: string): Promise<{
     id: string;
     title: string;
     createdAt: Date;
@@ -257,15 +257,15 @@ export class MudīrJalasāt {
   /**
    * Get the active murshid session
    */
-  wajadaMurshidFāʿil(): JalsatMurshid | null {
-    if (!this.#murshidFāʿilId) return null;
-    return this.#murshidSessions.get(this.#murshidFāʿilId) ?? null;
+  wajadaMurshidFaail(): JalsatMurshid | null {
+    if (!this.#murshidFaailId) return null;
+    return this.#murshidSessions.get(this.#murshidFaailId) ?? null;
   }
 
   /**
    * Get murshid by epic ID
    */
-  getMurshid(epicId: string): JalsatMurshid | null {
+  jalabMurshid(epicId: string): JalsatMurshid | null {
     return this.#murshidSessions.get(epicId) ?? null;
   }
 
@@ -273,8 +273,8 @@ export class MudīrJalasāt {
    * Get murshid by messaging channel (provider + channelId).
    * Uses the messenger's cached reverse lookup.
    */
-  wajadaMurshidBiQanāt(provider: string, channelId: string): JalsatMurshid | null {
-    const identifier = this.#messenger.resolveSessionByChannel(provider, channelId);
+  wajadaMurshidBiQanat(provider: string, channelId: string): JalsatMurshid | null {
+    const identifier = this.#messenger.hallJalsaBilQanat(provider, channelId);
     if (!identifier) return null;
     return this.#murshidSessions.get(identifier) ?? null;
   }
@@ -285,7 +285,7 @@ export class MudīrJalasāt {
    */
   async #ensureMessagingChannel(session: JalsatMurshid): Promise<void> {
     // Already has a channel
-    if (this.#messenger.yamlikuQanātMurshid(session.identifier)) {
+    if (this.#messenger.yamlikQanatMurshid(session.identifier)) {
       return;
     }
 
@@ -317,21 +317,21 @@ export class MudīrJalasāt {
   /**
    * Get the active murshid ID
    */
-  wajadaMurshidFāʿilId(): string | null {
-    return this.#murshidFāʿilId;
+  wajadaMurshidFaailId(): string | null {
+    return this.#murshidFaailId;
   }
 
   /**
    * Set the active murshid (called by dispatcher during switch)
    */
-  waḍaʿaMurshidFāʿil(epicId: string | null): void {
-    this.#murshidFāʿilId = epicId;
+  wadaaMurshidFaail(epicId: string | null): void {
+    this.#murshidFaailId = epicId;
   }
 
   /**
    * Update murshid status
    */
-  async jaddadaḤālatMurshid(
+  async jaddadaḤalatMurshid(
     epicId: string,
     status: JalsatMurshid["status"],
     blockedReason?: string
@@ -345,7 +345,7 @@ export class MudīrJalasāt {
     session.status = status;
     if (blockedReason !== undefined) {
       session.blockedReason = blockedReason;
-    } else if (status !== "masdūd" && status !== "muntaẓir") {
+    } else if (status !== "masdud" && status !== "muntazir") {
       // Clear blocked reason when not blocked/waiting
       session.blockedReason = undefined;
     }
@@ -366,9 +366,9 @@ export class MudīrJalasāt {
    * Register a new PR for tracking.
    * Called after successful PR creation via gh pr create.
    */
-  async registerPR(
+  async sajjalRisala(
     epicId: string,
-    pr: Omit<TrackedPR, "createdAt" | "statusChangedAt">
+    pr: Omit<RisalaMutaba, "createdAt" | "statusChangedAt">
   ): Promise<boolean> {
     const session = this.#murshidSessions.get(epicId);
     if (!session) {
@@ -377,14 +377,14 @@ export class MudīrJalasāt {
     }
 
     // Check if PR already tracked
-    const existing = session.activePRs.find((p) => p.prNumber === pr.prNumber);
+    const existing = session.activePRs.find((p) => p.raqamRisala === pr.raqamRisala);
     if (existing) {
-      await logger.warn("session-manager", `PR #${pr.prNumber} already tracked for ${epicId}`);
+      await logger.warn("session-manager", `PR #${pr.raqamRisala} already tracked for ${epicId}`);
       return false;
     }
 
     const now = new Date().toISOString();
-    const trackedPR: TrackedPR = {
+    const trackedPR: RisalaMutaba = {
       ...pr,
       createdAt: now,
       statusChangedAt: now,
@@ -393,8 +393,8 @@ export class MudīrJalasāt {
     session.activePRs.push(trackedPR);
     await this.saveState();
 
-    await logger.info("session-manager", `Registered PR #${pr.prNumber} for ${epicId}`, {
-      wasfaId: pr.wasfaId,
+    await logger.info("session-manager", `Registered PR #${pr.raqamRisala} for ${epicId}`, {
+      huwiyyatWasfa: pr.huwiyyatWasfa,
       branch: pr.branch,
     });
 
@@ -405,9 +405,9 @@ export class MudīrJalasāt {
    * Get murshid session by PR number.
    * Used by keepalive to find which murshid owns a PR.
    */
-  getSessionByPR(prNumber: number): JalsatMurshid | null {
+  jalabJalsaByPR(raqamRisala: number): JalsatMurshid | null {
     for (const session of this.#murshidSessions.values()) {
-      if (session.activePRs.some((pr) => pr.prNumber === prNumber)) {
+      if (session.activePRs.some((pr) => pr.raqamRisala === raqamRisala)) {
         return session;
       }
     }
@@ -419,11 +419,11 @@ export class MudīrJalasāt {
    * Returns the previous status for comparison.
    */
   async updatePRStatus(
-    prNumber: number,
-    status: TrackedPRStatus
-  ): Promise<{ session: JalsatMurshid; previousStatus: TrackedPRStatus } | null> {
+    raqamRisala: number,
+    status: RisalaMutabaStatus
+  ): Promise<{ session: JalsatMurshid; previousStatus: RisalaMutabaStatus } | null> {
     for (const session of this.#murshidSessions.values()) {
-      const pr = session.activePRs.find((p) => p.prNumber === prNumber);
+      const pr = session.activePRs.find((p) => p.raqamRisala === raqamRisala);
       if (pr) {
         const previousStatus = pr.status;
         if (previousStatus === status) {
@@ -434,9 +434,9 @@ export class MudīrJalasāt {
         pr.statusChangedAt = new Date().toISOString();
         await this.saveState();
 
-        await logger.info("session-manager", `Updated PR #${prNumber} status: ${previousStatus} → ${status}`, {
+        await logger.info("session-manager", `Updated PR #${raqamRisala} status: ${previousStatus} → ${status}`, {
           identifier: session.identifier,
-          wasfaId: pr.wasfaId,
+          huwiyyatWasfa: pr.huwiyyatWasfa,
         });
 
         return { session, previousStatus };
@@ -448,9 +448,9 @@ export class MudīrJalasāt {
   /**
    * Update the last polled time for a PR (persisted to prevent re-fetching comments on restart).
    */
-  async updatePRLastPolled(prNumber: number): Promise<void> {
+  async updatePRLastPolled(raqamRisala: number): Promise<void> {
     for (const session of this.#murshidSessions.values()) {
-      const pr = session.activePRs.find((p) => p.prNumber === prNumber);
+      const pr = session.activePRs.find((p) => p.raqamRisala === raqamRisala);
       if (pr) {
         pr.lastPolledAt = new Date().toISOString();
         await this.saveState();
@@ -463,8 +463,8 @@ export class MudīrJalasāt {
    * Get all PRs being tracked across all sessions.
    * Useful for keepalive to poll all active PRs.
    */
-  getAllTrackedPRs(): Array<{ session: JalsatMurshid; pr: TrackedPR }> {
-    const result: Array<{ session: JalsatMurshid; pr: TrackedPR }> = [];
+  getAllRisalaMutabas(): Array<{ session: JalsatMurshid; pr: RisalaMutaba }> {
+    const result: Array<{ session: JalsatMurshid; pr: RisalaMutaba }> = [];
     for (const session of this.#murshidSessions.values()) {
       for (const pr of session.activePRs) {
         result.push({ session, pr });
@@ -476,7 +476,7 @@ export class MudīrJalasāt {
   /**
    * Get PRs for a specific murshid that are not yet merged/closed.
    */
-  wajadaRasāʾilFāʿilaLiMurshid(epicId: string): TrackedPR[] {
+  wajadaRasaailFaailaLiMurshid(epicId: string): RisalaMutaba[] {
     const session = this.#murshidSessions.get(epicId);
     if (!session) return [];
     return session.activePRs.filter((pr) => pr.status !== "merged" && pr.status !== "closed");
@@ -506,7 +506,7 @@ export class MudīrJalasāt {
    * Automatically injects huwiyyatMurshid reminder for pm_reply/pm_notify routing.
    */
   async arsalaIlaMurshid(message: string): Promise<boolean> {
-    const session = this.wajadaMurshidFāʿil();
+    const session = this.wajadaMurshidFaail();
     if (!session) {
       await logger.warn("session-manager", "No active murshid session");
       return false;
@@ -601,7 +601,7 @@ Awaiting direction from operator...`;
     });
 
     // Fetch diary entries for this murshid
-    const entries = getDiaryDecisions({
+    const entries = getQararSijills({
       huwiyyatMurshid: session.identifier,
       limit: 15,
     });
@@ -643,7 +643,7 @@ Call pm_read_diary for full decision history with reasoning.
   /**
    * Get all murshid sessions
    */
-  wajadaJalasātMurshid(): JalsatMurshid[] {
+  wajadaJalasatMurshid(): JalsatMurshid[] {
     return Array.from(this.#murshidSessions.values());
   }
 
@@ -652,11 +652,11 @@ Call pm_read_diary for full decision history with reasoning.
    */
   exportState(): {
     murshidun: JalsatMurshid[];
-    murshidFāʿil: string | null;
+    murshidFaail: string | null;
   } {
     return {
-      murshidun: this.wajadaJalasātMurshid(),
-      murshidFāʿil: this.#murshidFāʿilId,
+      murshidun: this.wajadaJalasatMurshid(),
+      murshidFaail: this.#murshidFaailId,
     };
   }
 
@@ -665,7 +665,7 @@ Call pm_read_diary for full decision history with reasoning.
    */
   importState(state: {
     murshidun?: JalsatMurshid[];
-    murshidFāʿil?: string | null;
+    murshidFaail?: string | null;
   }): void {
     if (state.murshidun) {
       for (const session of state.murshidun) {
@@ -673,8 +673,8 @@ Call pm_read_diary for full decision history with reasoning.
       }
     }
 
-    if (state.murshidFāʿil) {
-      this.#murshidFāʿilId = state.murshidFāʿil;
+    if (state.murshidFaail) {
+      this.#murshidFaailId = state.murshidFaail;
     }
   }
 
@@ -724,7 +724,7 @@ Call pm_read_diary for full decision history with reasoning.
   }
 
   /**
-   * Load and validate session state from SQLite
+   * Load and tahaqqaq session state from SQLite
    * Validates that sessions still exist in OpenCode before using them
    */
   async loadState(): Promise<void> {
@@ -737,23 +737,23 @@ Call pm_read_diary for full decision history with reasoning.
       }
 
       // Validate murshid sessions still exist in OpenCode
-      const murshidūnṢāliḥūn: JalsatMurshid[] = [];
+      const murshidunṢalihun: JalsatMurshid[] = [];
       for (const dbSession of dbSessions) {
-        const exists = await this.#opencode.getSession(dbSession.id);
+        const exists = await this.#opencode.jalabJalsa(dbSession.id);
         if (exists) {
           // Parse metadata
           const metadata = JSON.parse(dbSession.metadata || "{}") as {
-            activePRs?: TrackedPR[];
+            activePRs?: RisalaMutaba[];
           };
 
           // Hydrate channels from the channels table
-          const channels = this.#messenger.loadChannelsForSession(dbSession.identifier);
+          const channels = this.#messenger.hammalQanawatLilJalsa(dbSession.identifier);
 
           const session: JalsatMurshid = {
             id: dbSession.id,
             identifier: dbSession.identifier,
             title: dbSession.title,
-            type: dbSession.type as NawʿMurshid,
+            type: dbSession.type as NawMurshid,
             status: dbSession.status as JalsatMurshid["status"],
             branch: dbSession.branch ?? "",
             blockedReason: dbSession.blocked_reason ?? undefined,
@@ -763,31 +763,31 @@ Call pm_read_diary for full decision history with reasoning.
             activePRs: metadata.activePRs ?? [],
           };
 
-          murshidūnṢāliḥūn.push(session);
+          murshidunṢalihun.push(session);
           await logger.info("session-manager", `Restored murshid session for ${session.identifier}`);
         } else {
           await logger.warn("session-manager", `Murshid session ${dbSession.id} no longer exists, skipping`);
         }
       }
 
-      // Import validated state
+      // Import tahaqqaqd state
       this.importState({
-        murshidun: murshidūnṢāliḥūn,
+        murshidun: murshidunṢalihun,
       });
 
-      // Find active murshid (one with status="fā'il")
-      const activeSession = murshidūnṢāliḥūn.find(s => s.status === "fā'il");
+      // Find active murshid (one with status="fail")
+      const activeSession = murshidunṢalihun.find(s => s.status === "fail");
       if (activeSession) {
-        this.#murshidFāʿilId = activeSession.identifier;
+        this.#murshidFaailId = activeSession.identifier;
       }
 
       await logger.info("session-manager", "Loaded session state from SQLite", {
-        murshidun: murshidūnṢāliḥūn.length,
-        active: this.#murshidFāʿilId,
+        murshidun: murshidunṢalihun.length,
+        active: this.#murshidFaailId,
       });
 
       // Ensure messaging channels exist for all loaded murshidun
-      for (const session of murshidūnṢāliḥūn) {
+      for (const session of murshidunṢalihun) {
         await this.#ensureMessagingChannel(session);
       }
     } catch (error) {
@@ -802,6 +802,6 @@ Call pm_read_diary for full decision history with reasoning.
 /**
  * Create a session manager instance
  */
-export function istadaaKatib(deps: MudīrJalasātConfig): MudīrJalasāt {
-  return new MudīrJalasāt(deps);
+export function istadaaKatib(deps: TasmimMudirJalasat): MudirJalasat {
+  return new MudirJalasat(deps);
 }

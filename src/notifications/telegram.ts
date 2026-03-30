@@ -11,7 +11,7 @@
 import { logger } from "../logging/logger.ts";
 import { execCommand } from "../utils/exec.ts";
 import { escapeMarkdown, escapeMarkdownV2 } from "../utils/strings.ts";
-import type { MunadiConfig, Notification, ReviewComment } from "../types.ts";
+import type { TasmimIksir, Notification, ReviewComment } from "../types.ts";
 
 /**
  * Fetch wrapper that uses SOCKS5 proxy for Telegram API if configured.
@@ -172,7 +172,7 @@ export class TelegramClient {
   private messageHandlers: MessageHandler[] = [];
   private callbackHandlers: CallbackHandler[] = [];
 
-  constructor(config: MunadiConfig) {
+  constructor(config: TasmimIksir) {
     this.botToken = config.notifications.telegram.botToken;
     this.chatId = config.notifications.telegram.chatId;
     this.groupId = config.notifications.telegram.groupId;
@@ -220,14 +220,14 @@ export class TelegramClient {
   /**
    * Check if Telegram notifications are enabled
    */
-  isEnabled(): boolean {
+  mumakkan(): boolean {
     return this.enabled;
   }
 
   /**
    * Validate that the bot token works
    */
-  async validateToken(): Promise<boolean> {
+  async tahaqqaqToken(): Promise<boolean> {
     if (!this.enabled) return false;
 
     try {
@@ -252,7 +252,7 @@ export class TelegramClient {
   /**
    * Send a message, optionally to a specific topic
    */
-  async sendMessage(
+  async arsalaRisala(
     text: string,
     options?: {
       parseMode?: "Markdown" | "MarkdownV2" | "HTML";
@@ -291,7 +291,7 @@ export class TelegramClient {
     }
 
     try {
-      const response = await proxyFetch(`${this.baseUrl}/sendMessage`, this.proxy, {
+      const response = await proxyFetch(`${this.baseUrl}/arsalaRisala`, this.proxy, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -319,7 +319,7 @@ export class TelegramClient {
    * Send a message with fallback chain: Markdown → plain text.
    * Use this when the message may contain user-generated content with special chars.
    */
-  async sendMessageWithFallback(
+  async arsalaRisalaWithFallback(
     text: string,
     options?: {
       keyboard?: InlineKeyboardMarkup;
@@ -329,7 +329,7 @@ export class TelegramClient {
     }
   ): Promise<number | null> {
     // Try Markdown first
-    const result = await this.sendMessage(text, {
+    const result = await this.arsalaRisala(text, {
       ...options,
       parseMode: "Markdown",
     });
@@ -340,7 +340,7 @@ export class TelegramClient {
 
     // Markdown failed, try plain text
     await logger.warn("telegram", "Markdown failed, retrying as plain text");
-    return this.sendMessage(text, {
+    return this.arsalaRisala(text, {
       ...options,
       parseMode: undefined,
     });
@@ -358,11 +358,11 @@ export class TelegramClient {
   ): Promise<number | null> {
     if (!this.isGroupMode()) {
       // Fall back to private chat
-      return this.sendMessageWithFallback(text, options);
+      return this.arsalaRisalaWithFallback(text, options);
     }
 
     // Use fallback chain for dispatch messages (may contain user-generated titles)
-    return this.sendMessageWithFallback(text, {
+    return this.arsalaRisalaWithFallback(text, {
       ...options,
       chatId: this.groupId,
       topicId: this.dispatchTopicId,
@@ -372,7 +372,7 @@ export class TelegramClient {
   /**
    * Send a message to an orchestrator's topic
    */
-  async sendToOrchestratorTopic(
+  async arsalaIlaMurshidTopic(
     topicId: number,
     text: string,
     options?: {
@@ -382,10 +382,10 @@ export class TelegramClient {
   ): Promise<number | null> {
     if (!this.groupId) {
       // Fall back to private chat (no topic)
-      return this.sendMessage(text, options);
+      return this.arsalaRisala(text, options);
     }
 
-    return this.sendMessage(text, {
+    return this.arsalaRisala(text, {
       ...options,
       chatId: this.groupId,
       topicId,
@@ -565,7 +565,7 @@ export class TelegramClient {
   /**
    * Get the topic ID from a message (1 = General, undefined = no topics)
    */
-  getMessageTopicId(message: TelegramMessage): number | undefined {
+  jalabRisalaTopicId(message: TelegramMessage): number | undefined {
     return message.message_thread_id;
   }
 
@@ -639,7 +639,7 @@ export class TelegramClient {
       ? this.buildKeyboard(notification.actions.map((a) => ({ text: a.label, callback_data: a.action })))
       : undefined;
 
-    return this.sendMessage(text, {
+    return this.arsalaRisala(text, {
       parseMode: "Markdown",
       keyboard,
       disableNotification: notification.priority === "min" || notification.priority === "low",
@@ -700,7 +700,7 @@ Total: ${totalPoints} story points
 
 Beginning work...`;
 
-    return this.sendMessage(text, { parseMode: "Markdown" });
+    return this.arsalaRisala(text, { parseMode: "Markdown" });
   }
 
   /**
@@ -708,13 +708,13 @@ Beginning work...`;
    */
   async sendProgress(
     projectId: string,
-    completed: Array<{ id: string; prNumber?: number }>,
+    completed: Array<{ id: string; raqamRisala?: number }>,
     inProgress: Array<{ id: string; progress: number }>,
     pending: string[]
   ): Promise<number | null> {
     const completedList =
       completed.length > 0
-        ? completed.map((t) => `  ✓ ${t.id}${t.prNumber ? ` (PR #${t.prNumber})` : ""}`).join("\n")
+        ? completed.map((t) => `  ✓ ${t.id}${t.raqamRisala ? ` (PR #${t.raqamRisala})` : ""}`).join("\n")
         : "  (none)";
 
     const inProgressList =
@@ -740,13 +740,13 @@ ${pendingList}
 
 Overall: ${percent}% complete`;
 
-    return this.sendMessage(text, { parseMode: "Markdown" });
+    return this.arsalaRisala(text, { parseMode: "Markdown" });
   }
 
   /**
    * Send review comments summary
    */
-  async sendReviewComments(prNumber: number, comments: ReviewComment[]): Promise<number | null> {
+  async sendReviewComments(raqamRisala: number, comments: ReviewComment[]): Promise<number | null> {
     const byAuthor = new Map<string, ReviewComment[]>();
     for (const comment of comments) {
       const existing = byAuthor.get(comment.author) ?? [];
@@ -754,7 +754,7 @@ Overall: ${percent}% complete`;
       byAuthor.set(comment.author, existing);
     }
 
-    let text = `💬 *Review Comments: PR #${prNumber}*\n\n`;
+    let text = `💬 *Review Comments: PR #${raqamRisala}*\n\n`;
 
     for (const [author, authorComments] of byAuthor) {
       text += `@${author} (${authorComments.length} comment${authorComments.length > 1 ? "s" : ""}):\n\n`;
@@ -772,7 +772,7 @@ Overall: ${percent}% complete`;
 
     text += "Awaiting your direction.";
 
-    return this.sendMessage(text, { parseMode: "Markdown" });
+    return this.arsalaRisala(text, { parseMode: "Markdown" });
   }
 
   /**
@@ -912,7 +912,7 @@ Overall: ${percent}% complete`;
 /**
  * Create a Telegram client instance
  */
-export function createTelegramClient(config: MunadiConfig): TelegramClient {
+export function createTelegramClient(config: TasmimIksir): TelegramClient {
   return new TelegramClient(config);
 }
 

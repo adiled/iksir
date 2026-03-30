@@ -1,5 +1,5 @@
 /**
- * Iksīr MCP Server
+ * Iksir MCP Server
  *
  * Provides tools to the Murshid LLM:
  *   mun_*    Alchemical operations (transmutation, decanting, inscription)
@@ -7,15 +7,15 @@
  *
  * All alchemical tools are built-in.
  *
- * Communicates with Iksīr daemon via SQLite IPC (events table).
+ * Communicates with Iksir daemon via SQLite IPC (events table).
  */
 
 import type {
-  NidāʾKhalqWaṣfa,
-  NidāʾTajdīdWaṣfa,
+  NidaKhalqWasfa,
+  NidaTajdidWasfa,
   MunSetRelationsCall,
-  NidāʾQirāʾatWaṣfa,
-  NidāʾKhalqRisāla,
+  NidaQiraatWasfa,
+  NidaKhalqRisala,
   MunCheckBranchStatusCall,
   MunNotifyCall,
   MunReplyCall,
@@ -28,13 +28,13 @@ import type {
   MunGitAddCall,
   MunGitPushCall,
   MunToolCall,
-  DiaryDecision,
-  NawʿMurshid,
+  QararSijill,
+  NawMurshid,
   McpToolDefinition,
   McpToolHandler,
   ToolRegistry,
 } from "../types.ts";
-import { generateBranchName } from "../daemon/session-manager.ts";
+import { generateBranchName } from "../daemon/katib.ts";
 import { loadIndex } from "../code-intel/indexer.ts";
 import { queryIndex } from "../code-intel/query.ts";
 
@@ -55,8 +55,8 @@ interface McpResponse {
 
 import {
   insertEvent,
-  addDiaryDecision,
-  getDiaryDecisions,
+  addQararSijill,
+  getQararSijills,
   qiraStatus,
 } from "../../db/db.ts";
 
@@ -125,7 +125,7 @@ export class IksirMunMcpServer {
    */
   async handleRequest(request: McpRequest): Promise<McpResponse> {
     switch (request.method) {
-      case "initialize":
+      case "tahyia":
         return this.#handleInitialize(request);
       case "tools/list":
         return this.#handleToolsList(request);
@@ -141,7 +141,7 @@ export class IksirMunMcpServer {
   }
 
   /**
-   * Handle initialize request
+   * Handle tahyia request
    */
   #handleInitialize(request: McpRequest): McpResponse {
     return {
@@ -177,7 +177,7 @@ export class IksirMunMcpServer {
    * Validate required arguments are present and non-null.
    * Throws with a clear message if validation fails.
    */
-  #validateArgs(
+  #tahaqqaqArgs(
     toolName: string,
     args: Record<string, unknown>,
   ): void {
@@ -209,7 +209,7 @@ export class IksirMunMcpServer {
 
     try {
       // Validate required fields before dispatching
-      this.#validateArgs(toolName, args);
+      this.#tahaqqaqArgs(toolName, args);
 
       const handler = this.#registry.getHandler(toolName);
       if (!handler) {
@@ -293,7 +293,7 @@ export class IksirMunMcpServer {
           required: ["huwiyyatMurshid", "title"],
         },
       },
-      (args) => this.#ʿālajaKhalqWaṣfa(args),
+      (args) => this.#aalajaKhalqWasfa(args),
     );
 
     this.#registry.register(
@@ -308,7 +308,7 @@ export class IksirMunMcpServer {
               type: "string",
               description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
             },
-            wasfaId: {
+            huwiyyatWasfa: {
               type: "string",
               description: "Ticket identifier (e.g., TEAM-200)",
             },
@@ -323,10 +323,10 @@ export class IksirMunMcpServer {
               description: "Fields to update",
             },
           },
-          required: ["huwiyyatMurshid", "wasfaId", "updates"],
+          required: ["huwiyyatMurshid", "huwiyyatWasfa", "updates"],
         },
       },
-      (args) => this.#ʿālajaTajdīdWaṣfa(args),
+      (args) => this.#aalajaTajdidWasfa(args),
     );
 
     this.#registry.register(
@@ -341,7 +341,7 @@ export class IksirMunMcpServer {
               type: "string",
               description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
             },
-            wasfaId: {
+            huwiyyatWasfa: {
               type: "string",
               description: "Ticket identifier",
             },
@@ -356,7 +356,7 @@ export class IksirMunMcpServer {
               description: "Tickets that block this ticket",
             },
           },
-          required: ["huwiyyatMurshid", "wasfaId"],
+          required: ["huwiyyatMurshid", "huwiyyatWasfa"],
         },
       },
       (args) => this.#handleSetRelations(args),
@@ -365,14 +365,14 @@ export class IksirMunMcpServer {
     this.#registry.register(
       {
         name: "mun_read_wasfa",
-        description: `Read any issue tracker URL (Linear, Jira, GitHub) and get enriched information with Iksīr context.
+        description: `Read any issue tracker URL (Linear, Jira, GitHub) and get enriched information with Iksir context.
 
 Returns:
 - Entity type (ticket, project, comment, milestone, etc.)
 - Full details (title, description, status, estimate, labels)
 - Relations (blocks, blocked_by, parent, children)
 - Attachments and links (Figma, Notion URLs with guidance on what to look for)
-- Iksīr context (connected sani sessions, implementation status, PR info)
+- Iksir context (connected sani sessions, implementation status, PR info)
 - Comments and activity
 
 Use this as your primary way to understand ticket entities.`,
@@ -391,7 +391,7 @@ Use this as your primary way to understand ticket entities.`,
           required: ["huwiyyatMurshid", "url"],
         },
       },
-      (args) => this.#ʿālajaQirāʾatWaṣfa(args),
+      (args) => this.#aalajaQiraaatWasfa(args),
     );
 
     // =========================================================================
@@ -410,7 +410,7 @@ Use this as your primary way to understand ticket entities.`,
               type: "string",
               description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
             },
-            wasfaId: {
+            huwiyyatWasfa: {
               type: "string",
               description: "Ticket the PR implements",
             },
@@ -431,10 +431,10 @@ Use this as your primary way to understand ticket entities.`,
               description: "Head branch with changes",
             },
           },
-          required: ["huwiyyatMurshid", "wasfaId", "title", "body", "base", "head"],
+          required: ["huwiyyatMurshid", "huwiyyatWasfa", "title", "body", "base", "head"],
         },
       },
-      (args) => this.#ʿālajaKhalqRisāla(args),
+      (args) => this.#aalajaKhalqRisala(args),
     );
 
     this.#registry.register(
@@ -586,7 +586,7 @@ The diary is a shared knowledge pool across all murshidun. Use it to:
               type: "string",
               description: "Your murshid ID",
             },
-            ṣaffāMurshid: {
+            filterOrchestrator: {
               type: "string",
               description: "Filter by a specific murshid ID (omit for collective pool)",
             },
@@ -624,8 +624,8 @@ The diary is a shared knowledge pool across all murshidun. Use it to:
         description: `Yield control voluntarily when blocked or waiting.
 
 Use this when:
-- All your formulae are blocked waiting for operator decisions → reason: "masdūd"
-- All treatises created and waiting for review/merge → reason: "muntaẓir"
+- All your formulae are blocked waiting for operator decisions → reason: "masdud"
+- All treatises created and waiting for review/merge → reason: "muntazir"
 
 This allows other murshidun with actionable work to become active.
 You will continue receiving issue tracker/GitHub updates even while idle.`,
@@ -638,8 +638,8 @@ You will continue receiving issue tracker/GitHub updates even while idle.`,
             },
             reason: {
               type: "string",
-              enum: ["masdūd", "muntaẓir"],
-              description: "Why yielding: masdūd (waiting for decisions) or muntaẓir (PRs pending)",
+              enum: ["masdud", "muntazir"],
+              description: "Why yielding: masdud (waiting for decisions) or muntazir (PRs pending)",
             },
             details: {
               type: "string",
@@ -818,7 +818,7 @@ You should only call this once per murshid, at the start.`,
         description:
           "Query the codebase index for symbol locations, dependencies, impact analysis, and search. " +
           "Use this BEFORE grepping or globbing — it's faster and gives structured results. " +
-          "Examples: 'where is MudīrJalasāt', 'what depends on types.ts', 'impact of changing TaṣmīmIksir', " +
+          "Examples: 'where is MudirJalasat', 'what depends on types.ts', 'impact of changing TasmimIksir', " +
           "'exports of classifier.ts', 'files related to auth'.",
         inputSchema: {
           type: "object",
@@ -855,7 +855,7 @@ You should only call this once per murshid, at the start.`,
               type: "string",
               description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
             },
-            wasfaId: {
+            huwiyyatWasfa: {
               type: "string",
               description: "Ticket the essence is for",
             },
@@ -865,7 +865,7 @@ You should only call this once per murshid, at the start.`,
               description: "Rune stones to extract (paths relative to crucible root)",
             },
           },
-          required: ["huwiyyatMurshid", "wasfaId", "files"],
+          required: ["huwiyyatMurshid", "huwiyyatWasfa", "files"],
         },
       },
       (args) => this.#handleExtract(args),
@@ -886,7 +886,7 @@ You should only call this once per murshid, at the start.`,
               type: "string",
               description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
             },
-            wasfaId: {
+            huwiyyatWasfa: {
               type: "string",
               description: "Ticket being attuned",
             },
@@ -896,7 +896,7 @@ You should only call this once per murshid, at the start.`,
               description: "Rune stones currently selected for extraction",
             },
           },
-          required: ["huwiyyatMurshid", "wasfaId", "files"],
+          required: ["huwiyyatMurshid", "huwiyyatWasfa", "files"],
         },
       },
       (args) => this.#handleAttune(args),
@@ -917,7 +917,7 @@ You should only call this once per murshid, at the start.`,
               type: "string",
               description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
             },
-            wasfaId: {
+            huwiyyatWasfa: {
               type: "string",
               description: "Ticket ID for the essence (e.g., 'TEAM-200-BE')",
             },
@@ -927,7 +927,7 @@ You should only call this once per murshid, at the start.`,
               description: "Rune stones to transmute into essence",
             },
           },
-          required: ["huwiyyatMurshid", "wasfaId", "files"],
+          required: ["huwiyyatMurshid", "huwiyyatWasfa", "files"],
         },
       },
       (args) => this.#handleTransmute(args),
@@ -948,7 +948,7 @@ You should only call this once per murshid, at the start.`,
               type: "string",
               description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
             },
-            wasfaId: {
+            huwiyyatWasfa: {
               type: "string",
               description: "Ticket ID for this artifact (e.g., 'TEAM-200-FE')",
             },
@@ -962,7 +962,7 @@ You should only call this once per murshid, at the start.`,
               description: "Files to include in the essence (paths relative to repo root)",
             },
           },
-          required: ["huwiyyatMurshid", "wasfaId", "parentTicketId", "files"],
+          required: ["huwiyyatMurshid", "huwiyyatWasfa", "parentTicketId", "files"],
         },
       },
       (args) => this.#handleTransmuteStacked(args),
@@ -983,7 +983,7 @@ You should only call this once per murshid, at the start.`,
               type: "string",
               description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
             },
-            wasfaId: {
+            huwiyyatWasfa: {
               type: "string",
               description: "Ticket the PR implements",
             },
@@ -1000,7 +1000,7 @@ You should only call this once per murshid, at the start.`,
               description: "Create as draft PR (default: true)",
             },
           },
-          required: ["huwiyyatMurshid", "wasfaId", "title", "body"],
+          required: ["huwiyyatMurshid", "huwiyyatWasfa", "title", "body"],
         },
       },
       (args) => this.#handleDecant(args),
@@ -1011,8 +1011,8 @@ You should only call this once per murshid, at the start.`,
   // Ticket Management Handlers
   // ===========================================================================
 
-  async #ʿālajaKhalqWaṣfa(args: Record<string, unknown>): Promise<string> {
-    const call: NidāʾKhalqWaṣfa = {
+  async #aalajaKhalqWasfa(args: Record<string, unknown>): Promise<string> {
+    const call: NidaKhalqWasfa = {
       tool: "mun_create_wasfa",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       title: args.title as string,
@@ -1034,12 +1034,12 @@ Estimate: ${call.estimate ?? "unestimated"}
 Daemon will create the ticket and return the ticket ID.`;
   }
 
-  async #ʿālajaTajdīdWaṣfa(args: Record<string, unknown>): Promise<string> {
-    const call: NidāʾTajdīdWaṣfa = {
+  async #aalajaTajdidWasfa(args: Record<string, unknown>): Promise<string> {
+    const call: NidaTajdidWasfa = {
       tool: "mun_update_wasfa",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
-      wasfaId: args.wasfaId as string,
-      updates: args.updates as NidāʾTajdīdWaṣfa["updates"],
+      huwiyyatWasfa: args.huwiyyatWasfa as string,
+      updates: args.updates as NidaTajdidWasfa["updates"],
     };
 
     this.#forwardToDaemon(call);
@@ -1051,7 +1051,7 @@ Daemon will create the ticket and return the ticket ID.`;
 
     return `Ticket update request forwarded to daemon.
 
-Ticket: ${call.wasfaId}
+Ticket: ${call.huwiyyatWasfa}
 Updates:
 ${updatesList}`;
   }
@@ -1060,7 +1060,7 @@ ${updatesList}`;
     const call: MunSetRelationsCall = {
       tool: "mun_set_relations",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
-      wasfaId: args.wasfaId as string,
+      huwiyyatWasfa: args.huwiyyatWasfa as string,
       blocks: args.blocks as string[] | undefined,
       blockedBy: args.blockedBy as string[] | undefined,
     };
@@ -1074,15 +1074,15 @@ ${updatesList}`;
 
     return `Relation update request forwarded to daemon.
 
-Ticket: ${call.wasfaId}
+Ticket: ${call.huwiyyatWasfa}
 ${blocksList}
 ${blockedByList}
 
 Relations control execution order: blocked tickets wait for blockers to complete.`;
   }
 
-  async #ʿālajaQirāʾatWaṣfa(args: Record<string, unknown>): Promise<string> {
-    const call: NidāʾQirāʾatWaṣfa = {
+  async #aalajaQiraaatWasfa(args: Record<string, unknown>): Promise<string> {
+    const call: NidaQiraatWasfa = {
       tool: "mun_read_wasfa",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       url: args.url as string,
@@ -1092,18 +1092,18 @@ Relations control execution order: blocked tickets wait for blockers to complete
 
     // Extract ticket ID from URL if possible (heuristic)
     const ticketMatch = call.url.match(/([A-Z]+-\d+)/);
-    const wasfaId = ticketMatch?.[1];
+    const huwiyyatWasfa = ticketMatch?.[1];
 
     // Check implementation status from SQLite
     let localContext = "";
-    if (wasfaId) {
-      const status = qiraStatus(wasfaId);
+    if (huwiyyatWasfa) {
+      const status = qiraStatus(huwiyyatWasfa);
       if (status) {
         localContext = `
 
 Local Munadi Context (from diary):
 - Implementation Status: ${status.status}
-${status.murshid_id ? `- Murshid: ${status.murshid_id}` : ""}
+${status.huwiyat_murshid ? `- Murshid: ${status.huwiyat_murshid}` : ""}
 ${status.summary ? `- Summary: ${status.summary}` : ""}`;
       }
     }
@@ -1116,7 +1116,7 @@ Daemon will:
 1. Parse URL to determine entity type (ticket, project, comment, etc.)
 2. Fetch full details from issue tracker API
 3. Extract attachments/links (Figma, Notion) with guidance
-4. Enrich with Iksīr context (sessions, implementation status, PRs)
+4. Enrich with Iksir context (sessions, implementation status, PRs)
 5. Return structured response${localContext}
 
 Awaiting daemon response...`;
@@ -1126,11 +1126,11 @@ Awaiting daemon response...`;
   // PR Management Handlers
   // ===========================================================================
 
-  async #ʿālajaKhalqRisāla(args: Record<string, unknown>): Promise<string> {
-    const call: NidāʾKhalqRisāla = {
+  async #aalajaKhalqRisala(args: Record<string, unknown>): Promise<string> {
+    const call: NidaKhalqRisala = {
       tool: "mun_create_risala",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
-      wasfaId: args.wasfaId as string,
+      huwiyyatWasfa: args.huwiyyatWasfa as string,
       title: args.title as string,
       body: args.body as string,
       base: args.base as string,
@@ -1141,7 +1141,7 @@ Awaiting daemon response...`;
 
     return `PR creation request forwarded to daemon.
 
-Ticket: ${call.wasfaId}
+Ticket: ${call.huwiyyatWasfa}
 Title: ${call.title}
 Base: ${call.base}
 Head: ${call.head}
@@ -1224,7 +1224,7 @@ ${call.message}`;
     };
 
     // Log to diary directly
-    const decision: DiaryDecision = {
+    const decision: QararSijill = {
       timestamp: new Date().toISOString(),
       type: call.type,
       decision: call.decision,
@@ -1232,7 +1232,7 @@ ${call.message}`;
       metadata: call.metadata,
     };
 
-    this.#appendDiaryDecision(decision, call.huwiyyatMurshid);
+    this.#appendQararSijill(decision, call.huwiyyatMurshid);
 
     // Also forward to daemon for any additional handling
     this.#forwardToDaemon(call);
@@ -1250,15 +1250,15 @@ This decision is now part of the persistent record.`;
     const call: MunReadDiaryCall = {
       tool: "mun_read_diary",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
-      ṣaffāMurshid: args.ṣaffāMurshid as string | undefined,
+      filterOrchestrator: args.filterOrchestrator as string | undefined,
       type: args.type as MunReadDiaryCall["type"],
       search: args.search as string | undefined,
       limit: args.limit as number | undefined,
       since: args.since as string | undefined,
     };
 
-    const decisions = getDiaryDecisions({
-      huwiyyatMurshid: call.ṣaffāMurshid,
+    const decisions = getQararSijills({
+      huwiyyatMurshid: call.filterOrchestrator,
       type: call.type,
       search: call.search,
       limit: call.limit,
@@ -1267,7 +1267,7 @@ This decision is now part of the persistent record.`;
 
     if (decisions.length === 0) {
       const filters = [
-        call.ṣaffāMurshid && `murshid=${call.ṣaffāMurshid}`,
+        call.filterOrchestrator && `murshid=${call.filterOrchestrator}`,
         call.type && `type=${call.type}`,
         call.search && `search="${call.search}"`,
         call.since && `since=${call.since}`,
@@ -1281,7 +1281,7 @@ This decision is now part of the persistent record.`;
     for (const d of decisions) {
       const meta = d.metadata ? JSON.parse(d.metadata) : null;
       response += `---\n`;
-      response += `**[${d.type}]** by ${d.murshid_id} (${d.created_at})\n`;
+      response += `**[${d.type}]** by ${d.huwiyat_murshid} (${d.created_at})\n`;
       response += `**Decision:** ${d.decision}\n`;
       response += `**Reasoning:** ${d.reasoning}\n`;
       if (meta) {
@@ -1301,14 +1301,14 @@ This decision is now part of the persistent record.`;
     const call: MunYieldCall = {
       tool: "mun_yield",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
-      reason: args.reason as "masdūd" | "muntaẓir",
+      reason: args.reason as "masdud" | "muntazir",
       details: args.details as string,
       suggestNext: args.suggestNext as string | undefined,
     };
 
     this.#forwardToDaemon(call);
 
-    const stateDescription = call.reason === "masdūd"
+    const stateDescription = call.reason === "masdud"
       ? "You are now in BLOCKED state. Operator will be notified of the blockers."
       : "You are now in WAITING state. Monitoring for PR events.";
 
@@ -1359,7 +1359,7 @@ You will be notified when control is granted.`;
   // ===========================================================================
 
   async #handleCreateBranch(args: Record<string, unknown>): Promise<string> {
-    const murshidType = args.type as NawʿMurshid;
+    const murshidType = args.type as NawMurshid;
     const call: MunCreateBranchCall = {
       tool: "mun_create_branch",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
@@ -1441,10 +1441,10 @@ Daemon will push current branch to origin.`;
   async #handleExtract(args: Record<string, unknown>): Promise<string> {
     // For now, extraction is just validation and planning
     // The actual file operations happen in mun_istihal
-    const wasfaId = args.wasfaId as string;
+    const huwiyyatWasfa = args.huwiyyatWasfa as string;
     const files = args.files as string[];
 
-    return `Rune stones identified for ${wasfaId}.
+    return `Rune stones identified for ${huwiyyatWasfa}.
 
 Stones selected (${files.length}):
 ${files.map((f) => `  - ${f}`).join("\n")}
@@ -1457,10 +1457,10 @@ Next steps:
   async #handleAttune(args: Record<string, unknown>): Promise<string> {
     // TODO: Implement smart dependency discovery
     // For now, return a placeholder that suggests manual review
-    const wasfaId = args.wasfaId as string;
+    const huwiyyatWasfa = args.huwiyyatWasfa as string;
     const files = args.files as string[];
 
-    return `Attunement analysis for ${wasfaId}:
+    return `Attunement analysis for ${huwiyyatWasfa}:
 
 Rune stones selected (${files.length}):
 ${files.map((f) => `  - ${f}`).join("\n")}
@@ -1481,17 +1481,17 @@ This is a placeholder. Future implementation will:
     const call = {
       tool: "mun_istihal" as const,
       huwiyyatMurshid: args.huwiyyatMurshid as string,
-      wasfaId: args.wasfaId as string,
+      huwiyyatWasfa: args.huwiyyatWasfa as string,
       files: args.files as string[],
     };
 
     this.#forwardToDaemon(call);
 
-    const essenceBranch = generateBranchName(call.wasfaId, "chore");
+    const essenceBranch = generateBranchName(call.huwiyyatWasfa, "chore");
 
     return `Artifact crafting request submitted.
 
-Ticket: ${call.wasfaId}
+Ticket: ${call.huwiyyatWasfa}
 Essence Branch: ${essenceBranch}
 Files (${call.files.length}):
 ${call.files.map((f) => `  - ${f}`).join("\n")}
@@ -1510,19 +1510,19 @@ On success, use mun_fasl to create the PR.`;
     const call = {
       tool: "mun_istihal_mutabaqq" as const,
       huwiyyatMurshid: args.huwiyyatMurshid as string,
-      wasfaId: args.wasfaId as string,
+      huwiyyatWasfa: args.huwiyyatWasfa as string,
       parentTicketId: args.parentTicketId as string,
       files: args.files as string[],
     };
 
     this.#forwardToDaemon(call);
 
-    const essenceBranch = generateBranchName(call.wasfaId, "chore");
+    const essenceBranch = generateBranchName(call.huwiyyatWasfa, "chore");
     const parentBranch = generateBranchName(call.parentTicketId, "chore");
 
     return `Stacked artifact crafting request submitted.
 
-Ticket: ${call.wasfaId}
+Ticket: ${call.huwiyyatWasfa}
 Essence Branch: ${essenceBranch}
 Parent Branch: ${parentBranch}
 Files (${call.files.length}):
@@ -1540,13 +1540,13 @@ Note: CI may fail if parent PR is unmerged. This is expected for incremental rev
 
   async #handleDecant(args: Record<string, unknown>): Promise<string> {
     // This is essentially mun_create_risala with better terminology
-    const wasfaId = args.wasfaId as string;
-    const essenceBranch = generateBranchName(wasfaId, "chore");
+    const huwiyyatWasfa = args.huwiyyatWasfa as string;
+    const essenceBranch = generateBranchName(huwiyyatWasfa, "chore");
 
-    const call: NidāʾKhalqRisāla = {
+    const call: NidaKhalqRisala = {
       tool: "mun_create_risala",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
-      wasfaId: wasfaId,
+      huwiyyatWasfa: huwiyyatWasfa,
       title: args.title as string,
       body: args.body as string,
       base: "main", // Will be overridden by daemon if stacked
@@ -1557,7 +1557,7 @@ Note: CI may fail if parent PR is unmerged. This is expected for incremental rev
 
     return `Unveiling request submitted.
 
-Ticket: ${wasfaId}
+Ticket: ${huwiyyatWasfa}
 Title: ${call.title}
 Branch: ${essenceBranch}
 
@@ -1570,7 +1570,7 @@ You will be notified with the PR URL once created.`;
   // ===========================================================================
 
   /**
-   * Forward a tool call to the Iksīr daemon via SQLite
+   * Forward a tool call to the Iksir daemon via SQLite
    */
   #forwardToDaemon(call: MunToolCall): void {
     // Extract huwiyyatMurshid if present (for routing)
@@ -1582,8 +1582,8 @@ You will be notified with the PR URL once created.`;
   /**
    * Append a decision to the diary (SQLite)
    */
-  #appendDiaryDecision(decision: DiaryDecision, huwiyyatMurshid: string = "unknown"): void {
-    addDiaryDecision({
+  #appendQararSijill(decision: QararSijill, huwiyyatMurshid: string = "unknown"): void {
+    addQararSijill({
       huwiyyatMurshid,
       type: decision.type,
       decision: decision.decision,

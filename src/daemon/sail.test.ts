@@ -1,8 +1,8 @@
 /**
  * Tests for src/daemon/question-handler.ts
  *
- * Tests QuestionHandler with:
- * - Mock OpenCodeClient, MessengerOutbound, SessionManager
+ * Tests Sail with:
+ * - Mock OpenCodeClient, RasulKharij, MudirJalasat
  * - Real temp DB (for question persistence)
  *
  * Key behaviors tested:
@@ -18,11 +18,11 @@ import {
   withTestDb,
   mockOpenCodeClient,
   mockMessenger,
-  mockSessionManager,
+  mockMudirJalasat,
   makeSession,
   seedSession,
 } from "../test-helpers.ts";
-import { QuestionHandler } from "./question-handler.ts";
+import { Sail } from "./question-handler.ts";
 import { getUnansweredQuestions, insertQuestion } from "../../db/db.ts";
 import type {
   QuestionAskedEvent,
@@ -62,10 +62,10 @@ function makeEvent(overrides?: Partial<QuestionAskedEvent["properties"]>): Quest
 // =============================================================================
 
 Deno.test("isQuestionCallback: returns true for q: prefix", () => {
-  const qh = new QuestionHandler({
+  const qh = new Sail({
     opencode: mockOpenCodeClient() as never,
     messenger: mockMessenger(),
-    sessionManager: mockSessionManager() as never,
+    sessionManager: mockMudirJalasat() as never,
   });
 
   assertEquals(qh.isQuestionCallback("q:abc:label"), true);
@@ -73,10 +73,10 @@ Deno.test("isQuestionCallback: returns true for q: prefix", () => {
 });
 
 Deno.test("isQuestionCallback: returns false for other prefixes", () => {
-  const qh = new QuestionHandler({
+  const qh = new Sail({
     opencode: mockOpenCodeClient() as never,
     messenger: mockMessenger(),
-    sessionManager: mockSessionManager() as never,
+    sessionManager: mockMudirJalasat() as never,
   });
 
   assertEquals(qh.isQuestionCallback("other:data"), false);
@@ -89,10 +89,10 @@ Deno.test("isQuestionCallback: returns false for other prefixes", () => {
 // =============================================================================
 
 Deno.test("getPendingQuestion: returns undefined for unknown", () => {
-  const qh = new QuestionHandler({
+  const qh = new Sail({
     opencode: mockOpenCodeClient() as never,
     messenger: mockMessenger(),
-    sessionManager: mockSessionManager() as never,
+    sessionManager: mockMudirJalasat() as never,
   });
 
   assertEquals(qh.getPendingQuestion("nonexistent"), undefined);
@@ -103,10 +103,10 @@ Deno.test("getPendingQuestion: returns undefined for unknown", () => {
 // =============================================================================
 
 Deno.test("isAwaitingCustomInput: returns false initially", () => {
-  const qh = new QuestionHandler({
+  const qh = new Sail({
     opencode: mockOpenCodeClient() as never,
     messenger: mockMessenger(),
-    sessionManager: mockSessionManager() as never,
+    sessionManager: mockMudirJalasat() as never,
   });
 
   assertEquals(qh.isAwaitingCustomInput("TEAM-123"), false);
@@ -117,10 +117,10 @@ Deno.test("isAwaitingCustomInput: returns false initially", () => {
 // =============================================================================
 
 Deno.test("buildInlineKeyboard: creates rows for each option + custom", () => {
-  const qh = new QuestionHandler({
+  const qh = new Sail({
     opencode: mockOpenCodeClient() as never,
     messenger: mockMessenger(),
-    sessionManager: mockSessionManager() as never,
+    sessionManager: mockMudirJalasat() as never,
   });
 
   const question = makeQuestionInfo();
@@ -138,10 +138,10 @@ Deno.test("buildInlineKeyboard: creates rows for each option + custom", () => {
 });
 
 Deno.test("buildInlineKeyboard: no custom button when custom=false", () => {
-  const qh = new QuestionHandler({
+  const qh = new Sail({
     opencode: mockOpenCodeClient() as never,
     messenger: mockMessenger(),
-    sessionManager: mockSessionManager() as never,
+    sessionManager: mockMudirJalasat() as never,
   });
 
   const question = makeQuestionInfo({ custom: false });
@@ -152,10 +152,10 @@ Deno.test("buildInlineKeyboard: no custom button when custom=false", () => {
 });
 
 Deno.test("parseQuestionCallback: resolves registered short IDs", () => {
-  const qh = new QuestionHandler({
+  const qh = new Sail({
     opencode: mockOpenCodeClient() as never,
     messenger: mockMessenger(),
-    sessionManager: mockSessionManager() as never,
+    sessionManager: mockMudirJalasat() as never,
   });
 
   // Register via buildInlineKeyboard
@@ -171,10 +171,10 @@ Deno.test("parseQuestionCallback: resolves registered short IDs", () => {
 });
 
 Deno.test("parseQuestionCallback: returns null for unknown short IDs", () => {
-  const qh = new QuestionHandler({
+  const qh = new Sail({
     opencode: mockOpenCodeClient() as never,
     messenger: mockMessenger(),
-    sessionManager: mockSessionManager() as never,
+    sessionManager: mockMudirJalasat() as never,
   });
 
   const result = qh.parseQuestionCallback("q:unknown1:some label");
@@ -182,10 +182,10 @@ Deno.test("parseQuestionCallback: returns null for unknown short IDs", () => {
 });
 
 Deno.test("parseQuestionCallback: handles labels with colons", () => {
-  const qh = new QuestionHandler({
+  const qh = new Sail({
     opencode: mockOpenCodeClient() as never,
     messenger: mockMessenger(),
-    sessionManager: mockSessionManager() as never,
+    sessionManager: mockMudirJalasat() as never,
   });
 
   // Register a question with a colon in the label
@@ -207,10 +207,10 @@ Deno.test("parseQuestionCallback: handles labels with colons", () => {
 Deno.test("handleQuestionAsked: unknown session -> rejects", async () => {
   await withTestDb(async () => {
     const oc = mockOpenCodeClient();
-    const qh = new QuestionHandler({
+    const qh = new Sail({
       opencode: oc as never,
       messenger: mockMessenger(),
-      sessionManager: mockSessionManager([]) as never, // no sessions
+      sessionManager: mockMudirJalasat([]) as never, // no sessions
     });
 
     await qh.handleQuestionAsked(makeEvent());
@@ -224,10 +224,10 @@ Deno.test("handleQuestionAsked: empty questions -> rejects", async () => {
   await withTestDb(async () => {
     const oc = mockOpenCodeClient();
     const session = makeSession();
-    const qh = new QuestionHandler({
+    const qh = new Sail({
       opencode: oc as never,
       messenger: mockMessenger(),
-      sessionManager: mockSessionManager([session]) as never,
+      sessionManager: mockMudirJalasat([session]) as never,
     });
 
     await qh.handleQuestionAsked(makeEvent({ questions: [] }));
@@ -250,10 +250,10 @@ Deno.test("handleQuestionAsked: CRY_BABY -> auto-answers + injects guidance", as
 
     const session = makeSession();
     const messenger = mockMessenger();
-    const qh = new QuestionHandler({
+    const qh = new Sail({
       opencode: oc as never,
       messenger,
-      sessionManager: mockSessionManager([session]) as never,
+      sessionManager: mockMudirJalasat([session]) as never,
     });
 
     await qh.handleQuestionAsked(makeEvent());
@@ -267,7 +267,7 @@ Deno.test("handleQuestionAsked: CRY_BABY -> auto-answers + injects guidance", as
     assertEquals(oc._calls.sendPromptAsync[0].prompt.includes("auto-answered"), true);
 
     // Should NOT forward to messenger
-    assertEquals(messenger._calls.sendFormatted.length, 0);
+    assertEquals(messenger._calls.arsalaMunassaq.length, 0);
   });
 });
 
@@ -285,10 +285,10 @@ Deno.test("handleQuestionAsked: WORTHY -> forwards to operator", async () => {
     const messenger = mockMessenger();
     let forwardedCount = 0;
 
-    const qh = new QuestionHandler({
+    const qh = new Sail({
       opencode: oc as never,
       messenger,
-      sessionManager: mockSessionManager([session]) as never,
+      sessionManager: mockMudirJalasat([session]) as never,
     });
 
     qh.setOnQuestionForwarded(async () => {
@@ -298,9 +298,9 @@ Deno.test("handleQuestionAsked: WORTHY -> forwards to operator", async () => {
     await qh.handleQuestionAsked(makeEvent());
 
     // Should send formatted message via messenger
-    assertEquals(messenger._calls.sendFormatted.length, 1);
-    const sentChannel = messenger._calls.sendFormatted[0].channel;
-    assertEquals(sentChannel, { orchestrator: "TEAM-1234" });
+    assertEquals(messenger._calls.arsalaMunassaq.length, 1);
+    const sentChannel = messenger._calls.arsalaMunassaq[0].channel;
+    assertEquals(sentChannel, { murshid: "TEAM-1234" });
 
     // Should persist question in DB
     const dbQuestions = getUnansweredQuestions();
@@ -316,7 +316,7 @@ Deno.test("handleQuestionAsked: WORTHY -> forwards to operator", async () => {
     // Question should be pending
     const pending = qh.getPendingQuestion("q-001");
     assertExists(pending);
-    assertEquals(pending.orchestratorId, "TEAM-1234");
+    assertEquals(pending.huwiyyatMurshid, "TEAM-1234");
   });
 });
 
@@ -335,10 +335,10 @@ Deno.test("handleQuestionCallback: answers question + marks in DB", async () => 
 
     const session = makeSession();
     seedSession(); // FK: questions.session_id -> sessions.id
-    const qh = new QuestionHandler({
+    const qh = new Sail({
       opencode: oc as never,
       messenger: mockMessenger(),
-      sessionManager: mockSessionManager([session]) as never,
+      sessionManager: mockMudirJalasat([session]) as never,
     });
 
     // Forward a question first to make it pending
@@ -363,10 +363,10 @@ Deno.test("handleQuestionCallback: answers question + marks in DB", async () => 
 Deno.test("handleQuestionCallback: unknown question -> returns false", async () => {
   await withTestDb(async () => {
     const oc = mockOpenCodeClient();
-    const qh = new QuestionHandler({
+    const qh = new Sail({
       opencode: oc as never,
       messenger: mockMessenger(),
-      sessionManager: mockSessionManager() as never,
+      sessionManager: mockMudirJalasat() as never,
     });
 
     const success = await qh.handleQuestionCallback("nonexistent", "anything");
@@ -390,10 +390,10 @@ Deno.test("markAwaitingCustomInput + handlePotentialCustomAnswer: end-to-end", a
 
     const session = makeSession();
     seedSession(); // FK: questions.session_id -> sessions.id
-    const qh = new QuestionHandler({
+    const qh = new Sail({
       opencode: oc as never,
       messenger: mockMessenger(),
-      sessionManager: mockSessionManager([session]) as never,
+      sessionManager: mockMudirJalasat([session]) as never,
     });
 
     // Forward a question
@@ -419,10 +419,10 @@ Deno.test("markAwaitingCustomInput + handlePotentialCustomAnswer: end-to-end", a
 
 Deno.test("handlePotentialCustomAnswer: returns false when not awaiting", async () => {
   await withTestDb(async () => {
-    const qh = new QuestionHandler({
+    const qh = new Sail({
       opencode: mockOpenCodeClient() as never,
       messenger: mockMessenger(),
-      sessionManager: mockSessionManager() as never,
+      sessionManager: mockMudirJalasat() as never,
     });
 
     const result = await qh.handlePotentialCustomAnswer("TEAM-123", "some text");
@@ -440,15 +440,15 @@ Deno.test("loadState: rebuilds pendingQuestions from DB", async () => {
     seedSession({ id: "sess-abc", identifier: "TEAM-900" }); // FK
     const oc = mockOpenCodeClient();
 
-    const qh = new QuestionHandler({
+    const qh = new Sail({
       opencode: oc as never,
       messenger: mockMessenger(),
-      sessionManager: mockSessionManager([session]) as never,
+      sessionManager: mockMudirJalasat([session]) as never,
     });
 
     // Insert a question directly in DB (simulating prior run)
     insertQuestion({
-      id: "q-restored",
+      id: "q-istarjaad",
       sessionId: "sess-abc",
       question: "Should we refactor?",
       options: ["Yes", "No"],
@@ -458,10 +458,10 @@ Deno.test("loadState: rebuilds pendingQuestions from DB", async () => {
     await qh.loadState();
 
     // Should be in pending questions
-    const pending = qh.getPendingQuestion("q-restored");
+    const pending = qh.getPendingQuestion("q-istarjaad");
     assertExists(pending);
     assertEquals(pending.sessionID, "sess-abc");
-    assertEquals(pending.orchestratorId, "TEAM-900");
+    assertEquals(pending.huwiyyatMurshid, "TEAM-900");
     assertEquals(pending.questions[0].question, "Should we refactor?");
     assertEquals(pending.questions[0].options.length, 2);
   });
@@ -473,10 +473,10 @@ Deno.test("loadState: rebuilds callbackIdMap (parseQuestionCallback works after 
     seedSession({ id: "sess-xyz", identifier: "TEAM-950" }); // FK
     const oc = mockOpenCodeClient();
 
-    const qh = new QuestionHandler({
+    const qh = new Sail({
       opencode: oc as never,
       messenger: mockMessenger(),
-      sessionManager: mockSessionManager([session]) as never,
+      sessionManager: mockMudirJalasat([session]) as never,
     });
 
     // Insert question in DB
@@ -504,10 +504,10 @@ Deno.test("loadState: rebuilds callbackIdMap (parseQuestionCallback works after 
 
 Deno.test("loadState: no questions -> no-op", async () => {
   await withTestDb(async () => {
-    const qh = new QuestionHandler({
+    const qh = new Sail({
       opencode: mockOpenCodeClient() as never,
       messenger: mockMessenger(),
-      sessionManager: mockSessionManager() as never,
+      sessionManager: mockMudirJalasat() as never,
     });
 
     // Should not throw
@@ -516,15 +516,15 @@ Deno.test("loadState: no questions -> no-op", async () => {
   });
 });
 
-Deno.test("loadState: unknown session -> uses sessionId as orchestratorId fallback", async () => {
+Deno.test("loadState: unknown session -> uses sessionId as huwiyyatMurshid fallback", async () => {
   await withTestDb(async () => {
     // Session exists in DB (FK) but not in sessionManager's in-memory list
     seedSession({ id: "sess-unknown", identifier: "ORPHAN" });
 
-    const qh = new QuestionHandler({
+    const qh = new Sail({
       opencode: mockOpenCodeClient() as never,
       messenger: mockMessenger(),
-      sessionManager: mockSessionManager([]) as never, // no sessions in-memory
+      sessionManager: mockMudirJalasat([]) as never, // no sessions in-memory
     });
 
     insertQuestion({
@@ -539,6 +539,6 @@ Deno.test("loadState: unknown session -> uses sessionId as orchestratorId fallba
     const pending = qh.getPendingQuestion("q-orphan");
     assertExists(pending);
     // Falls back to sessionId when no orchestrator found
-    assertEquals(pending.orchestratorId, "sess-unknown");
+    assertEquals(pending.huwiyyatMurshid, "sess-unknown");
   });
 });

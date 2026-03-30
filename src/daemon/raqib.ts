@@ -18,8 +18,8 @@
 
 import { logger } from "../logging/logger.ts";
 import type { OpenCodeClient } from "../opencode/client.ts";
-import type { MessengerOutbound } from "../types.ts";
-import type { MudīrJalasāt } from "./session-manager.ts";
+import type { RasulKharij } from "../types.ts";
+import type { MudirJalasat } from "./katib.ts";
 
 // =============================================================================
 // Configuration
@@ -41,10 +41,10 @@ const TICK_INTERVAL_MS = 60 * 1000;
 // Types
 // =============================================================================
 
-interface HealthMonitorDeps {
+interface RaqibDeps {
   opencode: OpenCodeClient;
-  messenger: MessengerOutbound;
-  sessionManager: MudīrJalasāt;
+  messenger: RasulKharij;
+  sessionManager: MudirJalasat;
 }
 
 /** Tracked state for a session being monitored */
@@ -61,10 +61,10 @@ interface SessionHealthState {
 // Health Monitor
 // =============================================================================
 
-export class HealthMonitor {
+export class Raqib {
   #opencode: OpenCodeClient;
-  #messenger: MessengerOutbound;
-  #sessionManager: MudīrJalasāt;
+  #messenger: RasulKharij;
+  #sessionManager: MudirJalasat;
 
   /** Per-session health tracking */
   #sessionHealth: Map<string, SessionHealthState> = new Map();
@@ -72,7 +72,7 @@ export class HealthMonitor {
   /** Timer handle for the tick loop */
   #tickTimer: ReturnType<typeof setInterval> | null = null;
 
-  constructor(deps: HealthMonitorDeps) {
+  constructor(deps: RaqibDeps) {
     this.#opencode = deps.opencode;
     this.#messenger = deps.messenger;
     this.#sessionManager = deps.sessionManager;
@@ -123,10 +123,10 @@ export class HealthMonitor {
   async #tick(): Promise<void> {
     try {
       // Get status of all sessions
-      const statuses = await this.#opencode.getSessionStatuses();
+      const statuses = await this.#opencode.jalabJalsaStatuses();
 
       // Check each murshid session
-      const murshidun = this.#sessionManager.wajadaJalasātMurshid();
+      const murshidun = this.#sessionManager.wajadaJalasatMurshid();
 
       for (const orch of murshidun) {
         const status = statuses[orch.id];
@@ -200,8 +200,8 @@ export class HealthMonitor {
           `Last assistant message created ${stuckMinutes}m ago with no output.\n\n` +
           `Auto-aborting...`;
 
-        await this.#messenger.sendFormatted({ murshid: identifier }, msg);
-        await this.#messenger.sendFormatted("dispatch", msg);
+        await this.#messenger.arsalaMunassaq({ murshid: identifier }, msg);
+        await this.#messenger.arsalaMunassaq("dispatch", msg);
 
         state.alertedStuck = true;
       }
@@ -218,7 +218,7 @@ export class HealthMonitor {
         if (aborted) {
           state.aborted = true;
 
-          await this.#messenger.sendFormatted("dispatch",
+          await this.#messenger.arsalaMunassaq("dispatch",
             `Auto-aborted stuck session **${identifier}** (stuck ${stuckMinutes}m).`
           );
 
@@ -240,7 +240,7 @@ export class HealthMonitor {
     // =========================================================================
 
     // Only compact idle sessions (don't interrupt busy ones)
-    if (status === "sākin") {
+    if (status === "sakin") {
       await this.#checkCompaction(sessionId, identifier, state, now);
     }
   }
@@ -260,7 +260,7 @@ export class HealthMonitor {
     }
 
     // Get message count
-    const counts = await this.#opencode.getMessageCount(sessionId);
+    const counts = await this.#opencode.jalabRisalaCount(sessionId);
     if (!counts) return;
 
     if (counts.total >= COMPACT_THRESHOLD) {
@@ -274,7 +274,7 @@ export class HealthMonitor {
       if (success) {
         state.lastCompactedAt = now;
 
-        await this.#messenger.sendFormatted("dispatch",
+        await this.#messenger.arsalaMunassaq("dispatch",
           `Auto-compacted session **${identifier}** (${counts.total} messages → summarized)`
         );
       } else {
@@ -305,6 +305,6 @@ export class HealthMonitor {
 /**
  * Create a health monitor instance
  */
-export function istadaaRaqib(deps: HealthMonitorDeps): HealthMonitor {
-  return new HealthMonitor(deps);
+export function istadaaRaqib(deps: RaqibDeps): Raqib {
+  return new Raqib(deps);
 }

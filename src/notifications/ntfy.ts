@@ -6,7 +6,7 @@
  */
 
 import { logger } from "../logging/logger.ts";
-import type { MunadiConfig, Notification, NotificationAction, NotificationPriority } from "../types.ts";
+import type { TasmimIksir, Notification, NotificationAction, NotificationPriority } from "../types.ts";
 
 const PRIORITY_MAP: Record<NotificationPriority, number> = {
   min: 1,
@@ -32,7 +32,7 @@ export class NtfyClient {
   private topic: string;
   private enabled: boolean;
 
-  constructor(config: MunadiConfig) {
+  constructor(config: TasmimIksir) {
     this.server = config.notifications.ntfy.server;
     this.topic = config.notifications.ntfy.topic;
     this.enabled = config.notifications.ntfy.enabled;
@@ -41,7 +41,7 @@ export class NtfyClient {
   /**
    * Check if ntfy notifications are enabled
    */
-  isEnabled(): boolean {
+  mumakkan(): boolean {
     return this.enabled;
   }
 
@@ -117,12 +117,12 @@ export class NtfyClient {
     title: string,
     body: string,
     options: string[],
-    ticketId?: string,
+    huwiyyatWasfa?: string,
     projectId?: string
   ): Promise<boolean> {
     const actions: NotificationAction[] = options.map((opt, i) => ({
       label: opt,
-      action: `blocker_${ticketId ?? "unknown"}_option_${i}`,
+      action: `blocker_${huwiyyatWasfa ?? "unknown"}_option_${i}`,
     }));
 
     return this.send({
@@ -131,7 +131,7 @@ export class NtfyClient {
       body,
       priority: "urgent",
       actions,
-      ticketId,
+      huwiyyatWasfa,
       projectId,
     });
   }
@@ -143,12 +143,12 @@ export class NtfyClient {
     title: string,
     body: string,
     options: string[],
-    ticketId?: string,
+    huwiyyatWasfa?: string,
     projectId?: string
   ): Promise<boolean> {
     const actions: NotificationAction[] = options.map((opt, i) => ({
       label: opt,
-      action: `decision_${ticketId ?? "unknown"}_option_${i}`,
+      action: `decision_${huwiyyatWasfa ?? "unknown"}_option_${i}`,
     }));
 
     return this.send({
@@ -157,7 +157,7 @@ export class NtfyClient {
       body,
       priority: "high",
       actions,
-      ticketId,
+      huwiyyatWasfa,
       projectId,
     });
   }
@@ -166,22 +166,22 @@ export class NtfyClient {
    * Send a PR ready notification
    */
   async sendPRReady(
-    prNumber: number,
-    ticketId: string,
+    raqamRisala: number,
+    huwiyyatWasfa: string,
     prUrl: string,
     summary: string
   ): Promise<boolean> {
     return this.send({
       category: "pr_ready",
-      title: `Draft PR Ready: #${prNumber}`,
-      body: `${ticketId}\n\n${summary}`,
+      title: `Draft PR Ready: #${raqamRisala}`,
+      body: `${huwiyyatWasfa}\n\n${summary}`,
       priority: "default",
       url: prUrl,
-      ticketId,
+      huwiyyatWasfa,
       actions: [
         {
           label: "View PR",
-          action: `view_pr_${prNumber}`,
+          action: `view_pr_${raqamRisala}`,
           url: prUrl,
         },
       ],
@@ -231,6 +231,6 @@ export class NtfyClient {
 /**
  * Create an ntfy client instance
  */
-export function createNtfyClient(config: MunadiConfig): NtfyClient {
+export function createNtfyClient(config: TasmimIksir): NtfyClient {
   return new NtfyClient(config);
 }

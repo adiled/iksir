@@ -64,17 +64,17 @@ function resolveMurshid(
 /**
  * Fetch diary decisions for an murshid, most recent first.
  */
-function getDiaryEntries(db: Database, murshidId: string): DiaryRow[] {
+function getDiaryEntries(db: Database, huwiyyatMurshid: string): DiaryRow[] {
   try {
     return db
       .prepare(
         `SELECT type, decision, reasoning, created_at
          FROM diary_decisions
-         WHERE murshid_id = ?
+         WHERE huwiyat_murshid = ?
          ORDER BY created_at DESC
          LIMIT 30`,
       )
-      .all(murshidId) as DiaryRow[]
+      .all(huwiyyatMurshid) as DiaryRow[]
   } catch {
     return []
   }

@@ -1,14 +1,14 @@
 /**
- * TelegramMessenger — MessengerOutbound adapter for Telegram
+ * TelegramMessenger — RasulKharij adapter for Telegram
  *
- * Translates the generic MessengerOutbound interface into TelegramClient
- * calls + channel DB persistence. Daemon modules depend on MessengerOutbound,
+ * Translates the generic RasulKharij interface into TelegramClient
+ * calls + channel DB persistence. Daemon modules depend on RasulKharij,
  * never on TelegramClient directly.
  *
  * Channel resolution:
  *   "dispatch"              → TelegramClient.sendToDispatch()
- *   "operator"                → TelegramClient.sendMessage() (private chat)
- *   { orchestrator: id }    → lookup channels table, sendToOrchestratorTopic()
+ *   "operator"                → TelegramClient.arsalaRisala() (private chat)
+ *   { murshid: id }    → lookup channels table, arsalaIlaMurshidTopic()
  *                              fallback: dispatch with [id] prefix
  */
 
@@ -18,14 +18,14 @@ import {
   upsertChannel,
   getChannel,
   getChannelsForSession,
-  getSessionByChannel,
+  jalabJalsaByChannel,
 } from "../../db/db.ts";
-import type { MessengerOutbound, MessageChannel } from "../types.ts";
+import type { RasulKharij, QanatRisala } from "../types.ts";
 
 // Re-export for convenience — channel DB functions used by main.ts for inbound routing
-export { getChannel, getChannelsForSession, getSessionByChannel } from "../../db/db.ts";
+export { getChannel, getChannelsForSession, jalabJalsaByChannel } from "../../db/db.ts";
 
-export class TelegramMessenger implements MessengerOutbound {
+export class TelegramMessenger implements RasulKharij {
   #telegram: TelegramClient;
 
   /** In-memory cache: provider:channelId → sessionIdentifier (reverse lookup) */
@@ -39,15 +39,15 @@ export class TelegramMessenger implements MessengerOutbound {
   }
 
   // ===========================================================================
-  // MessengerOutbound interface
+  // RasulKharij interface
   // ===========================================================================
 
-  isEnabled(): boolean {
-    return this.#telegram.isEnabled();
+  mumakkan(): boolean {
+    return this.#telegram.mumakkan();
   }
 
-  async send(channel: MessageChannel, text: string): Promise<void> {
-    if (!this.isEnabled()) return;
+  async send(channel: QanatRisala, text: string): Promise<void> {
+    if (!this.mumakkan()) return;
 
     if (channel === "dispatch") {
       await this.#telegram.sendToDispatch(text);
@@ -55,22 +55,22 @@ export class TelegramMessenger implements MessengerOutbound {
     }
 
     if (channel === "operator") {
-      await this.#telegram.sendMessage(text);
+      await this.#telegram.arsalaRisala(text);
       return;
     }
 
-    // { orchestrator: id }
-    const topicId = this.#resolveOrchestratorTopic(channel.orchestrator);
+    // { murshid: id }
+    const topicId = this.#resolveOrchestratorTopic(channel.murshid);
     if (topicId !== null) {
-      await this.#telegram.sendToOrchestratorTopic(topicId, text);
+      await this.#telegram.arsalaIlaMurshidTopic(topicId, text);
     } else {
       // No topic — fallback to dispatch with identifier prefix
-      await this.#telegram.sendToDispatch(`[${channel.orchestrator}] ${text}`);
+      await this.#telegram.sendToDispatch(`[${channel.murshid}] ${text}`);
     }
   }
 
-  async sendFormatted(channel: MessageChannel, text: string): Promise<void> {
-    if (!this.isEnabled()) return;
+  async arsalaMunassaq(channel: QanatRisala, text: string): Promise<void> {
+    if (!this.mumakkan()) return;
 
     if (channel === "dispatch") {
       await this.#telegram.sendToDispatch(text, { parseMode: "Markdown" });
@@ -78,20 +78,20 @@ export class TelegramMessenger implements MessengerOutbound {
     }
 
     if (channel === "operator") {
-      await this.#telegram.sendMessage(text, { parseMode: "Markdown" });
+      await this.#telegram.arsalaRisala(text, { parseMode: "Markdown" });
       return;
     }
 
-    // { orchestrator: id }
-    const topicId = this.#resolveOrchestratorTopic(channel.orchestrator);
+    // { murshid: id }
+    const topicId = this.#resolveOrchestratorTopic(channel.murshid);
     if (topicId !== null) {
-      await this.#telegram.sendToOrchestratorTopic(topicId, text, { parseMode: "Markdown" });
+      await this.#telegram.arsalaIlaMurshidTopic(topicId, text, { parseMode: "Markdown" });
     } else {
-      await this.#telegram.sendToDispatch(`[${channel.orchestrator}] ${text}`, { parseMode: "Markdown" });
+      await this.#telegram.sendToDispatch(`[${channel.murshid}] ${text}`, { parseMode: "Markdown" });
     }
   }
 
-  async createOrchestratorChannel(identifier: string, title: string): Promise<string | null> {
+  async khalaqaQanatMurshid(identifier: string, title: string): Promise<string | null> {
     if (!this.#telegram.isGroupMode()) {
       return null;
     }
@@ -124,7 +124,7 @@ export class TelegramMessenger implements MessengerOutbound {
     return channelId;
   }
 
-  hasOrchestratorChannel(identifier: string): boolean {
+  yamlikQanatMurshid(identifier: string): boolean {
     // Check cache first, then DB
     const cached = this.#sessionChannels.get(identifier);
     if (cached && cached["telegram"]) return true;
@@ -145,7 +145,7 @@ export class TelegramMessenger implements MessengerOutbound {
    * Load all channels from DB into cache. Call once at startup.
    * Uses getChannelsForSession for each known identifier.
    */
-  loadChannelsForSession(identifier: string): Record<string, string> {
+  hammalQanawatLilJalsa(identifier: string): Record<string, string> {
     const channels = getChannelsForSession(identifier);
     this.#sessionChannels.set(identifier, channels);
     for (const [provider, channelId] of Object.entries(channels)) {
@@ -158,12 +158,12 @@ export class TelegramMessenger implements MessengerOutbound {
    * Reverse lookup: find orchestrator identifier by provider + channelId.
    * Checks cache first, then DB.
    */
-  resolveSessionByChannel(provider: string, channelId: string): string | null {
+  hallJalsaBilQanat(provider: string, channelId: string): string | null {
     const cacheKey = `${provider}:${channelId}`;
     const cached = this.#channelCache.get(cacheKey);
     if (cached) return cached;
 
-    const fromDb = getSessionByChannel(provider, channelId);
+    const fromDb = jalabJalsaByChannel(provider, channelId);
     if (fromDb) {
       this.#channelCache.set(cacheKey, fromDb);
       return fromDb;

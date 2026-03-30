@@ -46,13 +46,13 @@ export async function startMcpServer(opts: { port?: number } = {}): Promise<void
   console.log(`  PM-MCP: POST http://127.0.0.1:${port}/pm`);
   console.log(`  Tools: ${toolCount} registered`);
 
-  const shutdown = () => {
+  const ighlaaq = () => {
     console.log("Shutting down MCP server...");
     server.shutdown();
   };
 
-  Deno.addSignalListener("SIGINT", shutdown);
-  Deno.addSignalListener("SIGTERM", shutdown);
+  Deno.addSignalListener("SIGINT", ighlaaq);
+  Deno.addSignalListener("SIGTERM", ighlaaq);
 }
 
 if (import.meta.main) {

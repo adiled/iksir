@@ -2,7 +2,7 @@
  * Git Operations
  *
  * Local git operations for the graceful snatch protocol.
- * Dispatcher owns all git operations - orchestrators should NOT call these directly.
+ * Munadi owns all git operations - orchestrators should NOT call these directly.
  */
 
 import { logger } from "../logging/logger.ts";
@@ -312,7 +312,7 @@ interface SspResult {
   success: boolean;
   /** What went wrong (if !success) */
   error?: string;
-  /** "conflicts" | "checkout_failed" | "restore_failed" | "push_failed" | "merge_failed" */
+  /** "conflicts" | "checkout_failed" | "istarjaa_failed" | "push_failed" | "merge_failed" */
   errorType?: string;
   /** Conflicted file paths (if errorType === "conflicts") */
   conflicts?: string[];
@@ -434,13 +434,13 @@ export async function ssp(
     }
 
     // Step 5: Restore specified files from epic branch
-    const restoreResult = await exec(["restore", `--source=${epicBranch}`, "--", ...files]);
-    if (!restoreResult.success) {
+    const istarjaaResult = await exec(["istarjaa", `--source=${epicBranch}`, "--", ...files]);
+    if (!istarjaaResult.success) {
       await returnToEpic();
       return {
         success: false,
-        error: `Failed to restore files from ${epicBranch}: ${restoreResult.stderr}`,
-        errorType: "restore_failed",
+        error: `Failed to istarjaa files from ${epicBranch}: ${istarjaaResult.stderr}`,
+        errorType: "istarjaa_failed",
         epicBranch,
         prBranch,
       };
@@ -453,7 +453,7 @@ export async function ssp(
       return {
         success: false,
         error: `Failed to stage files: ${addResult.stderr}`,
-        errorType: "restore_failed",
+        errorType: "istarjaa_failed",
         epicBranch,
         prBranch,
       };
@@ -465,7 +465,7 @@ export async function ssp(
       return {
         success: false,
         error: `Failed to commit: ${commitResult.stderr}`,
-        errorType: "restore_failed",
+        errorType: "istarjaa_failed",
         epicBranch,
         prBranch,
       };

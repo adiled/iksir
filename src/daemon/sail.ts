@@ -16,28 +16,28 @@ import {
   markQuestionAnswered as dbMarkQuestionAnswered,
 } from "../../db/db.ts";
 import { classifyQuestion } from "./classifier.ts";
-import type { MudīrJalasāt } from "./session-manager.ts";
+import type { MudirJalasat } from "./katib.ts";
 import type {
   QuestionAskedEvent,
   QuestionInfo,
   QuestionAnswer,
   QuestionClassification,
   PendingQuestion,
-  MessengerOutbound,
+  RasulKharij,
 } from "../types.ts";
 
 
 
-interface QuestionHandlerDeps {
+interface SailDeps {
   opencode: OpenCodeClient;
-  messenger: MessengerOutbound;
-  sessionManager: MudīrJalasāt;
+  messenger: RasulKharij;
+  sessionManager: MudirJalasat;
 }
 
-export class QuestionHandler {
+export class Sail {
   #opencode: OpenCodeClient;
-  #messenger: MessengerOutbound;
-  #sessionManager: MudīrJalasāt;
+  #messenger: RasulKharij;
+  #sessionManager: MudirJalasat;
 
   // Pending questions awaiting operator response (keyed by question ID)
   #pendingQuestions: Map<string, PendingQuestion> = new Map();
@@ -83,7 +83,7 @@ export class QuestionHandler {
     return this.#callbackIdMap.get(shortId) ?? null;
   }
 
-  constructor(deps: QuestionHandlerDeps) {
+  constructor(deps: SailDeps) {
     this.#opencode = deps.opencode;
     this.#messenger = deps.messenger;
     this.#sessionManager = deps.sessionManager;
@@ -102,7 +102,7 @@ export class QuestionHandler {
     });
 
     // Find which murshid this session belongs to
-    const murshid = this.#sessionManager.wajadaJalasātMurshid().find(
+    const murshid = this.#sessionManager.wajadaJalasatMurshid().find(
       (o) => o.id === sessionID
     );
 
@@ -224,7 +224,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
     const messageText = this.#formatQuestionMessage(primaryQuestion!, huwiyyatMurshid);
 
     // Send via messenger
-    await this.#messenger.sendFormatted({ murshid: huwiyyatMurshid }, messageText);
+    await this.#messenger.arsalaMunassaq({ murshid: huwiyyatMurshid }, messageText);
 
     // Notify transport layer for rich rendering (inline keyboards, etc.)
     if (this.#onQuestionForwarded) {
@@ -438,7 +438,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
 
   /**
    * Load question handler state from SQLite.
-   * Called at daemon startup to restore pending questions.
+   * Called at daemon startup to istarjaa pending questions.
    */
   async loadState(): Promise<void> {
     try {
@@ -457,7 +457,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
         const options = dbQ.options ? JSON.parse(dbQ.options) as string[] : [];
 
         // Resolve murshid identifier from session ID
-        const murshid = this.#sessionManager.wajadaJalasātMurshid().find(
+        const murshid = this.#sessionManager.wajadaJalasatMurshid().find(
           (o) => o.id === dbQ.session_id
         );
         
@@ -509,6 +509,6 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
 /**
  * Create a question handler instance.
  */
-export function istadaaSail(deps: QuestionHandlerDeps): QuestionHandler {
-  return new QuestionHandler(deps);
+export function istadaaSail(deps: SailDeps): Sail {
+  return new Sail(deps);
 }

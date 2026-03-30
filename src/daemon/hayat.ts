@@ -14,18 +14,18 @@ import { logger } from "../logging/logger.ts";
 import { isInTimeRange, minutesUntil, todayInTz } from "../utils/time.ts";
 import * as git from "../git/operations.ts";
 import type {
-  TaṣmīmIksir,
+  TasmimIksir,
   ReviewComment,
   JalsatMurshid,
-  TrackedPR,
-  TrackedPRStatus,
+  RisalaMutaba,
+  RisalaMutabaStatus,
 } from "../types.ts";
-import type { MudīrJalasāt } from "./session-manager.ts";
+import type { MudirJalasat } from "./katib.ts";
 
 /**
  * Result of maintenance run for a single branch
  */
-export interface MaintenanceResult {
+export interface NatijaSeyana {
   branch: string;
   identifier: string;
   success: boolean;
@@ -45,7 +45,7 @@ interface KeepAliveCallbacks {
    */
   onPRMerged: (
     session: JalsatMurshid,
-    pr: TrackedPR
+    pr: RisalaMutaba
   ) => Promise<void>;
 
   /**
@@ -53,7 +53,7 @@ interface KeepAliveCallbacks {
    */
   onPRClosed: (
     session: JalsatMurshid,
-    pr: TrackedPR
+    pr: RisalaMutaba
   ) => Promise<void>;
 
   /**
@@ -61,7 +61,7 @@ interface KeepAliveCallbacks {
    */
   onOperatorCommand: (
     session: JalsatMurshid,
-    prNumber: number,
+    raqamRisala: number,
     comment: ReviewComment
   ) => Promise<void>;
 
@@ -70,7 +70,7 @@ interface KeepAliveCallbacks {
    */
   onNewReviewComments: (
     session: JalsatMurshid,
-    prNumber: number,
+    raqamRisala: number,
     comments: ReviewComment[]
   ) => Promise<void>;
 
@@ -79,7 +79,7 @@ interface KeepAliveCallbacks {
    */
   onPRConflict: (
     session: JalsatMurshid,
-    pr: TrackedPR
+    pr: RisalaMutaba
   ) => Promise<void>;
 
   /**
@@ -87,7 +87,7 @@ interface KeepAliveCallbacks {
    */
   onCIFailed: (
     session: JalsatMurshid,
-    pr: TrackedPR
+    pr: RisalaMutaba
   ) => Promise<void>;
 
   /**
@@ -104,18 +104,18 @@ interface KeepAliveCallbacks {
   /**
    * Maintenance completed - report results to operator
    */
-  onMaintenanceComplete: (results: MaintenanceResult[]) => Promise<void>;
+  onMaintenanceComplete: (results: NatijaSeyana[]) => Promise<void>;
 }
 
 interface KeepAliveDeps {
-  config: TaṣmīmIksir;
-  sessionManager: MudīrJalasāt;
+  config: TasmimIksir;
+  sessionManager: MudirJalasat;
   github: GitHubClient;
 }
 
 export class KeepAliveLoop {
-  #config: TaṣmīmIksir;
-  #sessionManager: MudīrJalasāt;
+  #config: TasmimIksir;
+  #sessionManager: MudirJalasat;
   #github: GitHubClient;
   #callbacks: KeepAliveCallbacks;
   #lastMaintenanceDate: string | null = null; // ISO date string (YYYY-MM-DD)
@@ -137,7 +137,7 @@ export class KeepAliveLoop {
    * Polls all tracked PRs across all murshid sessions.
    */
   async cycle(): Promise<void> {
-    const trackedPRs = this.#sessionManager.getAllTrackedPRs();
+    const trackedPRs = this.#sessionManager.getAllRisalaMutabas();
 
     if (trackedPRs.length === 0) {
       await logger.debug("keepalive", "No PRs to monitor");
@@ -166,21 +166,21 @@ export class KeepAliveLoop {
   /**
    * Poll a single PR for status changes and comments
    */
-  async #pollPR(session: JalsatMurshid, trackedPR: TrackedPR): Promise<void> {
-    const prNumber = trackedPR.prNumber;
+  async #pollPR(session: JalsatMurshid, trackedPR: RisalaMutaba): Promise<void> {
+    const raqamRisala = trackedPR.raqamRisala;
     const now = new Date();
 
     // Rate limit: don't poll same PR more than configured interval
-    // Use persisted lastPolledAt from TrackedPR (survives daemon restarts)
+    // Use persisted lastPolledAt from RisalaMutaba (survives daemon restarts)
     const lastPoll = trackedPR.lastPolledAt ? new Date(trackedPR.lastPolledAt) : null;
     if (lastPoll && now.getTime() - lastPoll.getTime() < this.#config.polling.prPollIntervalMs) {
       return;
     }
 
     try {
-      const pr = await this.#github.getPR(prNumber);
+      const pr = await this.#github.getPR(raqamRisala);
       if (!pr) {
-        await logger.warn("keepalive", `PR #${prNumber} not found`);
+        await logger.warn("keepalive", `PR #${raqamRisala} not found`);
         return;
       }
 
@@ -189,43 +189,43 @@ export class KeepAliveLoop {
 
       // Check for merge conflicts (deduped — only notify once per conflict episode)
       if (pr.mergeable === "CONFLICTING" && trackedPR.status !== "merged") {
-        if (!this.#notifiedConflict.has(prNumber)) {
-          await logger.warn("keepalive", `PR #${prNumber} has conflicts`);
+        if (!this.#notifiedConflict.has(raqamRisala)) {
+          await logger.warn("keepalive", `PR #${raqamRisala} has conflicts`);
           await this.#callbacks.onPRConflict(session, trackedPR);
-          this.#notifiedConflict.add(prNumber);
+          this.#notifiedConflict.add(raqamRisala);
         }
       } else {
         // Conflict resolved — allow re-notification if it recurs
-        this.#notifiedConflict.delete(prNumber);
+        this.#notifiedConflict.delete(raqamRisala);
       }
 
       // Check CI status (only for draft PRs, deduped)
       if (trackedPR.status === "draft") {
-        const checksPassing = await this.#github.arePRChecksPassing(prNumber);
+        const checksPassing = await this.#github.arePRChecksPassing(raqamRisala);
         if (!checksPassing) {
-          if (!this.#notifiedCIFail.has(prNumber)) {
-            await logger.warn("keepalive", `PR #${prNumber} CI failing`);
+          if (!this.#notifiedCIFail.has(raqamRisala)) {
+            await logger.warn("keepalive", `PR #${raqamRisala} CI failing`);
             await this.#callbacks.onCIFailed(session, trackedPR);
-            this.#notifiedCIFail.add(prNumber);
+            this.#notifiedCIFail.add(raqamRisala);
           }
         } else {
           // CI recovered — allow re-notification if it fails again
-          this.#notifiedCIFail.delete(prNumber);
+          this.#notifiedCIFail.delete(raqamRisala);
         }
       }
 
       // Check for new comments (since last poll or PR creation)
       // Uses persisted lastPolledAt to prevent re-fetching all comments on daemon restart
       const commentsSince = lastPoll ?? new Date(trackedPR.createdAt);
-      const newComments = await this.#github.getNewComments(prNumber, commentsSince);
+      const newComments = await this.#github.getNewComments(raqamRisala, commentsSince);
       if (newComments.length > 0) {
-        await this.#processNewComments(session, prNumber, newComments);
+        await this.#processNewComments(session, raqamRisala, newComments);
       }
 
       // Persist the poll time (survives daemon restarts)
-      await this.#sessionManager.updatePRLastPolled(prNumber);
+      await this.#sessionManager.updatePRLastPolled(raqamRisala);
     } catch (error) {
-      await logger.error("keepalive", `Failed to poll PR #${prNumber}`, {
+      await logger.error("keepalive", `Failed to poll PR #${raqamRisala}`, {
         error: String(error),
         epicId: session.identifier,
       });
@@ -237,35 +237,35 @@ export class KeepAliveLoop {
    */
   async #checkStatusChange(
     session: JalsatMurshid,
-    trackedPR: TrackedPR,
+    trackedPR: RisalaMutaba,
     githubState: string
   ): Promise<void> {
-    const prNumber = trackedPR.prNumber;
-    let newStatus: TrackedPRStatus | null = null;
+    const raqamRisala = trackedPR.raqamRisala;
+    let newStatus: RisalaMutabaStatus | null = null;
 
     if (githubState === "MERGED" && trackedPR.status !== "merged") {
       newStatus = "merged";
-      await logger.info("keepalive", `PR #${prNumber} merged`, {
+      await logger.info("keepalive", `PR #${raqamRisala} merged`, {
         epicId: session.identifier,
-        wasfaId: trackedPR.wasfaId,
+        huwiyyatWasfa: trackedPR.huwiyyatWasfa,
       });
     } else if (githubState === "CLOSED" && trackedPR.status !== "closed") {
       newStatus = "closed";
-      await logger.info("keepalive", `PR #${prNumber} closed`, {
+      await logger.info("keepalive", `PR #${raqamRisala} closed`, {
         epicId: session.identifier,
-        wasfaId: trackedPR.wasfaId,
+        huwiyyatWasfa: trackedPR.huwiyyatWasfa,
       });
     } else if (githubState === "OPEN" && trackedPR.status === "draft") {
       // Draft was promoted to open (operator action)
       newStatus = "open";
-      await logger.info("keepalive", `PR #${prNumber} promoted to open`, {
+      await logger.info("keepalive", `PR #${raqamRisala} promoted to open`, {
         epicId: session.identifier,
       });
     }
 
     if (newStatus) {
       // Update tracking
-      const result = await this.#sessionManager.updatePRStatus(prNumber, newStatus);
+      const result = await this.#sessionManager.updatePRStatus(raqamRisala, newStatus);
 
       // Trigger callbacks
       if (newStatus === "merged" && result) {
@@ -281,7 +281,7 @@ export class KeepAliveLoop {
    */
   async #processNewComments(
     session: JalsatMurshid,
-    prNumber: number,
+    raqamRisala: number,
     comments: ReviewComment[]
   ): Promise<void> {
     const operatorUsername = this.#config.github.operatorUsername;
@@ -301,18 +301,18 @@ export class KeepAliveLoop {
 
     // Process operator commands immediately
     for (const cmd of operatorCommands) {
-      await logger.info("keepalive", `operator command on PR #${prNumber}`, {
+      await logger.info("keepalive", `operator command on PR #${raqamRisala}`, {
         body: cmd.body.slice(0, 100),
       });
-      await this.#callbacks.onOperatorCommand(session, prNumber, cmd);
+      await this.#callbacks.onOperatorCommand(session, raqamRisala, cmd);
     }
 
     // Queue other comments for operator review
     if (otherComments.length > 0) {
-      await logger.info("keepalive", `${otherComments.length} new comments on PR #${prNumber}`, {
+      await logger.info("keepalive", `${otherComments.length} new comments on PR #${raqamRisala}`, {
         authors: [...new Set(otherComments.map((c) => c.author))],
       });
-      await this.#callbacks.onNewReviewComments(session, prNumber, otherComments);
+      await this.#callbacks.onNewReviewComments(session, raqamRisala, otherComments);
     }
   }
 
@@ -378,10 +378,10 @@ export class KeepAliveLoop {
     this.#sessionManager.setGitFence(true);
 
     try {
-      const results: MaintenanceResult[] = [];
-      const sessions = this.#sessionManager.wajadaJalasātMurshid();
+      const results: NatijaSeyana[] = [];
+      const sessions = this.#sessionManager.wajadaJalasatMurshid();
 
-      // Save current branch to restore later
+      // Save current branch to istarjaa later
       const originalBranch = await git.getCurrentBranch();
 
       // Fetch latest from origin
@@ -394,9 +394,9 @@ export class KeepAliveLoop {
 
       // Restore original branch (with fallback to main)
       if (originalBranch) {
-        const restored = await git.checkout(originalBranch);
-        if (!restored) {
-          await logger.error("keepalive", `Failed to restore branch ${originalBranch}, falling back to main`);
+        const istarjaad = await git.checkout(originalBranch);
+        if (!istarjaad) {
+          await logger.error("keepalive", `Failed to istarjaa branch ${originalBranch}, falling back to main`);
           await git.checkout("main");
         }
       }
@@ -431,7 +431,7 @@ export class KeepAliveLoop {
   /**
    * Maintain a single epic branch - merge main into it
    */
-  async #maintainBranch(session: JalsatMurshid): Promise<MaintenanceResult> {
+  async #maintainBranch(session: JalsatMurshid): Promise<NatijaSeyana> {
     const branch = session.branch;
     const identifier = session.identifier;
 

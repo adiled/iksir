@@ -8,23 +8,23 @@
 // Configuration
 // =============================================================================
 
-export interface MunadiConfig {
-  polling: PollingConfig;
-  quietHours: QuietHoursConfig;
-  notifications: NotificationsConfig;
-  issueTracker: IssueTrackerConfig;
-  github: GitHubConfig;
-  opencode: OpenCodeConfig;
+export interface TasmimIksir {
+  polling: TasmimIstiftaa;
+  quietHours: TasmimSaatSukun;
+  notifications: TasmimIsharat;
+  issueTracker: MutabiWasfaConfig;
+  github: TasmimGitHub;
+  opencode: TasmimOpenCode;
   prompts: PromptsConfig;
 }
 
-export interface PollingConfig {
+export interface TasmimIstiftaa {
   defaultIntervalMs: number;
   /** Minimum interval between polls of the same PR (ms). Default: 60000 */
   prPollIntervalMs: number;
 }
 
-export interface QuietHoursConfig {
+export interface TasmimSaatSukun {
   enabled: boolean;
   start: string; // "22:00"
   end: string; // "07:00"
@@ -34,9 +34,9 @@ export interface QuietHoursConfig {
   maintenanceWindowMinutes: number;
 }
 
-export interface NotificationsConfig {
+export interface TasmimIsharat {
   ntfy: NtfyConfig;
-  telegram: TelegramConfig;
+  telegram: TasmimTelegram;
 }
 
 export interface NtfyConfig {
@@ -45,7 +45,7 @@ export interface NtfyConfig {
   server: string;
 }
 
-export interface TelegramConfig {
+export interface TasmimTelegram {
   enabled: boolean;
   botToken: string;
   chatId: string;
@@ -57,7 +57,7 @@ export interface TelegramConfig {
   proxy?: string;
 }
 
-export interface IssueTrackerConfig {
+export interface MutabiWasfaConfig {
   /** Provider name: "linear" | "jira" | "github" */
   provider?: string;
   apiKey: string;
@@ -70,9 +70,9 @@ export interface IssueTrackerConfig {
 // Issue Tracker Interface (provider-agnostic)
 // =============================================================================
 
-export type EntityType = "ticket" | "epic" | "milestone" | "project" | "unknown";
+export type NawKiyan = "ticket" | "epic" | "milestone" | "project" | "unknown";
 
-export interface TrackerIssue {
+export interface WasfaMutaba {
   id: string;
   identifier: string;
   title: string;
@@ -102,7 +102,7 @@ export interface TrackerMilestone {
 }
 
 export interface ParsedTicketUrl {
-  type: EntityType;
+  type: NawKiyan;
   id: string;
 }
 
@@ -128,19 +128,19 @@ export interface IssueFilters {
   cycleId?: string;
 }
 
-export interface IssueTracker {
+export interface MutabiWasfa {
   readonly provider: string;
   isAuthenticated(): Promise<boolean>;
 
   // Read
-  getIssue(identifier: string): Promise<TrackerIssue | null>;
+  getIssue(identifier: string): Promise<WasfaMutaba | null>;
   getProject(id: string): Promise<TrackerProject | null>;
-  searchIssues(query: string, limit?: number): Promise<TrackerIssue[]>;
+  searchIssues(query: string, limit?: number): Promise<WasfaMutaba[]>;
   searchProjects(query: string): Promise<TrackerProject[]>;
 
   // Write
-  createIssue(input: CreateIssueInput): Promise<TrackerIssue>;
-  updateIssue(id: string, input: UpdateIssueInput): Promise<TrackerIssue>;
+  createIssue(input: CreateIssueInput): Promise<WasfaMutaba>;
+  updateIssue(id: string, input: UpdateIssueInput): Promise<WasfaMutaba>;
   setRelations(identifier: string, blocks?: string[], blockedBy?: string[]): Promise<void>;
 
   // URL handling
@@ -153,16 +153,16 @@ export interface IssueTracker {
   // Search (optional — not all providers have these)
   searchMilestones?(query: string): Promise<TrackerMilestone[]>;
   getActiveMilestone?(): Promise<TrackerMilestone | null>;
-  getFilteredIssues?(filters: IssueFilters, limit?: number): Promise<TrackerIssue[]>;
+  getFilteredIssues?(filters: IssueFilters, limit?: number): Promise<WasfaMutaba[]>;
 }
 
-export interface GitHubConfig {
+export interface TasmimGitHub {
   owner: string;
   repo: string;
   operatorUsername: string;
 }
 
-export interface OpenCodeConfig {
+export interface TasmimOpenCode {
   server: string;
 }
 
@@ -197,7 +197,7 @@ export interface Notification {
   actions?: NotificationAction[];
   url?: string;
   projectId?: string;
-  wasfaId?: string;
+  huwiyyatWasfa?: string;
 }
 
 export interface NotificationAction {
@@ -212,7 +212,7 @@ export interface NotificationAction {
 
 export interface ReviewComment {
   id: string;
-  prNumber: number;
+  raqamRisala: number;
   author: string;
   body: string;
   path?: string;
@@ -263,17 +263,17 @@ export interface ExternalChangeEntry extends LogEntry {
 // OpenCode Integration
 // =============================================================================
 
-export interface OpenCodeSession {
+export interface JalsatOpenCode {
   id: string;
   projectId: string;
-  wasfaId: string;
+  huwiyyatWasfa: string;
   title: string;
   status: "fail" | "sakin" | "error";
   createdAt: Date;
   lastMessageAt: Date;
 }
 
-export interface OpenCodeEvent {
+export interface HadathOpenCode {
   type: string;
   properties: Record<string, unknown>;
   timestamp: Date;
@@ -345,7 +345,7 @@ export interface QuestionClassification {
 export interface PendingQuestion {
   id: string;
   sessionID: string;
-  orchestratorId: string;
+  huwiyyatMurshid: string;
   questions: QuestionInfo[];
   telegramMessageId?: number;
   createdAt: string;
@@ -363,7 +363,7 @@ export interface PendingQuestion {
 /** Create a new ticket */
 export interface NidaKhalqWasfa {
   tool: "mun_create_wasfa";
-  orchestratorId: string;
+  huwiyyatMurshid: string;
   title: string;
   description?: string;
   estimate?: number;
@@ -375,8 +375,8 @@ export interface NidaKhalqWasfa {
 /** Update an existing ticket */
 export interface NidaTajdidWasfa {
   tool: "mun_update_wasfa";
-  orchestratorId: string;
-  wasfaId: string;
+  huwiyyatMurshid: string;
+  huwiyyatWasfa: string;
   updates: {
     title?: string;
     description?: string;
@@ -388,8 +388,8 @@ export interface NidaTajdidWasfa {
 /** Set blocking relations between tickets */
 export interface MunSetRelationsCall {
   tool: "mun_set_relations";
-  orchestratorId: string;
-  wasfaId: string;
+  huwiyyatMurshid: string;
+  huwiyyatWasfa: string;
   blocks?: string[];
   blockedBy?: string[];
 }
@@ -397,23 +397,23 @@ export interface MunSetRelationsCall {
 /** Read any issue tracker URL — returns enriched info with context */
 export interface NidaQiraatWasfa {
   tool: "mun_read_wasfa";
-  orchestratorId: string;
+  huwiyyatMurshid: string;
   url: string;
 }
 
 /** Slice files for a PR */
 export interface MunSliceForPrCall {
   tool: "mun_slice_for_pr";
-  orchestratorId: string;
-  wasfaId: string;
+  huwiyyatMurshid: string;
+  huwiyyatWasfa: string;
   files: string[];
 }
 
 /** Create a draft PR */
 export interface NidaKhalqRisala {
   tool: "mun_create_risala";
-  orchestratorId: string;
-  wasfaId: string;
+  huwiyyatMurshid: string;
+  huwiyyatWasfa: string;
   title: string;
   body: string;
   base: string;
@@ -423,7 +423,7 @@ export interface NidaKhalqRisala {
 /** Check branch status (ahead/behind) */
 export interface MunCheckBranchStatusCall {
   tool: "mun_check_branch_status";
-  orchestratorId: string;
+  huwiyyatMurshid: string;
   branch: string;
 }
 
@@ -431,7 +431,7 @@ export interface MunCheckBranchStatusCall {
 export interface MunNotifyCall {
   tool: "mun_notify";
   /** Your orchestrator ID (e.g., TEAM-100, SANDBOX-pos-simulator) */
-  orchestratorId: string;
+  huwiyyatMurshid: string;
   message: string;
   priority: "min" | "low" | "default" | "high" | "urgent";
   actions?: Array<{ label: string; action: string }>;
@@ -441,14 +441,14 @@ export interface MunNotifyCall {
 export interface MunReplyCall {
   tool: "mun_reply";
   /** Your orchestrator ID (e.g., TEAM-100, SANDBOX-pos-simulator) */
-  orchestratorId: string;
+  huwiyyatMurshid: string;
   message: string;
 }
 
 /** Log a decision to the diary */
 export interface MunLogDecisionCall {
   tool: "mun_log_decision";
-  orchestratorId: string;
+  huwiyyatMurshid: string;
   type: "tadbir" | "tanfidh" | "tanfidh" | "hall" | "risala";
   decision: string;
   reasoning: string;
@@ -458,7 +458,7 @@ export interface MunLogDecisionCall {
 /** Query the collective diary for past decisions and context */
 export interface MunReadDiaryCall {
   tool: "mun_read_diary";
-  orchestratorId: string;
+  huwiyyatMurshid: string;
   /** Filter by orchestrator ID (omit for collective pool) */
   filterOrchestrator?: string;
   /** Filter by decision type */
@@ -474,7 +474,7 @@ export interface MunReadDiaryCall {
 /** Yield control voluntarily (when blocked or waiting) */
 export interface MunYieldCall {
   tool: "mun_yield";
-  orchestratorId: string;
+  huwiyyatMurshid: string;
   reason: "masdud" | "muntazir";
   details: string;
   suggestNext?: string; // Optional suggestion for which epic to switch to
@@ -483,7 +483,7 @@ export interface MunYieldCall {
 /** Demand control back (when unblocked and have actionable work) */
 export interface MunDemandControlCall {
   tool: "mun_demand_control";
-  orchestratorId: string;
+  huwiyyatMurshid: string;
   reason: string;
   priority: "normal" | "urgent";
 }
@@ -491,17 +491,17 @@ export interface MunDemandControlCall {
 /** Create branch for orchestrator (called once when starting work) */
 export interface MunCreateBranchCall {
   tool: "mun_create_branch";
-  orchestratorId: string;
+  huwiyyatMurshid: string;
   identifier: string;        // e.g., "TEAM-200"
-  type: OrchestratorType;    // "epic" or "chore"
+  type: NawMurshid;    // "epic" or "chore"
   slug?: string;             // e.g., "bab-al-shams" (required for epic, optional for chore)
 }
 
 /** Run SSP to slice files into a PR branch (targets main) */
 export interface MunSspCall {
   tool: "mun_ssp";
-  orchestratorId: string;
-  wasfaId: string;
+  huwiyyatMurshid: string;
+  huwiyyatWasfa: string;
   files: string[];
 }
 
@@ -518,8 +518,8 @@ export interface MunSspCall {
  */
 export interface MunSsspCall {
   tool: "mun_sssp";
-  orchestratorId: string;
-  wasfaId: string;
+  huwiyyatMurshid: string;
+  huwiyyatWasfa: string;
   /** Parent ticket ID whose PR branch this should target */
   parentTicketId: string;
   files: string[];
@@ -528,7 +528,7 @@ export interface MunSsspCall {
 /** Commit staged changes */
 export interface MunCommitCall {
   tool: "mun_commit";
-  orchestratorId: string;
+  huwiyyatMurshid: string;
   message: string;
   files?: string[]; // If provided, only commit these files
 }
@@ -536,14 +536,14 @@ export interface MunCommitCall {
 /** Git add files */
 export interface MunGitAddCall {
   tool: "mun_git_add";
-  orchestratorId: string;
+  huwiyyatMurshid: string;
   files: string[]; // Files to stage
 }
 
 /** Git push current branch */
 export interface MunGitPushCall {
   tool: "mun_git_push";
-  orchestratorId: string;
+  huwiyyatMurshid: string;
 }
 
 // =============================================================================
@@ -553,32 +553,32 @@ export interface MunGitPushCall {
 /** Extract files from forge for artifact creation */
 export interface MunIstikhasCall {
   tool: "mun_istikhas";
-  orchestratorId: string;
-  wasfaId: string;
+  huwiyyatMurshid: string;
+  huwiyyatWasfa: string;
   files: string[];
 }
 
 /** Test extraction for missing dependencies and coupling */
 export interface MunTalaumCall {
   tool: "mun_talaum";
-  orchestratorId: string;
-  wasfaId: string;
+  huwiyyatMurshid: string;
+  huwiyyatWasfa: string;
   files: string[];
 }
 
 /** Craft artifact from extracted files */
 export interface MunIstihalCall {
   tool: "mun_istihal";
-  orchestratorId: string;
-  wasfaId: string;
+  huwiyyatMurshid: string;
+  huwiyyatWasfa: string;
   files: string[];
 }
 
 /** Craft stacked artifact (builds on parent) */
 export interface MunIstihalMutabaqqCall {
   tool: "mun_istihal_mutabaqq";
-  orchestratorId: string;
-  wasfaId: string;
+  huwiyyatMurshid: string;
+  huwiyyatWasfa: string;
   parentTicketId: string;
   files: string[];
 }
@@ -586,8 +586,8 @@ export interface MunIstihalMutabaqqCall {
 /** Unveil artifact by creating PR */
 export interface MunFaslCall {
   tool: "mun_fasl";
-  orchestratorId: string;
-  wasfaId: string;
+  huwiyyatMurshid: string;
+  huwiyyatWasfa: string;
   title: string;
   body: string;
   draft?: boolean;
@@ -663,7 +663,7 @@ export interface ToolRegistry {
 // Orchestrator Diary
 // =============================================================================
 
-export interface DiaryDecision {
+export interface QararSijill {
   timestamp: string;
   type: "tadbir" | "tanfidh" | "tanfidh" | "hall" | "risala";
   decision: string;
@@ -671,26 +671,26 @@ export interface DiaryDecision {
   metadata?: Record<string, unknown>;
 }
 
-export interface DiaryScript {
+export interface MakhtutatSijill {
   name: string;
   purpose: string;
   createdAt: string;
   content?: string;
 }
 
-export interface DiaryImplementationStatus {
+export interface HalatTanfidhSijill {
   status: "pending" | "in_progress" | "complete" | "masdud";
   sessionId?: string;
   pr?: number;
   blockedReason?: string;
 }
 
-export interface OrchestratorDiary {
+export interface SijillMurshid {
   epicId: string;
   startedAt: string;
-  decisions: DiaryDecision[];
-  scriptsCreated: DiaryScript[];
-  implementationStatus: Record<string, DiaryImplementationStatus>;
+  decisions: QararSijill[];
+  scriptsCreated: MakhtutatSijill[];
+  implementationStatus: Record<string, HalatTanfidhSijill>;
 }
 
 // =============================================================================
@@ -698,33 +698,33 @@ export interface OrchestratorDiary {
 // =============================================================================
 
 /** Where a message should be routed */
-export type MessageChannel =
+export type QanatRisala =
   | "dispatch"                    // Control plane (Telegram dispatch topic, Slack #munadi, etc.)
   | "operator"                      // Direct to operator (private chat)
-  | { orchestrator: string };     // Orchestrator's channel (Telegram topic, Slack thread, etc.)
+  | { murshid: string };     // Orchestrator's channel (Telegram topic, Slack thread, etc.)
 
 /** Outbound messaging interface — what daemon modules depend on */
-export interface MessengerOutbound {
+export interface RasulKharij {
   /** Is the messenger operational? */
-  isEnabled(): boolean;
+  mumakkan(): boolean;
 
   /** Send a plain text message to a channel */
-  send(channel: MessageChannel, text: string): Promise<void>;
+  send(channel: QanatRisala, text: string): Promise<void>;
 
   /** Send with markdown formatting (falls back to plain if unsupported) */
-  sendFormatted(channel: MessageChannel, text: string): Promise<void>;
+  arsalaMunassaq(channel: QanatRisala, text: string): Promise<void>;
 
   /** Create a dedicated channel for an orchestrator (e.g., Telegram topic, Slack channel) */
-  createOrchestratorChannel(identifier: string, title: string): Promise<string | null>;
+  khalaqaQanatMurshid(identifier: string, title: string): Promise<string | null>;
 
   /** Check if an orchestrator has a dedicated channel */
-  hasOrchestratorChannel(identifier: string): boolean;
+  yamlikQanatMurshid(identifier: string): boolean;
 
   /** Load all channels for a session from persistence into cache. Returns the channels record. */
-  loadChannelsForSession(identifier: string): Record<string, string>;
+  hammalQanawatLilJalsa(identifier: string): Record<string, string>;
 
   /** Reverse lookup: find orchestrator identifier by provider + channelId. */
-  resolveSessionByChannel(provider: string, channelId: string): string | null;
+  hallJalsaBilQanat(provider: string, channelId: string): string | null;
 }
 
 // =============================================================================
@@ -732,17 +732,17 @@ export interface MessengerOutbound {
 // =============================================================================
 
 /** Orchestrator status for control handover */
-export type OrchestratorStatus = "sakin" | "fail" | "masdud" | "muntazir";
+export type HalatMurshid = "sakin" | "fail" | "masdud" | "muntazir";
 
 /** PR status for keepalive tracking */
-export type TrackedPRStatus = "draft" | "open" | "merged" | "closed";
+export type RisalaMutabaStatus = "draft" | "open" | "merged" | "closed";
 
 /** A PR being tracked by keepalive for PR tracking */
-export interface TrackedPR {
-  wasfaId: string;
-  prNumber: number;
+export interface RisalaMutaba {
+  huwiyyatWasfa: string;
+  raqamRisala: number;
   branch: string;
-  status: TrackedPRStatus;
+  status: RisalaMutabaStatus;
   /** When PR was created */
   createdAt: string;
   /** When status last changed */
@@ -752,7 +752,7 @@ export interface TrackedPR {
 }
 
 /** Orchestrator type */
-export type OrchestratorType = "epic" | "chore" | "sandbox";
+export type NawMurshid = "epic" | "chore" | "sandbox";
 
 /**
  * Orchestrator session
@@ -763,17 +763,17 @@ export type OrchestratorType = "epic" | "chore" | "sandbox";
  * - Chore: Single standalone task, no sub-tickets
  *   Branch: {MUNADI_GIT_USER}/{identifier}
  */
-export interface OrchestratorSession {
+export interface JalsatMurshid {
   id: string;
   /** Linear ticket identifier (e.g., TEAM-200, TEAM-300) */
   identifier: string;
   title: string;
   /** Epic = multi-ticket work, Chore = standalone task */
-  type: OrchestratorType;
+  type: NawMurshid;
   /** Primary branch for this orchestrator */
   branch: string;
   /** Control status: idle/active/blocked/waiting */
-  status: OrchestratorStatus;
+  status: HalatMurshid;
   /** Reason if blocked or waiting */
   blockedReason?: string;
   createdAt: string;
@@ -784,7 +784,7 @@ export interface OrchestratorSession {
    * - Merge detection (paves way for next PR cycle)
    * - Comment interpretation (conditional action per command protocol)
    */
-  activePRs: TrackedPR[];
+  activePRs: RisalaMutaba[];
   /**
    * Messaging channel IDs keyed by provider.
    * e.g., { telegram: "12345", slack: "C07ABC" }

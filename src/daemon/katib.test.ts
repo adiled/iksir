@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { generateBranchName } from "./session-manager.ts";
+import { generateBranchName } from "./katib.ts";
 
 // =============================================================================
 // generateBranchName — pure function, single source of truth for branch naming

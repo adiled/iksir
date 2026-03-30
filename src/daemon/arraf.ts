@@ -13,24 +13,24 @@
 
 import { logger } from "../logging/logger.ts";
 import type { OpenCodeClient } from "../opencode/client.ts";
-import type { ConversationContext } from "./dispatcher.ts";
-import type { IssueTracker, EntityType, TrackerIssue } from "../types.ts";
+import type { SiyaqMuhadatha } from "./munadi.ts";
+import type { MutabiWasfa, NawKiyan, WasfaMutaba } from "../types.ts";
 
 // =============================================================================
 // Types
 // =============================================================================
 
-/** Re-export EntityType for backwards compatibility */
-export type { EntityType } from "../types.ts";
+/** Re-export NawKiyan for backwards compatibility */
+export type { NawKiyan } from "../types.ts";
 
 /** Result of intent resolution */
-export interface ResolvedIntent {
+export interface NiyyaMuhallala {
   /** Resolution status */
   status: "resolved" | "needs_disambiguation" | "needs_llm" | "not_found" | "error" | "list";
 
   /** The identified entity (if resolved) */
   entity?: {
-    type: EntityType;
+    type: NawKiyan;
     id: string;
     identifier?: string; // e.g., "TEAM-200"
     title: string;
@@ -47,7 +47,7 @@ export interface ResolvedIntent {
 
   /** Multiple matches requiring user selection */
   candidates?: Array<{
-    type: EntityType;
+    type: NawKiyan;
     id: string;
     identifier?: string;
     title: string;
@@ -59,7 +59,7 @@ export interface ResolvedIntent {
   rawText: string;
 
   /** How it was resolved */
-  method: "url" | "ticket_id" | "llm_search" | "deterministic_search";
+  method: "url" | "huwiyat_wasfa" | "llm_search" | "deterministic_search";
 
   /** Error message if status is "error" */
   error?: string;
@@ -70,9 +70,9 @@ export interface ResolvedIntent {
 
 /** LLM-extracted intent structure */
 interface LLMIntent {
-  entityType: EntityType;
+  entityType: NawKiyan;
   searchTerms: string[];
-  wasfaId?: string; // If a specific ID was mentioned
+  huwiyyatWasfa?: string; // If a specific ID was mentioned
   projectHint?: string; // "in project X"
   milestoneHint?: string; // "in milestone Y"
   // Filters for querying
@@ -91,7 +91,7 @@ interface LLMIntent {
 const TICKET_ID_PATTERN = /\b([A-Z]+-\d+)\b/i;
 
 // Keywords that hint at entity type
-const TYPE_KEYWORDS: Record<EntityType, string[]> = {
+const TYPE_KEYWORDS: Record<NawKiyan, string[]> = {
   ticket: ["ticket", "issue"],
   epic: ["epic"],
   milestone: ["milestone", "sprint", "cycle"],
@@ -103,12 +103,12 @@ const TYPE_KEYWORDS: Record<EntityType, string[]> = {
 // Intent Resolver
 // =============================================================================
 
-export class IntentResolver {
-  #issueTracker: IssueTracker;
+export class Arraf {
+  #issueTracker: MutabiWasfa;
   #opencode: OpenCodeClient;
   #intentSessionId: string | null = null;
 
-  constructor(deps: { issueTracker: IssueTracker; opencode: OpenCodeClient }) {
+  constructor(deps: { issueTracker: MutabiWasfa; opencode: OpenCodeClient }) {
     this.#issueTracker = deps.issueTracker;
     this.#opencode = deps.opencode;
   }
@@ -116,7 +116,7 @@ export class IntentResolver {
   /**
    * Resolve user intent to a Linear entity
    */
-  async resolve(text: string, context?: ConversationContext): Promise<ResolvedIntent> {
+  async resolve(text: string, context?: SiyaqMuhadatha): Promise<NiyyaMuhallala> {
     const trimmed = text.trim();
 
     // Step 1: Try deterministic parsing
@@ -167,7 +167,7 @@ export class IntentResolver {
   /**
    * Try deterministic parsing (URLs, ticket IDs)
    */
-  async #tryDeterministic(text: string): Promise<ResolvedIntent> {
+  async #tryDeterministic(text: string): Promise<NiyyaMuhallala> {
     // Check for issue tracker URL
     const urlMatch = text.match(this.#issueTracker.getUrlPattern());
     if (urlMatch) {
@@ -199,7 +199,7 @@ export class IntentResolver {
     text: string,
     parsed: { type: string; id: string },
     url: string
-  ): Promise<ResolvedIntent> {
+  ): Promise<NiyyaMuhallala> {
     if (parsed.type === "ticket" || parsed.type === "issue") {
       return await this.#resolveTicketId(text, parsed.id);
     }
@@ -232,19 +232,19 @@ export class IntentResolver {
   /**
    * Resolve a ticket ID (e.g., "TEAM-200")
    */
-  async #resolveTicketId(text: string, identifier: string): Promise<ResolvedIntent> {
+  async #resolveTicketId(text: string, identifier: string): Promise<NiyyaMuhallala> {
     const issue = await this.#issueTracker.getIssue(identifier);
 
     if (!issue) {
       return {
         status: "not_found",
         rawText: text,
-        method: "ticket_id",
+        method: "huwiyat_wasfa",
         error: `Ticket ${identifier} not found`,
       };
     }
 
-    const result: ResolvedIntent = {
+    const result: NiyyaMuhallala = {
       status: "resolved",
       entity: {
         type: this.#classifyTicketType(issue),
@@ -254,7 +254,7 @@ export class IntentResolver {
         url: issue.url ?? "",
       },
       rawText: text,
-      method: "ticket_id",
+      method: "huwiyat_wasfa",
     };
 
     // Check for parent epic
@@ -276,7 +276,7 @@ export class IntentResolver {
   /**
    * Classify whether a ticket is an epic or regular ticket
    */
-  #classifyTicketType(issue: TrackerIssue): EntityType {
+  #classifyTicketType(issue: WasfaMutaba): NawKiyan {
     // Has "epic" label
     const labels = issue.labels ?? [];
     if (labels.some((l) => l.toLowerCase() === "epic")) {
@@ -289,13 +289,13 @@ export class IntentResolver {
   /**
    * Extract type hint from keywords in text
    */
-  #extractTypeHint(text: string): EntityType | null {
+  #extractTypeHint(text: string): NawKiyan | null {
     const lower = text.toLowerCase();
 
     for (const [type, keywords] of Object.entries(TYPE_KEYWORDS)) {
       for (const keyword of keywords) {
         if (lower.includes(keyword)) {
-          return type as EntityType;
+          return type as NawKiyan;
         }
       }
     }
@@ -312,7 +312,7 @@ Output format:
 {
   "entityType": "ticket" | "epic" | "milestone" | "project" | "unknown",
   "searchTerms": ["term1", "term2"],
-  "wasfaId": "TEAM-1234" or null,
+  "huwiyyatWasfa": "TEAM-1234" or null,
   "projectHint": "project name" or null,
   "milestoneHint": "milestone name" or null,
   "assignee": "me" or null,
@@ -325,7 +325,7 @@ Output format:
 Rules:
 - entityType: What type of entity they're referring to
 - searchTerms: Keywords to search for (exclude common words like "the", "work on", "assigned", "my", "find", "start", "need", etc.)
-- wasfaId: Only if they mentioned a specific formula ID like "TEAM-1234"
+- huwiyyatWasfa: Only if they mentioned a specific formula ID like "TEAM-1234"
 - projectHint: If they mentioned "in project X" or "the X project"
 - milestoneHint: If they mentioned "in milestone Y" or "the Y milestone/sprint"
 - assignee: "me" if they said "my tickets", "assigned to me", "my tasks", etc.
@@ -335,15 +335,15 @@ Rules:
 - action: "proceed" to start work on focus entity, "query" to ask about it, "cancel" to cancel, null otherwise
 
 Examples:
-- "the upsells milestone" → {"entityType":"milestone","searchTerms":["upsells"],"wasfaId":null,"projectHint":null,"milestoneHint":"upsells","assignee":null,"status":null,"cycle":null,"referencesFocus":false,"action":null}
-- "TEAM-200" → {"entityType":"ticket","searchTerms":[],"wasfaId":"TEAM-200","projectHint":null,"milestoneHint":null,"assignee":null,"status":null,"cycle":null,"referencesFocus":false,"action":null}
-- "ok" (with focus) → {"entityType":"unknown","searchTerms":[],"wasfaId":null,"projectHint":null,"milestoneHint":null,"assignee":null,"status":null,"cycle":null,"referencesFocus":true,"action":"proceed"}
-- "my todo tickets in current cycle" → {"entityType":"ticket","searchTerms":[],"wasfaId":null,"projectHint":null,"milestoneHint":null,"assignee":"me","status":"todo","cycle":"current","referencesFocus":false,"action":null}`;
+- "the upsells milestone" → {"entityType":"milestone","searchTerms":["upsells"],"huwiyyatWasfa":null,"projectHint":null,"milestoneHint":"upsells","assignee":null,"status":null,"cycle":null,"referencesFocus":false,"action":null}
+- "TEAM-200" → {"entityType":"ticket","searchTerms":[],"huwiyyatWasfa":"TEAM-200","projectHint":null,"milestoneHint":null,"assignee":null,"status":null,"cycle":null,"referencesFocus":false,"action":null}
+- "ok" (with focus) → {"entityType":"unknown","searchTerms":[],"huwiyyatWasfa":null,"projectHint":null,"milestoneHint":null,"assignee":null,"status":null,"cycle":null,"referencesFocus":true,"action":"proceed"}
+- "my todo tickets in current cycle" → {"entityType":"ticket","searchTerms":[],"huwiyyatWasfa":null,"projectHint":null,"milestoneHint":null,"assignee":"me","status":"todo","cycle":"current","referencesFocus":false,"action":null}`;
 
   /**
    * Use LLM to extract structured intent from vague text
    */
-  async #extractIntentWithLLM(text: string, context?: ConversationContext): Promise<LLMIntent | null> {
+  async #extractIntentWithLLM(text: string, context?: SiyaqMuhadatha): Promise<LLMIntent | null> {
     // Get or create intent extraction session
     const sessionId = await this.#getIntentSession();
     if (!sessionId) {
@@ -371,10 +371,10 @@ Examples:
 
 MESSAGE: "${text}"${contextSection}
 
-${IntentResolver.INTENT_SYSTEM_PROMPT}`;
+${Arraf.INTENT_SYSTEM_PROMPT}`;
 
     const response = await this.#opencode.sendPrompt(sessionId, userPrompt, {
-      system: IntentResolver.INTENT_SYSTEM_PROMPT,
+      system: Arraf.INTENT_SYSTEM_PROMPT,
       model: { providerID: "anthropic", modelID: "claude-sonnet-4-20250514" },
       timeoutMs: 15_000,
     });
@@ -412,7 +412,7 @@ ${IntentResolver.INTENT_SYSTEM_PROMPT}`;
   async #getIntentSession(): Promise<string | null> {
     // Reuse existing session
     if (this.#intentSessionId) {
-      const session = await this.#opencode.getSession(this.#intentSessionId);
+      const session = await this.#opencode.jalabJalsa(this.#intentSessionId);
       if (session) {
         return this.#intentSessionId;
       }
@@ -421,7 +421,7 @@ ${IntentResolver.INTENT_SYSTEM_PROMPT}`;
     }
 
     // Create new session
-    const session = await this.#opencode.createSession(
+    const session = await this.#opencode.khalaqaJalsa(
       "iksir-intent",
       "Intent Extraction (reusable)"
     );
@@ -440,14 +440,14 @@ ${IntentResolver.INTENT_SYSTEM_PROMPT}`;
   async #searchEntities(
     text: string,
     intent: LLMIntent,
-    typeHint: EntityType | null
-  ): Promise<ResolvedIntent> {
+    typeHint: NawKiyan | null
+  ): Promise<NiyyaMuhallala> {
     const effectiveType = intent.entityType !== "unknown" ? intent.entityType : typeHint;
     const searchQuery = intent.searchTerms.join(" ");
     const hasFilters = intent.assignee || intent.status || intent.cycle;
 
     // If we have filters but no search terms, that's OK (e.g., "my todo tickets")
-    if (!searchQuery && !intent.wasfaId && !hasFilters) {
+    if (!searchQuery && !intent.huwiyyatWasfa && !hasFilters) {
       return {
         status: "not_found",
         rawText: text,
@@ -457,14 +457,14 @@ ${IntentResolver.INTENT_SYSTEM_PROMPT}`;
     }
 
     // If we have a ticket ID, resolve it directly
-    if (intent.wasfaId) {
-      return await this.#resolveTicketId(text, intent.wasfaId);
+    if (intent.huwiyyatWasfa) {
+      return await this.#resolveTicketId(text, intent.huwiyyatWasfa);
     }
 
     // Search based on entity type
     // Always search tickets/issues since they're the most common
     // Also search the specified type if different
-    const candidates: ResolvedIntent["candidates"] = [];
+    const candidates: NiyyaMuhallala["candidates"] = [];
 
     // Use filtered query if we have filters, otherwise use text search
     if (hasFilters) {
@@ -558,7 +558,7 @@ ${IntentResolver.INTENT_SYSTEM_PROMPT}`;
 
     if (candidates.length === 1) {
       const match = candidates[0];
-      const result: ResolvedIntent = {
+      const result: NiyyaMuhallala = {
         status: "resolved",
         entity: {
           type: match.type,
@@ -602,7 +602,7 @@ ${IntentResolver.INTENT_SYSTEM_PROMPT}`;
   /**
    * Search milestones via the issue tracker interface
    */
-  async #searchMilestones(query: string): Promise<NonNullable<ResolvedIntent["candidates"]>> {
+  async #searchMilestones(query: string): Promise<NonNullable<NiyyaMuhallala["candidates"]>> {
     const milestones = await this.#issueTracker.searchMilestones?.(query);
     if (!milestones || milestones.length === 0) {
       return [];
@@ -638,8 +638,8 @@ ${IntentResolver.INTENT_SYSTEM_PROMPT}`;
  * Create an intent resolver instance
  */
 export function istadaaArraf(deps: {
-  issueTracker: IssueTracker;
+  issueTracker: MutabiWasfa;
   opencode: OpenCodeClient;
-}): IntentResolver {
-  return new IntentResolver(deps);
+}): Arraf {
+  return new Arraf(deps);
 }

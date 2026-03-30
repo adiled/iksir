@@ -5,11 +5,11 @@
  * structured lookups against the code index. No LLM required.
  *
  * Supports:
- *   Symbol lookup:    "where is SessionManager defined"
+ *   Symbol lookup:    "where is MudirJalasat defined"
  *   Reverse deps:     "what depends on types.ts"
  *   Forward deps:     "what does classifier.ts import"
  *   Export listing:    "exports of pm-server.ts"
- *   Impact analysis:  "impact of changing MunadiConfig"
+ *   Impact analysis:  "impact of changing TasmimIksir"
  *   Search:           "files related to authentication"
  */
 

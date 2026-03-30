@@ -16,14 +16,14 @@
 
 import { logger } from "../logging/logger.ts";
 import { escapeMarkdown } from "../utils/strings.ts";
-import { MudīrJalasāt } from "./session-manager.ts";
+import { MudirJalasat } from "./katib.ts";
 import {
-  IntentResolver,
-  type ResolvedIntent,
-  type EntityType,
-} from "./intent-resolver.ts";
+  Arraf,
+  type NiyyaMuhallala,
+  type NawKiyan,
+} from "./arraf.ts";
 import * as git from "../git/operations.ts";
-import type { TaṣmīmIksir, JalsatMurshid, MessengerOutbound } from "../types.ts";
+import type { TasmimIksir, JalsatMurshid, RasulKharij } from "../types.ts";
 
 // =============================================================================
 // Types
@@ -47,7 +47,7 @@ interface InboundMessage {
   source: InboundSource;
   text: string;
   messageId?: string | number;
-  prNumber?: number;
+  raqamRisala?: number;
   author?: string;
 }
 
@@ -70,7 +70,7 @@ interface DispatchResult {
 /** Pending disambiguation state */
 interface PendingDisambiguation {
   source: InboundSource;
-  candidates: NonNullable<ResolvedIntent["candidates"]>;
+  candidates: NonNullable<NiyyaMuhallala["candidates"]>;
   originalText: string;
   expiresAt: Date;
 }
@@ -78,8 +78,8 @@ interface PendingDisambiguation {
 /** Pending parent suggestion state */
 interface PendingParentSuggestion {
   source: InboundSource;
-  ticket: NonNullable<ResolvedIntent["entity"]>;
-  parent: NonNullable<ResolvedIntent["parentEpic"]>;
+  ticket: NonNullable<NiyyaMuhallala["entity"]>;
+  parent: NonNullable<NiyyaMuhallala["parentEpic"]>;
   parentIsEpic: boolean; // True if parent has children or epic label
   expiresAt: Date;
 }
@@ -88,18 +88,18 @@ interface PendingParentSuggestion {
 interface ConversationMessage {
   text: string;
   timestamp: Date;
-  resolved?: ResolvedIntent;
+  resolved?: NiyyaMuhallala;
   response?: string;
 }
 
 /** Short-term conversation context for intent resolution */
-export interface ConversationContext {
+export interface SiyaqMuhadatha {
   /** Recent messages in the conversation */
   recentMessages: ConversationMessage[];
 
   /** The current focus entity (most recently resolved) */
   focusEntity?: {
-    type: EntityType;
+    type: NawKiyan;
     id: string;
     identifier?: string;
     title: string;
@@ -109,17 +109,17 @@ export interface ConversationContext {
 }
 
 interface MunadiDeps {
-  config: TaṣmīmIksir;
-  sessionManager: MudīrJalasāt;
-  intentResolver: IntentResolver;
-  messenger: MessengerOutbound;
+  config: TasmimIksir;
+  sessionManager: MudirJalasat;
+  intentResolver: Arraf;
+  messenger: RasulKharij;
 }
 
 /**
  * Parameters for creating/activating an murshid.
- * Used by the common #khalaqaWaFa'alaMurshid method.
+ * Used by the common #khalaqaWaFailaMurshid method.
  */
-interface MuʿṭayātKhalqMurshid {
+interface MuatayatKhalqMurshid {
   identifier: string;
   title: string;
   type: "epic" | "chore" | "sandbox";
@@ -286,15 +286,15 @@ function parseBasicIntent(text: string, ticketPattern: RegExp): Intent {
 }
 
 // =============================================================================
-// Dispatcher
+// Munadi
 // =============================================================================
 
 export class Munadi {
   // @ts-expect-error Config kept for future use (quiet hours, etc.)
-  #config: TaṣmīmIksir;
-  #sessionManager: MudīrJalasāt;
-  #intentResolver: IntentResolver;
-  #messenger: MessengerOutbound;
+  #config: TasmimIksir;
+  #sessionManager: MudirJalasat;
+  #intentResolver: Arraf;
+  #messenger: RasulKharij;
   #ticketPattern: RegExp;
 
   // Active session state
@@ -315,7 +315,7 @@ export class Munadi {
   #pendingParentSuggestion: PendingParentSuggestion | null = null;
 
   // Conversation context (short-term memory for intent resolution)
-  #context: ConversationContext = {
+  #context: SiyaqMuhadatha = {
     recentMessages: [],
     focusEntity: undefined,
   };
@@ -407,7 +407,7 @@ export class Munadi {
       if ("handled" in preamble) return preamble;
 
       // Always use intent resolver — dispatch is a control plane, not a chat relay
-      const result = await this.#handleWithIntentResolver(msg, preamble.intent);
+      const result = await this.#handleWithArraf(msg, preamble.intent);
       this.#trackMessage(msg.text, result.response);
       return result;
     });
@@ -425,7 +425,7 @@ export class Munadi {
     // Default routing: if active murshid exists and message doesn't
     // explicitly reference a different ticket, route directly to active
     if (this.#activeIdentifier && !basicIntent.identifier) {
-      const session = this.#sessionManager.wajadaJalasātMurshid().find(
+      const session = this.#sessionManager.wajadaJalasatMurshid().find(
         (s) => s.identifier === this.#activeIdentifier
       );
       if (session) {
@@ -437,7 +437,7 @@ export class Munadi {
     }
 
     // For queries/operations with explicit ticket reference, use intent resolver
-    const result = await this.#handleWithIntentResolver(msg, basicIntent);
+    const result = await this.#handleWithArraf(msg, basicIntent);
     this.#trackMessage(msg.text, result.response);
     return result;
   }
@@ -453,15 +453,15 @@ export class Munadi {
     });
 
     // Keep only the last N messages
-    if (this.#context.recentMessages.length > Dispatcher.MAX_CONTEXT_MESSAGES) {
-      this.#context.recentMessages = this.#context.recentMessages.slice(-Dispatcher.MAX_CONTEXT_MESSAGES);
+    if (this.#context.recentMessages.length > Munadi.MAX_CONTEXT_MESSAGES) {
+      this.#context.recentMessages = this.#context.recentMessages.slice(-Munadi.MAX_CONTEXT_MESSAGES);
     }
   }
 
   /**
    * Set the focus entity (most recently resolved entity)
    */
-  #setFocusEntity(entity: NonNullable<ResolvedIntent["entity"]>): void {
+  #setFocusEntity(entity: NonNullable<NiyyaMuhallala["entity"]>): void {
     this.#context.focusEntity = {
       ...entity,
       resolvedAt: new Date(),
@@ -525,9 +525,9 @@ export class Munadi {
         return this.#getQueueStatus();
 
       case "sessions":
-        return this.#getSessionsStatus();
+        return this.#jalabJalsasStatus();
 
-      case "fā'il": {
+      case "fail": {
         const activeId = this.#activeIdentifier;
         if (activeId) {
           return {
@@ -551,7 +551,7 @@ export class Munadi {
   /**
    * Handle message with intent resolver (smart entity lookup)
    */
-  async #handleWithIntentResolver(
+  async #handleWithArraf(
     msg: InboundMessage,
     basicIntent: Intent
   ): Promise<DispatchResult> {
@@ -570,7 +570,7 @@ export class Munadi {
 
     switch (resolved.status) {
       case "resolved":
-        return this.#handleResolvedIntent(msg, resolved, basicIntent);
+        return this.#handleNiyyaMuhallala(msg, resolved, basicIntent);
 
       case "list":
         return this.#handleListResult(resolved);
@@ -599,7 +599,7 @@ export class Munadi {
   /**
    * Handle a list result (filtered query that returns multiple items)
    */
-  #handleListResult(resolved: ResolvedIntent): DispatchResult {
+  #handleListResult(resolved: NiyyaMuhallala): DispatchResult {
     const candidates = resolved.candidates ?? [];
 
     if (candidates.length === 0) {
@@ -625,9 +625,9 @@ export class Munadi {
   /**
    * Handle a fully resolved intent
    */
-  async #handleResolvedIntent(
+  async #handleNiyyaMuhallala(
     msg: InboundMessage,
-    resolved: ResolvedIntent,
+    resolved: NiyyaMuhallala,
     basicIntent: Intent
   ): Promise<DispatchResult> {
     const entity = resolved.entity!;
@@ -639,7 +639,7 @@ export class Munadi {
     const epicId = entity.identifier ?? entity.id;
 
     // Check if murshid already exists for this ticket
-    const existingSession = this.#sessionManager.wajadaJalasātMurshid().find(
+    const existingSession = this.#sessionManager.wajadaJalasatMurshid().find(
       (s) => s.identifier === epicId
     );
 
@@ -651,7 +651,7 @@ export class Munadi {
     // Check if murshid exists for the parent
     if (resolved.parentEpic) {
       const parentId = resolved.parentEpic.identifier;
-      const parentSession = this.#sessionManager.wajadaJalasātMurshid().find(
+      const parentSession = this.#sessionManager.wajadaJalasatMurshid().find(
         (s) => s.identifier === parentId
       );
 
@@ -680,7 +680,7 @@ export class Munadi {
     }
 
     // Start murshid for this entity
-    return this.#badaʾaMurshidLiKiyān(msg, entity);
+    return this.#badaaMurshidLiKiyan(msg, entity);
   }
 
   /**
@@ -688,7 +688,7 @@ export class Munadi {
    */
   async #startDisambiguation(
     msg: InboundMessage,
-    resolved: ResolvedIntent
+    resolved: NiyyaMuhallala
   ): Promise<DispatchResult> {
     const candidates = resolved.candidates!;
 
@@ -779,7 +779,7 @@ export class Munadi {
     const selected = pending.candidates[index];
 
     // Start murshid for selected entity
-    return this.#badaʾaMurshidLiKiyān(
+    return this.#badaaMurshidLiKiyan(
       { source, text: pending.originalText },
       {
         type: selected.type,
@@ -800,8 +800,8 @@ export class Munadi {
    */
   async #startParentSuggestion(
     msg: InboundMessage,
-    ticket: NonNullable<ResolvedIntent["entity"]>,
-    parent: NonNullable<ResolvedIntent["parentEpic"]>
+    ticket: NonNullable<NiyyaMuhallala["entity"]>,
+    parent: NonNullable<NiyyaMuhallala["parentEpic"]>
   ): Promise<DispatchResult> {
     // Store pending state
     // Note: We don't actually know if parent is an "epic" - it's just a parent ticket
@@ -865,7 +865,7 @@ Work on the parent instead?`;
 
     const entity = useParent
       ? {
-          type: "ticket" as EntityType, // Use ticket, not epic - we don't actually know
+          type: "ticket" as NawKiyan, // Use ticket, not epic - we don't actually know
           id: pending.parent.id,
           identifier: pending.parent.identifier,
           title: pending.parent.title,
@@ -873,7 +873,7 @@ Work on the parent instead?`;
         }
       : pending.ticket;
 
-    return this.#badaʾaMurshidLiKiyān({ source, text: "" }, entity);
+    return this.#badaaMurshidLiKiyan({ source, text: "" }, entity);
   }
 
   // ===========================================================================
@@ -890,8 +890,8 @@ Work on the parent instead?`;
    *
    * Both ticket-based and sandbox murshidun use this path.
    */
-  async #khalaqaWaFa'alaMurshid(
-    params: MuʿṭayātKhalqMurshid
+  async #khalaqaWaFailaMurshid(
+    params: MuatayatKhalqMurshid
   ): Promise<DispatchResult> {
     const { identifier, title, type, initMessage, url } = params;
 
@@ -910,7 +910,7 @@ Work on the parent instead?`;
     const { session, isNew, wasResumed, previousActive } = result;
 
     // Step 2: Formal switchover (handles branch checkout, WIP commit, notifications)
-    const switchResult = await this.#naffadhaTaḥwīlMurshid(
+    const switchResult = await this.#naffadhaTahwilMurshid(
       identifier,
       session,
       previousActive,
@@ -976,14 +976,14 @@ Work on the parent instead?`;
    * Handles WIP commit, branch checkout, and state updates.
    * Used for both new and existing murshidun.
    */
-  async #naffadhaTaḥwīlMurshid(
+  async #naffadhaTahwilMurshid(
     identifier: string,
     session: JalsatMurshid,
     previousActive: string | null,
     isNew: boolean
   ): Promise<DispatchResult> {
     const previousSession = previousActive
-      ? this.#sessionManager.getMurshid(previousActive)
+      ? this.#sessionManager.jalabMurshid(previousActive)
       : null;
 
     // Already active - no switch needed
@@ -1014,16 +1014,16 @@ Work on the parent instead?`;
 
     // Step 3: Update previous state to IDLE
     if (previousSession) {
-      await this.#sessionManager.jaddadaḤālatMurshid(previousActive!, "sākin");
+      await this.#sessionManager.jaddadaḤalatMurshid(previousActive!, "sakin");
       await this.#notifyPreviousSession(previousSession, wipCommitted);
     }
 
     // Step 4: Checkout target branch (creates if doesn't exist for new murshidun)
     const checkoutSuccess = await git.checkout(session.branch);
     if (!checkoutSuccess) {
-      // Abort switch - restore previous as active
+      // Abort switch - istarjaa previous as active
       if (previousSession) {
-        await this.#sessionManager.jaddadaḤālatMurshid(previousActive!, "fā'il");
+        await this.#sessionManager.jaddadaḤalatMurshid(previousActive!, "fail");
       }
       return {
         handled: true,
@@ -1038,16 +1038,16 @@ Work on the parent instead?`;
 
     // Step 5: Activate new murshid (DB first, then local state)
     try {
-      await this.#sessionManager.jaddadaḤālatMurshid(identifier, "fā'il");
-      this.#sessionManager.waḍaʿaMurshidFāʿil(identifier);
+      await this.#sessionManager.jaddadaḤalatMurshid(identifier, "fail");
+      this.#sessionManager.wadaaMurshidFaail(identifier);
       this.#activeIdentifier = identifier;
       this.#activeSince = new Date();
     } catch (err) {
-      // DB failed — rollback: try to restore previous session as active
+      // DB failed — rollback: try to istarjaa previous session as active
       void logger.error("dispatcher", `Failed to activate ${identifier}, rolling back`, { error: String(err) });
       if (previousSession) {
-        await this.#sessionManager.jaddadaḤālatMurshid(previousActive!, "fā'il").catch(() => {});
-        this.#sessionManager.waḍaʿaMurshidFāʿil(previousActive);
+        await this.#sessionManager.jaddadaḤalatMurshid(previousActive!, "fail").catch(() => {});
+        this.#sessionManager.wadaaMurshidFaail(previousActive);
       }
       this.#activeIdentifier = previousActive;
       this.#activeSince = previousActive ? new Date() : null;
@@ -1068,7 +1068,7 @@ Work on the parent instead?`;
     }
 
     try {
-      await this.#messenger.sendFormatted("dispatch", `Active: **${identifier}**`);
+      await this.#messenger.arsalaMunassaq("dispatch", `Active: **${identifier}**`);
     } catch (err) {
       void logger.error("dispatcher", `Failed to send dispatch notification`, { error: String(err) });
     }
@@ -1085,9 +1085,9 @@ Work on the parent instead?`;
   /**
    * Start murshid for a ticket entity (ticket/epic/project)
    */
-  async #badaʾaMurshidLiKiyān(
+  async #badaaMurshidLiKiyan(
     _msg: InboundMessage,
-    entity: NonNullable<ResolvedIntent["entity"]>
+    entity: NonNullable<NiyyaMuhallala["entity"]>
   ): Promise<DispatchResult> {
     const identifier = entity.identifier ?? entity.id;
 
@@ -1105,7 +1105,7 @@ Use \`pm_read_ticket\` to fetch full details and begin planning.`;
         ? "epic"
         : "chore";
 
-    return this.#khalaqaWaFa'alaMurshid({
+    return this.#khalaqaWaFailaMurshid({
       identifier,
       title: entity.title,
       type: murshidType,
@@ -1116,7 +1116,7 @@ Use \`pm_read_ticket\` to fetch full details and begin planning.`;
 
   /**
    * Public entry point for activating an murshid from a ticket URL.
-   * Routes through the full switch protocol (#khalaqaWaFa'alaMurshid)
+   * Routes through the full switch protocol (#khalaqaWaFailaMurshid)
    * so WIP commit, branch checkout, and interrupts all happen correctly.
    */
   async activateForTicketUrl(
@@ -1133,7 +1133,7 @@ URL: ${url}${contextLine}
 
 Use \`pm_read_ticket\` to understand this entity, then plan your approach.`;
 
-    return this.#khalaqaWaFa'alaMurshid({
+    return this.#khalaqaWaFailaMurshid({
       identifier,
       title,
       type: "epic",
@@ -1169,7 +1169,7 @@ This is freeform work - no ticket tracking, no PR requirements. Brainstorm, prot
 
 When you want to formalize this work into tickets, let the operator know.`;
 
-    return this.#khalaqaWaFa'alaMurshid({
+    return this.#khalaqaWaFailaMurshid({
       identifier,
       title: `Sandbox: ${sandboxName}`,
       type: "sandbox",
@@ -1195,7 +1195,7 @@ When you want to formalize this work into tickets, let the operator know.`;
       }
     }
 
-    const session = this.#sessionManager.wajadaJalasātMurshid().find(
+    const session = this.#sessionManager.wajadaJalasatMurshid().find(
       (s) => s.identifier === targetId
     );
 
@@ -1276,7 +1276,7 @@ When you want to formalize this work into tickets, let the operator know.`;
     this.#activeIdentifier = identifier;
     this.#activeSince = identifier ? new Date() : null;
     // Keep session-manager in sync to avoid dual-state drift
-    this.#sessionManager.waḍaʿaMurshidFāʿil(identifier);
+    this.#sessionManager.wadaaMurshidFaail(identifier);
     void logger.info("dispatcher", `Active session set to ${identifier ?? "none"}`);
   }
 
@@ -1286,17 +1286,17 @@ When you want to formalize this work into tickets, let the operator know.`;
 
   /**
    * Restore active murshid on daemon startup.
-   * Uses the centralized #naffadhaTaḥwīlMurshid to ensure branch checkout,
+   * Uses the centralized #naffadhaTahwilMurshid to ensure branch checkout,
    * notification, and all other switchover logic happens.
    */
-  async restoreActiveOnStartup(): Promise<void> {
-    const activeId = this.#sessionManager.wajadaMurshidFāʿilId();
+  async istarjaaActiveOnStartup(): Promise<void> {
+    const activeId = this.#sessionManager.wajadaMurshidFaailId();
     if (!activeId) {
       await logger.info("dispatcher", "No active murshid on startup");
       return;
     }
 
-    const session = this.#sessionManager.getMurshid(activeId);
+    const session = this.#sessionManager.jalabMurshid(activeId);
     if (!session) {
       await logger.warn("dispatcher", `Active murshid ${activeId} not found in session manager`);
       return;
@@ -1305,18 +1305,18 @@ When you want to formalize this work into tickets, let the operator know.`;
     await logger.info("dispatcher", `Restoring active murshid on startup: ${activeId}`);
 
     // Use centralized switch logic - handles branch checkout, notification, queue, etc.
-    await this.#naffadhaTaḥwīlMurshid(activeId, session, null, false);
+    await this.#naffadhaTahwilMurshid(activeId, session, null, false);
   }
 
   /**
    * Manual switch command handler. Validates target exists, delegates to
-   * #naffadhaTaḥwīlMurshid for the full switch protocol (interrupt,
+   * #naffadhaTahwilMurshid for the full switch protocol (interrupt,
    * WIP commit, branch checkout, activation, queue drain, notification).
    */
   async #switchActiveSession(epicId: string, _source: InboundSource): Promise<DispatchResult> {
-    const targetSession = this.#sessionManager.getMurshid(epicId);
+    const tarjalabJalsa = this.#sessionManager.jalabMurshid(epicId);
 
-    if (!targetSession) {
+    if (!tarjalabJalsa) {
       return { handled: true, response: `No murshid for ${epicId}. Start one first.` };
     }
 
@@ -1326,14 +1326,14 @@ When you want to formalize this work into tickets, let the operator know.`;
     if (previousEpicId === epicId) {
       return {
         handled: true,
-        response: `✅ Already active: ${epicId}\n\nBranch: ${targetSession.branch}\nSession: ${targetSession.id.slice(0, 16)}...`,
+        response: `✅ Already active: ${epicId}\n\nBranch: ${tarjalabJalsa.branch}\nSession: ${tarjalabJalsa.id.slice(0, 16)}...`,
       };
     }
 
     // Execute the core switchover logic (handles notification, queue, and dispatch)
-    const switchResult = await this.#naffadhaTaḥwīlMurshid(
+    const switchResult = await this.#naffadhaTahwilMurshid(
       epicId,
-      targetSession,
+      tarjalabJalsa,
       previousEpicId,
       false // not a new murshid
     );
@@ -1342,7 +1342,7 @@ When you want to formalize this work into tickets, let the operator know.`;
       return switchResult;
     }
 
-    // Return simple confirmation (dispatch notification sent by #naffadhaTaḥwīlMurshid)
+    // Return simple confirmation (dispatch notification sent by #naffadhaTahwilMurshid)
     return { handled: true, response: `Active: **${epicId}**` };
   }
 
@@ -1420,7 +1420,7 @@ You may now perform git operations.`;
   #getStatus(): DispatchResult {
     const active = this.#activeIdentifier;
     const queueLen = this.#queue.length;
-    const murshidun = this.#sessionManager.wajadaJalasātMurshid();
+    const murshidun = this.#sessionManager.wajadaJalasatMurshid();
 
     let response = "**Status**\n\n";
 
@@ -1470,8 +1470,8 @@ You may now perform git operations.`;
     return { handled: true, response };
   }
 
-  #getSessionsStatus(): DispatchResult {
-    const murshidun = this.#sessionManager.wajadaJalasātMurshid();
+  #jalabJalsasStatus(): DispatchResult {
+    const murshidun = this.#sessionManager.wajadaJalasatMurshid();
 
     // Build response with switch buttons for idle sessions
     let response = "**Sessions**\n\n";
@@ -1502,7 +1502,7 @@ You may now perform git operations.`;
   }
 
   #showSwitchPicker(): DispatchResult {
-    const murshidun = this.#sessionManager.wajadaJalasātMurshid();
+    const murshidun = this.#sessionManager.wajadaJalasatMurshid();
     const idleSessions = murshidun.filter((o) => o.identifier !== this.#activeIdentifier);
 
     if (murshidun.length === 0) {

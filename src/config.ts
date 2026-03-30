@@ -1,13 +1,13 @@
 /**
  * Munadi Configuration
  *
- * Loads and validates configuration from JSON file and environment variables.
+ * Loads and tahaqqaqs configuration from JSON file and environment variables.
  * Schema: munadi.schema.json
  */
 
 import { join } from "jsr:@std/path";
 import { exists } from "jsr:@std/fs";
-import type { MunadiConfig } from "./types.ts";
+import type { TasmimIksir } from "./types.ts";
 import { logger } from "./logging/logger.ts";
 
 const CONFIG_FILENAME = "munadi.json";
@@ -51,7 +51,7 @@ function resolveEnvVarsDeep(obj: unknown): unknown {
   return obj;
 }
 
-function getDefaultConfig(): MunadiConfig {
+function getDefaultConfig(): TasmimIksir {
   return {
     polling: {
       defaultIntervalMs: 5 * 60 * 1000, // 5 minutes
@@ -95,10 +95,10 @@ function getDefaultConfig(): MunadiConfig {
   };
 }
 
-function deepMerge(target: MunadiConfig, source: Partial<MunadiConfig>): MunadiConfig {
+function deepMerge(target: TasmimIksir, source: Partial<TasmimIksir>): TasmimIksir {
   const result = { ...target };
 
-  for (const key of Object.keys(source) as (keyof MunadiConfig)[]) {
+  for (const key of Object.keys(source) as (keyof TasmimIksir)[]) {
     const sourceValue = source[key];
     const targetValue = target[key];
 
@@ -123,7 +123,7 @@ function deepMerge(target: MunadiConfig, source: Partial<MunadiConfig>): MunadiC
   return result;
 }
 
-function validateConfig(config: MunadiConfig): string[] {
+function tahaqqaqConfig(config: TasmimIksir): string[] {
   const errors: string[] = [];
 
   // Required for any operation
@@ -165,7 +165,7 @@ function validateConfig(config: MunadiConfig): string[] {
   return errors;
 }
 
-export async function loadConfig(): Promise<MunadiConfig> {
+export async function loadConfig(): Promise<TasmimIksir> {
   const configDir = getConfigDir();
   const configPath = join(configDir, CONFIG_FILENAME);
 
@@ -175,8 +175,8 @@ export async function loadConfig(): Promise<MunadiConfig> {
   if (await exists(configPath)) {
     try {
       const content = await Deno.readTextFile(configPath);
-      const parsed = JSON.parse(content) as Partial<MunadiConfig>;
-      const resolved = resolveEnvVarsDeep(parsed) as Partial<MunadiConfig>;
+      const parsed = JSON.parse(content) as Partial<TasmimIksir>;
+      const resolved = resolveEnvVarsDeep(parsed) as Partial<TasmimIksir>;
       config = deepMerge(config, resolved);
       await logger.info("config", `Loaded configuration from ${configPath}`);
     } catch (error) {
@@ -190,7 +190,7 @@ export async function loadConfig(): Promise<MunadiConfig> {
   }
 
   // Override with environment variables
-  const envOverrides: Partial<MunadiConfig> = {};
+  const envOverrides: Partial<TasmimIksir> = {};
 
   if (Deno.env.get("MUNADI_OPENCODE_SERVER")) {
     envOverrides.opencode = { server: Deno.env.get("MUNADI_OPENCODE_SERVER")! };
@@ -266,7 +266,7 @@ export async function loadConfig(): Promise<MunadiConfig> {
   config = deepMerge(config, envOverrides);
 
   // Validate
-  const errors = validateConfig(config);
+  const errors = tahaqqaqConfig(config);
   if (errors.length > 0) {
     for (const error of errors) {
       await logger.error("config", `Validation error: ${error}`);

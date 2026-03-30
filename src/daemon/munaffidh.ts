@@ -8,7 +8,7 @@
  */
 
 import { GitHubClient } from "../github/gh.ts";
-import type { MessengerOutbound, IssueTracker, UpdateIssueInput } from "../types.ts";
+import type { RasulKharij, MutabiWasfa, UpdateIssueInput } from "../types.ts";
 import { NtfyClient } from "../notifications/ntfy.ts";
 import { OpenCodeClient } from "../opencode/client.ts";
 import { logger } from "../logging/logger.ts";
@@ -22,13 +22,13 @@ import {
   getPendingDemands,
 } from "../../db/db.ts";
 import type {
-  TaṣmīmIksir,
+  TasmimIksir,
   MunToolCall,
-  NidāʾKhalqWaṣfa,
-  NidāʾTajdīdWaṣfa,
+  NidaKhalqWasfa,
+  NidaTajdidWasfa,
   MunSetRelationsCall,
-  NidāʾQirāʾatWaṣfa,
-  NidāʾKhalqRisāla,
+  NidaQiraatWasfa,
+  NidaKhalqRisala,
   MunCheckBranchStatusCall,
   MunNotifyCall,
   MunReplyCall,
@@ -43,39 +43,39 @@ import type {
   MunCommitCall,
   MunGitAddCall,
 } from "../types.ts";
-import { generateBranchName } from "./session-manager.ts";
+import { generateBranchName } from "./katib.ts";
 import { classifyNotification } from "./classifier.ts";
-import type { MudīrJalasāt } from "./session-manager.ts";
+import type { MudirJalasat } from "./katib.ts";
 import type { Munadi } from "./munadi.ts";
 import * as git from "../git/operations.ts";
 
-interface ToolExecutorDeps {
-  config: TaṣmīmIksir;
-  issueTracker: IssueTracker;
+interface MunaffidhDeps {
+  config: TasmimIksir;
+  issueTracker: MutabiWasfa;
   github: GitHubClient;
-  messenger: MessengerOutbound;
+  messenger: RasulKharij;
   ntfy: NtfyClient;
-  sessionManager: MudīrJalasāt;
+  sessionManager: MudirJalasat;
   opencode: OpenCodeClient;
 }
 
 // Path to AGENTS.md for classification context
 
 
-export class ToolExecutor {
+export class Munaffidh {
   // Config stored for future use (quiet hours, etc.)
-  readonly #config: TaṣmīmIksir;
-  #issueTracker: IssueTracker;
+  readonly #config: TasmimIksir;
+  #issueTracker: MutabiWasfa;
   #github: GitHubClient;
-  #messenger: MessengerOutbound;
+  #messenger: RasulKharij;
   #ntfy: NtfyClient;
-  #sessionManager: MudīrJalasāt;
+  #sessionManager: MudirJalasat;
   #opencode: OpenCodeClient;
   #munadi: Munadi | null = null;
 
   #pollAbortController: AbortController | null = null;
 
-  constructor(deps: ToolExecutorDeps) {
+  constructor(deps: MunaffidhDeps) {
     this.#config = deps.config;
     this.#issueTracker = deps.issueTracker;
     this.#github = deps.github;
@@ -88,12 +88,12 @@ export class ToolExecutor {
   /**
    * Set Munadi (called after Munadi is created to avoid circular dep)
    */
-  waḍaʿaMunadi(munadi: Munadi): void {
+  wadaaMunadi(munadi: Munadi): void {
     this.#munadi = munadi;
   }
 
   /** Access config for quiet hours checks etc. */
-  get config(): TaṣmīmIksir {
+  get config(): TasmimIksir {
     return this.#config;
   }
 
@@ -106,7 +106,7 @@ export class ToolExecutor {
   }
 
   /**
-   * Save state to disk (public, for graceful shutdown)
+   * Save state to disk (public, for graceful ighlaaq)
    * With SQLite, processed events are already marked - nothing to persist separately.
    */
   async saveState(): Promise<void> {
@@ -180,7 +180,7 @@ export class ToolExecutor {
     await logger.debug("tool-executor", `Processing: ${event.tool}`);
 
     // Block git-mutating tools during session switch (git fence)
-    if (ToolExecutor.GIT_TOOLS.has(event.tool) && this.#sessionManager.isGitFenced()) {
+    if (Munaffidh.GIT_TOOLS.has(event.tool) && this.#sessionManager.isGitFenced()) {
       const msg = `Git operation blocked: a session switch is in progress. Try again in a few seconds.`;
       const targetId = ("huwiyyatMurshid" in event && event.huwiyyatMurshid)
         ? event.huwiyyatMurshid as string
@@ -198,13 +198,13 @@ export class ToolExecutor {
     try {
       switch (event.tool) {
         case "mun_read_wasfa":
-          result = await this.#ʿālajaQirāʾatWaṣfa(event);
+          result = await this.#aalajaQiraaatWasfa(event);
           break;
         case "mun_create_wasfa":
-          result = await this.#ʿālajaKhalqWaṣfa(event);
+          result = await this.#aalajaKhalqWasfa(event);
           break;
         case "mun_update_wasfa":
-          result = await this.#ʿālajaTajdīdWaṣfa(event);
+          result = await this.#aalajaTajdidWasfa(event);
           break;
         case "mun_set_relations":
           result = await this.#handleSetRelations(event);
@@ -214,7 +214,7 @@ export class ToolExecutor {
           result = await this.#handleSliceForPr(event);
           break;
         case "mun_create_risala":
-          result = await this.#ʿālajaKhalqRisāla(event);
+          result = await this.#aalajaKhalqRisala(event);
           break;
         case "mun_check_branch_status":
           result = await this.#handleCheckBranchStatus(event);
@@ -292,7 +292,7 @@ export class ToolExecutor {
   /**
    * Handle pm_read_wasfa
    */
-  async #ʿālajaQirāʾatWaṣfa(call: NidāʾQirāʾatWaṣfa): Promise<string> {
+  async #aalajaQiraaatWasfa(call: NidaQiraatWasfa): Promise<string> {
     const parsed = this.#issueTracker.parseUrl(call.url);
 
     if (!parsed) {
@@ -377,7 +377,7 @@ export class ToolExecutor {
   /**
    * Handle pm_create_wasfa
    */
-  async #ʿālajaKhalqWaṣfa(call: NidāʾKhalqWaṣfa): Promise<string> {
+  async #aalajaKhalqWasfa(call: NidaKhalqWasfa): Promise<string> {
     const issue = await this.#issueTracker.createIssue({
       title: call.title,
       description: call.description,
@@ -400,10 +400,10 @@ You can now set relations using pm_set_relations.`;
   /**
    * Handle pm_update_wasfa
    */
-  async #ʿālajaTajdīdWaṣfa(call: NidāʾTajdīdWaṣfa): Promise<string> {
-    const issue = await this.#issueTracker.getIssue(call.wasfaId);
+  async #aalajaTajdidWasfa(call: NidaTajdidWasfa): Promise<string> {
+    const issue = await this.#issueTracker.getIssue(call.huwiyyatWasfa);
     if (!issue) {
-      return `Ticket not found: ${call.wasfaId}`;
+      return `Ticket not found: ${call.huwiyyatWasfa}`;
     }
 
     // Build update payload
@@ -419,7 +419,7 @@ You can now set relations using pm_set_relations.`;
 
     await this.#issueTracker.updateIssue(issue.id, updatePayload);
 
-    return `Ticket updated: ${call.wasfaId}
+    return `Ticket updated: ${call.huwiyyatWasfa}
 
 Updated fields: ${Object.keys(call.updates).join(", ")}`;
   }
@@ -429,18 +429,18 @@ Updated fields: ${Object.keys(call.updates).join(", ")}`;
    */
   async #handleSetRelations(call: MunSetRelationsCall): Promise<string> {
     await logger.info("tool-executor", "Setting relations", {
-      wasfaId: call.wasfaId,
+      huwiyyatWasfa: call.huwiyyatWasfa,
       blocks: call.blocks,
       blockedBy: call.blockedBy,
     });
 
     await this.#issueTracker.setRelations(
-      call.wasfaId,
+      call.huwiyyatWasfa,
       call.blocks,
       call.blockedBy
     );
 
-    return `Relations updated for ${call.wasfaId}.
+    return `Relations updated for ${call.huwiyyatWasfa}.
 
 ${call.blocks?.length ? `**Blocks:** ${call.blocks.join(", ")}` : ""}
 ${call.blockedBy?.length ? `**Blocked by:** ${call.blockedBy.join(", ")}` : ""}`;
@@ -454,11 +454,11 @@ ${call.blockedBy?.length ? `**Blocked by:** ${call.blockedBy.join(", ")}` : ""}`
     // This is a placeholder - real implementation would use git commands
 
     await logger.info("tool-executor", "Slicing for PR", {
-      wasfaId: call.wasfaId,
+      huwiyyatWasfa: call.huwiyyatWasfa,
       files: call.files,
     });
 
-    return `PR slice prepared for ${call.wasfaId}.
+    return `PR slice prepared for ${call.huwiyyatWasfa}.
 
 Files (${call.files.length}):
 ${call.files.map((f) => `- ${f}`).join("\n")}
@@ -469,7 +469,7 @@ Ready for pm_create_risala.`;
   /**
    * Handle pm_create_risala
    */
-  async #ʿālajaKhalqRisāla(call: NidāʾKhalqRisāla): Promise<string> {
+  async #aalajaKhalqRisala(call: NidaKhalqRisala): Promise<string> {
     const result = await this.#github.createPR({
       title: call.title,
       body: call.body,
@@ -479,13 +479,13 @@ Ready for pm_create_risala.`;
     });
 
     if (!result) {
-      return `Failed to create PR for ${call.wasfaId}. Check GitHub authentication and branch status.`;
+      return `Failed to create PR for ${call.huwiyyatWasfa}. Check GitHub authentication and branch status.`;
     }
 
     // Update implementation status with PR info
-    const activeOrch = this.#sessionManager.wajadaMurshidFāʿil();
+    const activeOrch = this.#sessionManager.wajadaMurshidFaail();
     naqshStatus({
-      wasfaId: call.wasfaId,
+      huwiyyatWasfa: call.huwiyyatWasfa,
       huwiyyatMurshid: activeOrch?.identifier ?? "unknown",
       status: "complete",
       summary: `PR #${result.number}`,
@@ -493,11 +493,11 @@ Ready for pm_create_risala.`;
 
     // Register PR for keepalive tracking (PR tracking)
     // This enables merge detection to trigger next PR cycle
-    const murshidFāʿil = this.#sessionManager.wajadaMurshidFāʿil();
-    if (murshidFāʿil) {
-      await this.#sessionManager.registerPR(murshidFāʿil.identifier, {
-        wasfaId: call.wasfaId,
-        prNumber: result.number,
+    const murshidFaail = this.#sessionManager.wajadaMurshidFaail();
+    if (murshidFaail) {
+      await this.#sessionManager.sajjalRisala(murshidFaail.identifier, {
+        huwiyyatWasfa: call.huwiyyatWasfa,
+        raqamRisala: result.number,
         branch: call.head,
         status: "draft",
       });
@@ -568,7 +568,7 @@ Reason: ${classification.reason}`;
     const sent: string[] = [];
 
     // Send via messenger (routed to murshid's channel if available)
-    if (this.#messenger.isEnabled()) {
+    if (this.#messenger.mumakkan()) {
       try {
         await this.#messenger.send(
           { murshid: call.huwiyyatMurshid },
@@ -583,7 +583,7 @@ Reason: ${classification.reason}`;
     }
 
     // Send via ntfy
-    if (this.#ntfy.isEnabled()) {
+    if (this.#ntfy.mumakkan()) {
       const success = await this.#ntfy.send({
         category: "decision",
         title: "Murshid Message",
@@ -611,13 +611,13 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
    * Uses fallback chain: Markdown → MarkdownV2 → plain text
    */
   async #handleReply(call: MunReplyCall): Promise<string> {
-    if (!this.#messenger.isEnabled()) {
+    if (!this.#messenger.mumakkan()) {
       return "Warning: Messenger not enabled. Reply not delivered.";
     }
 
     try {
       // Send with markdown formatting (adapter handles fallback)
-      await this.#messenger.sendFormatted(
+      await this.#messenger.arsalaMunassaq(
         { murshid: call.huwiyyatMurshid },
         call.message,
       );
@@ -641,7 +641,7 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
    */
   async #handleYield(call: MunYieldCall): Promise<string> {
     if (!this.#munadi) {
-      return "Error: Munadi not initialized.";
+      return "Error: Munadi not tahyiad.";
     }
 
     const yielderId = call.huwiyyatMurshid;
@@ -654,8 +654,8 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
     }
 
     // Update session status
-    const newStatus = call.reason === "masdūd" ? "masdūd" : "muntaẓir";
-    await this.#sessionManager.jaddadaḤālatMurshid(yielderId, newStatus, call.details);
+    const newStatus = call.reason === "masdud" ? "masdud" : "muntazir";
+    await this.#sessionManager.jaddadaḤalatMurshid(yielderId, newStatus, call.details);
 
     await logger.info("tool-executor", `Murshid ${yielderId} yielded: ${call.reason}`, {
       details: call.details,
@@ -666,31 +666,31 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
     const demands = getPendingDemands();
     if (demands.length > 0) {
       const demand = demands[0];
-      removePendingDemand(demand.murshid_id);
-      await logger.info("tool-executor", `Processing pending demand from ${demand.murshid_id}`, {
+      removePendingDemand(demand.huwiyat_murshid);
+      await logger.info("tool-executor", `Processing pending demand from ${demand.huwiyat_murshid}`, {
         reason: demand.reason,
       });
 
-      const switchResult = await this.#munadi.handleCallback("cli", `switch:${demand.murshid_id}`);
+      const switchResult = await this.#munadi.handleCallback("cli", `switch:${demand.huwiyat_murshid}`);
       if (switchResult.handled) {
-        return `Yielded control. Switching to ${demand.murshid_id} (pending demand: ${demand.reason}).`;
+        return `Yielded control. Switching to ${demand.huwiyat_murshid} (pending demand: ${demand.reason}).`;
       }
     }
 
     // Check suggestNext
     if (call.suggestNext) {
-      const murshidun = this.#sessionManager.wajadaJalasātMurshid();
+      const murshidun = this.#sessionManager.wajadaJalasatMurshid();
       const suggested = murshidun.find((o) => o.identifier === call.suggestNext);
-      if (suggested && suggested.status === "sākin") {
+      if (suggested && suggested.status === "sakin") {
         await this.#munadi.handleCallback("cli", `switch:${call.suggestNext}`);
         return `Yielded control. Switching to suggested: ${call.suggestNext}.`;
       }
     }
 
     // Check for idle sessions
-    const murshidun = this.#sessionManager.wajadaJalasātMurshid();
+    const murshidun = this.#sessionManager.wajadaJalasatMurshid();
     const idleSessions = murshidun.filter(
-      (o) => o.identifier !== yielderId && o.status === "sākin"
+      (o) => o.identifier !== yielderId && o.status === "sakin"
     );
 
     if (idleSessions.length > 0) {
@@ -713,11 +713,11 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
    */
   async #handleDemandControl(call: MunDemandControlCall): Promise<string> {
     if (!this.#munadi) {
-      return "Error: Munadi not initialized.";
+      return "Error: Munadi not tahyiad.";
     }
 
     const demanderId = call.huwiyyatMurshid;
-    const demander = this.#sessionManager.getMurshid(demanderId);
+    const demander = this.#sessionManager.jalabMurshid(demanderId);
 
     if (!demander) {
       return `Cannot demand control: unknown murshid ${demanderId}.`;
@@ -746,8 +746,8 @@ Message preview: ${call.message.slice(0, 100)}${call.message.length > 100 ? "...
     }
 
     // Case 3: Current active is blocked/waiting — graceful snatch
-    const currentActive = this.#sessionManager.getMurshid(activeEpicId);
-    if (currentActive && (currentActive.status === "masdūd" || currentActive.status === "muntaẓir")) {
+    const currentActive = this.#sessionManager.jalabMurshid(activeEpicId);
+    if (currentActive && (currentActive.status === "masdud" || currentActive.status === "muntazir")) {
       const result = await this.#munadi.handleCallback("cli", `switch:${demanderId}`);
       if (result.handled) {
         return `Control granted (${activeEpicId} was ${currentActive.status}). You are now ACTIVE.\n\nReason: ${call.reason}`;
@@ -819,7 +819,7 @@ Try: git push -u origin ${branchName}`;
     }
 
     // Update session with branch name
-    const session = this.#sessionManager.getMurshid(call.identifier);
+    const session = this.#sessionManager.jalabMurshid(call.identifier);
     if (session) {
       session.branch = branchName;
       await this.#sessionManager.saveState();
@@ -890,9 +890,9 @@ Remote: origin`;
    * Handle pm_ssp - run SSP to create PR branch
    */
   async #handleSsp(call: MunSspCall): Promise<string> {
-    const prBranch = generateBranchName(call.wasfaId, "chore");
+    const prBranch = generateBranchName(call.huwiyyatWasfa, "chore");
 
-    await logger.info("tool-executor", `Running SSP for ${call.wasfaId}`, {
+    await logger.info("tool-executor", `Running SSP for ${call.huwiyyatWasfa}`, {
       files: call.files,
       prBranch,
     });
@@ -930,7 +930,7 @@ Files Sliced: ${result.filesSliced}
 The branch has been pushed to origin.
 
 Next: Create the PR with:
-  gh pr create --title "Your PR title (${call.wasfaId})" --base ${defaultBranch} --head ${prBranch} --draft`;
+  gh pr create --title "Your PR title (${call.huwiyyatWasfa})" --base ${defaultBranch} --head ${prBranch} --draft`;
   }
 
   /**
@@ -940,10 +940,10 @@ Next: Create the PR with:
    * the default branch. Still merges default branch into epic to surface conflicts.
    */
   async #handleSssp(call: MunSsspCall): Promise<string> {
-    const prBranch = generateBranchName(call.wasfaId, "chore");
+    const prBranch = generateBranchName(call.huwiyyatWasfa, "chore");
     const parentBranch = generateBranchName(call.parentTicketId, "chore");
 
-    await logger.info("tool-executor", `Running SSSP for ${call.wasfaId}`, {
+    await logger.info("tool-executor", `Running SSSP for ${call.huwiyyatWasfa}`, {
       files: call.files,
       prBranch,
       parentBranch,
@@ -979,7 +979,7 @@ Files Sliced: ${result.filesSliced}
 The branch has been pushed to origin.
 
 Next: Create the PR with:
-  gh pr create --title "Your PR title (${call.wasfaId})" --base ${parentBranch} --head ${prBranch} --draft
+  gh pr create --title "Your PR title (${call.huwiyyatWasfa})" --base ${parentBranch} --head ${prBranch} --draft
 
 NOTE: CI may fail until parent PR merges. This is expected.
 When parent merges, use mun_ssp to re-push this slice onto ${await git.getDefaultBranch()}.`;
@@ -989,11 +989,11 @@ When parent merges, use mun_ssp to re-push this slice onto ${await git.getDefaul
    * Handle mun_istihal - create artifact using file-plucking technique
    */
   async #handleTransmute(call: MunIstihalCall): Promise<string> {
-    await logger.info("tool-executor", `Crafting artifact for ${call.wasfaId}`, {
+    await logger.info("tool-executor", `Crafting artifact for ${call.huwiyyatWasfa}`, {
       files: call.files.length,
     });
 
-    const prBranch = generateBranchName(call.wasfaId, "chore");
+    const prBranch = generateBranchName(call.huwiyyatWasfa, "chore");
     
     // Use the new transmute utility from craft.ts
     const { transmute } = await import("../git/alchemy.ts");
@@ -1034,12 +1034,12 @@ Next: Use mun_fasl to transfer the essence for examination.`;
    * Handle mun_istihal_mutabaqq - create stacked artifact
    */
   async #handleTransmuteStacked(call: MunIstihalMutabaqqCall): Promise<string> {
-    await logger.info("tool-executor", `Crafting stacked artifact for ${call.wasfaId}`, {
+    await logger.info("tool-executor", `Crafting stacked artifact for ${call.huwiyyatWasfa}`, {
       parentTicketId: call.parentTicketId,
       files: call.files.length,
     });
 
-    const prBranch = generateBranchName(call.wasfaId, "chore");
+    const prBranch = generateBranchName(call.huwiyyatWasfa, "chore");
     const parentBranch = generateBranchName(call.parentTicketId, "chore");
     
     // Use transmute with parent branch as base
@@ -1078,6 +1078,6 @@ When parent inscribes, use mun_istihal to re-transmute onto ${await git.getDefau
 /**
  * Create an IPC processor instance
  */
-export function istadaaMunaffidh(deps: ToolExecutorDeps): ToolExecutor {
-  return new ToolExecutor(deps);
+export function istadaaMunaffidh(deps: MunaffidhDeps): Munaffidh {
+  return new Munaffidh(deps);
 }

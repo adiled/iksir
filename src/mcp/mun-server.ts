@@ -28,13 +28,13 @@ import type {
   MunGitAddCall,
   MunGitPushCall,
   MunToolCall,
-  DiaryDecision,
-  OrchestratorType,
+  QararSijill,
+  NawMurshid,
   McpToolDefinition,
   McpToolHandler,
   ToolRegistry,
 } from "../types.ts";
-import { generateBranchName } from "../daemon/session-manager.ts";
+import { generateBranchName } from "../daemon/katib.ts";
 import { loadIndex } from "../code-intel/indexer.ts";
 import { queryIndex } from "../code-intel/query.ts";
 
@@ -55,9 +55,9 @@ interface McpResponse {
 
 import {
   insertEvent,
-  addDiaryDecision,
-  getDiaryDecisions,
-  getImplStatus,
+  addQararSijill,
+  getQararSijills,
+  qiraStatus,
 } from "../../db/db.ts";
 
 // =============================================================================
@@ -125,7 +125,7 @@ export class MunadiMunMcpServer {
    */
   async handleRequest(request: McpRequest): Promise<McpResponse> {
     switch (request.method) {
-      case "initialize":
+      case "tahyia":
         return this.#handleInitialize(request);
       case "tools/list":
         return this.#handleToolsList(request);
@@ -141,7 +141,7 @@ export class MunadiMunMcpServer {
   }
 
   /**
-   * Handle initialize request
+   * Handle tahyia request
    */
   #handleInitialize(request: McpRequest): McpResponse {
     return {
@@ -177,7 +177,7 @@ export class MunadiMunMcpServer {
    * Validate required arguments are present and non-null.
    * Throws with a clear message if validation fails.
    */
-  #validateArgs(
+  #tahaqqaqArgs(
     toolName: string,
     args: Record<string, unknown>,
   ): void {
@@ -209,7 +209,7 @@ export class MunadiMunMcpServer {
 
     try {
       // Validate required fields before dispatching
-      this.#validateArgs(toolName, args);
+      this.#tahaqqaqArgs(toolName, args);
 
       const handler = this.#registry.getHandler(toolName);
       if (!handler) {
@@ -258,7 +258,7 @@ export class MunadiMunMcpServer {
         inputSchema: {
           type: "object",
           properties: {
-            orchestratorId: {
+            huwiyyatMurshid: {
               type: "string",
               description: "Your orchestrator ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
             },
@@ -290,7 +290,7 @@ export class MunadiMunMcpServer {
               description: "Parent ticket ID (use sparingly, prefer relations)",
             },
           },
-          required: ["orchestratorId", "title"],
+          required: ["huwiyyatMurshid", "title"],
         },
       },
       (args) => this.#aalajaKhalqWasfa(args),
@@ -304,11 +304,11 @@ export class MunadiMunMcpServer {
         inputSchema: {
           type: "object",
           properties: {
-            orchestratorId: {
+            huwiyyatMurshid: {
               type: "string",
               description: "Your orchestrator ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
             },
-            wasfaId: {
+            huwiyyatWasfa: {
               type: "string",
               description: "Ticket identifier (e.g., TEAM-200)",
             },
@@ -323,7 +323,7 @@ export class MunadiMunMcpServer {
               description: "Fields to update",
             },
           },
-          required: ["orchestratorId", "wasfaId", "updates"],
+          required: ["huwiyyatMurshid", "huwiyyatWasfa", "updates"],
         },
       },
       (args) => this.#aalajaTajdidWasfa(args),
@@ -337,11 +337,11 @@ export class MunadiMunMcpServer {
         inputSchema: {
           type: "object",
           properties: {
-            orchestratorId: {
+            huwiyyatMurshid: {
               type: "string",
               description: "Your orchestrator ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
             },
-            wasfaId: {
+            huwiyyatWasfa: {
               type: "string",
               description: "Ticket identifier",
             },
@@ -356,7 +356,7 @@ export class MunadiMunMcpServer {
               description: "Tickets that block this ticket",
             },
           },
-          required: ["orchestratorId", "wasfaId"],
+          required: ["huwiyyatMurshid", "huwiyyatWasfa"],
         },
       },
       (args) => this.#handleSetRelations(args),
@@ -379,7 +379,7 @@ Use this as your primary way to understand ticket entities.`,
         inputSchema: {
           type: "object",
           properties: {
-            orchestratorId: {
+            huwiyyatMurshid: {
               type: "string",
               description: "Your orchestrator ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
             },
@@ -388,7 +388,7 @@ Use this as your primary way to understand ticket entities.`,
               description: "Any issue tracker URL (ticket, project, etc.)",
             },
           },
-          required: ["orchestratorId", "url"],
+          required: ["huwiyyatMurshid", "url"],
         },
       },
       (args) => this.#aalajaQiraatWasfa(args),
@@ -406,11 +406,11 @@ Use this as your primary way to understand ticket entities.`,
         inputSchema: {
           type: "object",
           properties: {
-            orchestratorId: {
+            huwiyyatMurshid: {
               type: "string",
               description: "Your orchestrator ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
             },
-            wasfaId: {
+            huwiyyatWasfa: {
               type: "string",
               description: "Ticket the PR implements",
             },
@@ -431,7 +431,7 @@ Use this as your primary way to understand ticket entities.`,
               description: "Head branch with changes",
             },
           },
-          required: ["orchestratorId", "wasfaId", "title", "body", "base", "head"],
+          required: ["huwiyyatMurshid", "huwiyyatWasfa", "title", "body", "base", "head"],
         },
       },
       (args) => this.#aalajaKhalqRisala(args),
@@ -445,7 +445,7 @@ Use this as your primary way to understand ticket entities.`,
         inputSchema: {
           type: "object",
           properties: {
-            orchestratorId: {
+            huwiyyatMurshid: {
               type: "string",
               description: "Your orchestrator ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
             },
@@ -454,7 +454,7 @@ Use this as your primary way to understand ticket entities.`,
               description: "Branch name to check",
             },
           },
-          required: ["orchestratorId", "branch"],
+          required: ["huwiyyatMurshid", "branch"],
         },
       },
       (args) => this.#handleCheckBranchStatus(args),
@@ -472,7 +472,7 @@ Use this as your primary way to understand ticket entities.`,
         inputSchema: {
           type: "object",
           properties: {
-            orchestratorId: {
+            huwiyyatMurshid: {
               type: "string",
               description: "Your orchestrator ID (e.g., TEAM-100, SANDBOX-pos-simulator). Required for routing.",
             },
@@ -498,7 +498,7 @@ Use this as your primary way to understand ticket entities.`,
               description: "Action buttons for the notification",
             },
           },
-          required: ["orchestratorId", "message", "priority"],
+          required: ["huwiyyatMurshid", "message", "priority"],
         },
       },
       (args) => this.#handleNotify(args),
@@ -512,7 +512,7 @@ Use this as your primary way to understand ticket entities.`,
         inputSchema: {
           type: "object",
           properties: {
-            orchestratorId: {
+            huwiyyatMurshid: {
               type: "string",
               description: "Your orchestrator ID (e.g., TEAM-100, SANDBOX-pos-simulator). Required for routing.",
             },
@@ -521,7 +521,7 @@ Use this as your primary way to understand ticket entities.`,
               description: "The response text (supports markdown lists)",
             },
           },
-          required: ["orchestratorId", "message"],
+          required: ["huwiyyatMurshid", "message"],
         },
       },
       (args) => this.#handleReply(args),
@@ -535,7 +535,7 @@ Use this as your primary way to understand ticket entities.`,
         inputSchema: {
           type: "object",
           properties: {
-            orchestratorId: {
+            huwiyyatMurshid: {
               type: "string",
               description: "Your orchestrator ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
             },
@@ -563,7 +563,7 @@ Use this as your primary way to understand ticket entities.`,
               description: "Additional structured data (tickets created, etc.)",
             },
           },
-          required: ["orchestratorId", "type", "decision", "reasoning"],
+          required: ["huwiyyatMurshid", "type", "decision", "reasoning"],
         },
       },
       (args) => this.#handleLogDecision(args),
@@ -582,7 +582,7 @@ The diary is a shared knowledge pool across all orchestrators. Use it to:
         inputSchema: {
           type: "object",
           properties: {
-            orchestratorId: {
+            huwiyyatMurshid: {
               type: "string",
               description: "Your orchestrator ID",
             },
@@ -608,7 +608,7 @@ The diary is a shared knowledge pool across all orchestrators. Use it to:
               description: "Only return decisions since this ISO date (e.g., 2026-03-01T00:00:00Z)",
             },
           },
-          required: ["orchestratorId"],
+          required: ["huwiyyatMurshid"],
         },
       },
       (args) => this.#handleReadDiary(args),
@@ -624,21 +624,21 @@ The diary is a shared knowledge pool across all orchestrators. Use it to:
         description: `Yield control voluntarily when blocked or waiting.
 
 Use this when:
-- All your tickets are blocked waiting for operator decisions → reason: "blocked"
-- All PRs created and waiting for review/merge → reason: "waiting"
+- All your tickets are blocked waiting for operator decisions → reason: "masdud"
+- All PRs created and waiting for review/merge → reason: "muntazir"
 
 This allows other orchestrators with actionable work to become active.
 You will continue receiving issue tracker/GitHub updates even while idle.`,
         inputSchema: {
           type: "object",
           properties: {
-            orchestratorId: {
+            huwiyyatMurshid: {
               type: "string",
               description: "Your orchestrator ID (e.g., TEAM-100, SANDBOX-pos-simulator). Required for routing.",
             },
             reason: {
               type: "string",
-              enum: ["blocked", "waiting"],
+              enum: ["masdud", "muntazir"],
               description: "Why yielding: blocked (waiting for decisions) or waiting (PRs pending)",
             },
             details: {
@@ -650,7 +650,7 @@ You will continue receiving issue tracker/GitHub updates even while idle.`,
               description: "Optional: suggest which epic should become active next",
             },
           },
-          required: ["orchestratorId", "reason", "details"],
+          required: ["huwiyyatMurshid", "reason", "details"],
         },
       },
       (args) => this.#handleYield(args),
@@ -672,7 +672,7 @@ If another orchestrator is working, Operator will be asked to approve the switch
         inputSchema: {
           type: "object",
           properties: {
-            orchestratorId: {
+            huwiyyatMurshid: {
               type: "string",
               description: "Your orchestrator ID (e.g., TEAM-100, SANDBOX-pos-simulator). Required for routing.",
             },
@@ -686,7 +686,7 @@ If another orchestrator is working, Operator will be asked to approve the switch
               description: "Priority: normal (can wait for current to yield) or urgent (request immediate switch)",
             },
           },
-          required: ["orchestratorId", "reason", "priority"],
+          required: ["huwiyyatMurshid", "reason", "priority"],
         },
       },
       (args) => this.#handleDemandControl(args),
@@ -716,7 +716,7 @@ You should only call this once per orchestrator, at the start.`,
         inputSchema: {
           type: "object",
           properties: {
-            orchestratorId: {
+            huwiyyatMurshid: {
               type: "string",
               description: "Your orchestrator ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
             },
@@ -734,7 +734,7 @@ You should only call this once per orchestrator, at the start.`,
               description: "Short description slug (e.g., 'bab-al-shams'). Required for epics, optional for chores/sandbox.",
             },
           },
-          required: ["orchestratorId", "identifier", "type"],
+          required: ["huwiyyatMurshid", "identifier", "type"],
         },
       },
       (args) => this.#handleCreateBranch(args),
@@ -747,7 +747,7 @@ You should only call this once per orchestrator, at the start.`,
         inputSchema: {
           type: "object",
           properties: {
-            orchestratorId: {
+            huwiyyatMurshid: {
               type: "string",
               description: "Your orchestrator ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
             },
@@ -757,7 +757,7 @@ You should only call this once per orchestrator, at the start.`,
               description: "Files to stage (paths relative to repo root)",
             },
           },
-          required: ["orchestratorId", "files"],
+          required: ["huwiyyatMurshid", "files"],
         },
       },
       (args) => this.#handleGitAdd(args),
@@ -770,7 +770,7 @@ You should only call this once per orchestrator, at the start.`,
         inputSchema: {
           type: "object",
           properties: {
-            orchestratorId: {
+            huwiyyatMurshid: {
               type: "string",
               description: "Your orchestrator ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
             },
@@ -784,7 +784,7 @@ You should only call this once per orchestrator, at the start.`,
               description: "Optional: specific files to commit (will git add these first)",
             },
           },
-          required: ["orchestratorId", "message"],
+          required: ["huwiyyatMurshid", "message"],
         },
       },
       (args) => this.#handleCommit(args),
@@ -797,12 +797,12 @@ You should only call this once per orchestrator, at the start.`,
         inputSchema: {
           type: "object",
           properties: {
-            orchestratorId: {
+            huwiyyatMurshid: {
               type: "string",
               description: "Your orchestrator ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
             },
           },
-          required: ["orchestratorId"],
+          required: ["huwiyyatMurshid"],
         },
       },
       (args) => this.#handleGitPush(args),
@@ -818,7 +818,7 @@ You should only call this once per orchestrator, at the start.`,
         description:
           "Query the codebase index for symbol locations, dependencies, impact analysis, and search. " +
           "Use this BEFORE grepping or globbing — it's faster and gives structured results. " +
-          "Examples: 'where is SessionManager', 'what depends on types.ts', 'impact of changing MunadiConfig', " +
+          "Examples: 'where is MudirJalasat', 'what depends on types.ts', 'impact of changing TasmimIksir', " +
           "'exports of classifier.ts', 'files related to auth'.",
         inputSchema: {
           type: "object",
@@ -851,11 +851,11 @@ You should only call this once per orchestrator, at the start.`,
         inputSchema: {
           type: "object",
           properties: {
-            orchestratorId: {
+            huwiyyatMurshid: {
               type: "string",
               description: "Your orchestrator ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
             },
-            wasfaId: {
+            huwiyyatWasfa: {
               type: "string",
               description: "Ticket the essence is for",
             },
@@ -865,7 +865,7 @@ You should only call this once per orchestrator, at the start.`,
               description: "Rune stones to extract (paths relative to crucible root)",
             },
           },
-          required: ["orchestratorId", "wasfaId", "files"],
+          required: ["huwiyyatMurshid", "huwiyyatWasfa", "files"],
         },
       },
       (args) => this.#handleExtract(args),
@@ -882,11 +882,11 @@ You should only call this once per orchestrator, at the start.`,
         inputSchema: {
           type: "object",
           properties: {
-            orchestratorId: {
+            huwiyyatMurshid: {
               type: "string",
               description: "Your orchestrator ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
             },
-            wasfaId: {
+            huwiyyatWasfa: {
               type: "string",
               description: "Ticket being attuned",
             },
@@ -896,7 +896,7 @@ You should only call this once per orchestrator, at the start.`,
               description: "Rune stones currently selected for extraction",
             },
           },
-          required: ["orchestratorId", "wasfaId", "files"],
+          required: ["huwiyyatMurshid", "huwiyyatWasfa", "files"],
         },
       },
       (args) => this.#handleAttune(args),
@@ -913,11 +913,11 @@ You should only call this once per orchestrator, at the start.`,
         inputSchema: {
           type: "object",
           properties: {
-            orchestratorId: {
+            huwiyyatMurshid: {
               type: "string",
               description: "Your orchestrator ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
             },
-            wasfaId: {
+            huwiyyatWasfa: {
               type: "string",
               description: "Ticket ID for the essence (e.g., 'TEAM-200-BE')",
             },
@@ -927,7 +927,7 @@ You should only call this once per orchestrator, at the start.`,
               description: "Rune stones to transmute into essence",
             },
           },
-          required: ["orchestratorId", "wasfaId", "files"],
+          required: ["huwiyyatMurshid", "huwiyyatWasfa", "files"],
         },
       },
       (args) => this.#handleTransmute(args),
@@ -944,11 +944,11 @@ You should only call this once per orchestrator, at the start.`,
         inputSchema: {
           type: "object",
           properties: {
-            orchestratorId: {
+            huwiyyatMurshid: {
               type: "string",
               description: "Your orchestrator ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
             },
-            wasfaId: {
+            huwiyyatWasfa: {
               type: "string",
               description: "Ticket ID for this artifact (e.g., 'TEAM-200-FE')",
             },
@@ -962,7 +962,7 @@ You should only call this once per orchestrator, at the start.`,
               description: "Files to include in the essence (paths relative to repo root)",
             },
           },
-          required: ["orchestratorId", "wasfaId", "parentTicketId", "files"],
+          required: ["huwiyyatMurshid", "huwiyyatWasfa", "parentTicketId", "files"],
         },
       },
       (args) => this.#handleTransmuteStacked(args),
@@ -979,11 +979,11 @@ You should only call this once per orchestrator, at the start.`,
         inputSchema: {
           type: "object",
           properties: {
-            orchestratorId: {
+            huwiyyatMurshid: {
               type: "string",
               description: "Your orchestrator ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
             },
-            wasfaId: {
+            huwiyyatWasfa: {
               type: "string",
               description: "Ticket the PR implements",
             },
@@ -1000,7 +1000,7 @@ You should only call this once per orchestrator, at the start.`,
               description: "Create as draft PR (default: true)",
             },
           },
-          required: ["orchestratorId", "wasfaId", "title", "body"],
+          required: ["huwiyyatMurshid", "huwiyyatWasfa", "title", "body"],
         },
       },
       (args) => this.#handleDecant(args),
@@ -1014,7 +1014,7 @@ You should only call this once per orchestrator, at the start.`,
   async #aalajaKhalqWasfa(args: Record<string, unknown>): Promise<string> {
     const call: NidaKhalqWasfa = {
       tool: "mun_create_wasfa",
-      orchestratorId: args.orchestratorId as string,
+      huwiyyatMurshid: args.huwiyyatMurshid as string,
       title: args.title as string,
       description: args.description as string | undefined,
       estimate: args.estimate as number | undefined,
@@ -1037,8 +1037,8 @@ Daemon will create the ticket and return the ticket ID.`;
   async #aalajaTajdidWasfa(args: Record<string, unknown>): Promise<string> {
     const call: NidaTajdidWasfa = {
       tool: "mun_update_wasfa",
-      orchestratorId: args.orchestratorId as string,
-      wasfaId: args.wasfaId as string,
+      huwiyyatMurshid: args.huwiyyatMurshid as string,
+      huwiyyatWasfa: args.huwiyyatWasfa as string,
       updates: args.updates as NidaTajdidWasfa["updates"],
     };
 
@@ -1051,7 +1051,7 @@ Daemon will create the ticket and return the ticket ID.`;
 
     return `Ticket update request forwarded to daemon.
 
-Ticket: ${call.wasfaId}
+Ticket: ${call.huwiyyatWasfa}
 Updates:
 ${updatesList}`;
   }
@@ -1059,8 +1059,8 @@ ${updatesList}`;
   async #handleSetRelations(args: Record<string, unknown>): Promise<string> {
     const call: MunSetRelationsCall = {
       tool: "mun_set_relations",
-      orchestratorId: args.orchestratorId as string,
-      wasfaId: args.wasfaId as string,
+      huwiyyatMurshid: args.huwiyyatMurshid as string,
+      huwiyyatWasfa: args.huwiyyatWasfa as string,
       blocks: args.blocks as string[] | undefined,
       blockedBy: args.blockedBy as string[] | undefined,
     };
@@ -1074,7 +1074,7 @@ ${updatesList}`;
 
     return `Relation update request forwarded to daemon.
 
-Ticket: ${call.wasfaId}
+Ticket: ${call.huwiyyatWasfa}
 ${blocksList}
 ${blockedByList}
 
@@ -1084,7 +1084,7 @@ Relations control execution order: blocked tickets wait for blockers to complete
   async #aalajaQiraatWasfa(args: Record<string, unknown>): Promise<string> {
     const call: NidaQiraatWasfa = {
       tool: "mun_read_wasfa",
-      orchestratorId: args.orchestratorId as string,
+      huwiyyatMurshid: args.huwiyyatMurshid as string,
       url: args.url as string,
     };
 
@@ -1092,18 +1092,18 @@ Relations control execution order: blocked tickets wait for blockers to complete
 
     // Extract ticket ID from URL if possible (heuristic)
     const ticketMatch = call.url.match(/([A-Z]+-\d+)/);
-    const wasfaId = ticketMatch?.[1];
+    const huwiyyatWasfa = ticketMatch?.[1];
 
     // Check implementation status from SQLite
     let localContext = "";
-    if (wasfaId) {
-      const status = getImplStatus(wasfaId);
+    if (huwiyyatWasfa) {
+      const status = qiraStatus(huwiyyatWasfa);
       if (status) {
         localContext = `
 
 Local Munadi Context (from diary):
 - Implementation Status: ${status.status}
-${status.orchestrator_id ? `- Orchestrator: ${status.orchestrator_id}` : ""}
+${status.huwiyat_murshid ? `- Orchestrator: ${status.huwiyat_murshid}` : ""}
 ${status.summary ? `- Summary: ${status.summary}` : ""}`;
       }
     }
@@ -1129,8 +1129,8 @@ Awaiting daemon response...`;
   async #aalajaKhalqRisala(args: Record<string, unknown>): Promise<string> {
     const call: NidaKhalqRisala = {
       tool: "mun_create_risala",
-      orchestratorId: args.orchestratorId as string,
-      wasfaId: args.wasfaId as string,
+      huwiyyatMurshid: args.huwiyyatMurshid as string,
+      huwiyyatWasfa: args.huwiyyatWasfa as string,
       title: args.title as string,
       body: args.body as string,
       base: args.base as string,
@@ -1141,7 +1141,7 @@ Awaiting daemon response...`;
 
     return `PR creation request forwarded to daemon.
 
-Ticket: ${call.wasfaId}
+Ticket: ${call.huwiyyatWasfa}
 Title: ${call.title}
 Base: ${call.base}
 Head: ${call.head}
@@ -1156,7 +1156,7 @@ Daemon will:
   async #handleCheckBranchStatus(args: Record<string, unknown>): Promise<string> {
     const call: MunCheckBranchStatusCall = {
       tool: "mun_check_branch_status",
-      orchestratorId: args.orchestratorId as string,
+      huwiyyatMurshid: args.huwiyyatMurshid as string,
       branch: args.branch as string,
     };
 
@@ -1179,7 +1179,7 @@ Daemon will return:
   async #handleNotify(args: Record<string, unknown>): Promise<string> {
     const call: MunNotifyCall = {
       tool: "mun_notify",
-      orchestratorId: args.orchestratorId as string,
+      huwiyyatMurshid: args.huwiyyatMurshid as string,
       message: args.message as string,
       priority: args.priority as MunNotifyCall["priority"],
       actions: args.actions as MunNotifyCall["actions"],
@@ -1202,7 +1202,7 @@ Operator will receive this via Telegram/ntfy.`;
   async #handleReply(args: Record<string, unknown>): Promise<string> {
     const call: MunReplyCall = {
       tool: "mun_reply",
-      orchestratorId: args.orchestratorId as string,
+      huwiyyatMurshid: args.huwiyyatMurshid as string,
       message: args.message as string,
     };
 
@@ -1216,7 +1216,7 @@ ${call.message}`;
   async #handleLogDecision(args: Record<string, unknown>): Promise<string> {
     const call: MunLogDecisionCall = {
       tool: "mun_log_decision",
-      orchestratorId: args.orchestratorId as string,
+      huwiyyatMurshid: args.huwiyyatMurshid as string,
       type: args.type as MunLogDecisionCall["type"],
       decision: args.decision as string,
       reasoning: args.reasoning as string,
@@ -1224,7 +1224,7 @@ ${call.message}`;
     };
 
     // Log to diary directly
-    const decision: DiaryDecision = {
+    const decision: QararSijill = {
       timestamp: new Date().toISOString(),
       type: call.type,
       decision: call.decision,
@@ -1232,7 +1232,7 @@ ${call.message}`;
       metadata: call.metadata,
     };
 
-    this.#appendDiaryDecision(decision, call.orchestratorId);
+    this.#appendQararSijill(decision, call.huwiyyatMurshid);
 
     // Also forward to daemon for any additional handling
     this.#forwardToDaemon(call);
@@ -1249,7 +1249,7 @@ This decision is now part of the persistent record.`;
   #handleReadDiary(args: Record<string, unknown>): string {
     const call: MunReadDiaryCall = {
       tool: "mun_read_diary",
-      orchestratorId: args.orchestratorId as string,
+      huwiyyatMurshid: args.huwiyyatMurshid as string,
       filterOrchestrator: args.filterOrchestrator as string | undefined,
       type: args.type as MunReadDiaryCall["type"],
       search: args.search as string | undefined,
@@ -1257,8 +1257,8 @@ This decision is now part of the persistent record.`;
       since: args.since as string | undefined,
     };
 
-    const decisions = getDiaryDecisions({
-      orchestratorId: call.filterOrchestrator,
+    const decisions = getQararSijills({
+      huwiyyatMurshid: call.filterOrchestrator,
       type: call.type,
       search: call.search,
       limit: call.limit,
@@ -1281,7 +1281,7 @@ This decision is now part of the persistent record.`;
     for (const d of decisions) {
       const meta = d.metadata ? JSON.parse(d.metadata) : null;
       response += `---\n`;
-      response += `**[${d.type}]** by ${d.orchestrator_id} (${d.created_at})\n`;
+      response += `**[${d.type}]** by ${d.huwiyat_murshid} (${d.created_at})\n`;
       response += `**Decision:** ${d.decision}\n`;
       response += `**Reasoning:** ${d.reasoning}\n`;
       if (meta) {
@@ -1300,15 +1300,15 @@ This decision is now part of the persistent record.`;
   async #handleYield(args: Record<string, unknown>): Promise<string> {
     const call: MunYieldCall = {
       tool: "mun_yield",
-      orchestratorId: args.orchestratorId as string,
-      reason: args.reason as "blocked" | "waiting",
+      huwiyyatMurshid: args.huwiyyatMurshid as string,
+      reason: args.reason as "masdud" | "muntazir",
       details: args.details as string,
       suggestNext: args.suggestNext as string | undefined,
     };
 
     this.#forwardToDaemon(call);
 
-    const stateDescription = call.reason === "blocked"
+    const stateDescription = call.reason === "masdud"
       ? "You are now in BLOCKED state. Operator will be notified of the blockers."
       : "You are now in WAITING state. Monitoring for PR events.";
 
@@ -1332,7 +1332,7 @@ Use \`mun_demand_control\` when you have actionable work again.`;
   async #handleDemandControl(args: Record<string, unknown>): Promise<string> {
     const call: MunDemandControlCall = {
       tool: "mun_demand_control",
-      orchestratorId: args.orchestratorId as string,
+      huwiyyatMurshid: args.huwiyyatMurshid as string,
       reason: args.reason as string,
       priority: args.priority as "normal" | "urgent",
     };
@@ -1359,10 +1359,10 @@ You will be notified when control is granted.`;
   // ===========================================================================
 
   async #handleCreateBranch(args: Record<string, unknown>): Promise<string> {
-    const orchestratorType = args.type as OrchestratorType;
+    const orchestratorType = args.type as NawMurshid;
     const call: MunCreateBranchCall = {
       tool: "mun_create_branch",
-      orchestratorId: args.orchestratorId as string,
+      huwiyyatMurshid: args.huwiyyatMurshid as string,
       identifier: args.identifier as string,
       type: orchestratorType,
       slug: args.slug as string | undefined,
@@ -1389,7 +1389,7 @@ You will be notified when the branch is ready.`;
   async #handleGitAdd(args: Record<string, unknown>): Promise<string> {
     const call: MunGitAddCall = {
       tool: "mun_git_add",
-      orchestratorId: args.orchestratorId as string,
+      huwiyyatMurshid: args.huwiyyatMurshid as string,
       files: args.files as string[],
     };
 
@@ -1406,7 +1406,7 @@ Daemon will stage these files.`;
   async #handleCommit(args: Record<string, unknown>): Promise<string> {
     const call: MunCommitCall = {
       tool: "mun_commit",
-      orchestratorId: args.orchestratorId as string,
+      huwiyyatMurshid: args.huwiyyatMurshid as string,
       message: args.message as string,
       files: args.files as string[] | undefined,
     };
@@ -1424,7 +1424,7 @@ Daemon will create the commit.`;
   async #handleGitPush(args: Record<string, unknown>): Promise<string> {
     const call: MunGitPushCall = {
       tool: "mun_git_push",
-      orchestratorId: args.orchestratorId as string,
+      huwiyyatMurshid: args.huwiyyatMurshid as string,
     };
 
     this.#forwardToDaemon(call);
@@ -1441,10 +1441,10 @@ Daemon will push current branch to origin.`;
   async #handleExtract(args: Record<string, unknown>): Promise<string> {
     // For now, extraction is just validation and planning
     // The actual file operations happen in mun_istihal
-    const wasfaId = args.wasfaId as string;
+    const huwiyyatWasfa = args.huwiyyatWasfa as string;
     const files = args.files as string[];
 
-    return `Rune stones identified for ${wasfaId}.
+    return `Rune stones identified for ${huwiyyatWasfa}.
 
 Stones selected (${files.length}):
 ${files.map((f) => `  - ${f}`).join("\n")}
@@ -1457,10 +1457,10 @@ Next steps:
   async #handleAttune(args: Record<string, unknown>): Promise<string> {
     // TODO: Implement smart dependency discovery
     // For now, return a placeholder that suggests manual review
-    const wasfaId = args.wasfaId as string;
+    const huwiyyatWasfa = args.huwiyyatWasfa as string;
     const files = args.files as string[];
 
-    return `Attunement analysis for ${wasfaId}:
+    return `Attunement analysis for ${huwiyyatWasfa}:
 
 Rune stones selected (${files.length}):
 ${files.map((f) => `  - ${f}`).join("\n")}
@@ -1480,18 +1480,18 @@ This is a placeholder. Future implementation will:
   async #handleTransmute(args: Record<string, unknown>): Promise<string> {
     const call = {
       tool: "mun_istihal" as const,
-      orchestratorId: args.orchestratorId as string,
-      wasfaId: args.wasfaId as string,
+      huwiyyatMurshid: args.huwiyyatMurshid as string,
+      huwiyyatWasfa: args.huwiyyatWasfa as string,
       files: args.files as string[],
     };
 
     this.#forwardToDaemon(call);
 
-    const essenceBranch = generateBranchName(call.wasfaId, "chore");
+    const essenceBranch = generateBranchName(call.huwiyyatWasfa, "chore");
 
     return `Artifact crafting request submitted.
 
-Ticket: ${call.wasfaId}
+Ticket: ${call.huwiyyatWasfa}
 Essence Branch: ${essenceBranch}
 Files (${call.files.length}):
 ${call.files.map((f) => `  - ${f}`).join("\n")}
@@ -1509,20 +1509,20 @@ On success, use mun_fasl to create the PR.`;
   async #handleTransmuteStacked(args: Record<string, unknown>): Promise<string> {
     const call = {
       tool: "mun_istihal_mutabaqq" as const,
-      orchestratorId: args.orchestratorId as string,
-      wasfaId: args.wasfaId as string,
+      huwiyyatMurshid: args.huwiyyatMurshid as string,
+      huwiyyatWasfa: args.huwiyyatWasfa as string,
       parentTicketId: args.parentTicketId as string,
       files: args.files as string[],
     };
 
     this.#forwardToDaemon(call);
 
-    const essenceBranch = generateBranchName(call.wasfaId, "chore");
+    const essenceBranch = generateBranchName(call.huwiyyatWasfa, "chore");
     const parentBranch = generateBranchName(call.parentTicketId, "chore");
 
     return `Stacked artifact crafting request submitted.
 
-Ticket: ${call.wasfaId}
+Ticket: ${call.huwiyyatWasfa}
 Essence Branch: ${essenceBranch}
 Parent Branch: ${parentBranch}
 Files (${call.files.length}):
@@ -1540,13 +1540,13 @@ Note: CI may fail if parent PR is unmerged. This is expected for incremental rev
 
   async #handleDecant(args: Record<string, unknown>): Promise<string> {
     // This is essentially mun_create_risala with better terminology
-    const wasfaId = args.wasfaId as string;
-    const essenceBranch = generateBranchName(wasfaId, "chore");
+    const huwiyyatWasfa = args.huwiyyatWasfa as string;
+    const essenceBranch = generateBranchName(huwiyyatWasfa, "chore");
 
     const call: NidaKhalqRisala = {
       tool: "mun_create_risala",
-      orchestratorId: args.orchestratorId as string,
-      wasfaId: wasfaId,
+      huwiyyatMurshid: args.huwiyyatMurshid as string,
+      huwiyyatWasfa: huwiyyatWasfa,
       title: args.title as string,
       body: args.body as string,
       base: "main", // Will be overridden by daemon if stacked
@@ -1557,7 +1557,7 @@ Note: CI may fail if parent PR is unmerged. This is expected for incremental rev
 
     return `Unveiling request submitted.
 
-Ticket: ${wasfaId}
+Ticket: ${huwiyyatWasfa}
 Title: ${call.title}
 Branch: ${essenceBranch}
 
@@ -1573,18 +1573,18 @@ You will be notified with the PR URL once created.`;
    * Forward a tool call to the Munadi daemon via SQLite
    */
   #forwardToDaemon(call: MunToolCall): void {
-    // Extract orchestratorId if present (for routing)
-    const orchestratorId = "orchestratorId" in call ? (call as { orchestratorId?: string }).orchestratorId : undefined;
+    // Extract huwiyyatMurshid if present (for routing)
+    const huwiyyatMurshid = "huwiyyatMurshid" in call ? (call as { huwiyyatMurshid?: string }).huwiyyatMurshid : undefined;
 
-    insertEvent("pm", call.tool, call as unknown as Record<string, unknown>, orchestratorId);
+    insertEvent("pm", call.tool, call as unknown as Record<string, unknown>, huwiyyatMurshid);
   }
 
   /**
    * Append a decision to the diary (SQLite)
    */
-  #appendDiaryDecision(decision: DiaryDecision, orchestratorId: string = "unknown"): void {
-    addDiaryDecision({
-      orchestratorId,
+  #appendQararSijill(decision: QararSijill, huwiyyatMurshid: string = "unknown"): void {
+    addQararSijill({
+      huwiyyatMurshid,
       type: decision.type,
       decision: decision.decision,
       reasoning: decision.reasoning,

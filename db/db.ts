@@ -33,7 +33,7 @@ let db: Database | null = null;
 
 function getDb(): Database {
   if (!db) {
-    throw new Error("Database not initialized. Call initDatabase() first.");
+    throw new Error("Database not tahyiad. Call initDatabase() first.");
   }
   return db;
 }
@@ -63,7 +63,7 @@ export async function initDatabase(): Promise<void> {
 
   applySchema(db);
 
-  await logger.info("database", `SQLite initialized at ${dbPath}`);
+  await logger.info("database", `SQLite tahyiad at ${dbPath}`);
 }
 
 /**
@@ -94,7 +94,7 @@ function applySchema(d: Database): void {
     )
   `);
 
-  // NOTE: TrackedPR data is stored in sessions.metadata JSON, not a dedicated table.
+  // NOTE: RisalaMutaba data is stored in sessions.metadata JSON, not a dedicated table.
 
   d.exec(`
     CREATE TABLE IF NOT EXISTS channels (
@@ -114,7 +114,7 @@ function applySchema(d: Database): void {
       type TEXT NOT NULL,
       tool TEXT NOT NULL,
       payload TEXT NOT NULL,
-      murshid_id TEXT,
+      huwiyat_murshid TEXT,
       processed INTEGER DEFAULT 0,
       created_at TEXT NOT NULL
     )
@@ -136,7 +136,7 @@ function applySchema(d: Database): void {
   d.exec(`
     CREATE TABLE IF NOT EXISTS diary_decisions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      murshid_id TEXT NOT NULL,
+      huwiyat_murshid TEXT NOT NULL,
       type TEXT NOT NULL,
       decision TEXT NOT NULL,
       reasoning TEXT NOT NULL,
@@ -147,8 +147,8 @@ function applySchema(d: Database): void {
 
   d.exec(`
     CREATE TABLE IF NOT EXISTS diary_impl_status (
-      ticket_id TEXT PRIMARY KEY,
-      murshid_id TEXT NOT NULL,
+      huwiyat_wasfa TEXT PRIMARY KEY,
+      huwiyat_murshid TEXT NOT NULL,
       status TEXT NOT NULL,
       summary TEXT,
       files_changed TEXT,
@@ -158,7 +158,7 @@ function applySchema(d: Database): void {
 
   d.exec(`
     CREATE TABLE IF NOT EXISTS pending_demands (
-      murshid_id TEXT PRIMARY KEY,
+      huwiyat_murshid TEXT PRIMARY KEY,
       reason TEXT NOT NULL,
       priority TEXT NOT NULL,
       demanded_at TEXT NOT NULL
@@ -174,7 +174,7 @@ function applySchema(d: Database): void {
   d.exec(
     "CREATE INDEX IF NOT EXISTS idx_questions_unanswered ON questions(session_id) WHERE answered_at IS NULL",
   );
-  d.exec("CREATE INDEX IF NOT EXISTS idx_diary_murshid ON diary_decisions(murshid_id)");
+  d.exec("CREATE INDEX IF NOT EXISTS idx_diary_murshid ON diary_decisions(huwiyat_murshid)");
   d.exec("CREATE INDEX IF NOT EXISTS idx_channels_lookup ON channels(provider, channel_id)");
 
   // Mark schema version (for future migrations)
@@ -185,7 +185,7 @@ function applySchema(d: Database): void {
 }
 
 /**
- * Close the database connection. Call during shutdown.
+ * Close the database connection. Call during ighlaaq.
  */
 export function closeDatabase(): void {
   if (db) {
@@ -206,15 +206,15 @@ export function insertEvent(
   channel: "pm",
   toolName: string,
   payload: Record<string, unknown>,
-  murshidId?: string,
+  huwiyyatMurshid?: string,
 ): void {
   const d = getDb();
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
 
   d.prepare(
-    "INSERT INTO events (id, type, tool, payload, murshid_id, processed, created_at) VALUES (?, ?, ?, ?, ?, 0, ?)",
-  ).run(id, channel, toolName, JSON.stringify(payload), murshidId ?? null, now);
+    "INSERT INTO events (id, type, tool, payload, huwiyat_murshid, processed, created_at) VALUES (?, ?, ?, ?, ?, 0, ?)",
+  ).run(id, channel, toolName, JSON.stringify(payload), huwiyyatMurshid ?? null, now);
 }
 
 /**
@@ -388,7 +388,7 @@ export function getChannelsForSession(
  * Reverse lookup: find session identifier by provider + channel ID.
  * Used for inbound message routing (e.g., Telegram topic → murshid).
  */
-export function getSessionByChannel(
+export function jalabJalsaByChannel(
   provider: string,
   channelId: string,
 ): string | null {
@@ -402,7 +402,7 @@ export function getSessionByChannel(
 /**
  * Delete a channel for an murshid.
  */
-export function deleteChannel(
+export function mahaqaQanat(
   sessionIdentifier: string,
   provider: string,
 ): void {
@@ -486,8 +486,8 @@ export function updateQuestionTelegramMessageId(questionId: string, messageId: n
 // Diary — decisions
 // ---------------------------------------------------------------------------
 
-interface AddDiaryDecisionArgs {
-  murshidId: string;
+interface AddQararSijillArgs {
+  huwiyyatMurshid: string;
   type: string;
   decision: string;
   reasoning: string;
@@ -497,13 +497,13 @@ interface AddDiaryDecisionArgs {
 /**
  * Append a decision to the diary log.
  */
-export function addDiaryDecision(args: AddDiaryDecisionArgs): void {
+export function addQararSijill(args: AddQararSijillArgs): void {
   const d = getDb();
   d.prepare(`
-    INSERT INTO diary_decisions (murshid_id, type, decision, reasoning, metadata, created_at)
+    INSERT INTO diary_decisions (huwiyat_murshid, type, decision, reasoning, metadata, created_at)
     VALUES (?, ?, ?, ?, ?, ?)
   `).run(
-    args.murshidId,
+    args.huwiyyatMurshid,
     args.type,
     args.decision,
     args.reasoning,
@@ -516,17 +516,17 @@ export function addDiaryDecision(args: AddDiaryDecisionArgs): void {
 // Diary — query decisions (collective knowledge pool)
 // ---------------------------------------------------------------------------
 
-interface GetDiaryDecisionsOpts {
-  murshidId?: string;  // filter by murshid (omit for collective)
+interface KhiyaratJalabQararatSijill {
+  huwiyyatMurshid?: string;  // filter by murshid (omit for collective)
   type?: string;            // filter by decision type
   search?: string;          // free-text search in decision + reasoning
   limit?: number;           // default 20
   since?: string;           // ISO date cutoff
 }
 
-interface DbDiaryDecision {
+interface QararSijillDb {
   id: number;
-  murshid_id: string;
+  huwiyat_murshid: string;
   type: string;
   decision: string;
   reasoning: string;
@@ -538,14 +538,14 @@ interface DbDiaryDecision {
  * Query diary decisions. Returns most recent first.
  * Supports filtering by murshid, type, and free-text search.
  */
-export function getDiaryDecisions(opts: GetDiaryDecisionsOpts = {}): DbDiaryDecision[] {
+export function getQararSijills(opts: KhiyaratJalabQararatSijill = {}): QararSijillDb[] {
   const d = getDb();
   const conditions: string[] = [];
   const params: (string | number | null)[] = [];
 
-  if (opts.murshidId) {
-    conditions.push("murshid_id = ?");
-    params.push(opts.murshidId);
+  if (opts.huwiyyatMurshid) {
+    conditions.push("huwiyat_murshid = ?");
+    params.push(opts.huwiyyatMurshid);
   }
   if (opts.type) {
     conditions.push("type = ?");
@@ -566,11 +566,11 @@ export function getDiaryDecisions(opts: GetDiaryDecisionsOpts = {}): DbDiaryDeci
   params.push(limit);
 
   return d.prepare(
-    `SELECT id, murshid_id, type, decision, reasoning, metadata, created_at
+    `SELECT id, huwiyat_murshid, type, decision, reasoning, metadata, created_at
      FROM diary_decisions ${where}
      ORDER BY created_at DESC
      LIMIT ?`
-  ).all(...params) as DbDiaryDecision[];
+  ).all(...params) as QararSijillDb[];
 }
 
 // ---------------------------------------------------------------------------
@@ -578,8 +578,8 @@ export function getDiaryDecisions(opts: GetDiaryDecisionsOpts = {}): DbDiaryDeci
 // ---------------------------------------------------------------------------
 
 interface UpsertImplStatusArgs {
-  wasfaId: string;
-  murshidId: string;
+  huwiyyatWasfa: string;
+  huwiyyatMurshid: string;
   status: string;
   summary?: string;
 }
@@ -590,16 +590,16 @@ interface UpsertImplStatusArgs {
 export function naqshStatus(args: UpsertImplStatusArgs): void {
   const d = getDb();
   d.prepare(`
-    INSERT INTO diary_impl_status (ticket_id, murshid_id, status, summary, updated_at)
+    INSERT INTO diary_impl_status (huwiyat_wasfa, huwiyat_murshid, status, summary, updated_at)
     VALUES (?, ?, ?, ?, ?)
-    ON CONFLICT(ticket_id) DO UPDATE SET
-      murshid_id = excluded.murshid_id,
+    ON CONFLICT(huwiyat_wasfa) DO UPDATE SET
+      huwiyat_murshid = excluded.huwiyat_murshid,
       status = excluded.status,
       summary = excluded.summary,
       updated_at = excluded.updated_at
   `).run(
-    args.wasfaId,
-    args.murshidId,
+    args.huwiyyatWasfa,
+    args.huwiyyatMurshid,
     args.status,
     args.summary ?? null,
     new Date().toISOString(),
@@ -608,20 +608,20 @@ export function naqshStatus(args: UpsertImplStatusArgs): void {
 
 interface DbImplStatus {
   status: string;
-  murshid_id: string;
+  huwiyat_murshid: string;
   summary: string | null;
 }
 
 /**
  * Get implementation status for a formula, or null if not found.
  */
-export function qiraStatus(wasfaId: string): DbImplStatus | null {
+export function qiraStatus(huwiyyatWasfa: string): DbImplStatus | null {
   const d = getDb();
   const row = d
     .prepare(
-      "SELECT status, murshid_id, summary FROM diary_impl_status WHERE ticket_id = ?",
+      "SELECT status, huwiyat_murshid, summary FROM diary_impl_status WHERE huwiyat_wasfa = ?",
     )
-    .get(wasfaId) as DbImplStatus | undefined;
+    .get(huwiyyatWasfa) as DbImplStatus | undefined;
 
   return row ?? null;
 }
@@ -631,7 +631,7 @@ export function qiraStatus(wasfaId: string): DbImplStatus | null {
 // ---------------------------------------------------------------------------
 
 interface PendingDemand {
-  murshid_id: string;
+  huwiyat_murshid: string;
   reason: string;
   priority: string;
   demanded_at: string;
@@ -641,27 +641,27 @@ interface PendingDemand {
  * Upsert a pending demand (one per murshid).
  */
 export function upsertPendingDemand(
-  murshidId: string,
+  huwiyyatMurshid: string,
   reason: string,
   priority: "normal" | "urgent",
 ): void {
   const d = getDb();
   d.prepare(`
-    INSERT INTO pending_demands (murshid_id, reason, priority, demanded_at)
+    INSERT INTO pending_demands (huwiyat_murshid, reason, priority, demanded_at)
     VALUES (?, ?, ?, ?)
-    ON CONFLICT(murshid_id) DO UPDATE SET
+    ON CONFLICT(huwiyat_murshid) DO UPDATE SET
       reason = excluded.reason,
       priority = excluded.priority,
       demanded_at = excluded.demanded_at
-  `).run(murshidId, reason, priority, new Date().toISOString());
+  `).run(huwiyyatMurshid, reason, priority, new Date().toISOString());
 }
 
 /**
  * Remove a pending demand (after it's been fulfilled).
  */
-export function removePendingDemand(murshidId: string): void {
+export function removePendingDemand(huwiyyatMurshid: string): void {
   const d = getDb();
-  d.prepare("DELETE FROM pending_demands WHERE murshid_id = ?").run(murshidId);
+  d.prepare("DELETE FROM pending_demands WHERE huwiyat_murshid = ?").run(huwiyyatMurshid);
 }
 
 /**
@@ -670,7 +670,7 @@ export function removePendingDemand(murshidId: string): void {
 export function getPendingDemands(): PendingDemand[] {
   const d = getDb();
   return d.prepare(
-    `SELECT murshid_id, reason, priority, demanded_at
+    `SELECT huwiyat_murshid, reason, priority, demanded_at
      FROM pending_demands
      ORDER BY
        CASE priority WHEN 'urgent' THEN 0 ELSE 1 END,

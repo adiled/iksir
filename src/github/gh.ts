@@ -7,7 +7,7 @@
 
 import { logger } from "../logging/logger.ts";
 import { execCommand, type ExecResult } from "../utils/exec.ts";
-import type { MunadiConfig, ReviewComment, CommentAssessment } from "../types.ts";
+import type { TasmimIksir, ReviewComment, CommentAssessment } from "../types.ts";
 
 interface GhPullRequest {
   number: number;
@@ -47,7 +47,7 @@ export class GitHubClient {
   private repo: string;
   private operatorUsername: string;
 
-  constructor(config: MunadiConfig) {
+  constructor(config: TasmimIksir) {
     this.owner = config.github.owner;
     this.repo = config.github.repo;
     this.operatorUsername = config.github.operatorUsername;
@@ -144,16 +144,16 @@ export class GitHubClient {
     // gh pr create prints the URL to stdout on success
     // Format: https://github.com/owner/repo/pull/123
     const url = result.stdout.trim();
-    const prNumberMatch = url.match(/\/pull\/(\d+)$/);
+    const raqamRisalaMatch = url.match(/\/pull\/(\d+)$/);
 
-    if (!prNumberMatch) {
+    if (!raqamRisalaMatch) {
       await logger.error("github", `Failed to parse PR URL from gh output`, {
         stdout: result.stdout,
       });
       return null;
     }
 
-    const number = parseInt(prNumberMatch[1], 10);
+    const number = parseInt(raqamRisalaMatch[1], 10);
 
     await logger.info("github", `Created PR #${number}`, { url });
 
@@ -163,9 +163,9 @@ export class GitHubClient {
   /**
    * Get pull request details
    */
-  async getPR(prNumber: number): Promise<GhPullRequest | null> {
+  async getPR(raqamRisala: number): Promise<GhPullRequest | null> {
     return this.execJson<GhPullRequest>([
-      "pr", "view", String(prNumber),
+      "pr", "view", String(raqamRisala),
       "--repo", `${this.owner}/${this.repo}`,
       "--json", "number,title,body,state,isDraft,url,headRefName,baseRefName,author,createdAt,updatedAt,mergeable,reviewDecision",
     ]);
@@ -197,13 +197,13 @@ export class GitHubClient {
   /**
    * Update PR (title, body, base branch)
    */
-  async updatePR(prNumber: number, options: {
+  async updatePR(raqamRisala: number, options: {
     title?: string;
     body?: string;
     base?: string;
   }): Promise<boolean> {
     const args = [
-      "pr", "edit", String(prNumber),
+      "pr", "edit", String(raqamRisala),
       "--repo", `${this.owner}/${this.repo}`,
     ];
 
@@ -218,9 +218,9 @@ export class GitHubClient {
   /**
    * Mark PR as ready for review (remove draft status)
    */
-  async markReadyForReview(prNumber: number): Promise<boolean> {
+  async markReadyForReview(raqamRisala: number): Promise<boolean> {
     const result = await this.exec([
-      "pr", "ready", String(prNumber),
+      "pr", "ready", String(raqamRisala),
       "--repo", `${this.owner}/${this.repo}`,
     ]);
     return result.success;
@@ -229,9 +229,9 @@ export class GitHubClient {
   /**
    * Close a PR
    */
-  async closePR(prNumber: number): Promise<boolean> {
+  async closePR(raqamRisala: number): Promise<boolean> {
     const result = await this.exec([
-      "pr", "close", String(prNumber),
+      "pr", "close", String(raqamRisala),
       "--repo", `${this.owner}/${this.repo}`,
     ]);
     return result.success;
@@ -244,18 +244,18 @@ export class GitHubClient {
   /**
    * Get PR comments (both review comments and issue comments)
    */
-  async getPRComments(prNumber: number): Promise<GhPRComment[]> {
+  async getPRComments(raqamRisala: number): Promise<GhPRComment[]> {
     // Get review comments via API
     const reviewComments = await this.execJson<GhPRComment[]>([
       "api",
-      `repos/${this.owner}/${this.repo}/pulls/${prNumber}/comments`,
+      `repos/${this.owner}/${this.repo}/pulls/${raqamRisala}/comments`,
       "--jq", "[.[] | {id: .id, body: .body, author: {login: .user.login}, createdAt: .created_at, path: .path, line: .line, diffHunk: .diff_hunk}]",
     ]) ?? [];
 
     // Get issue comments
     const issueComments = await this.execJson<GhPRComment[]>([
       "api",
-      `repos/${this.owner}/${this.repo}/issues/${prNumber}/comments`,
+      `repos/${this.owner}/${this.repo}/issues/${raqamRisala}/comments`,
       "--jq", "[.[] | {id: .id, body: .body, author: {login: .user.login}, createdAt: .created_at}]",
     ]) ?? [];
 
@@ -265,23 +265,23 @@ export class GitHubClient {
   /**
    * Get new comments since a timestamp
    */
-  async getNewComments(prNumber: number, since: Date): Promise<ReviewComment[]> {
-    const allComments = await this.getPRComments(prNumber);
+  async getNewComments(raqamRisala: number, since: Date): Promise<ReviewComment[]> {
+    const allComments = await this.getPRComments(raqamRisala);
 
     return allComments
       .filter((c) => new Date(c.createdAt) > since)
-      .map((c) => this.toReviewComment(prNumber, c));
+      .map((c) => this.toReviewComment(raqamRisala, c));
   }
 
   /**
    * Convert gh comment to ReviewComment type
    */
-  private toReviewComment(prNumber: number, comment: GhPRComment): ReviewComment {
+  private toReviewComment(raqamRisala: number, comment: GhPRComment): ReviewComment {
     const isOperator = comment.author.login === this.operatorUsername;
 
     return {
       id: String(comment.id),
-      prNumber,
+      raqamRisala,
       author: comment.author.login,
       body: comment.body,
       path: comment.path,
@@ -392,9 +392,9 @@ export class GitHubClient {
   /**
    * Add a comment to a PR
    */
-  async addComment(prNumber: number, body: string): Promise<boolean> {
+  async addComment(raqamRisala: number, body: string): Promise<boolean> {
     const result = await this.exec([
-      "pr", "comment", String(prNumber),
+      "pr", "comment", String(raqamRisala),
       "--repo", `${this.owner}/${this.repo}`,
       "--body", body,
     ]);
@@ -408,9 +408,9 @@ export class GitHubClient {
   /**
    * Get PR check runs status
    */
-  async getPRChecks(prNumber: number): Promise<GhCheckRun[]> {
+  async getPRChecks(raqamRisala: number): Promise<GhCheckRun[]> {
     const result = await this.execJson<{ checks: GhCheckRun[] }>([
-      "pr", "checks", String(prNumber),
+      "pr", "checks", String(raqamRisala),
       "--repo", `${this.owner}/${this.repo}`,
       "--json", "name,status,conclusion,detailsUrl",
     ]);
@@ -421,8 +421,8 @@ export class GitHubClient {
   /**
    * Check if all PR checks are passing
    */
-  async arePRChecksPassing(prNumber: number): Promise<boolean> {
-    const checks = await this.getPRChecks(prNumber);
+  async arePRChecksPassing(raqamRisala: number): Promise<boolean> {
+    const checks = await this.getPRChecks(raqamRisala);
 
     if (checks.length === 0) return true; // No checks configured
 
@@ -435,14 +435,14 @@ export class GitHubClient {
    * Wait for PR checks to complete (with timeout)
    */
   async waitForChecks(
-    prNumber: number,
+    raqamRisala: number,
     timeoutMs: number = 300000,
     pollIntervalMs: number = 30000
   ): Promise<{ passed: boolean; checks: GhCheckRun[] }> {
     const start = Date.now();
 
     while (Date.now() - start < timeoutMs) {
-      const checks = await this.getPRChecks(prNumber);
+      const checks = await this.getPRChecks(raqamRisala);
 
       const allCompleted = checks.every((c) => c.status === "completed");
       if (allCompleted) {
@@ -453,7 +453,7 @@ export class GitHubClient {
       await new Promise((r) => setTimeout(r, pollIntervalMs));
     }
 
-    const checks = await this.getPRChecks(prNumber);
+    const checks = await this.getPRChecks(raqamRisala);
     return { passed: false, checks };
   }
 
@@ -515,6 +515,6 @@ export class GitHubClient {
 /**
  * Create a GitHub client instance
  */
-export function createGitHubClient(config: MunadiConfig): GitHubClient {
+export function createGitHubClient(config: TasmimIksir): GitHubClient {
   return new GitHubClient(config);
 }

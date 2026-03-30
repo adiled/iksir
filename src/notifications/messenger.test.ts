@@ -1,14 +1,14 @@
 /**
  * Tests for src/notifications/messenger.ts
  *
- * Tests TelegramMessenger (MessengerOutbound implementation) with:
+ * Tests TelegramMessenger (RasulKharij implementation) with:
  * - Mock TelegramClient (injected via constructor)
  * - Real temp DB (for channel persistence)
  *
  * Key behaviors tested:
  * - Channel routing: dispatch, operator, orchestrator (with/without topic)
  * - Channel creation, persistence, and cache behavior
- * - Reverse lookup via resolveSessionByChannel
+ * - Reverse lookup via hallJalsaBilQanat
  */
 
 import { assertEquals } from "@std/assert";
@@ -29,24 +29,24 @@ Deno.test("send: dispatch channel -> sendToDispatch", async () => {
 
     assertEquals(tc._calls.sendToDispatch.length, 1);
     assertEquals(tc._calls.sendToDispatch[0].text, "hello dispatch");
-    assertEquals(tc._calls.sendMessage.length, 0);
+    assertEquals(tc._calls.arsalaRisala.length, 0);
   });
 });
 
-Deno.test("send: operator channel -> sendMessage", async () => {
+Deno.test("send: operator channel -> arsalaRisala", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
 
     await m.send("operator", "hello operator");
 
-    assertEquals(tc._calls.sendMessage.length, 1);
-    assertEquals(tc._calls.sendMessage[0].text, "hello operator");
+    assertEquals(tc._calls.arsalaRisala.length, 1);
+    assertEquals(tc._calls.arsalaRisala[0].text, "hello operator");
     assertEquals(tc._calls.sendToDispatch.length, 0);
   });
 });
 
-Deno.test("send: orchestrator with known topic -> sendToOrchestratorTopic", async () => {
+Deno.test("send: orchestrator with known topic -> arsalaIlaMurshidTopic", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
@@ -54,11 +54,11 @@ Deno.test("send: orchestrator with known topic -> sendToOrchestratorTopic", asyn
     // Pre-populate DB with a channel
     upsertChannel("TEAM-123", "telegram", "999");
 
-    await m.send({ orchestrator: "TEAM-123" }, "hello orchestrator");
+    await m.send({ murshid: "TEAM-123" }, "hello orchestrator");
 
-    assertEquals(tc._calls.sendToOrchestratorTopic.length, 1);
-    assertEquals(tc._calls.sendToOrchestratorTopic[0].topicId, 999);
-    assertEquals(tc._calls.sendToOrchestratorTopic[0].text, "hello orchestrator");
+    assertEquals(tc._calls.arsalaIlaMurshidTopic.length, 1);
+    assertEquals(tc._calls.arsalaIlaMurshidTopic[0].topicId, 999);
+    assertEquals(tc._calls.arsalaIlaMurshidTopic[0].text, "hello orchestrator");
   });
 });
 
@@ -67,7 +67,7 @@ Deno.test("send: orchestrator with no topic -> fallback to dispatch with prefix"
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
 
-    await m.send({ orchestrator: "TEAM-999" }, "no topic message");
+    await m.send({ murshid: "TEAM-999" }, "no topic message");
 
     assertEquals(tc._calls.sendToDispatch.length, 1);
     assertEquals(tc._calls.sendToDispatch[0].text, "[TEAM-999] no topic message");
@@ -76,67 +76,67 @@ Deno.test("send: orchestrator with no topic -> fallback to dispatch with prefix"
 
 Deno.test("send: disabled messenger -> no calls", async () => {
   await withTestDb(async () => {
-    const tc = mockTelegramClient({ isEnabled: false });
+    const tc = mockTelegramClient({ mumakkan: false });
     const m = new TelegramMessenger(tc as never);
 
     await m.send("dispatch", "should not send");
     await m.send("operator", "should not send");
-    await m.send({ orchestrator: "TEAM-1" }, "should not send");
+    await m.send({ murshid: "TEAM-1" }, "should not send");
 
     assertEquals(tc._calls.sendToDispatch.length, 0);
-    assertEquals(tc._calls.sendMessage.length, 0);
-    assertEquals(tc._calls.sendToOrchestratorTopic.length, 0);
+    assertEquals(tc._calls.arsalaRisala.length, 0);
+    assertEquals(tc._calls.arsalaIlaMurshidTopic.length, 0);
   });
 });
 
 // =============================================================================
-// sendFormatted()
+// arsalaMunassaq()
 // =============================================================================
 
-Deno.test("sendFormatted: dispatch -> sendToDispatch with Markdown", async () => {
+Deno.test("arsalaMunassaq: dispatch -> sendToDispatch with Markdown", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
 
-    await m.sendFormatted("dispatch", "**bold** text");
+    await m.arsalaMunassaq("dispatch", "**bold** text");
 
     assertEquals(tc._calls.sendToDispatch.length, 1);
     assertEquals(tc._calls.sendToDispatch[0].options?.parseMode, "Markdown");
   });
 });
 
-Deno.test("sendFormatted: operator -> sendMessage with Markdown", async () => {
+Deno.test("arsalaMunassaq: operator -> arsalaRisala with Markdown", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
 
-    await m.sendFormatted("operator", "**bold** text");
+    await m.arsalaMunassaq("operator", "**bold** text");
 
-    assertEquals(tc._calls.sendMessage.length, 1);
-    assertEquals(tc._calls.sendMessage[0].options?.parseMode, "Markdown");
+    assertEquals(tc._calls.arsalaRisala.length, 1);
+    assertEquals(tc._calls.arsalaRisala[0].options?.parseMode, "Markdown");
   });
 });
 
-Deno.test("sendFormatted: orchestrator with topic -> Markdown", async () => {
+Deno.test("arsalaMunassaq: orchestrator with topic -> Markdown", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
 
     upsertChannel("TEAM-100", "telegram", "555");
 
-    await m.sendFormatted({ orchestrator: "TEAM-100" }, "**bold**");
+    await m.arsalaMunassaq({ murshid: "TEAM-100" }, "**bold**");
 
-    assertEquals(tc._calls.sendToOrchestratorTopic.length, 1);
-    assertEquals(tc._calls.sendToOrchestratorTopic[0].options?.parseMode, "Markdown");
+    assertEquals(tc._calls.arsalaIlaMurshidTopic.length, 1);
+    assertEquals(tc._calls.arsalaIlaMurshidTopic[0].options?.parseMode, "Markdown");
   });
 });
 
-Deno.test("sendFormatted: orchestrator fallback -> dispatch with prefix + Markdown", async () => {
+Deno.test("arsalaMunassaq: orchestrator fallback -> dispatch with prefix + Markdown", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
 
-    await m.sendFormatted({ orchestrator: "TEAM-999" }, "**bold**");
+    await m.arsalaMunassaq({ murshid: "TEAM-999" }, "**bold**");
 
     assertEquals(tc._calls.sendToDispatch.length, 1);
     assertEquals(tc._calls.sendToDispatch[0].text, "[TEAM-999] **bold**");
@@ -145,17 +145,17 @@ Deno.test("sendFormatted: orchestrator fallback -> dispatch with prefix + Markdo
 });
 
 // =============================================================================
-// isEnabled()
+// mumakkan()
 // =============================================================================
 
-Deno.test("isEnabled: delegates to TelegramClient", async () => {
-  const tcEnabled = mockTelegramClient({ isEnabled: true });
+Deno.test("mumakkan: delegates to TelegramClient", async () => {
+  const tcEnabled = mockTelegramClient({ mumakkan: true });
   const mEnabled = new TelegramMessenger(tcEnabled as never);
-  assertEquals(mEnabled.isEnabled(), true);
+  assertEquals(mEnabled.mumakkan(), true);
 
-  const tcDisabled = mockTelegramClient({ isEnabled: false });
+  const tcDisabled = mockTelegramClient({ mumakkan: false });
   const mDisabled = new TelegramMessenger(tcDisabled as never);
-  assertEquals(mDisabled.isEnabled(), false);
+  assertEquals(mDisabled.mumakkan(), false);
 });
 
 // =============================================================================
@@ -214,9 +214,9 @@ Deno.test("hasOrchestratorChannel: cache hit returns true", async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
 
-    // Populate cache via loadChannelsForSession
+    // Populate cache via hammalQanawatLilJalsa
     upsertChannel("TEAM-500", "telegram", "123");
-    m.loadChannelsForSession("TEAM-500");
+    m.hammalQanawatLilJalsa("TEAM-500");
 
     assertEquals(m.hasOrchestratorChannel("TEAM-500"), true);
   });
@@ -244,10 +244,10 @@ Deno.test("hasOrchestratorChannel: full miss returns false", async () => {
 });
 
 // =============================================================================
-// loadChannelsForSession()
+// hammalQanawatLilJalsa()
 // =============================================================================
 
-Deno.test("loadChannelsForSession: returns channels from DB and caches", async () => {
+Deno.test("hammalQanawatLilJalsa: returns channels from DB and caches", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
@@ -255,7 +255,7 @@ Deno.test("loadChannelsForSession: returns channels from DB and caches", async (
     upsertChannel("TEAM-700", "telegram", "789");
     upsertChannel("TEAM-700", "slack", "C-SLACK");
 
-    const channels = m.loadChannelsForSession("TEAM-700");
+    const channels = m.hammalQanawatLilJalsa("TEAM-700");
 
     assertEquals(channels["telegram"], "789");
     assertEquals(channels["slack"], "C-SLACK");
@@ -266,10 +266,10 @@ Deno.test("loadChannelsForSession: returns channels from DB and caches", async (
 });
 
 // =============================================================================
-// resolveSessionByChannel()
+// hallJalsaBilQanat()
 // =============================================================================
 
-Deno.test("resolveSessionByChannel: DB hit returns identifier and caches", async () => {
+Deno.test("hallJalsaBilQanat: DB hit returns identifier and caches", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
@@ -277,22 +277,22 @@ Deno.test("resolveSessionByChannel: DB hit returns identifier and caches", async
     upsertChannel("TEAM-800", "telegram", "888");
 
     // First call: DB hit
-    const result1 = m.resolveSessionByChannel("telegram", "888");
+    const result1 = m.hallJalsaBilQanat("telegram", "888");
     assertEquals(result1, "TEAM-800");
 
     // Second call should use cache (we can't directly verify cache hit,
     // but it shouldn't error and should return same result)
-    const result2 = m.resolveSessionByChannel("telegram", "888");
+    const result2 = m.hallJalsaBilQanat("telegram", "888");
     assertEquals(result2, "TEAM-800");
   });
 });
 
-Deno.test("resolveSessionByChannel: miss returns null", async () => {
+Deno.test("hallJalsaBilQanat: miss returns null", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
 
-    const result = m.resolveSessionByChannel("telegram", "nonexistent");
+    const result = m.hallJalsaBilQanat("telegram", "nonexistent");
     assertEquals(result, null);
   });
 });

@@ -6,7 +6,7 @@ import { join } from "jsr:@std/path";
 // Test helpers
 // =============================================================================
 
-/** Env vars we might set during tests — saved/restored around each test */
+/** Env vars we might set during tests — saved/istarjaad around each test */
 const ENV_KEYS = [
   "MUNADI_CONFIG_DIR",
   "MUNADI_OPENCODE_SERVER",

@@ -4,8 +4,8 @@
  * Main entry point for the Munadi daemon.
  * 
  * Architecture:
- * - SessionManager: Manages orchestrator OpenCode sessions
- * - ToolExecutor: Executes PM-MCP tool calls via Linear/GitHub APIs
+ * - MudirJalasat: Manages orchestrator OpenCode sessions
+ * - Munaffidh: Executes PM-MCP tool calls via Linear/GitHub APIs
  * - Telegram: Routes human messages to orchestrator session
  * - KeepAlive: Polls for external changes, feeds to orchestrator
  *
@@ -28,22 +28,22 @@ import { createTelegramClient } from "./notifications/telegram.ts";
 import { createTelegramMessenger, type TelegramMessenger } from "./notifications/messenger.ts";
 import { createLinearClient } from "./linear/client.ts";
 import { createGitHubClient } from "./github/gh.ts";
-import { istadaaKatib } from "./daemon/session-manager.ts";
-import { istadaaMunaffidh } from "./daemon/tool-executor.ts";
-import { istadaaMunadi } from "./daemon/dispatcher.ts";
-import { istadaaArraf } from "./daemon/intent-resolver.ts";
-import { awqadaHayat, type MaintenanceResult } from "./daemon/keepalive.ts";
-import { istadaaSail } from "./daemon/question-handler.ts";
-import { istadaaRaqib } from "./daemon/health-monitor.ts";
-import type { MunadiConfig, ReviewComment, OrchestratorSession, TrackedPR, QuestionAskedEvent, QuestionInfo, PendingQuestion, IssueTracker } from "./types.ts";
+import { istadaaKatib } from "./daemon/katib.ts";
+import { istadaaMunaffidh } from "./daemon/munaffidh.ts";
+import { istadaaMunadi } from "./daemon/munadi.ts";
+import { istadaaArraf } from "./daemon/arraf.ts";
+import { awqadaHayat, type NatijaSeyana } from "./daemon/hayat.ts";
+import { istadaaSail } from "./daemon/sail.ts";
+import { istadaaRaqib } from "./daemon/raqib.ts";
+import type { TasmimIksir, ReviewComment, JalsatMurshid, RisalaMutaba, QuestionAskedEvent, QuestionInfo, PendingQuestion, MutabiWasfa } from "./types.ts";
 
 interface DaemonContext {
-  config: MunadiConfig;
+  config: TasmimIksir;
   opencode: ReturnType<typeof createOpenCodeClient>;
   ntfy: ReturnType<typeof createNtfyClient>;
   telegram: ReturnType<typeof createTelegramClient>;
   messenger: TelegramMessenger;
-  issueTracker: IssueTracker;
+  issueTracker: MutabiWasfa;
   github: ReturnType<typeof createGitHubClient>;
   sessionManager: ReturnType<typeof istadaaKatib>;
   ipcProcessor: ReturnType<typeof istadaaMunaffidh>;
@@ -73,7 +73,7 @@ async function checkConnectivity(ctx: DaemonContext): Promise<boolean> {
   // Telegram
   if (ctx.config.notifications.telegram.enabled) {
     process.stdout.write("  Telegram bot... ");
-    const telegramValid = await ctx.telegram.validateToken();
+    const telegramValid = await ctx.telegram.tahaqqaqToken();
     if (telegramValid) {
       console.log("✓");
     } else {
@@ -152,7 +152,7 @@ async function runCheck(ctx: DaemonContext): Promise<void> {
 }
 
 async function setupSignalHandlers(ctx: DaemonContext): Promise<void> {
-  const shutdown = async (signal: string) => {
+  const ighlaaq = async (signal: string) => {
     await logger.info("main", `Received ${signal}, shutting down...`);
 
     // Stop all loops
@@ -177,7 +177,7 @@ async function setupSignalHandlers(ctx: DaemonContext): Promise<void> {
   };
 
   const handleSignal = (signal: string) => {
-    shutdown(signal).catch((error) => {
+    ighlaaq(signal).catch((error) => {
       console.error(`Shutdown error: ${error}`);
       Deno.exit(1);
     });
@@ -190,7 +190,7 @@ async function setupSignalHandlers(ctx: DaemonContext): Promise<void> {
 /**
  * Subscribe to OpenCode SSE events and route question events to handler.
  */
-async function subscribeToOpenCodeEvents(ctx: DaemonContext): Promise<void> {
+async function subscribeToHadathOpenCodes(ctx: DaemonContext): Promise<void> {
   await logger.info("sse", "Starting OpenCode SSE subscription");
 
   let backoffMs = 5_000;
@@ -267,7 +267,7 @@ async function runDaemon(ctx: DaemonContext): Promise<void> {
   });
 
   // Start OpenCode SSE subscription (handles question events from orchestrators)
-  subscribeToOpenCodeEvents(ctx).catch(async (error) => {
+  subscribeToHadathOpenCodes(ctx).catch(async (error) => {
     await logger.error("sse", "Event subscription error", { error: String(error) });
   });
 
@@ -295,7 +295,7 @@ function setupTelegramHandlers(ctx: DaemonContext): void {
     if (!message.text) return;
 
     const text = message.text.trim();
-    const topicId = ctx.telegram.getMessageTopicId(message);
+    const topicId = ctx.telegram.jalabRisalaTopicId(message);
     const isGroupMessage = ctx.telegram.isGroupMessage(message);
     const isPrivateMessage = ctx.telegram.isPrivateMessage(message);
     const isDispatchTopic = ctx.telegram.isDispatchTopic(message);
@@ -333,13 +333,13 @@ function setupTelegramHandlers(ctx: DaemonContext): void {
     // ORCHESTRATOR TOPIC: Route to the owning orchestrator
     if (topicId) {
       // Resolve orchestrator from channel
-      const orchestrator = ctx.sessionManager.getOrchestratorByChannel("telegram", String(topicId));
+      const orchestrator = ctx.sessionManager.wajadaMurshidBiQanat("telegram", String(topicId));
 
       // Check if we're awaiting custom input for a question in this orchestrator's channel
       if (orchestrator && ctx.questionHandler.isAwaitingCustomInput(orchestrator.identifier)) {
         const handled = await ctx.questionHandler.handlePotentialCustomAnswer(orchestrator.identifier, text);
         if (handled) {
-          await ctx.messenger.send({ orchestrator: orchestrator.identifier }, "Answer submitted.");
+          await ctx.messenger.send({ murshid: orchestrator.identifier }, "Answer submitted.");
           return;
         }
         // If not handled (e.g., question expired), fall through to normal routing
@@ -348,9 +348,9 @@ function setupTelegramHandlers(ctx: DaemonContext): void {
       if (orchestrator) {
         await logger.info("telegram", `Routing to orchestrator ${orchestrator.identifier} via topic ${topicId}`);
         
-        const success = await ctx.sessionManager.sendToOrchestratorById(orchestrator.identifier, text);
+        const success = await ctx.sessionManager.arsalaIlaMurshidById(orchestrator.identifier, text);
         if (!success) {
-          await ctx.telegram.sendToOrchestratorTopic(
+          await ctx.telegram.arsalaIlaMurshidTopic(
             topicId,
             `Failed to send message to orchestrator ${orchestrator.identifier}.`
           );
@@ -361,12 +361,12 @@ function setupTelegramHandlers(ctx: DaemonContext): void {
       // Topic exists but no orchestrator mapped - might be General or orphaned
       if (topicId === 1) {
         // General topic - ignore or send helpful message
-        await ctx.telegram.sendMessage(
+        await ctx.telegram.arsalaRisala(
           "Use the **Dispatch** topic to send Linear URLs and spawn orchestrators.",
           { topicId: 1, chatId: ctx.telegram.getGroupId(), parseMode: "Markdown" }
         );
       } else {
-        await ctx.telegram.sendMessage(
+        await ctx.telegram.arsalaRisala(
           "This topic is not linked to an active orchestrator.",
           { topicId, chatId: ctx.telegram.getGroupId() }
         );
@@ -391,7 +391,7 @@ function setupTelegramHandlers(ctx: DaemonContext): void {
           // Resolve orchestrator from the topic
           const topicId = query.message?.message_thread_id;
           const orchestrator = topicId
-            ? ctx.sessionManager.getOrchestratorByChannel("telegram", String(topicId))
+            ? ctx.sessionManager.wajadaMurshidBiQanat("telegram", String(topicId))
             : null;
           if (orchestrator) {
             // Mark this question as awaiting custom text input for this orchestrator
@@ -450,9 +450,9 @@ function setupTelegramHandlers(ctx: DaemonContext): void {
     await ctx.telegram.answerCallback(query.id, "Received!");
 
     // Forward to orchestrator as a decision
-    const orchestrator = ctx.sessionManager.getActiveOrchestrator();
+    const orchestrator = ctx.sessionManager.wajadaMurshidFaail();
     if (orchestrator && query.data) {
-      await ctx.sessionManager.sendToOrchestrator(
+      await ctx.sessionManager.arsalaIlaMurshid(
         `Operator selected option: ${query.data}`
       );
     }
@@ -466,7 +466,7 @@ async function handlePrivateChatMessage(
   ctx: DaemonContext,
   _message: { text?: string; message_id: number }
 ): Promise<void> {
-  const sessions = ctx.sessionManager.getOrchestratorSessions();
+  const sessions = ctx.sessionManager.wajadaJalasatMurshid();
   
   let response = "**Sessions**\n\n";
   
@@ -474,9 +474,9 @@ async function handlePrivateChatMessage(
     response += "No active orchestrator sessions.\n\n";
   } else {
     for (const session of sessions) {
-      const statusEmoji = session.status === "active" ? "🟢" : 
-                          session.status === "blocked" ? "🔴" : 
-                          session.status === "waiting" ? "🟡" : "⚪";
+      const statusEmoji = session.status === "fail" ? "🟢" : 
+                          session.status === "masdud" ? "🔴" : 
+                          session.status === "muntazir" ? "🟡" : "⚪";
       response += `${statusEmoji} **${session.identifier}** (${session.type})\n`;
       response += `   ${session.title}\n`;
       if (Object.keys(session.channels).length > 0) {
@@ -494,7 +494,7 @@ async function handlePrivateChatMessage(
     response += "• **Orchestrator topics**: Converse with active sessions\n";
   }
   
-  await ctx.telegram.sendMessage(response, { 
+  await ctx.telegram.arsalaRisala(response, { 
     parseMode: "Markdown",
     chatId: ctx.telegram.getChatId(),  // Explicit private chat
   });
@@ -659,16 +659,16 @@ async function keepAliveCycle(ctx: DaemonContext): Promise<void> {
 
 async function handlePRMerged(
   ctx: DaemonContext,
-  session: OrchestratorSession,
-  pr: TrackedPR
+  session: JalsatMurshid,
+  pr: RisalaMutaba
 ): Promise<void> {
-  await logger.info("main", `PR #${pr.prNumber} merged for ${pr.ticketId}`, {
+  await logger.info("main", `PR #${pr.raqamRisala} merged for ${pr.huwiyyatWasfa}`, {
     epicId: session.identifier,
   });
 
   // Check if any other PRs were stacked on this one (early push / pressure mode)
   // Those PRs need to be re-pushed via pm_ssp to rebase onto main
-  const activePRs = ctx.sessionManager.getActivePRsForOrchestrator(session.identifier);
+  const activePRs = ctx.sessionManager.wajadaRasaailFaailaLiMurshid(session.identifier);
   const stackedPRs = activePRs.filter(
     (p) => p.status === "draft" || p.status === "open"
   );
@@ -680,51 +680,51 @@ async function handlePRMerged(
 **Stacked PRs detected:** ${stackedPRs.length} PR(s) may have been created via early push.
 If any were targeting ${pr.branch} (SSSP), they need re-pushing:
 
-${stackedPRs.map((p) => `- ${p.ticketId} (PR #${p.prNumber}): Use \`pm_ssp\` to rebase onto main`).join("\n")}
+${stackedPRs.map((p) => `- ${p.huwiyyatWasfa} (PR #${p.raqamRisala}): Use \`pm_ssp\` to rebase onto main`).join("\n")}
 
 Re-pushing will fix CI (now that base is on main).`;
   }
 
   // Notify the owning orchestrator - this paves way for next PR cycle
-  await ctx.sessionManager.sendToOrchestratorById(session.identifier, `## PR Merged - Ready for Next Slice
+  await ctx.sessionManager.arsalaIlaMurshidById(session.identifier, `## PR Merged - Ready for Next Slice
 
-**PR:** #${pr.prNumber}
-**Ticket:** ${pr.ticketId}
+**PR:** #${pr.raqamRisala}
+**Ticket:** ${pr.huwiyyatWasfa}
 **Branch:** ${pr.branch}
 
 This PR has been merged. You can now:
-1. Update ${pr.ticketId} status in Linear to "Done"
+1. Update ${pr.huwiyyatWasfa} status in Linear to "Done"
 2. Check \`blocked_by\` relations to see which tickets are now unblocked for the next PR
 3. Use \`pm_ssp\` to create the next PR if appropriate${stackedNote}
 
 Query Linear for the ticket's blocking relations to determine next slice.`);
 
   // Notify operator
-  if (ctx.telegram.isEnabled()) {
+  if (ctx.telegram.mumakkan()) {
     const stackedMsg = stackedPRs.length > 0 
       ? `\n\n${stackedPRs.length} stacked PR(s) may need re-push.`
       : "";
-    await ctx.telegram.sendMessage(
-      `✅ PR #${pr.prNumber} merged\n\nTicket: ${pr.ticketId}\nEpic: ${session.identifier}\n\nNext slice may now be disclosed.${stackedMsg}`
+    await ctx.telegram.arsalaRisala(
+      `✅ PR #${pr.raqamRisala} merged\n\nTicket: ${pr.huwiyyatWasfa}\nEpic: ${session.identifier}\n\nNext slice may now be disclosed.${stackedMsg}`
     );
   }
 }
 
 async function handlePRClosed(
   ctx: DaemonContext,
-  session: OrchestratorSession,
-  pr: TrackedPR
+  session: JalsatMurshid,
+  pr: RisalaMutaba
 ): Promise<void> {
-  await logger.info("main", `PR #${pr.prNumber} closed without merge`, {
+  await logger.info("main", `PR #${pr.raqamRisala} closed without merge`, {
     epicId: session.identifier,
-    ticketId: pr.ticketId,
+    huwiyyatWasfa: pr.huwiyyatWasfa,
   });
 
   // Notify the owning orchestrator
-  await ctx.sessionManager.sendToOrchestratorById(session.identifier, `## PR Closed Without Merge
+  await ctx.sessionManager.arsalaIlaMurshidById(session.identifier, `## PR Closed Without Merge
 
-**PR:** #${pr.prNumber}
-**Ticket:** ${pr.ticketId}
+**PR:** #${pr.raqamRisala}
+**Ticket:** ${pr.huwiyyatWasfa}
 
 This PR was closed without being merged. Investigate why:
 - Was it superseded by another PR?
@@ -734,17 +734,17 @@ This PR was closed without being merged. Investigate why:
 
 async function handleOperatorCommand(
   ctx: DaemonContext,
-  session: OrchestratorSession,
-  prNumber: number,
+  session: JalsatMurshid,
+  raqamRisala: number,
   comment: ReviewComment
 ): Promise<void> {
-  await logger.info("main", `Operator command on PR #${prNumber}`, {
+  await logger.info("main", `Operator command on PR #${raqamRisala}`, {
     epicId: session.identifier,
     body: comment.body.slice(0, 100),
   });
 
   // Forward to the owning orchestrator for execution
-  await ctx.sessionManager.sendToOrchestratorById(session.identifier, `## Operator command on PR #${prNumber}
+  await ctx.sessionManager.arsalaIlaMurshidById(session.identifier, `## Operator command on PR #${raqamRisala}
 
 ${comment.body}
 
@@ -753,11 +753,11 @@ Execute this direction on the epic branch, then update the PR.`);
 
 async function handleNewReviewComments(
   ctx: DaemonContext,
-  session: OrchestratorSession,
-  prNumber: number,
+  session: JalsatMurshid,
+  raqamRisala: number,
   comments: ReviewComment[]
 ): Promise<void> {
-  await logger.info("main", `${comments.length} new review comments on PR #${prNumber}`, {
+  await logger.info("main", `${comments.length} new review comments on PR #${raqamRisala}`, {
     epicId: session.identifier,
     authors: [...new Set(comments.map((c) => c.author))],
   });
@@ -767,7 +767,7 @@ async function handleNewReviewComments(
     .map((c) => `- @${c.author}: "${c.body.slice(0, 100)}${c.body.length > 100 ? "..." : ""}"`)
     .join("\n");
 
-  await ctx.sessionManager.sendToOrchestratorById(session.identifier, `## New Review Comments on PR #${prNumber}
+  await ctx.sessionManager.arsalaIlaMurshidById(session.identifier, `## New Review Comments on PR #${raqamRisala}
 
 ${commentText}
 
@@ -779,18 +779,18 @@ Analyze intent per command protocol:
 
 async function handlePRConflict(
   ctx: DaemonContext,
-  session: OrchestratorSession,
-  pr: TrackedPR
+  session: JalsatMurshid,
+  pr: RisalaMutaba
 ): Promise<void> {
-  await logger.warn("main", `PR #${pr.prNumber} has conflicts`, {
+  await logger.warn("main", `PR #${pr.raqamRisala} has conflicts`, {
     epicId: session.identifier,
-    ticketId: pr.ticketId,
+    huwiyyatWasfa: pr.huwiyyatWasfa,
   });
 
-  await ctx.sessionManager.sendToOrchestratorById(session.identifier, `## PR Has Merge Conflicts
+  await ctx.sessionManager.arsalaIlaMurshidById(session.identifier, `## PR Has Merge Conflicts
 
-**PR:** #${pr.prNumber}
-**Ticket:** ${pr.ticketId}
+**PR:** #${pr.raqamRisala}
+**Ticket:** ${pr.huwiyyatWasfa}
 
 The PR has conflicts with the base branch. Options:
 1. Resolve during quiet hours maintenance (if minor)
@@ -800,18 +800,18 @@ The PR has conflicts with the base branch. Options:
 
 async function handleCIFailed(
   ctx: DaemonContext,
-  session: OrchestratorSession,
-  pr: TrackedPR
+  session: JalsatMurshid,
+  pr: RisalaMutaba
 ): Promise<void> {
-  await logger.warn("main", `PR #${pr.prNumber} CI failing`, {
+  await logger.warn("main", `PR #${pr.raqamRisala} CI failing`, {
     epicId: session.identifier,
-    ticketId: pr.ticketId,
+    huwiyyatWasfa: pr.huwiyyatWasfa,
   });
 
-  await ctx.sessionManager.sendToOrchestratorById(session.identifier, `## CI Checks Failing
+  await ctx.sessionManager.arsalaIlaMurshidById(session.identifier, `## CI Checks Failing
 
-**PR:** #${pr.prNumber}
-**Ticket:** ${pr.ticketId}
+**PR:** #${pr.raqamRisala}
+**Ticket:** ${pr.huwiyyatWasfa}
 
 The PR has failing CI checks. Investigate:
 1. Is it a flaky test unrelated to our changes?
@@ -842,7 +842,7 @@ async function handleMaintenanceModeRelease(_ctx: DaemonContext): Promise<void> 
 
 async function handleMaintenanceComplete(
   ctx: DaemonContext,
-  results: MaintenanceResult[]
+  results: NatijaSeyana[]
 ): Promise<void> {
   await logger.info("main", "Maintenance complete", {
     total: results.length,
@@ -893,7 +893,7 @@ async function handleMaintenanceComplete(
   }
 
   // Notify operator via Telegram
-  if (ctx.telegram.isEnabled()) {
+  if (ctx.telegram.mumakkan()) {
     // Shorter version for Telegram
     let telegramMsg = "🌙 Overnight Maintenance\n\n";
     if (merged.length > 0) telegramMsg += `✅ Merged: ${merged.length} branches\n`;
@@ -906,7 +906,7 @@ async function handleMaintenanceComplete(
     }
     if (errors.length > 0) telegramMsg += `❌ Errors: ${errors.length}\n`;
 
-    await ctx.telegram.sendMessage(telegramMsg);
+    await ctx.telegram.arsalaRisala(telegramMsg);
   }
 
   // Queue detailed summary for orchestrators with conflicts
@@ -922,7 +922,7 @@ ${(r.conflicts ?? []).map((f) => `- \`${f}\``).join("\n")}
 
 **Action required:** When you become active, resolve these conflicts manually, then use \`pm_ssp\` to refresh any open PRs.`;
 
-    await ctx.sessionManager.sendToOrchestratorById(r.identifier, conflictMsg);
+    await ctx.sessionManager.arsalaIlaMurshidById(r.identifier, conflictMsg);
   }
 }
 
@@ -967,11 +967,11 @@ export async function startDaemon(opts: { check?: boolean } = {}): Promise<void>
   const github = createGitHubClient(config);
   const abortController = new AbortController();
 
-  // Initialize session manager and restore persisted state
+  // Initialize session manager and istarjaa persisted state
   const sessionManager = istadaaKatib({ config, opencode, messenger });
   await sessionManager.loadState();
 
-  // Initialize IPC processor and restore persisted state
+  // Initialize IPC processor and istarjaa persisted state
   const ipcProcessor = istadaaMunaffidh({
     config,
     issueTracker,
@@ -995,10 +995,10 @@ export async function startDaemon(opts: { check?: boolean } = {}): Promise<void>
   });
 
   // Wire dispatcher to IPC processor (for yield/demand_control handling)
-  ipcProcessor.setDispatcher(dispatcher);
+  ipcProcessor.wadaaMunadi(dispatcher);
 
   // Restore active orchestrator (if any) after daemon restart - checks out branch, sends notification
-  await dispatcher.restoreActiveOnStartup();
+  await dispatcher.istarjaaActiveOnStartup();
 
   // Initialize question handler (for question tool events from orchestrators)
   const questionHandler = istadaaSail({
@@ -1011,9 +1011,9 @@ export async function startDaemon(opts: { check?: boolean } = {}): Promise<void>
   // Wire question handler's transport-specific rendering (Telegram inline keyboards)
   questionHandler.setOnQuestionForwarded(async (pending: PendingQuestion, question: QuestionInfo) => {
     const keyboard = buildQuestionKeyboard(questionHandler, pending.id, question);
-    const orchestrator = sessionManager.getOrchestrator(pending.orchestratorId);
+    const orchestrator = sessionManager.jalabMurshid(pending.huwiyyatMurshid);
     const topicId = orchestrator?.channels["telegram"];
-    const messageId = await telegram.sendMessage("Use buttons below to answer:", {
+    const messageId = await telegram.arsalaRisala("Use buttons below to answer:", {
       topicId: topicId ? parseInt(topicId, 10) : undefined,
       keyboard,
     });
@@ -1063,11 +1063,11 @@ export async function startDaemon(opts: { check?: boolean } = {}): Promise<void>
       onPRClosed: async (session, pr) => {
         await handlePRClosed(ctx, session, pr);
       },
-      onOperatorCommand: async (session, prNumber, comment) => {
-        await handleOperatorCommand(ctx, session, prNumber, comment);
+      onOperatorCommand: async (session, raqamRisala, comment) => {
+        await handleOperatorCommand(ctx, session, raqamRisala, comment);
       },
-      onNewReviewComments: async (session, prNumber, comments) => {
-        await handleNewReviewComments(ctx, session, prNumber, comments);
+      onNewReviewComments: async (session, raqamRisala, comments) => {
+        await handleNewReviewComments(ctx, session, raqamRisala, comments);
       },
       onPRConflict: async (session, pr) => {
         await handlePRConflict(ctx, session, pr);

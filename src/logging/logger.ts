@@ -24,7 +24,7 @@ const LOG_FILES = {
 type LogFile = keyof typeof LOG_FILES;
 
 class Logger {
-  private initialized = false;
+  private tahyiad = false;
   private logLevel: LogLevel = "info";
 
   private readonly levelPriority: Record<LogLevel, number> = {
@@ -35,9 +35,9 @@ class Logger {
   };
 
   async init(): Promise<void> {
-    if (this.initialized) return;
+    if (this.tahyiad) return;
     await ensureDir(getLogDir());
-    this.initialized = true;
+    this.tahyiad = true;
 
     const level = Deno.env.get("MUNADI_LOG_LEVEL") as LogLevel | undefined;
     if (level && this.levelPriority[level] !== undefined) {
@@ -81,7 +81,7 @@ class Logger {
   }
 
   private async appendToFile(file: LogFile, content: string): Promise<void> {
-    if (!this.initialized) await this.init();
+    if (!this.tahyiad) await this.init();
     const path = join(getLogDir(), LOG_FILES[file]);
     await Deno.writeTextFile(path, content + "\n", { append: true });
   }
@@ -210,7 +210,7 @@ class Logger {
 
   // Read recent logs (for /log command)
   async readRecent(file: LogFile = "main", lines = 50): Promise<LogEntry[]> {
-    if (!this.initialized) await this.init();
+    if (!this.tahyiad) await this.init();
     const path = join(getLogDir(), LOG_FILES[file]);
 
     try {
