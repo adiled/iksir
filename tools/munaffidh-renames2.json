@@ -1,9 +1,0 @@
-[
-  { "file": "src/daemon/munaffidh.ts", "line": 59, "col": 3, "new": "tasmim" },
-  { "file": "src/daemon/munaffidh.ts", "line": 60, "col": 3, "new": "mutabiWasfa" },
-  { "file": "src/daemon/munaffidh.ts", "line": 62, "col": 3, "new": "rasul" },
-  { "file": "src/daemon/munaffidh.ts", "line": 64, "col": 3, "new": "mudirJalasat" },
-  { "file": "src/daemon/munaffidh.ts", "line": 100, "col": 7, "new": "tasmim" },
-  { "file": "src/daemon/munaffidh.ts", "old": "#handleIstihal", "new": "#aalajIstihal" },
-  { "file": "src/daemon/munaffidh.ts", "old": "#handleIstihalMutabaqq", "new": "#aalajIstihalMutabaqq" }
-]

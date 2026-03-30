@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://iksir.dev/iksir.schema.json",
-  "title": "Munadi Configuration",
-  "description": "Configuration for the Munadi autonomous agent orchestration system.",
+  "title": "Iksir Configuration",
+  "description": "Configuration for Iksir",
   "type": "object",
   "properties": {
     "$schema": {

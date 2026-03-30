@@ -23,6 +23,13 @@ logs/
 .deno/
 deno.lock
 
+# Tooling artifacts
+/tools
+/verify-all.sh
+
+# Editor
+.zed/
+
 # Old/backup files
 *.old.ts
 *.bak
