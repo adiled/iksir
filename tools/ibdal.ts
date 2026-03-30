@@ -1,5 +1,5 @@
 /**
- * Type-safe symbol rename tool using ts-morph.
+ * Ibdal (إبدال) — Type-safe symbol substitution using ts-morph.
  *
  * Uses the TypeScript compiler (via ts-morph) to find all references
  * and rename them across all files. Same engine as VSCode's "Rename Symbol".
@@ -14,9 +14,9 @@
  *    {"file": "src/daemon/hayat.ts", "line": 38, "col": 3, "new": "far"}
  *
  * Usage:
- *   deno run -A tools/rename.ts --batch renames.json
- *   deno run -A tools/rename.ts <file> <oldName> <newName>
- *   deno run -A tools/rename.ts <file> <line> <col> <newName>
+ *   deno run -A tools/ibdal.ts --batch renames.json
+ *   deno run -A tools/ibdal.ts <file> <oldName> <newName>
+ *   deno run -A tools/ibdal.ts <file> <line> <col> <newName>
  */
 
 import { Project, Node, SyntaxKind, type SourceFile } from "npm:ts-morph@24.0.0";
@@ -268,7 +268,7 @@ async function main() {
   if (args[0] === "--batch") {
     const batchFile = args[1];
     if (!batchFile) {
-      console.error("Usage: rename.ts --batch <renames.json>");
+      console.error("Usage: ibdal.ts --batch <renames.json>");
       Deno.exit(1);
     }
     renames = JSON.parse(await Deno.readTextFile(batchFile));
@@ -278,9 +278,9 @@ async function main() {
     renames = [{ file: args[0], old: args[1], new: args[2] }];
   } else {
     console.error("Usage:");
-    console.error("  rename.ts <file> <oldName> <newName>");
-    console.error("  rename.ts <file> <line> <col> <newName>");
-    console.error("  rename.ts --batch <renames.json>");
+    console.error("  ibdal.ts <file> <oldName> <newName>");
+    console.error("  ibdal.ts <file> <line> <col> <newName>");
+    console.error("  ibdal.ts --batch <renames.json>");
     Deno.exit(1);
   }
 
