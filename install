@@ -99,18 +99,19 @@ sync_config() {
   fi
 }
 
-sync_prompts() {
+sync_opencode() {
   local AGENT_DIR="$XDG_CONFIG_HOME/opencode/agent"
   local PLUGIN_DIR="$XDG_CONFIG_HOME/opencode/plugins"
   mkdir -p "$AGENT_DIR" "$PLUGIN_DIR"
 
+  # Symlink agent prompts (only iksir-* are OC agents, mayyaza-* are internal)
   for file in "$IKSIR_SRC"/prompts/iksir-*.md; do
-    [ -f "$file" ] && cp "$file" "$AGENT_DIR/$(basename "$file")"
+    [ -f "$file" ] && ln -sf "$file" "$AGENT_DIR/$(basename "$file")"
   done
 
-  for file in "$IKSIR_SRC"/plugins/*.ts; do
-    [ -f "$file" ] && cp "$file" "$PLUGIN_DIR/$(basename "$file")"
-  done
+  # Symlink the plugin
+  ln -sf "$IKSIR_SRC/plugins/iksir.ts" "$PLUGIN_DIR/iksir.ts"
+  info "linked opencode agents and plugin"
 }
 
 install_cli() {
@@ -276,7 +277,7 @@ cmd_install() {
   ensure_dirs
   ensure_source
   sync_config
-  sync_prompts
+  sync_opencode
   install_cli
 
   info "registering services..."
@@ -295,7 +296,7 @@ cmd_update() {
 
   stop_daemon
   sync_config
-  sync_prompts
+  sync_opencode
   install_cli
   register_services
 
@@ -325,6 +326,12 @@ cmd_uninstall() {
 
   rm -f "$BIN_DIR/iksir"
   info "removed CLI"
+
+  # Remove opencode symlinks
+  local AGENT_DIR="$XDG_CONFIG_HOME/opencode/agent"
+  local PLUGIN_DIR="$XDG_CONFIG_HOME/opencode/plugins"
+  rm -f "$AGENT_DIR"/iksir-*.md "$PLUGIN_DIR/iksir.ts" 2>/dev/null || true
+  info "removed opencode symlinks"
 
   echo ""
   info "uninstalled. data left in place:"
