@@ -1,0 +1,356 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ─── XDG directories ────────────────────────────────────────────────────────
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
+
+IKSIR_CONFIG="$XDG_CONFIG_HOME/iksir"
+IKSIR_DATA="$XDG_DATA_HOME/iksir"
+IKSIR_STATE="$XDG_STATE_HOME/iksir"
+BIN_DIR="$HOME/.local/bin"
+
+IKSIR_REPO="https://github.com/adiled/iksir.git"
+IKSIR_SRC="$IKSIR_DATA/src"
+
+AGENT_PORT="${IKSIR_AGENT_PORT:-4096}"
+MCP_PORT="${IKSIR_MCP_PORT:-3100}"
+
+OS="$(uname -s)"
+CMD="${1:-install}"
+IS_ROOT=$([ "$(id -u)" = "0" ] && echo true || echo false)
+
+# ─── helpers ─────────────────────────────────────────────────────────────────
+
+info()  { echo -e "\033[36m[iksir]\033[0m $*"; }
+warn()  { echo -e "\033[33m[iksir]\033[0m $*"; }
+error() { echo -e "\033[31m[iksir]\033[0m $*" >&2; }
+die()   { error "$@"; exit 1; }
+
+check_prereqs() {
+  [ -x "$(command -v git)" ]  || die "git required"
+
+  DENO_BIN="${DENO_BIN:-$(command -v deno 2>/dev/null || echo "$HOME/.deno/bin/deno")}"
+  [ -x "$DENO_BIN" ] || die "deno required — https://docs.deno.com/runtime/getting_started/installation/"
+
+  OPENCODE_BIN="${OPENCODE_BIN:-$(command -v opencode 2>/dev/null || echo "$HOME/.opencode/bin/opencode")}"
+  [ -x "$OPENCODE_BIN" ] || die "opencode required — https://opencode.ai"
+}
+
+ensure_dirs() {
+  mkdir -p "$IKSIR_CONFIG" "$IKSIR_DATA" "$IKSIR_STATE" "$BIN_DIR"
+}
+
+latest_tag() {
+  git -C "$IKSIR_SRC" ls-remote --tags --sort=-v:refname origin "v*" 2>/dev/null \
+    | head -1 | sed 's|.*refs/tags/||; s|\^{}||'
+}
+
+current_tag() {
+  git -C "$IKSIR_SRC" describe --tags --exact-match 2>/dev/null || echo "none"
+}
+
+ensure_source() {
+  if [ -d "$IKSIR_SRC/.git" ]; then
+    local LATEST CURRENT
+    LATEST=$(latest_tag)
+    CURRENT=$(current_tag)
+
+    if [ "$CMD" = "update" ] && [ "$CURRENT" = "$LATEST" ] && [ -n "$LATEST" ]; then
+      info "already at $LATEST — nothing to update"
+      exit 0
+    fi
+
+    if [ -n "$LATEST" ]; then
+      info "updating to $LATEST..."
+      git -C "$IKSIR_SRC" fetch --depth=1 origin tag "$LATEST"
+      git -C "$IKSIR_SRC" checkout "$LATEST" 2>/dev/null || git -C "$IKSIR_SRC" reset --hard "$LATEST"
+    else
+      info "updating to latest main..."
+      git -C "$IKSIR_SRC" fetch --depth=1 origin main
+      git -C "$IKSIR_SRC" reset --hard origin/main
+    fi
+  else
+    info "cloning to $IKSIR_SRC..."
+    git clone --depth=1 "$IKSIR_REPO" "$IKSIR_SRC"
+    cd "$IKSIR_SRC"
+    local LATEST
+    LATEST=$(latest_tag)
+    if [ -n "$LATEST" ]; then
+      git fetch --depth=1 origin tag "$LATEST"
+      git checkout "$LATEST" 2>/dev/null || true
+    fi
+  fi
+}
+
+sync_config() {
+  if [ ! -f "$IKSIR_CONFIG/iksir.json" ] && [ -f "$IKSIR_SRC/iksir.json.example" ]; then
+    cp "$IKSIR_SRC/iksir.json.example" "$IKSIR_CONFIG/iksir.json"
+    info "created $IKSIR_CONFIG/iksir.json from example"
+  fi
+  if [ ! -f "$IKSIR_CONFIG/AGENTS.md" ] && [ -f "$IKSIR_SRC/agents.md.example" ]; then
+    cp "$IKSIR_SRC/agents.md.example" "$IKSIR_CONFIG/AGENTS.md"
+    info "created $IKSIR_CONFIG/AGENTS.md from example"
+  fi
+  if [ ! -f "$IKSIR_SRC/.env" ] && [ -f "$IKSIR_SRC/.env.example" ]; then
+    cp "$IKSIR_SRC/.env.example" "$IKSIR_SRC/.env"
+    info "created .env from example"
+  fi
+}
+
+sync_prompts() {
+  local AGENT_DIR="$XDG_CONFIG_HOME/opencode/agent"
+  local PLUGIN_DIR="$XDG_CONFIG_HOME/opencode/plugins"
+  mkdir -p "$AGENT_DIR" "$PLUGIN_DIR"
+
+  for file in "$IKSIR_SRC"/prompts/iksir-*.md; do
+    [ -f "$file" ] && cp "$file" "$AGENT_DIR/$(basename "$file")"
+  done
+
+  for file in "$IKSIR_SRC"/plugins/*.ts; do
+    [ -f "$file" ] && cp "$file" "$PLUGIN_DIR/$(basename "$file")"
+  done
+}
+
+install_cli() {
+  cat > "$BIN_DIR/iksir" <<EOF
+#!/bin/bash
+exec "$DENO_BIN" run --allow-all --env="$IKSIR_SRC/.env" "$IKSIR_SRC/src/cli.ts" "\$@"
+EOF
+  chmod +x "$BIN_DIR/iksir"
+  info "installed $BIN_DIR/iksir"
+
+  if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
+    warn "$BIN_DIR is not on your PATH"
+    warn "  export PATH=\"$BIN_DIR:\$PATH\""
+  fi
+}
+
+# ─── systemd / launchd ──────────────────────────────────────────────────────
+
+env_block() {
+  cat <<EOF
+Environment=PATH=$(dirname "$DENO_BIN"):/usr/local/bin:/usr/bin:/bin
+Environment=DENO_DIR=$HOME/.cache/deno
+Environment=HOME=$HOME
+Environment=IKSIR_CONFIG_DIR=$IKSIR_CONFIG
+Environment=IKSIR_STATE_DIR=$IKSIR_DATA
+Environment=IKSIR_LOG_DIR=$IKSIR_STATE
+Environment=IKSIR_REPO_PATH=$IKSIR_SRC
+EOF
+}
+
+register_services() {
+  if [ "$OS" = "Linux" ]; then
+    register_systemd
+  else
+    die "unsupported OS: $OS (only Linux is supported)"
+  fi
+}
+
+register_systemd() {
+  local SERVICE_DIR SC
+  if $IS_ROOT; then
+    SERVICE_DIR="/etc/systemd/system"
+    SC="systemctl"
+  else
+    SERVICE_DIR="$HOME/.config/systemd/user"
+    SC="systemctl --user"
+    mkdir -p "$SERVICE_DIR"
+    if command -v loginctl &>/dev/null; then
+      loginctl enable-linger "$(whoami)" 2>/dev/null || true
+    fi
+  fi
+
+  local ENV_VARS
+  ENV_VARS=$(env_block)
+  local WM
+  $IS_ROOT && WM="multi-user.target" || WM="default.target"
+
+  # MCP server
+  cat > "$SERVICE_DIR/iksir-mcp.service" <<EOF
+[Unit]
+Description=Iksir MCP Server
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=$IKSIR_SRC
+ExecStart=$DENO_BIN run --allow-all --env=.env src/mcp/serve.ts --port=$MCP_PORT
+Restart=on-failure
+RestartSec=5
+$ENV_VARS
+
+[Install]
+WantedBy=$WM
+EOF
+
+  # Agent runtime
+  cat > "$SERVICE_DIR/iksir-agent.service" <<EOF
+[Unit]
+Description=Iksir Agent Runtime (OpenCode)
+After=network.target iksir-mcp.service
+Requires=iksir-mcp.service
+
+[Service]
+Type=simple
+WorkingDirectory=$IKSIR_SRC
+ExecStart=$OPENCODE_BIN serve --port $AGENT_PORT --hostname 0.0.0.0
+Restart=on-failure
+RestartSec=10
+Environment=HOME=$HOME
+
+[Install]
+WantedBy=$WM
+EOF
+
+  # Daemon
+  cat > "$SERVICE_DIR/iksir.service" <<EOF
+[Unit]
+Description=Iksir
+After=network.target iksir-agent.service
+Requires=iksir-agent.service
+
+[Service]
+Type=simple
+WorkingDirectory=$IKSIR_SRC
+ExecStart=$DENO_BIN run --allow-all --env=.env src/main.ts
+Restart=on-failure
+RestartSec=10
+$ENV_VARS
+
+[Install]
+WantedBy=$WM
+EOF
+
+  $SC daemon-reload
+  $SC enable iksir-mcp iksir-agent iksir 2>/dev/null
+  info "registered systemd services"
+}
+
+start_daemon() {
+  local SC="systemctl"
+  $IS_ROOT || SC="systemctl --user"
+
+  $SC restart iksir-mcp iksir-agent iksir
+  sleep 2
+  if $SC is-active --quiet iksir; then
+    info "running"
+  else
+    warn "iksir may not have started — check logs"
+  fi
+}
+
+stop_daemon() {
+  local SC="systemctl"
+  $IS_ROOT || SC="systemctl --user"
+  $SC stop iksir iksir-agent iksir-mcp 2>/dev/null || true
+}
+
+# ─── commands ────────────────────────────────────────────────────────────────
+
+print_status() {
+  echo ""
+  info "done."
+  echo "  config: $IKSIR_CONFIG/"
+  echo "  data:   $IKSIR_DATA/"
+  echo "  state:  $IKSIR_STATE/"
+  echo "  source: $IKSIR_SRC/"
+  echo ""
+  if $IS_ROOT; then
+    echo "  logs:   journalctl -u iksir -f"
+    echo "  stop:   systemctl stop iksir iksir-agent iksir-mcp"
+  else
+    echo "  logs:   journalctl --user -u iksir -f"
+    echo "  stop:   systemctl --user stop iksir iksir-agent iksir-mcp"
+  fi
+  echo ""
+  echo "  First time? Edit $IKSIR_SRC/.env then: iksir start"
+  echo ""
+}
+
+cmd_install() {
+  info "installing..."
+  check_prereqs
+  ensure_dirs
+  ensure_source
+  sync_config
+  sync_prompts
+  install_cli
+
+  info "registering services..."
+  register_services
+
+  info "starting..."
+  start_daemon
+  print_status
+}
+
+cmd_update() {
+  info "updating..."
+  check_prereqs
+  ensure_dirs
+  ensure_source
+
+  stop_daemon
+  sync_config
+  sync_prompts
+  install_cli
+  register_services
+
+  info "restarting..."
+  start_daemon
+  print_status
+}
+
+cmd_uninstall() {
+  info "uninstalling..."
+
+  stop_daemon
+
+  local SC="systemctl"
+  local SERVICE_DIR
+  if $IS_ROOT; then
+    SERVICE_DIR="/etc/systemd/system"
+  else
+    SC="systemctl --user"
+    SERVICE_DIR="$HOME/.config/systemd/user"
+  fi
+
+  $SC disable iksir iksir-agent iksir-mcp 2>/dev/null || true
+  rm -f "$SERVICE_DIR"/iksir*.service
+  $SC daemon-reload 2>/dev/null || true
+  info "removed systemd services"
+
+  rm -f "$BIN_DIR/iksir"
+  info "removed CLI"
+
+  echo ""
+  info "uninstalled. data left in place:"
+  echo "  $IKSIR_CONFIG  $IKSIR_DATA  $IKSIR_STATE"
+}
+
+# ─── dispatch ────────────────────────────────────────────────────────────────
+
+case "$CMD" in
+  install)   cmd_install ;;
+  update)    cmd_update ;;
+  uninstall) cmd_uninstall ;;
+  *)
+    echo "Usage: curl -fsSL https://raw.githubusercontent.com/adiled/iksir/main/install | bash"
+    echo "       curl ... | bash -s update"
+    echo "       curl ... | bash -s uninstall"
+    echo ""
+    echo "  install    — clone, register services, start (default)"
+    echo "  update     — pull latest, re-register, restart"
+    echo "  uninstall  — stop, remove services, remove CLI"
+    echo ""
+    echo "Environment:"
+    echo "  IKSIR_AGENT_PORT   Agent port (default: 4096)"
+    echo "  IKSIR_MCP_PORT     MCP port (default: 3100)"
+    echo "  DENO_BIN            Path to deno binary"
+    echo "  OPENCODE_BIN        Path to opencode binary"
+    exit 1
+    ;;
+esac

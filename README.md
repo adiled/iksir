@@ -15,16 +15,12 @@ The modern world has forgotten the scent of real alchemy - the sharp bite of sul
 ---
 
 ```bash
-git clone https://github.com/adiled/iksir.git ~/.iksir/sanctuary
-cd ~/.iksir/sanctuary
-./kindle
-iksir consecrate
-iksir awaken
+curl -fsSL https://raw.githubusercontent.com/adiled/iksir/main/install | bash
 ```
 
 Prerequisites: [Deno](https://deno.com), [OpenCode](https://opencode.ai)
 
-`./kindle` prepares the workshop. `iksir consecrate` sanctifies the vessels - binding Telegram, Linear, and GitHub to the Great Work. `iksir awaken` breathes life into the elixir.
+The kindling ritual clones the source, creates XDG directories, copies sacred templates, installs the `iksir` CLI to `~/.local/bin/`, registers daemon services, and consecrates agent incantations. Edit `~/.local/share/iksir/src/.env` to bind your keys, then `iksir start`.
 
 ```bash
 iksir divine            # divine the state of the Great Work
@@ -33,7 +29,12 @@ iksir rekindle mcp      # rekindle just the MCP crucible
 iksir verify            # verify the formulae and runes
 ```
 
-The kindling ritual creates XDG directories, copies sacred templates, installs the `iksir` CLI to `~/.local/bin/`, generates daemon services, and consecrates agent incantations. Run `./kindle` again after pulling new transmutations.
+Update or remove with:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/adiled/iksir/main/install | bash -s update
+curl -fsSL https://raw.githubusercontent.com/adiled/iksir/main/install | bash -s uninstall
+```
 
 ```
 ~/.config/iksir/           Sacred vessels (iksir.yaml, AGENTS.md)
