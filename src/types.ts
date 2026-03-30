@@ -321,7 +321,8 @@ export interface SualMuallaq {
   sessionID: string;
   huwiyyatMurshid: string;
   questions: MaalumatSual[];
-  telegramMessageId?: number;
+  /** Provider message ID (for editing/referencing the sent question) */
+  huwiyyatRisalaMuqaddim?: number;
   createdAt: string;
 }
 
@@ -654,6 +655,61 @@ export interface RasulKharij {
 
   /** Reverse lookup: find murshid identifier by provider + channelId. */
   hallJalsaBilQanat(provider: string, channelId: string): string | null;
+}
+
+
+// ─── Inbound transport abstraction ────────────────────────────────────────────
+
+/**
+ * Normalized inbound message — what the transport emits after
+ * converting provider-specific events (Telegram messages, CLI input, etc.).
+ */
+export type RisalaDakhila =
+  | { naw: "murshid"; huwiyya: string; nass: string }
+  | { naw: "irsal"; nass: string; huwiyyatRisala?: number }
+  | { naw: "amr"; amr: string; wusut: string[] }
+  | { naw: "jawab_sual"; huwiyyatSual: string; taamiyya: string }
+  | { naw: "idkhal_khass_sual"; huwiyyatMurshid: string; huwiyyatSual: string }
+  | { naw: "ikhtiyar_munadi"; miftah: string }
+  | { naw: "khass" };
+
+/**
+ * Abstract interactive option — the transport renders these
+ * in its native format (Telegram inline keyboard, CLI numbered list, etc.).
+ */
+export interface KhiyarTafauli {
+  /** Display text */
+  nass: string;
+  /** Callback key returned on selection */
+  miftah: string;
+}
+
+/**
+ * Full messenger interface — extends RasulKharij with inbound lifecycle
+ * and interactive rendering. This is what main.ts depends on.
+ */
+export interface Rasul extends RasulKharij {
+  /** Start listening for inbound messages */
+  baddaa(): Promise<void>;
+
+  /** Stop listening */
+  awqaf(): void;
+
+  /** Register handler for normalized inbound messages */
+  indaRisala(handler: (risala: RisalaDakhila) => Promise<void>): void;
+
+  /**
+   * Send a question with interactive options.
+   * Returns a provider message ID for later reference (editing, etc.), or null.
+   */
+  arsalaSualBiKhiyarat(
+    channel: QanatRisala,
+    nass: string,
+    khiyarat: KhiyarTafauli[],
+  ): Promise<number | null>;
+
+  /** Validate connectivity (token check, health probe, etc.) */
+  tahaqqaq(): Promise<boolean>;
 }
 
 

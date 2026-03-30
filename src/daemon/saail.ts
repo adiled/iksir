@@ -30,6 +30,7 @@ import type {
   TasnifSual,
   SualMuallaq,
   RasulKharij,
+  KhiyarTafauli,
 } from "../types.ts";
 
 
@@ -61,8 +62,8 @@ export class Saail {
   }
 
   /**
-   * Generate a short callback ID (8 chars) for Telegram callback_data
-   * and register the mapping to the full question ID.
+   * Generate a short callback ID (8 chars) and register the mapping
+   * to the full question ID.
    */
   ikhtisarIdIstijaba(questionId: string): string {
     const short = questionId.replace(/-/g, "").slice(0, 8);
@@ -226,7 +227,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
   }
 
   /**
-   * Format a question for Telegram display.
+   * Format a question for display (markdown).
    */
   nassaqRisalatSual(question: MaalumatSual, huwiyyatMurshid: string): string {
     let msg = `**${question.header}** (${huwiyyatMurshid})\n\n`;
@@ -250,46 +251,39 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
   }
 
   /**
-   * Build inline keyboard data for transport-specific rendering.
-   * Public so main.ts can build Telegram keyboards.
+   * Build abstract interactive options for a question.
+   * Transport adapters convert these into native controls
+   * (Telegram inline keyboard, CLI numbered list, etc.).
+   *
+   * Callback keys use short 8-char IDs + truncated labels to stay
+   * compact across transports.
    */
-  banaMafatihSatriyya(
+  banaKhiyarat(
     questionId: string,
     question: MaalumatSual
-  ): { inline_keyboard: Array<Array<{ text: string; callback_data: string }>> } {
-    const rows: Array<Array<{ text: string; callback_data: string }>> = [];
-    /**
-     * Use short 8-char ID to stay within Telegram's 64-byte callback_data limit.
-     * Format: "q:{8}:{label}" — 11 chars overhead, leaving 53 for label.
-     */
+  ): KhiyarTafauli[] {
     const shortId = this.ikhtisarIdIstijaba(questionId);
-    const maxLabelLen = 64 - 2 - shortId.length - 1;
+    /** Keep callback keys compact — 53 chars for label after "q:{8}:" prefix */
+    const maxLabelLen = 53;
 
-    for (const opt of question.options) {
-      const shortLabel = opt.label.slice(0, maxLabelLen);
-      rows.push([
-        {
-          text: opt.label,
-          callback_data: `q:${shortId}:${shortLabel}`,
-        },
-      ]);
-    }
+    const khiyarat: KhiyarTafauli[] = question.options.map((opt) => ({
+      nass: opt.label,
+      miftah: `q:${shortId}:${opt.label.slice(0, maxLabelLen)}`,
+    }));
 
     if (question.custom !== false) {
-      rows.push([
-        {
-          text: "Type answer...",
-          callback_data: `q:${shortId}:__custom__`,
-        },
-      ]);
+      khiyarat.push({
+        nass: "Type answer...",
+        miftah: `q:${shortId}:__custom__`,
+      });
     }
 
-    return { inline_keyboard: rows };
+    return khiyarat;
   }
 
   /**
-   * Handle a callback query (button press) for a question.
-   * Called from main.ts when Telegram callback matches question pattern.
+   * Handle a callback (button press) for a question.
+   * Called when transport reports a question answer via callback key.
    */
   async aalajIstijabaZirrSual(
     questionId: string,
@@ -453,7 +447,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
             header: dbQ.sual.slice(0, 30),
             options: options.map(label => ({ label, description: "" })),
           }],
-          telegramMessageId: dbQ.huwiyyatRisala ?? undefined,
+          huwiyyatRisalaMuqaddim: dbQ.huwiyyatRisala ?? undefined,
           createdAt: dbQ.unshiaFi,
         };
         

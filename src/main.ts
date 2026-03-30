@@ -6,7 +6,7 @@
  * Architecture:
  * - MudirJalasat: Manages murshid OpenCode sessions
  * - Munaffidh: Executes PM-MCP tool calls via Linear/GitHub APIs
- * - Telegram: Routes human messages to murshid session
+ * - Rasul: Routes human messages to/from murshid sessions (transport-agnostic)
  * - KeepAlive: Polls for external changes, feeds to murshid
  *
  * Usage:
@@ -29,7 +29,7 @@ import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, haddathaHuwiyyatRisalaSual }
 import { createOpenCodeClient } from "./opencode/client.ts";
 import { anshaaNtfyAmil } from "./notifications/ntfy.ts";
 import { anshaaTelegramAmil } from "./notifications/telegram.ts";
-import { anshaaTelegramRasul, type TelegramMessenger } from "./notifications/messenger.ts";
+import { anshaaTelegramRasul } from "./notifications/messenger.ts";
 import { createLinearClient } from "./linear/client.ts";
 import { createGitHubClient } from "./github/gh.ts";
 import { istadaaKatib } from "./daemon/katib.ts";
@@ -39,14 +39,13 @@ import { istadaaArraf } from "./daemon/arraf.ts";
 import { awqadaHayat, type NatijaSeyana } from "./daemon/hayat.ts";
 import { istadaaSaail } from "./daemon/saail.ts";
 import { istadaaRaqib } from "./daemon/raqib.ts";
-import type { TasmimIksir, TaaliqMuraja, JalsatMurshid, RisalaMutaba, HadathSualMatlub, MaalumatSual, SualMuallaq, MutabiWasfa } from "./types.ts";
+import type { TasmimIksir, Rasul, RisalaDakhila, TaaliqMuraja, JalsatMurshid, RisalaMutaba, HadathSualMatlub, MaalumatSual, SualMuallaq, MutabiWasfa } from "./types.ts";
 
 interface SiyaqKhadim {
   tasmim: TasmimIksir;
   opencode: ReturnType<typeof createOpenCodeClient>;
   ntfy: ReturnType<typeof anshaaNtfyAmil>;
-  telegram: ReturnType<typeof anshaaTelegramAmil>;
-  rasul: TelegramMessenger;
+  rasul: Rasul;
   mutabiWasfa: MutabiWasfa;
   github: ReturnType<typeof createGitHubClient>;
   mudirJalasat: ReturnType<typeof istadaaKatib>;
@@ -73,17 +72,17 @@ async function tahaqqaqIttisaal(ctx: SiyaqKhadim): Promise<boolean> {
     allGood = false;
   }
 
-  if (ctx.tasmim.isharat.telegram.mufattah) {
-    process.stdout.write("  Telegram bot... ");
-    const telegramValid = await ctx.telegram.tahaqqaqToken();
-    if (telegramValid) {
+  if (ctx.rasul.mumakkan()) {
+    process.stdout.write("  Messenger... ");
+    const messengerValid = await ctx.rasul.tahaqqaq();
+    if (messengerValid) {
       console.log("✓");
     } else {
-      console.log("✗ (invalid token)");
+      console.log("✗ (validation failed)");
       allGood = false;
     }
   } else {
-    console.log("  Telegram bot... (disabled)");
+    console.log("  Messenger... (disabled)");
   }
 
   if (ctx.tasmim.isharat.ntfy.mufattah) {
@@ -155,7 +154,7 @@ async function addaIsharat(ctx: SiyaqKhadim): Promise<void> {
     await logger.akhbar("main", `Received ${signal}, shutting down...`);
 
     ctx.mutahakkimIlgha.abort();
-    ctx.telegram.stopPolling();
+    ctx.rasul.awqaf();
     ctx.munaffidh.awqafMuaalaja();
     ctx.raqib.awqaf();
 
@@ -245,12 +244,11 @@ async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
 
   await addaIsharat(ctx);
 
-  if (ctx.tasmim.isharat.telegram.mufattah) {
-    addaMualijatTelegram(ctx);
-    ctx.telegram.startPolling().catch(async (error) => {
-      await logger.sajjalKhata("telegram", "Polling error", { error: String(error) });
-    });
-  }
+  /** Wire inbound message routing and start the messenger */
+  rabatRisalaDakhila(ctx);
+  await ctx.rasul.baddaa().catch(async (error) => {
+    await logger.sajjalKhata("messenger", "Inbound start error", { error: String(error) });
+  });
 
   ctx.munaffidh.badaaMuaalaja(ctx.mutahakkimIlgha.signal).catch(async (error) => {
     await logger.sajjalKhata("tool-executor", "Processing error", { error: String(error) });
@@ -275,282 +273,187 @@ async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
   }
 }
 
-function addaMualijatTelegram(ctx: SiyaqKhadim): void {
-  ctx.telegram.onMessage(async (message) => {
-    if (!message.text) return;
+/**
+ * Wire inbound message routing — ctx.rasul.indaRisala() → business logic.
+ * The Rasul adapter (messenger.ts) handles transport-specific parsing and
+ * emits normalized RisalaDakhila events.
+ */
+function rabatRisalaDakhila(ctx: SiyaqKhadim): void {
+  ctx.rasul.indaRisala(async (risala: RisalaDakhila) => {
+    switch (risala.naw) {
+      case "murshid": {
+        /** Message from a murshid topic */
+        const { huwiyya, nass } = risala;
 
-    const text = message.text.trim();
-    const topicId = ctx.telegram.jalabRisalaTopicId(message);
-    const isGroupMessage = ctx.telegram.isGroupMessage(message);
-    const isPrivateMessage = ctx.telegram.isPrivateMessage(message);
-    const isDispatchTopic = ctx.telegram.isDispatchTopic(message);
-
-    await logger.akhbar("telegram", `Received: ${text.slice(0, 100)}`, {
-      topicId,
-      isGroupMessage,
-      isPrivateMessage,
-      isDispatchTopic,
-    });
-
-    if (isPrivateMessage) {
-      await aalajRisalaKhassa(ctx, message);
-      return;
-    }
-
-    if (!isGroupMessage) {
-      await logger.haDHHir("telegram", "Message from unknown chat type");
-      return;
-    }
-
-    if (isDispatchTopic) {
-      await aalajRisalaMawduu(ctx, text, message.message_id);
-      return;
-    }
-
-    if (topicId) {
-      /** Resolve murshid from channel */
-      const murshid = ctx.mudirJalasat.wajadaMurshidBiQanat("telegram", String(topicId));
-
-      if (murshid && ctx.sail.huwaYantazirIdkhal(murshid.huwiyya)) {
-        const handled = await ctx.sail.aalajJawabKhass(murshid.huwiyya, text);
-        if (handled) {
-          await ctx.rasul.send({ murshid: murshid.huwiyya }, "Answer submitted.");
-          return;
-        }
-      }
-      
-      if (murshid) {
-        await logger.akhbar("telegram", `Routing to murshid ${murshid.huwiyya} via topic ${topicId}`);
-        
-        const success = await ctx.mudirJalasat.arsalaIlaMurshidById(murshid.huwiyya, text);
-        if (!success) {
-          await ctx.telegram.arsalaIlaMurshidTopic(
-            topicId,
-            `Failed to send message to murshid ${murshid.huwiyya}.`
-          );
-        }
-        return;
-      }
-      
-      if (topicId === 1) {
-        await ctx.telegram.arsalaRisala(
-          "Use the **Dispatch** topic to send Linear URLs and spawn murshids.",
-          { topicId: 1, chatId: ctx.telegram.getGroupId(), parseMode: "Markdown" }
-        );
-      } else {
-        await ctx.telegram.arsalaRisala(
-          "This topic is not linked to an active murshid.",
-          { topicId, chatId: ctx.telegram.getGroupId() }
-        );
-      }
-      return;
-    }
-
-    await logger.haDHHir("telegram", "Group message without topic ID");
-  });
-
-  ctx.telegram.onCallback(async (query) => {
-    await logger.akhbar("telegram", `Callback: ${query.data}`);
-
-    if (query.data && ctx.sail.huwaIstijabaZirrSual(query.data)) {
-      const parsed = ctx.sail.hallalIstijabaZirrSual(query.data);
-      if (parsed) {
-        if (parsed.selectedLabel === "__custom__") {
-          /** Resolve murshid from the topic */
-          const topicId = query.message?.message_thread_id;
-          const murshid = topicId
-            ? ctx.mudirJalasat.wajadaMurshidBiQanat("telegram", String(topicId))
-            : null;
-          if (murshid) {
-            await ctx.sail.allamIntizarIdkhal(murshid.huwiyya, parsed.questionId);
-            await ctx.telegram.answerCallback(query.id, "Type your answer as a reply...");
-          } else {
-            await ctx.telegram.answerCallback(query.id, "Cannot resolve murshid for custom input");
+        /** Check if waiting for custom question input */
+        if (ctx.sail.huwaYantazirIdkhal(huwiyya)) {
+          const handled = await ctx.sail.aalajJawabKhass(huwiyya, nass);
+          if (handled) {
+            await ctx.rasul.send({ murshid: huwiyya }, "Answer submitted.");
+            return;
           }
+        }
+
+        /** Route to murshid session */
+        await logger.akhbar("inbound", `Routing to murshid ${huwiyya}`);
+        const success = await ctx.mudirJalasat.arsalaIlaMurshidById(huwiyya, nass);
+        if (!success) {
+          await ctx.rasul.send({ murshid: huwiyya }, `Failed to send message to murshid.`);
+        }
+        break;
+      }
+
+      case "irsal": {
+        /** Dispatch topic message — ticket URL or free text */
+        const { nass, huwiyyatRisala } = risala;
+
+        /** Check for ticket URLs first */
+        const ticketUrlMatch = nass.match(ctx.mutabiWasfa.getUrlPattern());
+        if (ticketUrlMatch) {
+          await aalajRabitWasfa(ctx, ticketUrlMatch[0], nass);
           return;
         }
 
-        /** Handle option selection */
-        const success = await ctx.sail.aalajIstijabaZirrSual(
-          parsed.questionId,
-          parsed.selectedLabel
-        );
-        
-        if (success) {
-          await ctx.telegram.answerCallback(query.id, `Selected: ${parsed.selectedLabel}`);
+        /** Route to dispatcher for intent resolution */
+        const result = await ctx.munadi.aalajRisalaIrsal({
+          source: "telegram",
+          text: nass,
+          messageId: huwiyyatRisala,
+        });
+
+        if (result.tuulija) {
+          if (result.buttons) {
+            const khiyarat = result.buttons.map((b) => ({ nass: b.text, miftah: b.data }));
+            await ctx.rasul.arsalaSualBiKhiyarat("dispatch", result.radd ?? "Choose:", khiyarat);
+          } else if (result.radd) {
+            await ctx.rasul.send("dispatch", result.radd);
+          }
+          if (result.khata) {
+            await ctx.rasul.send("dispatch", `Error: ${result.khata}`);
+          }
         } else {
-          await ctx.telegram.answerCallback(query.id, "Question expired or already answered");
+          await ctx.rasul.send("dispatch", "Send a ticket URL to spawn a murshid, or use /help for commands.");
         }
-        return;
+        break;
       }
-    }
 
-    if (query.data && (
-      query.data.startsWith("select:") ||
-      query.data.startsWith("parent:") ||
-      query.data.startsWith("switch:") ||
-      query.data === "cancel"
-    )) {
-      const result = await ctx.munadi.aalajIstijabaZirr("telegram", query.data);
-      await ctx.telegram.answerCallback(query.id, "Received!");
-      if (result.tuulija) {
-        if (result.buttons) {
-          const keyboard = {
-            inline_keyboard: result.buttons.map((b) => [{ text: b.text, callback_data: b.data }]),
-          };
-          await ctx.telegram.sendToDispatch(result.radd ?? "Choose:", {
-            parseMode: "Markdown",
-            keyboard,
-          });
-        } else if (result.radd) {
-          await ctx.telegram.sendToDispatch(result.radd, { parseMode: "Markdown" });
-        }
-        if (result.khata) {
-          await ctx.telegram.sendToDispatch(`Error: ${result.khata}`);
-        }
+      case "amr": {
+        /** Slash command from dispatch topic */
+        await aalajAmrDakhil(ctx, risala.amr, risala.wusut);
+        break;
       }
-      return;
-    }
 
-    await ctx.telegram.answerCallback(query.id, "Received!");
+      case "jawab_sual": {
+        /** Question button selection */
+        const { huwiyyatSual, taamiyya } = risala;
+        /** huwiyyatSual is "short:{8chars}" — extract and resolve */
+        const shortId = huwiyyatSual.replace("short:", "");
+        const questionId = ctx.sail.hallaIdIstijaba(shortId);
+        if (questionId) {
+          await ctx.sail.aalajIstijabaZirrSual(questionId, taamiyya);
+        }
+        break;
+      }
 
-    /** Forward to murshid as a decision */
-    const murshid = ctx.mudirJalasat.wajadaMurshidFaail();
-    if (murshid && query.data) {
-      await ctx.mudirJalasat.arsalaIlaMurshid(
-        `Al-Kimyawi selected option: ${query.data}`
-      );
+      case "idkhal_khass_sual": {
+        /** Custom input requested for question */
+        const { huwiyyatMurshid, huwiyyatSual } = risala;
+        const shortId = huwiyyatSual.replace("short:", "");
+        const questionId = ctx.sail.hallaIdIstijaba(shortId);
+        if (questionId) {
+          await ctx.sail.allamIntizarIdkhal(huwiyyatMurshid, questionId);
+        }
+        break;
+      }
+
+      case "ikhtiyar_munadi": {
+        /** Munadi button (select/parent/switch/cancel) */
+        const result = await ctx.munadi.aalajIstijabaZirr("telegram", risala.miftah);
+        if (result.tuulija) {
+          if (result.buttons) {
+            const khiyarat = result.buttons.map((b) => ({ nass: b.text, miftah: b.data }));
+            await ctx.rasul.arsalaSualBiKhiyarat("dispatch", result.radd ?? "Choose:", khiyarat);
+          } else if (result.radd) {
+            await ctx.rasul.send("dispatch", result.radd);
+          }
+          if (result.khata) {
+            await ctx.rasul.send("dispatch", `Error: ${result.khata}`);
+          }
+        }
+        break;
+      }
+
+      case "khass": {
+        /** Private chat — show sessions overview */
+        await aalajRisalaKhassa(ctx);
+        break;
+      }
     }
   });
 }
 
 /**
- * Handle private chat messages - list sessions, direct to group
+ * Handle private chat messages - list sessions overview
  */
-async function aalajRisalaKhassa(
-  ctx: SiyaqKhadim,
-  _message: { text?: string; message_id: number }
-): Promise<void> {
+async function aalajRisalaKhassa(ctx: SiyaqKhadim): Promise<void> {
   const sessions = ctx.mudirJalasat.wajadaJalasatMurshid();
-  
+
   let response = "**Sessions**\n\n";
-  
+
   if (sessions.length === 0) {
     response += "No active murshid sessions.\n\n";
   } else {
     for (const session of sessions) {
-      const statusEmoji = session.hala === "fail" ? "🟢" : 
-                          session.hala === "masdud" ? "🔴" : 
-                          session.hala === "muntazir" ? "🟡" : "⚪";
+      const statusEmoji =
+        session.hala === "fail" ? "🟢" :
+        session.hala === "masdud" ? "🔴" :
+        session.hala === "muntazir" ? "🟡" : "⚪";
       response += `${statusEmoji} **${session.huwiyya}** (${session.naw})\n`;
       response += `   ${session.unwan}\n`;
       if (Object.keys(session.channels).length > 0) {
-        const channelStr = Object.entries(session.channels).map(([p, id]) => `${p}:${id}`).join(", ");
+        const channelStr = Object.entries(session.channels)
+          .map(([p, id]) => `${p}:${id}`)
+          .join(", ");
         response += `   Channels: ${channelStr}\n`;
       }
       response += "\n";
     }
   }
-  
-  if (ctx.telegram.isGroupMode()) {
-    response += "---\n";
-    response += "Use the **Telegram group for operations:\n";
-    response += "• **Dispatch** topic: Send ticket URLs to spawn murshids\n";
-    response += "• **Murshid topics**: Converse with active sessions\n";
-  }
-  
-  await ctx.telegram.arsalaRisala(response, { 
-    parseMode: "Markdown",
-    chatId: ctx.telegram.getChatId(),
-  });
+
+  response += "---\n";
+  response += "Use **Dispatch** to send ticket URLs and spawn murshids.\n";
+  response += "Use **murshid topics** to converse with active sessions.\n";
+
+  await ctx.rasul.send("kimyawi", response);
 }
 
 /**
- * Handle messages in the Dispatch topic - Linear URLs, commands
+ * Handle slash commands from dispatch topic
  */
-async function aalajRisalaMawduu(
-  ctx: SiyaqKhadim,
-  text: string,
-  messageId: number
-): Promise<void> {
-  /** Check for ticket URLs first */
-  const ticketUrlMatch = text.match(ctx.mutabiWasfa.getUrlPattern());
-  if (ticketUrlMatch) {
-    await aalajRabitWasfa(ctx, ticketUrlMatch[0], text);
-    return;
-  }
-
-  if (text.startsWith("/")) {
-    await aalajAmrMunadi(ctx, text);
-    return;
-  }
-
-  ctx.munadi.aalajRisalaIrsal({
-    source: "telegram",
-    text,
-    messageId,
-  }).then(async (result) => {
-    if (result.tuulija) {
-      if (result.radd) {
-        await ctx.telegram.sendToDispatch(result.radd, { parseMode: "Markdown" });
-      }
-      if (result.khata) {
-        await ctx.telegram.sendToDispatch(`Error: ${result.khata}`);
-      }
-      if (result.buttons) {
-        const keyboard = {
-          inline_keyboard: result.buttons.map((b) => [{ text: b.text, callback_data: b.data }]),
-        };
-        await ctx.telegram.sendToDispatch(result.radd ?? "Choose:", {
-          parseMode: "Markdown",
-          keyboard,
-        });
-      }
-      return;
-    }
-
-    await ctx.telegram.sendToDispatch(
-      "Send a ticket URL to spawn an murshid, or use /help for commands."
-    );
-  }).catch(async (error) => {
-    await logger.sajjalKhata("main", "Dispatch handler failed", { error: String(error) });
-    await ctx.telegram.sendToDispatch("Internal error processing your message.");
-  });
-}
-
-/**
- * Handle slash commands in Dispatch topic
- */
-async function aalajAmrMunadi(ctx: SiyaqKhadim, text: string): Promise<void> {
-  const [command, ...args] = text.slice(1).split(" ");
-
-  switch (command.toLowerCase()) {
+async function aalajAmrDakhil(ctx: SiyaqKhadim, amr: string, wusut: string[]): Promise<void> {
+  switch (amr.toLowerCase()) {
     case "start":
-      if (args.length === 0) {
-        await ctx.telegram.sendToDispatch(
-          "**Usage:** /start <ticket-url>\n\nProvide a ticket, project, or milestone URL.",
-          { parseMode: "Markdown" }
-        );
+      if (wusut.length === 0) {
+        await ctx.rasul.send("dispatch", "**Usage:** /start <ticket-url>\n\nProvide a ticket, project, or milestone URL.");
       } else {
-        await aalajRabitWasfa(ctx, args[0], args.slice(1).join(" "));
+        await aalajRabitWasfa(ctx, wusut[0], wusut.slice(1).join(" "));
       }
       break;
 
     case "status":
     case "sessions": {
-      /** Delegate to dispatcher — single source of truth for status rendering */
       const result = await ctx.munadi.aalajRisalaIrsal({
         source: "telegram",
-        text: `/${command}`,
+        text: `/${amr}`,
       });
       if (result.radd) {
-        await ctx.telegram.sendToDispatch(result.radd, { parseMode: "Markdown" });
+        await ctx.rasul.send("dispatch", result.radd);
       }
       break;
     }
 
     case "help":
-      await ctx.telegram.sendToDispatch(`**Commands**
+      await ctx.rasul.send("dispatch", `**Commands**
 
 /start <url> - Start murshid for ticket URL
 /status - Show active murshid status
@@ -560,21 +463,21 @@ async function aalajAmrMunadi(ctx: SiyaqKhadim, text: string): Promise<void> {
 **Usage**
 Send a ticket URL to start working on a ticket/project.
 Each murshid gets its own topic for conversation.
-`, { parseMode: "Markdown" });
+`);
       break;
 
     default:
-      await ctx.telegram.sendToDispatch(`Unknown command: /${command}\n\nType /help for available commands.`);
+      await ctx.rasul.send("dispatch", `Unknown command: /${amr}\n\nType /help for available commands.`);
   }
 }
 
 async function aalajRabitWasfa(ctx: SiyaqKhadim, url: string, additionalContext: string): Promise<void> {
-  await ctx.telegram.sendToDispatch(`Analyzing: ${url}`);
+  await ctx.rasul.send("dispatch", `Analyzing: ${url}`);
 
   /** Parse URL to extract ticket ID */
   const parsed = ctx.mutabiWasfa.parseUrl(url);
   if (!parsed) {
-    await ctx.telegram.sendToDispatch("Could not parse ticket URL.");
+    await ctx.rasul.send("dispatch", "Could not parse ticket URL.");
     return;
   }
 
@@ -599,9 +502,9 @@ async function aalajRabitWasfa(ctx: SiyaqKhadim, url: string, additionalContext:
   );
 
   if (result.khata) {
-    await ctx.telegram.sendToDispatch(result.khata);
+    await ctx.rasul.send("dispatch", result.khata);
   } else if (result.radd) {
-    await ctx.telegram.sendToDispatch(result.radd, { parseMode: "Markdown" });
+    await ctx.rasul.send("dispatch", result.radd);
   }
 }
 
@@ -659,11 +562,12 @@ This PR has been merged. You can now:
 
 Query Linear for the ticket's blocking relations to determine next slice.`);
 
-  if (ctx.telegram.mumakkan()) {
-    const stackedMsg = stackedPRs.length > 0 
+  if (ctx.rasul.mumakkan()) {
+    const stackedMsg = stackedPRs.length > 0
       ? `\n\n${stackedPRs.length} stacked PR(s) may need re-push.`
       : "";
-    await ctx.telegram.arsalaRisala(
+    await ctx.rasul.send(
+      "dispatch",
       `✅ PR #${pr.raqamRisala} merged\n\nTicket: ${pr.huwiyyatWasfa}\nEpic: ${session.huwiyya}\n\nNext slice may now be disclosed.${stackedMsg}`
     );
   }
@@ -846,20 +750,20 @@ async function aalajIktimalSeyana(
     summary += "\n";
   }
 
-  if (ctx.telegram.mumakkan()) {
-    /** Shorter version for Telegram */
-    let telegramMsg = "🌙 Overnight Maintenance\n\n";
-    if (merged.length > 0) telegramMsg += `✅ Merged: ${merged.length} branches\n`;
-    if (upToDate.length > 0) telegramMsg += `✓ Up-to-date: ${upToDate.length}\n`;
+  if (ctx.rasul.mumakkan()) {
+    /** Shorter version for messenger */
+    let msg = "🌙 Overnight Maintenance\n\n";
+    if (merged.length > 0) msg += `✅ Merged: ${merged.length} branches\n`;
+    if (upToDate.length > 0) msg += `✓ Up-to-date: ${upToDate.length}\n`;
     if (conflicts.length > 0) {
-      telegramMsg += `⚠️ Conflicts: ${conflicts.length}\n`;
+      msg += `⚠️ Conflicts: ${conflicts.length}\n`;
       for (const r of conflicts) {
-        telegramMsg += `  - ${r.huwiyya}: ${r.taarudat?.length ?? 0} file(s)\n`;
+        msg += `  - ${r.huwiyya}: ${r.taarudat?.length ?? 0} file(s)\n`;
       }
     }
-    if (errors.length > 0) telegramMsg += `❌ Errors: ${errors.length}\n`;
+    if (errors.length > 0) msg += `❌ Errors: ${errors.length}\n`;
 
-    await ctx.telegram.arsalaRisala(telegramMsg);
+    await ctx.rasul.send("dispatch", msg);
   }
 
   for (const r of conflicts) {
@@ -879,17 +783,7 @@ ${(r.taarudat ?? []).map((f) => `- \`${f}\``).join("\n")}
 }
 
 
-/**
- * Build a Telegram inline keyboard for a question.
- * Wraps question-handler's buildInlineKeyboard to create Telegram-specific markup.
- */
-function banaLawhatSual(
-  handler: ReturnType<typeof istadaaSaail>,
-  questionId: string,
-  question: MaalumatSual,
-): { inline_keyboard: Array<Array<{ text: string; callback_data: string }>> } {
-  return handler.banaMafatihSatriyya(questionId, question);
-}
+
 
 
 export const VERSION = "0.2.0";
@@ -951,15 +845,14 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   await questionHandler.hammalaHala();
 
   questionHandler.wadaaIndaTahwilSual(async (pending: SualMuallaq, question: MaalumatSual) => {
-    const keyboard = banaLawhatSual(questionHandler, pending.id, question);
-    const murshid = sessionManager.jalabMurshid(pending.huwiyyatMurshid);
-    const topicId = murshid?.channels["telegram"];
-    const messageId = await telegram.arsalaRisala("Use buttons below to answer:", {
-      topicId: topicId ? parseInt(topicId, 10) : undefined,
-      keyboard,
-    });
+    const khiyarat = questionHandler.banaKhiyarat(pending.id, question);
+    const messageId = await messenger.arsalaSualBiKhiyarat(
+      { murshid: pending.huwiyyatMurshid },
+      "Use buttons below to answer:",
+      khiyarat,
+    );
     if (messageId) {
-      pending.telegramMessageId = messageId;
+      pending.huwiyyatRisalaMuqaddim = messageId;
       haddathaHuwiyyatRisalaSual(pending.id, messageId);
     }
   });
@@ -976,7 +869,6 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     tasmim: config,
     opencode,
     ntfy,
-    telegram,
     rasul: messenger,
     mutabiWasfa: issueTracker,
     github,
