@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Release: bump version, tag, push. GitHub Action creates the release.
+# Usage: ./release patch|minor|major ["changelog message"]
+
+BUMP="${1:-}"
+MESSAGE="${2:-}"
+
+# If no message arg and stdin is piped, read it
+if [ -z "$MESSAGE" ] && [ ! -t 0 ]; then
+  MESSAGE=$(cat)
+fi
+
+if [[ ! "$BUMP" =~ ^(patch|minor|major)$ ]]; then
+  echo "Usage: ./release <patch|minor|major> [\"changelog message\"]"
+  exit 1
+fi
+
+# Ensure working tree is clean
+if [[ -n "$(git status --porcelain)" ]]; then
+  echo "Error: working tree is dirty. Commit or stash first."
+  exit 1
+fi
+
+# Read current version from deno.json
+CURRENT=$(grep '"version"' deno.json | sed 's/.*"\([0-9]*\.[0-9]*\.[0-9]*\)".*/\1/')
+IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+
+case "$BUMP" in
+  major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+  minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+  patch) PATCH=$((PATCH + 1)) ;;
+esac
+
+NEW="${MAJOR}.${MINOR}.${PATCH}"
+TAG="v${NEW}"
+
+echo "Releasing: $CURRENT → $NEW ($BUMP)"
+echo ""
+
+# Check tag doesn't already exist
+if git rev-parse "$TAG" >/dev/null 2>&1; then
+  echo "Error: tag $TAG already exists"
+  exit 1
+fi
+
+# Bump version in deno.json
+sed -i "s/\"version\": \"$CURRENT\"/\"version\": \"$NEW\"/" deno.json
+git add deno.json
+git commit -m "release: v${NEW}"
+
+# Tag — always annotated
+if [ -n "$MESSAGE" ]; then
+  git tag -a "$TAG" -m "$MESSAGE"
+else
+  # Opens $EDITOR for multi-line changelog (like git commit)
+  git tag -a "$TAG"
+fi
+
+# Push commit and tag
+git push origin main "$TAG"
+
+echo ""
+echo "Released $TAG"
