@@ -338,7 +338,7 @@ export interface SualMuallaq {
 
 
 /**
- * Tool calls made by murshids via MUN-MCP.
+ * Nida made by murshids through the instruments.
  * These are dispatched by the daemon's tool executor.
  */
 
@@ -569,8 +569,8 @@ export type MunToolCall =
   | NidaNaqsh;
 
 
-/** MCP tool definition (JSON Schema for tool input) */
-export interface TaarifAlatMcp {
+/** One instrument's taarif — the shape humd advertises and routes by. */
+export interface TaarifAla {
   name: string;
   description: string;
   inputSchema: {
@@ -580,23 +580,23 @@ export interface TaarifAlatMcp {
   };
 }
 
-/** Handler function for a registered MCP tool */
-export type MuaallijAlatMcp = (args: Record<string, unknown>) => Promise<string> | string;
+/** The hand that works one instrument. */
+export type MuaallijAla = (args: Record<string, unknown>) => Promise<string> | string;
 
 /**
- * Tool registry — all tools are core, built into the MUN-MCP server.
+ * The sijill of instruments — every ala is core, none are plugins.
  *
- * MUN-MCP server delegates tool listing and dispatch to this registry.
+ * AlatAlIksir advertises and dispatches through this registry.
  */
 export interface SijillAlat {
   /** Register a tool definition + its handler */
-  sajjil(tool: TaarifAlatMcp, handler: MuaallijAlatMcp): void;
+  sajjil(tool: TaarifAla, handler: MuaallijAla): void;
 
   /** Get all registered tool definitions (for tools/list) */
-  adawat(): TaarifAlatMcp[];
+  adawat(): TaarifAla[];
 
   /** Get a specific handler by name (for tools/call) */
-  muaallijLi(name: string): MuaallijAlatMcp | undefined;
+  muaallijLi(name: string): MuaallijAla | undefined;
 
   /** Check if a tool name is registered */
   yujad(name: string): boolean;

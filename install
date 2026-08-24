@@ -14,7 +14,6 @@ BIN_DIR="$HOME/.local/bin"
 IKSIR_REPO="https://github.com/adiled/iksir.git"
 IKSIR_SRC="$IKSIR_DATA/src"
 
-MCP_PORT="${IKSIR_MCP_PORT:-3100}"
 
 OS="$(uname -s)"
 CMD="${1:-install}"
@@ -170,30 +169,11 @@ register_systemd() {
   local WM
   $IS_ROOT && WM="multi-user.target" || WM="default.target"
 
-  # MCP server
-  cat > "$SERVICE_DIR/iksir-mcp.service" <<EOF
-[Unit]
-Description=Iksir MCP Server
-After=network.target
-
-[Service]
-Type=simple
-WorkingDirectory=$IKSIR_SRC
-ExecStart=$DENO_BIN run --allow-all --env=.env src/mcp/serve.ts --port=$MCP_PORT
-Restart=on-failure
-RestartSec=5
-$ENV_VARS
-
-[Install]
-WantedBy=$WM
-EOF
-
   # Daemon
   cat > "$SERVICE_DIR/iksir.service" <<EOF
 [Unit]
 Description=Iksir
-After=network.target iksir-mcp.service
-Requires=iksir-mcp.service
+After=network.target
 
 [Service]
 Type=simple
@@ -208,7 +188,7 @@ WantedBy=$WM
 EOF
 
   $SC daemon-reload
-  $SC enable iksir-mcp iksir 2>/dev/null
+  $SC enable iksir 2>/dev/null
   info "registered systemd services"
 }
 
@@ -216,7 +196,7 @@ start_daemon() {
   local SC="systemctl"
   $IS_ROOT || SC="systemctl --user"
 
-  $SC restart iksir-mcp iksir
+  $SC restart iksir
   sleep 2
   if $SC is-active --quiet iksir; then
     info "running"
@@ -228,7 +208,7 @@ start_daemon() {
 stop_daemon() {
   local SC="systemctl"
   $IS_ROOT || SC="systemctl --user"
-  $SC stop iksir iksir-mcp 2>/dev/null || true
+  $SC stop iksir 2>/dev/null || true
 }
 
 # ─── commands ────────────────────────────────────────────────────────────────
@@ -243,10 +223,10 @@ print_status() {
   echo ""
   if $IS_ROOT; then
     echo "  logs:   journalctl -u iksir -f"
-    echo "  stop:   systemctl stop iksir iksir-mcp"
+    echo "  stop:   systemctl stop iksir"
   else
     echo "  logs:   journalctl --user -u iksir -f"
-    echo "  stop:   systemctl --user stop iksir iksir-mcp"
+    echo "  stop:   systemctl --user stop iksir"
   fi
   echo ""
   echo "  First time? Edit $IKSIR_SRC/.env then: iksir start"
@@ -301,7 +281,7 @@ cmd_uninstall() {
     SERVICE_DIR="$HOME/.config/systemd/user"
   fi
 
-  $SC disable iksir iksir-mcp 2>/dev/null || true
+  $SC disable iksir 2>/dev/null || true
   rm -f "$SERVICE_DIR"/iksir*.service
   $SC daemon-reload 2>/dev/null || true
   info "removed systemd services"
@@ -331,7 +311,6 @@ case "$CMD" in
     echo "  uninstall  — stop, remove services, remove CLI"
     echo ""
     echo "Environment:"
-    echo "  IKSIR_MCP_PORT     MCP port (default: 3100)"
     echo "  DENO_BIN            Path to deno binary"
     exit 1
     ;;

@@ -4,8 +4,8 @@
  * Main entry point for the Iksir daemon.
  * 
  * Architecture:
- * - MudirJalasat: Manages murshid the nest sessions
- * - Munaffidh: Executes PM-MCP tool calls via Linear/GitHub APIs
+ * - MudirJalasat: Manages murshid jalasat at the nest
+ * - Munaffidh: Executes mun_* instruments via Linear/GitHub APIs
  * - Rasul: Routes human messages to/from murshid sessions (transport-agnostic)
  * - KeepAlive: Polls for external changes, feeds to murshid
  *
@@ -28,7 +28,7 @@ import {
 import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, haddathaHuwiyyatRisalaSual } from "../db/db.ts";
 import { createAmilHum } from "./hum/client.ts";
 import { masarThrum } from "./hum/thrum.ts";
-import { MunadiMunMcpServer } from "./mcp/iksir-mcp.ts";
+import { AlatAlIksir } from "./alat/alat-al-iksir.ts";
 import { anshaaNtfyAmil } from "./notifications/ntfy.ts";
 import { anshaaTelegramAmil } from "./notifications/telegram.ts";
 import { anshaaTelegramRasul } from "./notifications/messenger.ts";
@@ -187,10 +187,11 @@ async function addaIsharat(ctx: SiyaqKhadim): Promise<void> {
 }
 
 /**
- * Subscribe to the nest SSE events and route question events to handler.
+ * Drain the ahdath the amil raises from the thrum, routing asila to Sail
+ * and curations to Katib.
  */
 async function ishtarakAhdath(ctx: SiyaqKhadim): Promise<void> {
-  await logger.akhbar("sse", "Starting the nest SSE subscription");
+  await logger.akhbar("ahdath", "Draining ahdath from the thrum");
 
   let backoffMs = INITIAL_BACKOFF_MS;
   
@@ -209,7 +210,7 @@ async function ishtarakAhdath(ctx: SiyaqKhadim): Promise<void> {
           const sessionId = (event.properties as { sessionID?: string })?.sessionID;
           if (sessionId) {
             ctx.mudirJalasat.aalajaDamj(sessionId).catch(async (e) =>
-              await logger.sajjalKhata("sse", "Failed to handle compaction event", {
+              await logger.sajjalKhata("ahdath", "Failed to handle curation event", {
                 sessionId,
                 error: String(e),
               })
@@ -221,7 +222,7 @@ async function ishtarakAhdath(ctx: SiyaqKhadim): Promise<void> {
       if (ctx.mutahakkimIlgha.signal.aborted) {
         break;
       }
-      await logger.haDHHir("sse", `SSE connection lost, reconnecting in ${backoffMs / 1000}s`, {
+      await logger.haDHHir("ahdath", `Ahdath stream faulted, retrying in ${backoffMs / 1000}s`, {
         error: String(error),
       });
       await new Promise((r) => setTimeout(r, backoffMs));
@@ -229,7 +230,7 @@ async function ishtarakAhdath(ctx: SiyaqKhadim): Promise<void> {
     }
   }
 
-  await logger.akhbar("sse", "the nest SSE subscription stopped");
+  await logger.akhbar("ahdath", "Ahdath drain stopped");
 }
 
 async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
@@ -263,7 +264,7 @@ async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
   });
 
   ishtarakAhdath(ctx).catch(async (error) => {
-    await logger.sajjalKhata("sse", "Event subscription error", { error: String(error) });
+    await logger.sajjalKhata("ahdath", "Ahdath drain error", { error: String(error) });
   });
 
   ctx.raqib.badaa(ctx.mutahakkimIlgha.signal);
@@ -809,28 +810,18 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
    * humd routes a nida by name to whichever hive's manifest declares it,
    * so an unannounced ada is an unreachable one.
    */
-  const munMcp = new MunadiMunMcpServer();
-  const amil = createAmilHum(config, munMcp.sijill.adawat());
+  const alat = new AlatAlIksir();
+  const amil = createAmilHum(config, alat.adawat());
 
   /**
-   * A nida arrives from the nest. The ada bodies are unchanged — they still
-   * inscribe their hadath into the sijill, and Munaffidh still drains that
-   * table on its heartbeat. Only the carriage changed: no MCP server, no
-   * stdio, no polling for the call itself. The journal stays the record;
-   * the thrum is merely the road.
+   * A nida arrives from the nest. The instruments are unchanged — each still
+   * inscribes its hadath into the sijill, and Munaffidh still drains that
+   * table on its heartbeat. Only the carriage changed: no server, no stdio,
+   * no polling for the call itself. The journal stays the record; the thrum
+   * is merely the road.
    */
   amil.alaNida(async (nida) => {
-    const radd = await munMcp.aalijTalab({
-      jsonrpc: "2.0",
-      id: nida.callId,
-      method: "tools/call",
-      params: { name: nida.name, arguments: nida.args },
-    });
-
-    const natija = radd.error
-      ? `Error: ${radd.error.message}`
-      : (radd.result as { content?: Array<{ text?: string }> })?.content?.[0]?.text ?? "";
-
+    const natija = await alat.naffidh(nida.name, nida.args);
     amil.raddNida(nida.sid, nida.callId, natija);
   });
   const ntfy = anshaaNtfyAmil(config);

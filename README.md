@@ -29,7 +29,7 @@ A murshid without `fs` can contemplate the runūz but never inscribe them.
 
 ```bash
 hum hive humfs install          # the filesystem surface
-hum hive <your-worker> install  # whatever you would have think
+hum hive <your-worker> install  # whatever you would have think for you
 ```
 
 The kindling ritual clones the source, creates XDG directories, copies sacred templates, installs the `iksir` CLI to `~/.local/bin/`, registers daemon services, and consecrates the ruqan. Edit `~/.local/share/iksir/src/.env` to bind your keys, then `iksir start`.
@@ -39,7 +39,6 @@ Iksīr can also be supervised as a bee in its own right — an `Orchfile` sits a
 ```bash
 iksir divine            # divine the state of the Great Work
 iksir transmute         # pull latest essence, sync vessels, rekindle
-iksir rekindle mcp      # rekindle just the MCP crucible
 iksir verify            # verify the formulae and runes
 ```
 
@@ -90,7 +89,7 @@ Buwtaqa (بوتقة - The Crucible)
 Athanor (أثانور - The Sacred Furnace)
 ```
 
-The sacred tools are forged within: transmutation rites, formula inscription, essence decanting. Additional instruments may be consecrated through the mystical registry.
+The **Ālāt al-Iksīr** (آلات الإكسير - instruments of the Elixir) are forged within: transmutation rites, formula inscription, essence decanting. They are advertised to the nest in Iksīr's own hello, and a summons returns to them by name. Additional instruments may be consecrated through the sijill.
 
 ## The Sacred Laws
 

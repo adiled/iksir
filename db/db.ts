@@ -185,7 +185,7 @@ export function aghlaaqQaidatBayanat(): void {
 
 /**
  * Insert an IPC hadath into the ahdath table.
- * Used by MCP servers to forward tool calls to the daemon.
+ * Used by the instruments to forward their nida to the daemon.
  */
 export function adkhalaHadath(
   naw: "pm",

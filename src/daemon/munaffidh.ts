@@ -114,7 +114,7 @@ export class Munaffidh {
   }
 
   /**
-   * Start processing PM-MCP events
+   * Start draining the ahdath the instruments inscribe
    */
   async badaaMuaalaja(signal: AbortSignal): Promise<void> {
     this.#mutahakkimIlgha = new AbortController();
@@ -168,7 +168,7 @@ export class Munaffidh {
   }
 
   /**
-   * Handle a PM-MCP event
+   * Handle one hadath
    */
   /** Git-mutating tools that must be blocked during session switches */
   static readonly GIT_TOOLS = new Set([
