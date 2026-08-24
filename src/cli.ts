@@ -22,9 +22,8 @@ import { execCommand } from "./utils/exec.ts";
 import { join } from "jsr:@std/path";
 
 /**
- * One service. The MCP server and the agent runtime were both Iksir's to
- * supervise once; the nest is al-Kimyawi's concern now, and the instruments
- * ride the same process as the daemon.
+ * One service. The nest is al-Kimyawi's to supervise, and the instruments
+ * ride the daemon's own process.
  */
 const SERVICES = ["iksir"] as const;
 

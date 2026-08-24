@@ -814,11 +814,10 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   const amil = createAmilHum(config, alat.adawat());
 
   /**
-   * A nida arrives from the nest. The instruments are unchanged — each still
-   * inscribes its hadath into the sijill, and Munaffidh still drains that
-   * table on its heartbeat. Only the carriage changed: no server, no stdio,
-   * no polling for the call itself. The journal stays the record; the thrum
-   * is merely the road.
+   * A nida arrives from the nest, is worked, and its natija returns on the
+   * same strand — the cell stays parked until it does. Each instrument
+   * inscribes its own hadath as it goes, which Munaffidh drains on its
+   * heartbeat. The sijill is the record; the thrum is merely the road.
    */
   amil.alaNida(async (nida) => {
     const natija = await alat.naffidh(nida.name, nida.args);

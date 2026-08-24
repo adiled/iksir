@@ -1,19 +1,17 @@
 /**
  * Alat al-Iksir (آلات الإكسير) — The Instruments of Iksir
  *
- * The workshop's apparatus. Not a server, not a protocol — the
- * instruments themselves, and the hands that work them:
+ * The workshop's apparatus — the instruments themselves, and the
+ * hands that work them:
  *
  *   mun_*   the alchemical operations — istihal, fasl, naqsh
  *   code_*  the reading of runuz — symbols, dependencies, impact
  *
- * There was an MCP server here once, because OpenCode needed to be
- * told what Iksir could do. Nothing needs telling any more. The
- * adawat ride in the hello, humd merges them into the foragerTools
- * it hands every worker, and a nida comes back by name. What remains
- * is a sijill of instruments and a way to work one.
+ * Their taarif ride in Iksir's hello. humd merges every forager's
+ * into the foragerTools it hands each worker, so a nida returns
+ * here by name alone.
  *
- * Each instrument still inscribes its hadath into the ahdath table.
+ * Each instrument inscribes its hadath into the ahdath table, and
  * Munaffidh drains it. The sijill is the record; the thrum is the road.
  */
 

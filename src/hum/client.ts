@@ -5,11 +5,9 @@
  * always knew, but behind it there is no vendor — only the thrum,
  * and whatever hive al-Kimyawi has chosen to kindle.
  *
- * The inversion is total. Where once Iksir asked a foreign runtime
- * which jalasat existed, it now answers that question itself: the
- * sijill was always the truth, and the runtime was only ever
- * repeating it back. Sessions are minted here, held here, and
- * carried across turns by the nestId the worker returns on
+ * Jalasat are Iksir's own. The sijill is the truth of which exist;
+ * nothing is asked of the nest about them. They are minted here, held
+ * here, and carried across turns by the nestId the worker returns on
  * session-ready — surrendered again as `resume` on the next prompt,
  * so the cell rehydrates its full prior context.
  *
@@ -34,7 +32,7 @@ import type { HadathHum, JalsatHum, TasmimIksir } from "../types.ts";
 /** How long a blocking prompt waits before it is abandoned. */
 const MUHLAT_IFTIRADIYYA_MS = 30_000;
 
-/** What Iksir remembers of a jalsa the runtime no longer remembers for it. */
+/** What Iksir remembers of a jalsa. Nothing else remembers it. */
 interface HalatJalsa {
   id: string;
   huwiyyatWasfa: string;
@@ -198,10 +196,9 @@ export class AmilHum {
   /**
    * The ruqya a murshid is summoned under.
    *
-   * OpenCode kept these as "agents" in its own config dir and attached them
-   * by name. Nothing does that now, so Iksir carries its own incantations:
-   * the ruqya is read from the prompts/ archive and sent as systemPrompt.
-   * Read once, then held — a murshid's identity does not change mid-work.
+   * Read from the prompts/ archive and sent as the systemPrompt, since
+   * a murshid arrives unnamed otherwise. Held after the first read — an
+   * identity does not change mid-work.
    */
   #ruqya(ism: string): string | undefined {
     const mahfuz = this.#ruqan.get(ism);
@@ -533,8 +530,8 @@ export class AmilHum {
   }
 
   /**
-   * The stream of ahdath. Never ends on its own — the strand reconnects
-   * beneath it, so unlike the old SSE loop there is nothing to resubscribe.
+   * The stream of ahdath. Never ends on its own; the strand reconnects
+   * beneath it, so there is nothing here to resubscribe.
    */
   async *subscribeToEvents(signal?: AbortSignal): AsyncGenerator<HadathHum> {
     while (!signal?.aborted) {

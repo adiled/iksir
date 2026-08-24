@@ -548,8 +548,8 @@ Awaiting direction from al-Kimyawi...`;
 
 
   /**
-   * Get murshid by the nest session ID (reverse lookup).
-   * Used by SSE event handlers where only the the nest session ID is known.
+   * Get murshid by jalsa id (reverse lookup).
+   * Used where a hadath carries only the sid.
    */
   wajadaMurshidBiHuwiyyatJalsa(sessionId: string): JalsatMurshid | null {
     for (const session of this.#murshidSessions.values()) {
@@ -561,13 +561,13 @@ Awaiting direction from al-Kimyawi...`;
   /**
    * Handle a compaction event for an murshid session.
    *
-   * After compaction, the murshid's conversation history is summarized and
-   * prior context is lost. The compaction plugin injects diary entries INTO the
-   * summary, but as a belt-and-suspenders measure, we also send a follow-up
-   * message with diary entries and a reminder to use pm_read_diary.
+   * Curation summarizes the murshid's history and prior context is lost with
+   * it. This sends a follow-up carrying the diary entries back in, with a
+   * reminder to use pm_read_diary — the only thing standing between a curated
+   * murshid and a murshid that has forgotten its own decisions.
    *
-   * This catches both Daemon-triggered compactions (health-monitor) and
-   * the nest-triggered compactions (token overflow).
+   * Reaches only curations Raqib asked for. A worker that curates itself on
+   * token overflow raises no tone Iksir can hear.
    */
   async aalajaDamj(sessionId: string): Promise<void> {
     const session = this.wajadaMurshidBiHuwiyyatJalsa(sessionId);
