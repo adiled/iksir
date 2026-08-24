@@ -44,7 +44,7 @@ function buildContext() {
     arraf: intentResolver as never,
     rasul: messenger,
     hayula,
-    namatWasfa: config.mutabiWasfa?.namatWasfa,
+    namatWasfa: config.wasfat?.namatWasfa,
   });
 
   const questionHandler = new Saail({

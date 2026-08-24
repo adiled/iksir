@@ -11,7 +11,7 @@ const QALB = ["src/daemon", "src/kimiya", "src/alat", "src/hum"];
 const KALIMAT_NATINA = [
   "git/operations.ts",
   "github/gh.ts",
-  "linear/client.ts",
+  "wasfa-linear/",
   "natn/",
 ];
 

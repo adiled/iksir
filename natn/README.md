@@ -19,8 +19,6 @@ else. A test enforces it.
 | `hayula-git/` | git | `Hayula` |
 | `hayula-nass/` | a markdown file | `Hayula` |
 | `fasl-github/` | GitHub | `Fasl` |
+| `wasfa-linear/` | Linear | a mirror, for those who want one |
 
-## What is still outside
 
-`hives/wasfa/` holds the tracker's key and answers over the thrum, but still
-names `src/config.ts` and `src/linear/`.

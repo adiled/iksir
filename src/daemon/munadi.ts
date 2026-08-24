@@ -101,10 +101,8 @@ export interface SiyaqMuhadatha {
   /** The current focus entity (most recently resolved) */
   focusEntity?: {
     naw: NawKiyan;
-    id: string;
-    huwiyya?: string;
+    huwiyya: string;
     unwan: string;
-    url: string;
     resolvedAt: Date;
   };
 }
@@ -589,8 +587,7 @@ export class Munadi {
     const lines = [`Found ${murashshahun.length} ticket(s):\n`];
 
     for (const c of murashshahun) {
-      const id = c.huwiyya ?? c.id.slice(0, 8);
-      lines.push(`• ${id}: ${escapeMarkdown(c.unwan)}`);
+      lines.push(`• ${c.huwiyya}: ${escapeMarkdown(c.unwan)}`);
     }
 
     return {
@@ -612,7 +609,7 @@ export class Munadi {
     this.wadaKiyanMurakkazAlayh(entity);
 
     /** Determine epic ID based on entity type */
-    const epicId = entity.huwiyya ?? entity.id;
+    const epicId = entity.huwiyya;
 
     /** Check if murshid already exists for this ticket */
     const existingSession = this.mudirJalasat.wajadaJalasatMurshid().find(
@@ -750,10 +747,8 @@ export class Munadi {
       { source, text: pending.nassAsli },
       {
         naw: selected.naw,
-        id: selected.id,
         huwiyya: selected.huwiyya,
         unwan: selected.unwan,
-        url: selected.url,
       }
     );
   }
@@ -828,10 +823,8 @@ Work on the parent instead?`;
     const entity = useParent
       ? {
           naw: "wasfa" as NawKiyan,
-          id: pending.ab.id,
           huwiyya: pending.ab.huwiyya,
           unwan: pending.ab.unwan,
-          url: pending.ab.url,
         }
       : pending.wasfa;
 
@@ -1036,19 +1029,18 @@ Work on the parent instead?`;
     _msg: RisalaWarida,
     entity: NonNullable<NiyyaMuhallala["kiyan"]>
   ): Promise<NatijaIrsal> {
-    const huwiyya = entity.huwiyya ?? entity.id;
+    const huwiyya = entity.huwiyya;
 
     const initMessage = `You have been assigned you to work on:
 
 **${entity.naw.toUpperCase()}**: ${entity.unwan}
-**ID**: ${huwiyya}
-**URL**: ${entity.url}
+**Name**: ${huwiyya}
 
-Use \`mun_iqra_wasfa\` to fetch full details and begin planning.`;
+Use \`mun_iqra_wasfa\` to read it in full and begin.`;
 
     /** Map naw kiyan to naw murshid */
     const nawMurshid: "epic" | "chore" =
-      (entity.naw === "malhamat" || entity.naw === "mashru" || entity.naw === "marhala")
+      entity.naw === "malhamat"
         ? "epic"
         : "chore";
 
@@ -1057,7 +1049,6 @@ Use \`mun_iqra_wasfa\` to fetch full details and begin planning.`;
       unwan: entity.unwan,
       type: nawMurshid,
       initMessage,
-      url: entity.url,
     });
   }
 

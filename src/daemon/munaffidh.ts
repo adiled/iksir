@@ -14,7 +14,8 @@
  */
 
 import type { Fasl } from "../hayula/fasl.ts";
-import type { RasulKharij, MutabiWasfa, MudkhalTahdithQadiya } from "../types.ts";
+import type { RasulKharij } from "../types.ts";
+import type { SijillWasfat, Wasfa } from "../wasfa/sijill-wasfat.ts";
 import { NtfyClient } from "../notifications/ntfy.ts";
 import { AmilHum } from "../hum/client.ts";
 import { logger } from "../logging/logger.ts";
@@ -54,7 +55,7 @@ import type { Hayula } from "../hayula/hayula.ts";
 
 interface MunaffidhDeps {
   tasmim: TasmimIksir;
-  mutabiWasfa: MutabiWasfa;
+  wasfat: SijillWasfat;
   fasl: Fasl;
   rasul: RasulKharij;
   ntfy: NtfyClient;
@@ -68,7 +69,7 @@ interface MunaffidhDeps {
 
 export class Munaffidh {
   readonly #config: TasmimIksir;
-  #mutabiWasfa: MutabiWasfa;
+  #wasfat: SijillWasfat;
   #fasl: Fasl;
   #messenger: RasulKharij;
   #ntfy: NtfyClient;
@@ -81,7 +82,7 @@ export class Munaffidh {
 
   constructor(deps: MunaffidhDeps) {
     this.#config = deps.tasmim;
-    this.#mutabiWasfa = deps.mutabiWasfa;
+    this.#wasfat = deps.wasfat;
     this.#fasl = deps.fasl;
     this.#messenger = deps.rasul;
     this.#ntfy = deps.ntfy;
@@ -282,133 +283,79 @@ export class Munaffidh {
    * Handle pm_read_wasfa
    */
   async #aalajaQiraaatWasfa(call: NidaQiraatWasfa): Promise<string> {
-    const parsed = this.#mutabiWasfa.parseUrl(call.url);
+    const wasfa = await this.#wasfat.iqra(call.huwiyya);
+    if (!wasfa) return `No wasfa by that name: ${call.huwiyya}`;
 
-    if (!parsed) {
-      return `Failed to parse URL: ${call.url}`;
+    const ajzaa: string[] = [
+      `## ${wasfa.huwiyya} — ${wasfa.unwan}`,
+      "",
+    ];
+
+    if (wasfa.hala) ajzaa.push(`**Condition:** ${wasfa.hala}`);
+    if (wasfa.qadr) ajzaa.push(`**Measure:** ${wasfa.qadr}`);
+    if (wasfa.wasm?.length) ajzaa.push(`**Marks:** ${wasfa.wasm.join(", ")}`);
+    if (wasfa.ab) ajzaa.push(`**Under:** ${wasfa.ab}`);
+    ajzaa.push("");
+
+    if (wasfa.matn) {
+      ajzaa.push("## Statement", wasfa.matn, "");
     }
 
-    const parts: string[] = [];
-    parts.push(`## Entity`);
-    parts.push(`**Type:** ${parsed.naw}`);
-    parts.push(`**ID:** ${parsed.id}`);
-    parts.push("");
-
-    if (parsed.naw === "wasfa") {
-      const issue = await this.#mutabiWasfa.getIssue(parsed.id);
-
-      if (!issue) {
-        return `Issue not found: ${parsed.id}`;
-      }
-
-      parts.push(`## Ticket Details`);
-      parts.push(`**Identifier:** ${issue.identifier}`);
-      parts.push(`**Title:** ${issue.title}`);
-      if (issue.status) parts.push(`**Status:** ${issue.status}`);
-      if (issue.estimate) parts.push(`**Estimate:** ${issue.estimate}`);
-      if (issue.url) parts.push(`**URL:** ${issue.url}`);
-      parts.push("");
-
-      if (issue.description) {
-        parts.push(`## Description`);
-        parts.push(issue.description);
-        parts.push("");
-      }
-
-      if (issue.labels && issue.labels.length > 0) {
-        parts.push(`## Labels`);
-        parts.push(issue.labels.map((l) => `- ${l}`).join("\n"));
-        parts.push("");
-      }
-
-      if (issue.parent) {
-        parts.push(`## Parent`);
-        parts.push(`- ${issue.parent.identifier}: ${issue.parent.title}`);
-        parts.push("");
-      }
-
-      /** Implementation context from local DB */
-      const implStatusDb = qiraStatus(issue.identifier);
-      parts.push(`## Context`);
-      if (implStatusDb) {
-        parts.push(`**Implementation Status:** ${implStatusDb.status}`);
-        if (implStatusDb.summary?.includes("PR #")) {
-          parts.push(`**PR:** ${implStatusDb.summary}`);
-        }
-      } else {
-        parts.push(`**Implementation Status:** not started`);
-      }
-      parts.push("");
-
-    } else if (parsed.naw === "mashru") {
-      const project = await this.#mutabiWasfa.getProject(parsed.id);
-
-      if (!project) {
-        return `Project not found: ${parsed.id}`;
-      }
-
-      parts.push(`## Project Details`);
-      parts.push(`**Name:** ${project.name}`);
-      if (project.url) parts.push(`**URL:** ${project.url}`);
-      if (project.issueCount) parts.push(`**Issues:** ${project.issueCount}`);
-      parts.push("");
-
-      if (project.description) {
-        parts.push(`## Description`);
-        parts.push(project.description);
-        parts.push("");
-      }
+    const alaqat = await this.#wasfat.alaqat(wasfa.huwiyya);
+    if (alaqat.yamnaa.length || alaqat.mamnu.length) {
+      ajzaa.push("## Bindings");
+      if (alaqat.yamnaa.length) ajzaa.push(`**Holds back:** ${alaqat.yamnaa.join(", ")}`);
+      if (alaqat.mamnu.length) ajzaa.push(`**Held by:** ${alaqat.mamnu.join(", ")}`);
+      ajzaa.push("");
     }
 
-    return parts.join("\n");
+    const halaTanfidh = qiraStatus(wasfa.huwiyya);
+    ajzaa.push("## Working");
+    ajzaa.push(`**State:** ${halaTanfidh ? halaTanfidh.status : "not begun"}`);
+
+    return ajzaa.join("\n");
   }
 
   /**
    * Handle pm_create_wasfa
    */
   async #aalajaKhalqWasfa(call: NidaKhalqWasfa): Promise<string> {
-    const issue = await this.#mutabiWasfa.createIssue({
-      title: call.unwan,
-      description: call.wasf,
-      estimate: call.taqdir,
-      status: call.hala,
-      labels: call.wasamat,
-      parentId: call.huwiyyatAb,
+    const wasfa = await this.#wasfat.khalaq({
+      unwan: call.unwan,
+      matn: call.wasf,
+      qadr: call.taqdir,
+      hala: call.hala,
+      wasm: call.wasamat,
+      ab: call.huwiyyatAb,
     });
 
-    return `Ticket created successfully!
+    return `Wasfa inscribed.
 
-**ID:** ${issue.identifier}
-**Title:** ${issue.title}
-**Status:** ${issue.status ?? "default"}
-**URL:** ${issue.url ?? ""}
+**Name:** ${wasfa.huwiyya}
+**Says:** ${wasfa.unwan}
+**Condition:** ${wasfa.hala ?? "khaam"}
 
-You can now set relations using pm_set_relations.`;
+Bind it to others with mun_wadaa_alaqat.`;
   }
 
   /**
    * Handle pm_update_wasfa
    */
   async #aalajaTajdidWasfa(call: NidaTajdidWasfa): Promise<string> {
-    const issue = await this.#mutabiWasfa.getIssue(call.huwiyyatWasfa);
+    const issue = await this.#wasfat.iqra(call.huwiyyatWasfa);
     if (!issue) {
       return `Ticket not found: ${call.huwiyyatWasfa}`;
     }
 
-    /** Build update payload */
-    const updatePayload: MudkhalTahdithQadiya = {};
+    const taghyir: Partial<Omit<Wasfa, "huwiyya">> = {};
+    if (call.updates.unwan) taghyir.unwan = call.updates.unwan;
+    if (call.updates.wasf) taghyir.matn = call.updates.wasf;
+    if (call.updates.taqdir) taghyir.qadr = call.updates.taqdir;
+    if (call.updates.hala) taghyir.hala = call.updates.hala;
 
-    if (call.updates.unwan) updatePayload.title = call.updates.unwan;
-    if (call.updates.wasf) updatePayload.description = call.updates.wasf;
-    if (call.updates.taqdir) updatePayload.estimate = call.updates.taqdir;
+    await this.#wasfat.jaddid(issue.huwiyya, taghyir);
 
-    if (call.updates.hala) {
-      updatePayload.status = call.updates.hala;
-    }
-
-    await this.#mutabiWasfa.updateIssue(issue.id, updatePayload);
-
-    return `Ticket updated: ${call.huwiyyatWasfa}
+    return `Wasfa altered: ${call.huwiyyatWasfa}
 
 Updated fields: ${Object.keys(call.updates).join(", ")}`;
   }
@@ -423,7 +370,7 @@ Updated fields: ${Object.keys(call.updates).join(", ")}`;
       blockedBy: call.mahjoubBi,
     });
 
-    await this.#mutabiWasfa.setRelations(
+    await this.#wasfat.rabt(
       call.huwiyyatWasfa,
       call.yahjub,
       call.mahjoubBi

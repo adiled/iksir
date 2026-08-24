@@ -9,7 +9,7 @@ export interface TasmimIksir {
   istiftaa: TasmimIstiftaa;
   saatSukun: TasmimSaatSukun;
   isharat: TasmimIsharat;
-  mutabiWasfa: TasmimMutabiWasfa;
+  wasfat: TasmimWasfat;
   github: TasmimGitHub;
   hum: TasmimHum;
   hafazat: TasmimHaththat;
@@ -54,96 +54,15 @@ export interface TasmimTelegram {
   proxy?: string;
 }
 
-export interface TasmimMutabiWasfa {
-  /** Provider name: "linear" | "jira" | "github" */
-  muqaddim?: string;
-  miftahApi: string;
-  huwiyyatFareeq: string;
-  /** Regex pattern for ticket identifiers. Default: "[A-Z]+-\\d+" */
+export interface TasmimWasfat {
+  /** The mark a minted waṣfa name carries. Default: "W" */
+  sabiqa?: string;
+  /** How a waṣfa name is recognised in an utterance. Default: "[A-Z]+-\\d+" */
   namatWasfa?: string;
 }
 
 
-export type NawKiyan = "wasfa" | "malhamat" | "marhala" | "mashru" | "majhul";
-
-export interface WasfaMutaba {
-  id: string;
-  identifier: string;
-  title: string;
-  description?: string;
-  status?: string;
-  url?: string;
-  parentId?: string;
-  parent?: { identifier: string; title: string };
-  labels?: string[];
-  estimate?: number;
-}
-
-export interface MashruMutabi {
-  id: string;
-  name: string;
-  description?: string;
-  url?: string;
-  issueCount?: number;
-}
-
-export interface MaalimMutabi {
-  id: string;
-  name: string;
-  url?: string;
-  startsAt?: string;
-  endsAt?: string;
-}
-
-export interface RabitWasfaMuhallal {
-  naw: NawKiyan;
-  id: string;
-}
-
-export interface MudkhalKhalqQadiya {
-  title: string;
-  description?: string;
-  estimate?: number;
-  status?: string;
-  labels?: string[];
-  parentId?: string;
-}
-
-export interface MudkhalTahdithQadiya {
-  title?: string;
-  description?: string;
-  estimate?: number;
-  status?: string;
-}
-
-export interface MurashihatQadiya {
-  assigneeId?: string;
-  status?: string;
-  cycleId?: string;
-}
-
-export interface MutabiWasfa {
-  readonly provider: string;
-  isAuthenticated(): Promise<boolean>;
-
-  getIssue(identifier: string): Promise<WasfaMutaba | null>;
-  getProject(id: string): Promise<MashruMutabi | null>;
-  searchIssues(query: string, limit?: number): Promise<WasfaMutaba[]>;
-  searchProjects(query: string): Promise<MashruMutabi[]>;
-
-  createIssue(input: MudkhalKhalqQadiya): Promise<WasfaMutaba>;
-  updateIssue(id: string, input: MudkhalTahdithQadiya): Promise<WasfaMutaba>;
-  setRelations(identifier: string, blocks?: string[], blockedBy?: string[]): Promise<void>;
-
-  parseUrl(url: string): RabitWasfaMuhallal | null;
-  getUrlPattern(): RegExp;
-
-  getStateId(name: string): Promise<string | null>;
-
-  searchMilestones?(query: string): Promise<MaalimMutabi[]>;
-  getActiveMilestone?(): Promise<MaalimMutabi | null>;
-  getFilteredIssues?(filters: MurashihatQadiya, limit?: number): Promise<WasfaMutaba[]>;
-}
+export type NawKiyan = "wasfa" | "malhamat" | "majhul";
 
 export interface TasmimGitHub {
   sahib: string;
@@ -380,7 +299,7 @@ export interface NidaWadaaAlaqat {
 export interface NidaQiraatWasfa {
   tool: "mun_iqra_wasfa";
   huwiyyatMurshid: string;
-  url: string;
+  huwiyya: string;
 }
 
 /** Create a draft PR */

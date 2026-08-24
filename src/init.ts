@@ -102,36 +102,17 @@ async function telegramApi(token: string, method: string): Promise<{ ok: boolean
   }
 }
 
-async function linearApi(apiKey: string, query: string): Promise<{ data?: unknown; errors?: unknown[] }> {
-  try {
-    const resp = await fetch("https://api.linear.app/graphql", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": apiKey,
-      },
-      body: JSON.stringify({ query }),
-    });
-    return await resp.json();
-  } catch {
-    return { errors: [{ message: "Network error" }] };
-  }
-}
-
 
 interface InitState {
   telegramBotToken: string;
   telegramChatId: string;
   telegramBotName: string;
-  issueTrackerApiKey: string;
-  issueTrackerTeamId: string;
-  issueTrackerTeamName: string;
   githubOwner: string;
   githubRepo: string;
   githubUsername: string;
   namudhaj: string;
   skippedTelegram: boolean;
-  skippedMutabiWasfa: boolean;
+  sabiqaWasfa: string;
   skippedGithub: boolean;
 }
 
@@ -211,68 +192,14 @@ async function stepTelegram(state: InitState): Promise<void> {
   }
 }
 
-async function stepMutabiWasfa(state: InitState): Promise<void> {
-  heading(2, TOTAL_STEPS, "Issue Tracker");
+async function stepWasfat(state: InitState): Promise<void> {
+  heading(2, TOTAL_STEPS, "The Register");
   console.log("");
-  console.log(`  Iksir creates and manages tickets. Linear is the default provider.`);
-  console.log("");
-
-  if (!await confirm("Set up Linear?")) {
-    state.skippedMutabiWasfa = true;
-    warn("Skipped. You can configure the issue tracker later in .env");
-    return;
-  }
-
-  console.log("");
-  console.log(`  ${dim("1.")} Go to ${bold("linear.app")} > Settings > API`);
-  console.log(`  ${dim("2.")} Create a Personal API Key`);
+  console.log(`  The waṣfāt live in Iksīr's own sijill. Nothing to configure.`);
   console.log("");
 
-  while (true) {
-    const key = await promptSecret("API key");
-    if (!key) {
-      if (await confirm("Skip Linear?", false)) {
-        state.skippedMutabiWasfa = true;
-        return;
-      }
-      continue;
-    }
-
-    /** Validate + fetch teams */
-    const result = await linearApi(key, "{ teams { nodes { id key name } } }");
-    if (result.errors || !result.data) {
-      fail("Invalid API key or network error");
-      continue;
-    }
-
-    const data = result.data as { teams: { nodes: { id: string; key: string; name: string }[] } };
-    const teams = data.teams.nodes;
-
-    if (teams.length === 0) {
-      fail("No teams found in your Linear workspace");
-      continue;
-    }
-
-    state.issueTrackerApiKey = key;
-
-    if (teams.length === 1) {
-      state.issueTrackerTeamId = teams[0].key;
-      state.issueTrackerTeamName = teams[0].name;
-      ok(`Connected to Linear, team: ${bold(teams[0].name)} (${teams[0].key})`);
-    } else {
-      ok("Connected to Linear");
-      console.log("");
-      console.log("  Teams found:");
-      for (const t of teams) {
-        console.log(`    ${bold(t.key)} — ${t.name}`);
-      }
-      console.log("");
-      state.issueTrackerTeamId = await prompt("Team ID", teams[0].key);
-      const match = teams.find((t) => t.key === state.issueTrackerTeamId);
-      state.issueTrackerTeamName = match?.name ?? state.issueTrackerTeamId;
-    }
-    break;
-  }
+  state.sabiqaWasfa = await prompt("Mark that minted waṣfa names carry", "W");
+  ok(`Waṣfāt will be named ${bold(`${state.sabiqaWasfa}-1`)}, ${state.sabiqaWasfa}-2, …`);
 }
 
 async function stepGithub(state: InitState): Promise<void> {
@@ -363,9 +290,6 @@ async function stepFinalize(state: InitState): Promise<void> {
     envLines.push(`TELEGRAM_BOT_TOKEN=${state.telegramBotToken}`);
     envLines.push(`TELEGRAM_CHAT_ID=${state.telegramChatId}`);
   }
-  if (state.issueTrackerApiKey) {
-    envLines.push(`LINEAR_API_KEY=${state.issueTrackerApiKey}`);
-  }
   envLines.push("");
 
   /** Build iksir.json */
@@ -373,8 +297,8 @@ async function stepFinalize(state: InitState): Promise<void> {
     $schema: "./iksir.schema.json",
   };
 
-  if (state.issueTrackerTeamId) {
-    config.issueTracker = { provider: "linear", teamId: state.issueTrackerTeamId };
+  if (state.sabiqaWasfa && state.sabiqaWasfa !== "W") {
+    config.wasfat = { sabiqa: state.sabiqaWasfa };
   }
   if (state.githubOwner) {
     config.github = {
@@ -428,10 +352,8 @@ async function stepFinalize(state: InitState): Promise<void> {
   } else if (state.skippedTelegram) {
     warn("Telegram: skipped");
   }
-  if (state.issueTrackerApiKey) {
-    ok(`Issue tracker: ${state.issueTrackerTeamName} (Linear)`);
-  } else if (state.skippedMutabiWasfa) {
-    warn("Issue tracker: skipped");
+  if (state.sabiqaWasfa) {
+    ok(`Waṣfāt: named ${state.sabiqaWasfa}-1, ${state.sabiqaWasfa}-2, …`);
   }
   if (state.githubOwner) {
     ok(`GitHub: ${state.githubOwner}/${state.githubRepo}`);
@@ -454,20 +376,17 @@ export async function runInit(): Promise<void> {
     telegramBotToken: "",
     telegramChatId: "",
     telegramBotName: "",
-    issueTrackerApiKey: "",
-    issueTrackerTeamId: "",
-    issueTrackerTeamName: "",
     githubOwner: "",
     githubRepo: "",
     githubUsername: "",
     namudhaj: "",
     skippedTelegram: false,
-    skippedMutabiWasfa: false,
+    sabiqaWasfa: "W",
     skippedGithub: false,
   };
 
   await stepTelegram(state);
-  await stepMutabiWasfa(state);
+  await stepWasfat(state);
   await stepGithub(state);
   await stepAgent(state);
   await stepFinalize(state);

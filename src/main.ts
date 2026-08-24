@@ -33,7 +33,7 @@ import { anshaaNtfyAmil } from "./notifications/ntfy.ts";
 import { anshaaTelegramAmil } from "./notifications/telegram.ts";
 import { anshaaTelegramRasul } from "./notifications/messenger.ts";
 import { anshaaRasulUnbub } from "./notifications/rasul-anbub.ts";
-import { MutabiWasfaBaid } from "./hum/mutabi-baid.ts";
+import { anshaaSijillWasfat } from "./wasfa/sijill.ts";
 import { anshaaHayulaGit } from "../natn/hayula-git/mod.ts";
 import { anshaaFaslGitHub } from "../natn/fasl-github/mod.ts";
 import { createGitHubClient } from "./github/gh.ts";
@@ -44,14 +44,15 @@ import { istadaaArraf } from "./daemon/arraf.ts";
 import { awqadaHayat, type NatijaSeyana } from "./daemon/hayat.ts";
 import { istadaaSaail } from "./daemon/saail.ts";
 import { istadaaRaqib } from "./daemon/raqib.ts";
-import type { TasmimIksir, Rasul, RisalaDakhila, TaaliqMuraja, JalsatMurshid, RisalaMutaba, HadathSualMatlub, MaalumatSual, SualMuallaq, MutabiWasfa } from "./types.ts";
+import type { TasmimIksir, Rasul, RisalaDakhila, TaaliqMuraja, JalsatMurshid, RisalaMutaba, HadathSualMatlub, MaalumatSual, SualMuallaq } from "./types.ts";
+import type { SijillWasfat } from "./wasfa/sijill-wasfat.ts";
 
 interface SiyaqKhadim {
   tasmim: TasmimIksir;
   amil: ReturnType<typeof createAmilHum>;
   ntfy: ReturnType<typeof anshaaNtfyAmil>;
   rasul: Rasul;
-  mutabiWasfa: MutabiWasfa;
+  wasfat: SijillWasfat;
   github: ReturnType<typeof createGitHubClient>;
   mudirJalasat: ReturnType<typeof istadaaKatib>;
   munaffidh: ReturnType<typeof istadaaMunaffidh>;
@@ -106,19 +107,6 @@ async function tahaqqaqIttisaal(ctx: SiyaqKhadim): Promise<boolean> {
     }
   } else {
     console.log("  ntfy server... (disabled)");
-  }
-
-  if (ctx.tasmim.mutabiWasfa.miftahApi) {
-    process.stdout.write("  Issue tracker... ");
-    const authenticated = await ctx.mutabiWasfa.isAuthenticated();
-    if (authenticated) {
-      console.log("✓");
-    } else {
-      console.log("✗ (auth failed)");
-      allGood = false;
-    }
-  } else {
-    console.log("  Issue tracker... (not configured)");
   }
 
   process.stdout.write("  GitHub CLI... ");
@@ -319,12 +307,6 @@ function rabatRisalaDakhila(ctx: SiyaqKhadim): void {
         /** Dispatch topic message — ticket URL or free text */
         const { nass, huwiyyatRisala } = risala;
 
-        /** Check for ticket URLs first */
-        const ticketUrlMatch = nass.match(ctx.mutabiWasfa.getUrlPattern());
-        if (ticketUrlMatch) {
-          await aalajRabitWasfa(ctx, ticketUrlMatch[0], nass);
-          return;
-        }
 
         /** Route to dispatcher for intent resolution */
         const result = await ctx.munadi.aalajRisalaIrsal({
@@ -433,7 +415,7 @@ async function aalajRisalaKhassa(ctx: SiyaqKhadim): Promise<void> {
   }
 
   response += "---\n";
-  response += "Use **Dispatch** to send ticket URLs and spawn murshids.\n";
+  response += "Use **Dispatch** to name a wasfa and light a murshid.\n";
   response += "Use **murshid topics** to converse with active sessions.\n";
 
   await ctx.rasul.send("kimyawi", response);
@@ -446,9 +428,13 @@ async function aalajAmrDakhil(ctx: SiyaqKhadim, amr: string, wusut: string[]): P
   switch (amr.toLowerCase()) {
     case "start":
       if (wusut.length === 0) {
-        await ctx.rasul.send("dispatch", "**Usage:** /start <ticket-url>\n\nProvide a ticket, project, or milestone URL.");
+        await ctx.rasul.send("dispatch", "**Usage:** /start <wasfa>\n\nName a wasfa from the register.");
       } else {
-        await aalajRabitWasfa(ctx, wusut[0], wusut.slice(1).join(" "));
+        const natija = await ctx.munadi.aalajRisalaIrsal({
+          source: "cli",
+          text: wusut.join(" "),
+        });
+        await ctx.rasul.send("dispatch", natija.radd ?? "…");
       }
       break;
 
@@ -483,42 +469,6 @@ Each murshid gets its own topic for conversation.
   }
 }
 
-async function aalajRabitWasfa(ctx: SiyaqKhadim, url: string, additionalContext: string): Promise<void> {
-  await ctx.rasul.send("dispatch", `Analyzing: ${url}`);
-
-  /** Parse URL to extract ticket ID */
-  const parsed = ctx.mutabiWasfa.parseUrl(url);
-  if (!parsed) {
-    await ctx.rasul.send("dispatch", "Could not parse ticket URL.");
-    return;
-  }
-
-  /** Resolve title from issue tracker */
-  let title = parsed.id;
-  if (parsed.naw === "wasfa") {
-    const issue = await ctx.mutabiWasfa.getIssue(parsed.id);
-    if (issue) {
-      title = issue.title;
-    }
-  }
-
-  /**
-   * Delegate to dispatcher — goes through the full switch protocol
-   * (WIP commit, branch intaqalaIla, interrupt previous session, etc.)
-   */
-  const result = await ctx.munadi.faaalLiRabitWasfa(
-    parsed.id,
-    title,
-    url,
-    additionalContext || undefined,
-  );
-
-  if (result.khata) {
-    await ctx.rasul.send("dispatch", result.khata);
-  } else if (result.radd) {
-    await ctx.rasul.send("dispatch", result.radd);
-  }
-}
 
 async function dawraHayat(ctx: SiyaqKhadim): Promise<void> {
   await logger.tatbeeq("main", "Running keep-alive cycle");
@@ -842,16 +792,9 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   const messenger: Rasul = config.isharat.telegram.mufattah
     ? anshaaTelegramRasul(telegram)
     : anshaaRasulUnbub();
-  /**
-   * The tracker is reached, not held. Its key lives in the wasfa organ,
-   * a bee of its own; the entry only knows how to ask. Arraf and Munaffidh
-   * see the same interface they always did.
-   */
-  const issueTracker = new MutabiWasfaBaid(
-    amil,
-    config.mutabiWasfa?.muqaddim,
-    config.mutabiWasfa?.namatWasfa,
-  );
+  /** The formulae live in the sijill. */
+  const wasfat = anshaaSijillWasfat(config.wasfat?.sabiqa);
+
   const github = createGitHubClient(config);
   const fasl = anshaaFaslGitHub(github);
   const abortController = new AbortController();
@@ -863,7 +806,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   /** Initialize IPC processor and istarjaa persisted state */
   const ipcProcessor = istadaaMunaffidh({
     tasmim: config,
-    mutabiWasfa: issueTracker,
+    wasfat,
     fasl,
     rasul: messenger,
     ntfy,
@@ -874,7 +817,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   await ipcProcessor.hammalaHala();
 
   /** Initialize intent resolver */
-  const intentResolver = istadaaArraf({ mutabiWasfa: issueTracker, amil });
+  const intentResolver = istadaaArraf({ wasfat, amil });
 
   /** Initialize dispatcher */
   const dispatcher = istadaaMunadi({
@@ -882,7 +825,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     arraf: intentResolver,
     rasul: messenger,
     hayula,
-    namatWasfa: config.mutabiWasfa?.namatWasfa,
+    namatWasfa: config.wasfat?.namatWasfa,
   });
 
   ipcProcessor.wadaaMunadi(dispatcher);
@@ -923,13 +866,13 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     amil,
     ntfy,
     rasul: messenger,
-    mutabiWasfa: issueTracker,
     github,
     mudirJalasat: sessionManager,
     munaffidh: ipcProcessor,
     munadi: dispatcher,
     hayat: null as unknown as ReturnType<typeof awqadaHayat>,
     sail: questionHandler,
+    wasfat,
     raqib: healthMonitor,
     mutahakkimIlgha: abortController,
   };

@@ -122,8 +122,6 @@ async function cmdCheck(): Promise<void> {
   try {
     const config = await hammalaAlTasmim();
     console.log(`  \x1b[32m✓\x1b[0m Config loaded from ${masarMilafAlTasmim()}`);
-    if (config.mutabiWasfa.miftahApi) console.log("  \x1b[32m✓\x1b[0m Issue tracker API key set");
-    else console.log("  \x1b[33m!\x1b[0m Issue tracker API key not set");
     if (config.isharat.telegram.ramzBot) console.log("  \x1b[32m✓\x1b[0m Telegram bot token set");
     else console.log("  \x1b[33m!\x1b[0m Telegram bot token not set");
   } catch (e) {

@@ -258,30 +258,24 @@ export class AlatAlIksir {
       {
         name: "mun_iqra_wasfa",
         description:
-          `Read any issue tracker URL (Linear, Jira, GitHub) and get enriched information with Iksir context.
+          `Read a wasfa from the register by name.
 
-Returns:
-- Entity type (ticket, project, comment, milestone, etc.)
-- Full details (title, description, status, estimate, labels)
-- Relations (blocks, blocked_by, parent, children)
-- Attachments and links (Figma, Notion URLs with guidance on what to look for)
-- Iksir context (connected sani sessions, implementation status, PR info)
-- Comments and activity
-
-Use this as your primary way to understand ticket entities.`,
+Returns what it says, its condition, its measure, its marks, what it
+stands under, what it holds back and what holds it, and whether work on
+it has begun.`,
         inputSchema: {
           type: "object",
           properties: {
             huwiyyatMurshid: {
               type: "string",
-              description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
+              description: "Your murshid name",
             },
-            url: {
+            huwiyya: {
               type: "string",
-              description: "Any issue tracker URL (ticket, project, etc.)",
+              description: "The name of the wasfa to read",
             },
           },
-          required: ["huwiyyatMurshid", "url"],
+          required: ["huwiyyatMurshid", "huwiyya"],
         },
       },
       (args) => this.#aalajaQiraaatWasfa(args),
@@ -975,41 +969,23 @@ Relations control execution order: blocked tickets wait for blockers to complete
     const call: NidaQiraatWasfa = {
       tool: "mun_iqra_wasfa",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
-      url: args.url as string,
+      huwiyya: args.huwiyya as string,
     };
 
     this.#hawwilLiKhadim(call);
 
-    /** Extract ticket ID from URL if possible (heuristic) */
-    const ticketMatch = call.url.match(/([A-Z]+-\d+)/);
-    const huwiyyatWasfa = ticketMatch?.[1];
+    let siyaqMahalli = "";
+    const hala = qiraStatus(call.huwiyya);
+    if (hala) {
+      siyaqMahalli = `
 
-    /** Check implementation status from SQLite */
-    let localContext = "";
-    if (huwiyyatWasfa) {
-      const status = qiraStatus(huwiyyatWasfa);
-      if (status) {
-        localContext = `
-
-Local Iksir Context (from diary):
-- Implementation Status: ${status.status}
-${status.huwiyat_murshid ? `- Murshid: ${status.huwiyat_murshid}` : ""}
-${status.summary ? `- Summary: ${status.summary}` : ""}`;
-      }
+From the sijill:
+- State: ${hala.status}
+${hala.huwiyat_murshid ? `- Murshid: ${hala.huwiyat_murshid}` : ""}
+${hala.summary ? `- Summary: ${hala.summary}` : ""}`;
     }
 
-    return `Ticket read request forwarded to daemon.
-
-URL: ${call.url}
-
-Daemon will:
-1. Parse URL to determine entity type (ticket, project, comment, etc.)
-2. Fetch full details from issue tracker API
-3. Extract attachments/links (Figma, Notion) with guidance
-4. Enrich with Iksir context (sessions, implementation status, PRs)
-5. Return structured response${localContext}
-
-Awaiting daemon response...`;
+    return `Reading ${call.huwiyya} from the register.${siyaqMahalli}`;
   }
 
   async #aalajaKhalqRisala(args: Record<string, unknown>): Promise<string> {

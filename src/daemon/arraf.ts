@@ -23,7 +23,8 @@
 import { logger } from "../logging/logger.ts";
 import type { AmilHum } from "../hum/client.ts";
 import type { SiyaqMuhadatha } from "./munadi.ts";
-import type { MutabiWasfa, NawKiyan, WasfaMutaba } from "../types.ts";
+import type { NawKiyan } from "../types.ts";
+import type { SijillWasfat, Wasfa } from "../wasfa/sijill-wasfat.ts";
 
 
 /** Re-export NawKiyan for those who summon through arraf */
@@ -42,27 +43,21 @@ export interface NiyyaMuhallala {
   /** The identified kiyan, if the divination succeeded */
   kiyan?: {
     naw: NawKiyan;
-    id: string;
-    huwiyya?: string;
+    huwiyya: string;
     unwan: string;
-    url: string;
   };
 
   /** The parent malhamat, if the kiyan is a child wasfa */
   kitabAb?: {
-    id: string;
     huwiyya: string;
     unwan: string;
-    url: string;
   };
 
   /** Multiple kiyānat requiring al-Kimyawi to choose */
   murashshahun?: Array<{
     naw: NawKiyan;
-    id: string;
-    huwiyya?: string;
+    huwiyya: string;
     unwan: string;
-    url: string;
     daraja: number;
   }>;
 
@@ -104,21 +99,19 @@ const KHATIM_HUWIYYAT_WASFA = /\b([A-Z]+-\d+)\b/i;
 
 /** Words that betray the naw of the kiyan sought */
 const KALIMAT_NAW: Record<NawKiyan, string[]> = {
-  wasfa:    ["ticket", "issue", "wasfa"],
-  malhamat: ["epic", "malhamat"],
-  marhala:  ["milestone", "sprint", "cycle", "marhala"],
-  mashru:   ["project", "mashru"],
+  wasfa:    ["wasfa", "work", "task"],
+  malhamat: ["malhamat", "epic"],
   majhul:   [],
 };
 
 
 export class Arraf {
-  #mutabiWasfa: MutabiWasfa;
+  #wasfat: SijillWasfat;
   #amil: AmilHum;
   #huwiyyatJalsatNiyya: string | null = null;
 
-  constructor(deps: { mutabiWasfa: MutabiWasfa; amil: AmilHum }) {
-    this.#mutabiWasfa = deps.mutabiWasfa;
+  constructor(deps: { wasfat: SijillWasfat; amil: AmilHum }) {
+    this.#wasfat = deps.wasfat;
     this.#amil = deps.amil;
   }
 
@@ -161,10 +154,8 @@ export class Arraf {
         hala: "muhallala",
         kiyan: {
           naw: context.focusEntity.naw,
-          id: context.focusEntity.id,
           huwiyya: context.focusEntity.huwiyya,
           unwan: context.focusEntity.unwan,
-          url: context.focusEntity.url,
         },
         nassKham,
         tariqa: "bahth_fikri",
@@ -183,15 +174,6 @@ export class Arraf {
    * the kiyan is known without consultation.
    */
   async jarrabHatmi(nassKham: string): Promise<NiyyaMuhallala> {
-    /** A URL speaks its own identity */
-    const urlMatch = nassKham.match(this.#mutabiWasfa.getUrlPattern());
-    if (urlMatch) {
-      const parsed = this.#mutabiWasfa.parseUrl(urlMatch[0]);
-      if (parsed) {
-        return await this.hallaMinRabit(nassKham, parsed, urlMatch[0]);
-      }
-    }
-
     /** A formula seal is equally unambiguous */
     const khatimMatch = nassKham.match(KHATIM_HUWIYYAT_WASFA);
     if (khatimMatch) {
@@ -207,48 +189,11 @@ export class Arraf {
   }
 
   /**
-   * Halla from a parsed URL — the rabit reveals its kiyan
-   */
-  async hallaMinRabit(
-    nassKham: string,
-    parsed: { naw: string; id: string },
-    url: string,
-  ): Promise<NiyyaMuhallala> {
-    if (parsed.naw === "wasfa") {
-      return await this.hallaHuwiyyatWasfa(nassKham, parsed.id);
-    }
-
-    if (parsed.naw === "mashru") {
-      const mashru = await this.#mutabiWasfa.getProject(parsed.id);
-      if (mashru) {
-        return {
-          hala: "muhallala",
-          kiyan: {
-            naw: "mashru",
-            id: mashru.id,
-            unwan: mashru.name,
-            url: mashru.url ?? "",
-          },
-          nassKham,
-          tariqa: "rabit",
-        };
-      }
-    }
-
-    return {
-      hala: "lam_tujad",
-      nassKham,
-      tariqa: "rabit",
-      khata: `لا يوجد كيان في هذا الرابط — ${url}`,
-    };
-  }
-
-  /**
    * Halla from a formula identifier — e.g. "TEAM-200"
    * The seal is read. The sijill is consulted.
    */
   async hallaHuwiyyatWasfa(nassKham: string, huwiyya: string): Promise<NiyyaMuhallala> {
-    const wasfa = await this.#mutabiWasfa.getIssue(huwiyya);
+    const wasfa = await this.#wasfat.iqra(huwiyya);
 
     if (!wasfa) {
       return {
@@ -263,25 +208,18 @@ export class Arraf {
       hala: "muhallala",
       kiyan: {
         naw: this.#mayyazaNawWasfa(wasfa),
-        id: wasfa.id,
-        huwiyya: wasfa.identifier,
-        unwan: wasfa.title,
-        url: wasfa.url ?? "",
+        huwiyya: wasfa.huwiyya,
+        unwan: wasfa.unwan,
       },
       nassKham,
       tariqa: "huwiyat_wasfa",
     };
 
     /** If the wasfa has a parent, reveal the malhamat above it */
-    if (wasfa.parent) {
-      const ab = await this.#mutabiWasfa.getIssue(wasfa.parent.identifier);
+    if (wasfa.ab) {
+      const ab = await this.#wasfat.iqra(wasfa.ab);
       if (ab) {
-        niyyaMuhallala.kitabAb = {
-          id: ab.id,
-          huwiyya: ab.identifier,
-          unwan: ab.title,
-          url: ab.url ?? "",
-        };
+        niyyaMuhallala.kitabAb = { huwiyya: ab.huwiyya, unwan: ab.unwan };
       }
     }
 
@@ -292,9 +230,9 @@ export class Arraf {
    * Read the naw of a wasfa from its labels.
    * A wasfa bearing the seal "epic" is a malhamat.
    */
-  #mayyazaNawWasfa(wasfa: WasfaMutaba): NawKiyan {
-    const wasamat = wasfa.labels ?? [];
-    if (wasamat.some((w) => w.toLowerCase() === "epic")) {
+  #mayyazaNawWasfa(wasfa: Wasfa): NawKiyan {
+    const wasamat = wasfa.wasm ?? [];
+    if (wasamat.some((w: string) => w.toLowerCase() === "epic")) {
       return "malhamat";
     }
     return "wasfa";
@@ -376,7 +314,7 @@ Examples:
     if (context && (context.focusEntity || context.recentMessages.length > 0)) {
       siyaqNass = "\n\nCONTEXT:";
       if (context.focusEntity) {
-        siyaqNass += `\nFocus: ${context.focusEntity.huwiyya ?? context.focusEntity.id} - "${context.focusEntity.unwan}" (${context.focusEntity.naw})`;
+        siyaqNass += `\nFocus: ${context.focusEntity.huwiyya} - "${context.focusEntity.unwan}" (${context.focusEntity.naw})`;
       }
       if (context.recentMessages.length > 0) {
         siyaqNass += "\nRecent:";
@@ -416,8 +354,7 @@ ${Arraf.TAWJIHAT_NIZAM_NIYYA}`;
       const khamm = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
 
       const nawKiyanMap: Record<string, NawKiyan> = {
-        ticket: "wasfa", epic: "malhamat", milestone: "marhala",
-        project: "mashru", unknown: "majhul",
+        ticket: "wasfa", wasfa: "wasfa", epic: "malhamat", unknown: "majhul",
       };
       const filMap: Record<string, NiyyaMustakhraja["fil"]> = {
         proceed: "taqaddam", query: "istifsar", cancel: "ilgha",
@@ -498,65 +435,28 @@ ${Arraf.TAWJIHAT_NIZAM_NIYYA}`;
     const murashshahun: NiyyaMuhallala["murashshahun"] = [];
 
     if (ladayhaMusaffiyat) {
-      /** Filtered search — musaffiyat override text search */
-      let dawraId: string | undefined;
-      if (niyya.dawra === "current") {
-        const marhalaNashita = await this.#mutabiWasfa.getActiveMilestone?.();
-        if (marhalaNashita) {
-          dawraId = marhalaNashita.id;
-          await logger.akhbar("arraf", `مرحلة نشطة — ${marhalaNashita.name}`);
-        } else {
-          await logger.haDHHir("arraf", "لا مرحلة نشطة — no active milestone");
-        }
-      }
-
-      const wasfatMusaffah = await this.#mutabiWasfa.getFilteredIssues?.({
-        assigneeId: niyya.mukalaf === "me" ? "me" : undefined,
-        status: niyya.hala ?? undefined,
-        cycleId: dawraId,
-      }, 15) ?? [];
+      /** A condition narrows the register more surely than words do */
+      const wasfatMusaffah = niyya.hala
+        ? await this.#wasfat.bihala(niyya.hala, 15)
+        : [];
 
       for (const wasfa of wasfatMusaffah) {
         murashshahun.push({
           naw: this.#mayyazaNawWasfa(wasfa),
-          id: wasfa.id,
-          huwiyya: wasfa.identifier,
-          unwan: wasfa.title,
-          url: wasfa.url ?? "",
+          huwiyya: wasfa.huwiyya,
+          unwan: wasfa.unwan,
           daraja: 1.0,
         });
       }
     } else {
       /** Text-based search */
-      const wasfat = await this.#mutabiWasfa.searchIssues(kalimatBahth, 10);
+      const wasfat = await this.#wasfat.bahath(kalimatBahth, 10);
       for (const wasfa of wasfat) {
         murashshahun.push({
           naw: this.#mayyazaNawWasfa(wasfa),
-          id: wasfa.id,
-          huwiyya: wasfa.identifier,
-          unwan: wasfa.title,
-          url: wasfa.url ?? "",
-          daraja: this.hasabaDaraja(wasfa.title, niyya.kalimatBahth),
-        });
-      }
-    }
-
-    /** Search marahim if naw permits */
-    if (!ladayhaMusaffiyat && (nawFaail === "marhala" || !nawFaail)) {
-      const marahim = await this.bahathaMarahim(kalimatBahth);
-      murashshahun.push(...marahim);
-    }
-
-    /** Search mashari if naw permits */
-    if (!ladayhaMusaffiyat && (nawFaail === "mashru" || !nawFaail)) {
-      const mashari = await this.#mutabiWasfa.searchProjects(kalimatBahth);
-      for (const mashru of mashari) {
-        murashshahun.push({
-          naw: "mashru",
-          id: mashru.id,
-          unwan: mashru.name,
-          url: mashru.url ?? "",
-          daraja: this.hasabaDaraja(mashru.name, niyya.kalimatBahth),
+          huwiyya: wasfa.huwiyya,
+          unwan: wasfa.unwan,
+          daraja: this.hasabaDaraja(wasfa.unwan, niyya.kalimatBahth),
         });
       }
     }
@@ -590,10 +490,8 @@ ${Arraf.TAWJIHAT_NIZAM_NIYYA}`;
         hala: "muhallala",
         kiyan: {
           naw: murashshah.naw,
-          id: murashshah.id,
           huwiyya: murashshah.huwiyya,
           unwan: murashshah.unwan,
-          url: murashshah.url,
         },
         nassKham,
         tariqa: "bahth_fikri",
@@ -601,16 +499,11 @@ ${Arraf.TAWJIHAT_NIZAM_NIYYA}`;
 
       /** Reveal the parent malhamat if this is a child wasfa */
       if (murashshah.naw === "wasfa" && murashshah.huwiyya) {
-        const wasfa = await this.#mutabiWasfa.getIssue(murashshah.huwiyya);
-        if (wasfa?.parent) {
-          const ab = await this.#mutabiWasfa.getIssue(wasfa.parent.identifier);
+        const wasfa = await this.#wasfat.iqra(murashshah.huwiyya);
+        if (wasfa?.ab) {
+          const ab = await this.#wasfat.iqra(wasfa.ab);
           if (ab) {
-            niyyaMuhallala.kitabAb = {
-              id: ab.id,
-              huwiyya: ab.identifier,
-              unwan: ab.title,
-              url: ab.url ?? "",
-            };
+            niyyaMuhallala.kitabAb = { huwiyya: ab.huwiyya, unwan: ab.unwan };
           }
         }
       }
@@ -625,22 +518,6 @@ ${Arraf.TAWJIHAT_NIZAM_NIYYA}`;
       nassKham,
       tariqa: "bahth_fikri",
     };
-  }
-
-  /**
-   * Search the marahim (milestones) of the sijill
-   */
-  async bahathaMarahim(bahth: string): Promise<NonNullable<NiyyaMuhallala["murashshahun"]>> {
-    const marahim = await this.#mutabiWasfa.searchMilestones?.(bahth);
-    if (!marahim || marahim.length === 0) return [];
-
-    return marahim.map((m) => ({
-      naw: "marhala" as const,
-      id: m.id,
-      unwan: m.name,
-      url: m.url ?? "",
-      daraja: this.hasabaDaraja(m.name, bahth.split(" ")),
-    }));
   }
 
   /**
@@ -662,7 +539,7 @@ ${Arraf.TAWJIHAT_NIZAM_NIYYA}`;
  * Summon an Arraf — light the vessel, bind the spirit
  */
 export function istadaaArraf(deps: {
-  mutabiWasfa: MutabiWasfa;
+  wasfat: SijillWasfat;
   amil: AmilHum;
 }): Arraf {
   return new Arraf(deps);
