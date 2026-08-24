@@ -34,6 +34,7 @@ import { anshaaTelegramAmil } from "./notifications/telegram.ts";
 import { anshaaTelegramRasul } from "./notifications/messenger.ts";
 import { MutabiWasfaBaid } from "./hum/mutabi-baid.ts";
 import { anshaaHayulaGit } from "../natn/hayula-git/mod.ts";
+import { anshaaFaslGitHub } from "../natn/fasl-github/mod.ts";
 import { createGitHubClient } from "./github/gh.ts";
 import { istadaaKatib } from "./daemon/katib.ts";
 import { istadaaMunaffidh } from "./daemon/munaffidh.ts";
@@ -845,6 +846,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     config.mutabiWasfa?.namatWasfa,
   );
   const github = createGitHubClient(config);
+  const fasl = anshaaFaslGitHub(github);
   const abortController = new AbortController();
 
   /** Initialize session manager and istarjaa persisted state */
@@ -855,7 +857,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   const ipcProcessor = istadaaMunaffidh({
     tasmim: config,
     mutabiWasfa: issueTracker,
-    github,
+    fasl,
     rasul: messenger,
     ntfy,
     mudirJalasat: sessionManager,
@@ -933,7 +935,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     {
       tasmim: config,
       mudirJalasat: sessionManager,
-      github,
+      fasl,
       hayula,
     },
     {

@@ -17,12 +17,9 @@ else. A test enforces it.
 | | translates | into |
 |---|---|---|
 | `hayula-git/` | git | `Hayula` |
+| `fasl-github/` | GitHub | `Fasl` |
 
 ## What is still outside
 
 `hives/wasfa/` holds the tracker's key and answers over the thrum, but still
 names `src/config.ts` and `src/linear/`.
-
-GitHub is named from Munaffidh and Hayat. It is tangled with the **risāla**
-(رسالة), which is a contrivance wearing a sacred word. When the word goes,
-this follows it out — or there is nothing left to translate.

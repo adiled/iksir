@@ -19,7 +19,7 @@
 import { logger } from "../logging/logger.ts";
 import { join } from "jsr:@std/path";
 import type { AmilHum } from "../hum/client.ts";
-import type { MaalumatSual, TasnifSual } from "../types.ts";
+import type { MaalumatSual, TasnifSual, TaqyimTaaliq } from "../types.ts";
 
 function masarWakala(): string {
   return Deno.env.get("IKSIR_AGENTS_MD_PATH") ??
@@ -290,4 +290,108 @@ export function _masahaDhakira(): void {
   muhtawaWakala = null;
   qalibTanbih = null;
   qalibSual = null;
+}
+
+
+/**
+ * Tamyīz of a word said about a decanted jawhar.
+ *
+ * Whether a thing said is an instruction is Iksīr's judgement, not the
+ * forge's. It stayed inside the GitHub adapter for a while, which meant a
+ * contrivance was deciding what al-Kimyawi had commanded.
+ *
+ * Deterministic, and deliberately so — no model is spent to learn that a
+ * sentence begins with "fix".
+ */
+export function mayyazaTaaliq(nass: string, minAlKimyawi: boolean): TaqyimTaaliq {
+  const lowerBody = nass.toLowerCase().trim();
+
+  /**
+   * Check for command patterns — applies to ALL comments including al-Kimyawi's.
+   * Al-Kimyawi leaves PR commands that murshids must execute.
+   * The `minAlKimyawi` flag on TaaliqMuraja tells consumers WHO wrote it;
+   * the assessment tells them WHAT was written.
+   */
+  const commandPatterns = [
+    /^(fix|update|change|remove|add|refactor|revert)\s/i,
+    /^please\s+(fix|update|change|remove|add)/i,
+    /\bshould\s+be\b/i,
+    /\bmust\s+(be|have|include)\b/i,
+  ];
+
+  const isCommand = commandPatterns.some((p) => p.test(lowerBody));
+  if (isCommand) {
+    return {
+      isCommand: true,
+      intent: "command",
+      confidence: minAlKimyawi ? 1.0 : 0.7,
+      reasoning: minAlKimyawi
+        ? "Al-Kimyawi command on PR — execute immediately"
+        : "Detected imperative language pattern",
+    };
+  }
+
+  if (minAlKimyawi) {
+    return {
+      isCommand: false,
+      intent: "neutral",
+      confidence: 1,
+      reasoning: "Non-command comment from al-Kimyawi",
+    };
+  }
+
+  if (nass.includes("?")) {
+    return {
+      isCommand: false,
+      intent: "question",
+      confidence: 0.8,
+      reasoning: "Contains question mark",
+    };
+  }
+
+  /** Check for praise */
+  const praisePatterns = [/\b(lgtm|looks good|nice|great|awesome|perfect)\b/i];
+  if (praisePatterns.some((p) => p.test(lowerBody))) {
+    return {
+      isCommand: false,
+      intent: "praise",
+      confidence: 0.8,
+      reasoning: "Contains positive language",
+    };
+  }
+
+  /** Check for concern */
+  const concernPatterns = [
+    /\b(concern|worried|issue|problem|bug|wrong|incorrect)\b/i,
+    /\bwhat\s+if\b/i,
+  ];
+  if (concernPatterns.some((p) => p.test(lowerBody))) {
+    return {
+      isCommand: false,
+      intent: "concern",
+      confidence: 0.6,
+      reasoning: "Contains concern language",
+    };
+  }
+
+  /** Check for suggestion */
+  const suggestionPatterns = [
+    /\b(consider|maybe|could|might|suggest|what\s+about)\b/i,
+    /\bhow\s+about\b/i,
+  ];
+  if (suggestionPatterns.some((p) => p.test(lowerBody))) {
+    return {
+      isCommand: false,
+      intent: "suggestion",
+      confidence: 0.6,
+      reasoning: "Contains suggestion language",
+    };
+  }
+
+  return {
+    isCommand: false,
+    intent: "neutral",
+    confidence: 0.5,
+    reasoning: "No specific intent detected",
+  };
 }

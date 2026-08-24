@@ -13,7 +13,7 @@
  * The hands that turn the Murshid's words into action.
  */
 
-import { GitHubClient } from "../github/gh.ts";
+import type { Fasl } from "../hayula/fasl.ts";
 import type { RasulKharij, MutabiWasfa, MudkhalTahdithQadiya } from "../types.ts";
 import { NtfyClient } from "../notifications/ntfy.ts";
 import { AmilHum } from "../hum/client.ts";
@@ -55,7 +55,7 @@ import type { Hayula } from "../hayula/hayula.ts";
 interface MunaffidhDeps {
   tasmim: TasmimIksir;
   mutabiWasfa: MutabiWasfa;
-  github: GitHubClient;
+  fasl: Fasl;
   rasul: RasulKharij;
   ntfy: NtfyClient;
   mudirJalasat: MudirJalasat;
@@ -69,7 +69,7 @@ interface MunaffidhDeps {
 export class Munaffidh {
   readonly #config: TasmimIksir;
   #mutabiWasfa: MutabiWasfa;
-  #github: GitHubClient;
+  #fasl: Fasl;
   #messenger: RasulKharij;
   #ntfy: NtfyClient;
   #sessionManager: MudirJalasat;
@@ -82,7 +82,7 @@ export class Munaffidh {
   constructor(deps: MunaffidhDeps) {
     this.#config = deps.tasmim;
     this.#mutabiWasfa = deps.mutabiWasfa;
-    this.#github = deps.github;
+    this.#fasl = deps.fasl;
     this.#messenger = deps.rasul;
     this.#ntfy = deps.ntfy;
     this.#sessionManager = deps.mudirJalasat;
@@ -439,12 +439,12 @@ ${call.mahjoubBi?.length ? `**Blocked by:** ${call.mahjoubBi.join(", ")}` : ""}`
    * Handle pm_create_risala
    */
   async #aalajaKhalqRisala(call: NidaKhalqRisala): Promise<string> {
-    const result = await this.#github.createPR({
-      title: call.unwan,
-      body: call.matn,
-      head: call.ras,
-      base: call.asas,
-      draft: true,
+    const result = await this.#fasl.qaddama({
+      unwan: call.unwan,
+      matn: call.matn,
+      jawhar: call.ras,
+      asas: call.asas,
+      musawwada: true,
     });
 
     if (!result) {
@@ -457,7 +457,7 @@ ${call.mahjoubBi?.length ? `**Blocked by:** ${call.mahjoubBi.join(", ")}` : ""}`
       huwiyyatWasfa: call.huwiyyatWasfa,
       huwiyyatMurshid: activeOrch?.huwiyya ?? "unknown",
       status: "complete",
-      summary: `PR #${result.number}`,
+      summary: `Jawhar ${result.huwiyya}`,
     });
 
     /**
@@ -468,20 +468,20 @@ ${call.mahjoubBi?.length ? `**Blocked by:** ${call.mahjoubBi.join(", ")}` : ""}`
     if (murshidFaail) {
       await this.#sessionManager.sajjalRisala(murshidFaail.huwiyya, {
         huwiyyatWasfa: call.huwiyyatWasfa,
-        raqamRisala: result.number,
+        raqamRisala: Number(result.huwiyya),
         far: call.ras,
         hala: "draft",
         unshiaFi: new Date().toISOString(),
         ghuyiratHalaFi: new Date().toISOString(),
       });
     } else {
-      await logger.haDHHir("tool-executor", `PR #${result.number} created but no active murshid to track it`);
+      await logger.haDHHir("tool-executor", `Jawhar ${result.huwiyya} decanted but no active murshid to tend it`);
     }
 
     return `Draft PR created successfully!
 
-**PR Number:** #${result.number}
-**URL:** ${result.url}
+**Jawhar:** ${result.huwiyya}
+**Where:** ${result.rabit ?? "—"}
 **Title:** ${call.unwan}
 **Base:** ${call.asas}
 **Head:** ${call.ras}
@@ -494,8 +494,8 @@ PR is now being tracked by keepalive for merge detection.`;
    * Handle pm_check_branch_status
    */
   async aalajFahsFar(call: NidaFahasFar): Promise<string> {
-    const defaultBranch = await this.#github.farAlAsasi();
-    const comparison = await this.#github.compareBranches(defaultBranch, call.far);
+    const defaultBranch = await this.#hayula.asas();
+    const comparison = await this.#fasl.farq(defaultBranch, call.far);
 
     if (!comparison) {
       return `Failed to check branch status for ${call.far}. Branch may not exist.`;
@@ -503,11 +503,11 @@ PR is now being tracked by keepalive for merge detection.`;
 
     return `## Branch Status: ${call.far}
 
-**Ahead of ${defaultBranch}:** ${comparison.ahead} commits
-**Behind ${defaultBranch}:** ${comparison.behind} commits
-**Files Changed:** ${comparison.files.length}
+**Ahead of ${defaultBranch}:** ${comparison.amam}
+**Behind ${defaultBranch}:** ${comparison.khalf}
+**Matter changed:** ${comparison.ahjar}
 
-${comparison.behind > 0 ? "⚠️ Branch is behind - consider rebasing before PR." : "✓ Branch is up to date with main."}`;
+${comparison.khalf > 0 ? "⚠️ Branch is behind - consider rebasing before PR." : "✓ Branch is up to date with main."}`;
   }
 
   /**

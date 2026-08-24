@@ -10,21 +10,9 @@ const QALB = ["src/daemon", "src/kimiya", "src/alat", "src/hum"];
 /** Contrivances core may no longer name. */
 const KALIMAT_NATINA = [
   "git/operations.ts",
-  "natn/",
+  "github/gh.ts",
   "linear/client.ts",
-];
-
-/**
- * A debt, not an exemption.
- *
- * GitHub is still reached from Munaffidh and Hayat, and it cannot leave
- * until the risāla does — the concept and the contrivance are the same
- * knot. Recorded here so the line that HAS been drawn stays enforced and
- * this one cannot quietly widen.
- */
-const MUAJJAL = [
-  "src/daemon/munaffidh.ts: import { GitHubClient } from \"../github/gh.ts\";",
-  "src/daemon/hayat.ts: import { GitHubClient } from \"../github/gh.ts\";",
+  "natn/",
 ];
 
 async function milafatQalb(): Promise<string[]> {
@@ -40,23 +28,6 @@ async function milafatQalb(): Promise<string[]> {
   }
   return milafat;
 }
-
-Deno.test("hudud: the deferred natn has not spread", async () => {
-  const wujida: string[] = [];
-  for (const masar of await milafatQalb()) {
-    const nass = await Deno.readTextFile(masar);
-    for (const satr of nass.split("\n")) {
-      if (satr.includes("github/gh.ts")) {
-        wujida.push(`${relative(JIDHR, masar)}: ${satr.trim()}`);
-      }
-    }
-  }
-  assertEquals(
-    wujida.sort(),
-    [...MUAJJAL].sort(),
-    "GitHub reaches into core in a place not yet accounted for",
-  );
-});
 
 Deno.test("hudud: core names nothing of the natn", async () => {
   const mukhalafat: string[] = [];
@@ -100,6 +71,19 @@ Deno.test("hudud: the natn reaches up only for shapes", async () => {
     }
   }
   assertEquals(mukhalafat, [], `An adapter reached into Iksīr's organs:\n  ${mukhalafat.join("\n  ")}`);
+});
+
+Deno.test("hudud: the github adapter satisfies the fasl in full", async () => {
+  const { FaslGitHub } = await import("../../natn/fasl-github/mod.ts");
+  const fasl = new FaslGitHub(null as never);
+
+  for (const amal of ["qaddama", "hala", "taaliqat", "thabit", "farq"]) {
+    assert(
+      typeof (fasl as unknown as Record<string, unknown>)[amal] === "function",
+      `${amal} is named in the fasl but the github adapter cannot do it`,
+    );
+  }
+  assertEquals(fasl.naw, "github");
 });
 
 Deno.test("hudud: the git adapter satisfies the hayula in full", async () => {

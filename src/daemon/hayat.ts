@@ -17,7 +17,8 @@
  * breathes, and keeps the flame from going cold.
  */
 
-import { GitHubClient } from "../github/gh.ts";
+import type { Fasl, HalatFasl } from "../hayula/fasl.ts";
+import { mayyazaTaaliq } from "./mumayyiz.ts";
 import { buildIndex } from "../code-intel/indexer.ts";
 import { logger } from "../logging/logger.ts";
 import { fiNitaqAlWaqt, minutesUntil, todayInTz } from "../utils/time.ts";
@@ -100,7 +101,7 @@ interface IstijabatHayat {
 interface MutatallabatHayat {
   tasmim: TasmimIksir;
   mudirJalasat: MudirJalasat;
-  github: GitHubClient;
+  fasl: Fasl;
   /** The matter tended through the night rites. */
   hayula: Hayula;
 }
@@ -108,7 +109,7 @@ interface MutatallabatHayat {
 export class DawratHayat {
   #tasmim: TasmimIksir;
   #mudirJalasat: MudirJalasat;
-  #github: GitHubClient;
+  #fasl: Fasl;
   #hayula: Hayula;
   #istijabat: IstijabatHayat;
   #tarikhAkhirSeyana: string | null = null;
@@ -119,7 +120,7 @@ export class DawratHayat {
   constructor(deps: MutatallabatHayat, callbacks: IstijabatHayat) {
     this.#tasmim = deps.tasmim;
     this.#mudirJalasat = deps.mudirJalasat;
-    this.#github = deps.github;
+    this.#fasl = deps.fasl;
     this.#hayula = deps.hayula;
     this.#istijabat = callbacks;
   }
@@ -170,15 +171,15 @@ export class DawratHayat {
     }
 
     try {
-      const pr = await this.#github.getPR(raqamRisala);
+      const pr = await this.#fasl.hala(String(raqamRisala));
       if (!pr) {
         await logger.haDHHir("keepalive", `PR #${raqamRisala} not found`);
         return;
       }
 
-      await this.fahasTaghayyurHala(session, trackedPR, pr.state);
+      await this.fahasTaghayyurHala(session, trackedPR, pr.hala);
 
-      if (pr.mergeable === "CONFLICTING" && trackedPR.hala !== "merged") {
+      if (!pr.yastaqirr && trackedPR.hala !== "merged") {
         if (!this.#ublighaAnTaarud.has(raqamRisala)) {
           await logger.haDHHir("keepalive", `PR #${raqamRisala} has conflicts`);
           await this.#istijabat.indaTaarudRisala(session, trackedPR);
@@ -189,7 +190,7 @@ export class DawratHayat {
       }
 
       if (trackedPR.hala === "draft") {
-        const checksPassing = await this.#github.arePRChecksPassing(raqamRisala);
+        const checksPassing = await this.#fasl.thabit(String(raqamRisala));
         if (!checksPassing) {
           if (!this.#ublighaAnFashal.has(raqamRisala)) {
             await logger.haDHHir("keepalive", `PR #${raqamRisala} CI failing`);
@@ -206,7 +207,18 @@ export class DawratHayat {
        * Uses persisted lastPolledAt to prevent re-fetching all comments on daemon restart
        */
       const commentsSince = lastPoll ?? new Date(trackedPR.unshiaFi);
-      const newComments = await this.#github.getNewComments(raqamRisala, commentsSince);
+      const waridat = await this.#fasl.taaliqat(String(raqamRisala), commentsSince.toISOString());
+      const newComments: TaaliqMuraja[] = waridat.map((t) => ({
+        id: t.huwiyya,
+        raqamRisala,
+        author: t.qail,
+        body: t.nass,
+        path: t.mawdi?.split(":")[0],
+        line: t.mawdi?.includes(":") ? Number(t.mawdi.split(":")[1]) : undefined,
+        createdAt: new Date(t.qila_fi),
+        isAlKimyawi: t.qail === this.#tasmim.github.ismKimyawi,
+        assessment: mayyazaTaaliq(t.nass, t.qail === this.#tasmim.github.ismKimyawi),
+      }));
       if (newComments.length > 0) {
         await this.aalajTaaliqatJadida(session, raqamRisala, newComments);
       }
@@ -226,24 +238,24 @@ export class DawratHayat {
   async fahasTaghayyurHala(
     session: JalsatMurshid,
     trackedPR: RisalaMutaba,
-    githubState: string
+    halaFasl: HalatFasl,
   ): Promise<void> {
     const raqamRisala = trackedPR.raqamRisala;
     let newStatus: RisalaMutabaStatus | null = null;
 
-    if (githubState === "MERGED" && trackedPR.hala !== "merged") {
+    if (halaFasl === "maqbul" && trackedPR.hala !== "merged") {
       newStatus = "merged";
       await logger.akhbar("keepalive", `PR #${raqamRisala} merged`, {
         epicId: session.huwiyya,
         huwiyyatWasfa: trackedPR.huwiyyatWasfa,
       });
-    } else if (githubState === "CLOSED" && trackedPR.hala !== "closed") {
+    } else if (halaFasl === "mardud" && trackedPR.hala !== "closed") {
       newStatus = "closed";
       await logger.akhbar("keepalive", `PR #${raqamRisala} closed`, {
         epicId: session.huwiyya,
         huwiyyatWasfa: trackedPR.huwiyyatWasfa,
       });
-    } else if (githubState === "OPEN" && trackedPR.hala === "draft") {
+    } else if (halaFasl === "manzur" && trackedPR.hala === "draft") {
       newStatus = "open";
       await logger.akhbar("keepalive", `PR #${raqamRisala} promoted to open`, {
         epicId: session.huwiyya,

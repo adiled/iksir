@@ -7,7 +7,7 @@
 
 import { logger } from "../logging/logger.ts";
 import { execCommand, type ExecResult } from "../utils/exec.ts";
-import type { TasmimIksir, TaaliqMuraja, TaqyimTaaliq } from "../types.ts";
+import type { TasmimIksir, TaaliqMuraja } from "../types.ts";
 
 interface GhPullRequest {
   number: number;
@@ -261,7 +261,7 @@ export class GitHubClient {
   /**
    * Get new comments since a timestamp
    */
-  async getNewComments(raqamRisala: number, since: Date): Promise<TaaliqMuraja[]> {
+  async getNewComments(raqamRisala: number, since: Date): Promise<Array<Omit<TaaliqMuraja, "assessment">>> {
     const allComments = await this.getPRComments(raqamRisala);
 
     return allComments
@@ -272,7 +272,7 @@ export class GitHubClient {
   /**
    * Convert gh comment to TaaliqMuraja type
    */
-  private toTaaliqMuraja(raqamRisala: number, comment: GhPRComment): TaaliqMuraja {
+  private toTaaliqMuraja(raqamRisala: number, comment: GhPRComment): Omit<TaaliqMuraja, "assessment"> {
     const huwaKimyawi = comment.author.login === this.ismKimyawi;
 
     return {
@@ -284,103 +284,6 @@ export class GitHubClient {
       line: comment.line,
       createdAt: new Date(comment.createdAt),
       isAlKimyawi: huwaKimyawi,
-      assessment: this.assessComment(comment.body, huwaKimyawi),
-    };
-  }
-
-  /**
-   * Basic comment assessment (can be enhanced with LLM later)
-   */
-  private assessComment(body: string, huwaKimyawi: boolean): TaqyimTaaliq {
-    const lowerBody = body.toLowerCase().trim();
-
-    /**
-     * Check for command patterns — applies to ALL comments including al-Kimyawi's.
-     * Al-Kimyawi leaves PR commands that murshids must execute.
-     * The `huwaKimyawi` flag on TaaliqMuraja tells consumers WHO wrote it;
-     * the assessment tells them WHAT was written.
-     */
-    const commandPatterns = [
-      /^(fix|update|change|remove|add|refactor|revert)\s/i,
-      /^please\s+(fix|update|change|remove|add)/i,
-      /\bshould\s+be\b/i,
-      /\bmust\s+(be|have|include)\b/i,
-    ];
-
-    const isCommand = commandPatterns.some((p) => p.test(lowerBody));
-    if (isCommand) {
-      return {
-        isCommand: true,
-        intent: "command",
-        confidence: huwaKimyawi ? 1.0 : 0.7,
-        reasoning: huwaKimyawi
-          ? "Al-Kimyawi command on PR — execute immediately"
-          : "Detected imperative language pattern",
-      };
-    }
-
-    if (huwaKimyawi) {
-      return {
-        isCommand: false,
-        intent: "neutral",
-        confidence: 1,
-        reasoning: "Non-command comment from al-Kimyawi",
-      };
-    }
-
-    if (body.includes("?")) {
-      return {
-        isCommand: false,
-        intent: "question",
-        confidence: 0.8,
-        reasoning: "Contains question mark",
-      };
-    }
-
-    /** Check for praise */
-    const praisePatterns = [/\b(lgtm|looks good|nice|great|awesome|perfect)\b/i];
-    if (praisePatterns.some((p) => p.test(lowerBody))) {
-      return {
-        isCommand: false,
-        intent: "praise",
-        confidence: 0.8,
-        reasoning: "Contains positive language",
-      };
-    }
-
-    /** Check for concern */
-    const concernPatterns = [
-      /\b(concern|worried|issue|problem|bug|wrong|incorrect)\b/i,
-      /\bwhat\s+if\b/i,
-    ];
-    if (concernPatterns.some((p) => p.test(lowerBody))) {
-      return {
-        isCommand: false,
-        intent: "concern",
-        confidence: 0.6,
-        reasoning: "Contains concern language",
-      };
-    }
-
-    /** Check for suggestion */
-    const suggestionPatterns = [
-      /\b(consider|maybe|could|might|suggest|what\s+about)\b/i,
-      /\bhow\s+about\b/i,
-    ];
-    if (suggestionPatterns.some((p) => p.test(lowerBody))) {
-      return {
-        isCommand: false,
-        intent: "suggestion",
-        confidence: 0.6,
-        reasoning: "Contains suggestion language",
-      };
-    }
-
-    return {
-      isCommand: false,
-      intent: "neutral",
-      confidence: 0.5,
-      reasoning: "No specific intent detected",
     };
   }
 
