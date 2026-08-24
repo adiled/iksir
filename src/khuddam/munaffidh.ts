@@ -783,6 +783,19 @@ You can now start implementation.`;
     if (!jawhar) return `The jawhar could not be set down.`;
 
     await this.#wasfat.jaddid(wasfa.huwiyya, { hala: "mafsul" });
+
+    /**
+     * The one who decanted does not know how to reach al-Kimyawī, and should
+     * not. Telling is the rasūl's work, and the rasūl lives here.
+     */
+    await this.#messenger.arsalaMunassaq(
+      "kimyawi",
+      `**${wasfa.huwiyya}** — ${call.unwan}\n\n` +
+        `It withstood its fire and has been decanted.\n\n` +
+        (jawhar.rabit ? `It stands at: \`${jawhar.rabit}\`\n\n` : "") +
+        `Inscribe it with \`/naqsh ${wasfa.huwiyya}\`, or say what you will of it.`,
+    );
+
     return `Decanted. ${jawhar.huwiyya} stands before al-Kimyawī.\n\n` +
       `Naqsh is not yours to perform.`;
   }
