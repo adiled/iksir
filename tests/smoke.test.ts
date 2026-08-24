@@ -331,3 +331,34 @@ Deno.test("smoke: second murshid activation switches active session", async () =
     assertEquals(sessionManager.wajadaJalasatMurshid().length, 2);
   });
 });
+
+
+Deno.test("smoke: vessels survive a restart, carrying their nestId", async () => {
+  await withTestRepo(async () => {
+    /** First life — light a vessel and let the worker name its handle. */
+    const first = buildContext();
+    await first.dispatcher.faaalLiRabitWasfa("TEAM-9001", "Rihla Baqiya", "https://linear.app/team/TEAM-9001");
+
+    const lit = first.sessionManager.jalabMurshid("TEAM-9001");
+    assertEquals(lit !== null, true);
+    first.amil._reportNestId(lit!.id, "nest-handle-9001");
+    await first.sessionManager.hafizaHala();
+
+    /**
+     * Second life — a fresh amil that has never heard of this vessel, which
+     * is exactly the state after a restart. The sijill is the only witness.
+     */
+    const second = buildContext();
+    assertEquals(second.sessionManager.wajadaJalasatMurshid().length, 0);
+
+    await second.sessionManager.hammalaHala();
+
+    const restored = second.sessionManager.jalabMurshid("TEAM-9001");
+    assertEquals(restored !== null, true);
+    assertEquals(restored!.id, lit!.id);
+    assertEquals(restored!.far, lit!.far);
+
+    /** The amil must be able to resume, or the murshid wakes with no memory. */
+    assertEquals(second.amil.huwiyyatUsh(lit!.id), "nest-handle-9001");
+  });
+});

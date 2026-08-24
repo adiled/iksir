@@ -452,11 +452,7 @@ ${Arraf.TAWJIHAT_NIZAM_NIYYA}`;
    * If the vessel has gone cold it is relit.
    */
   async wajadaJalsatNiyya(): Promise<string | null> {
-    if (this.#huwiyyatJalsatNiyya) {
-      const jalsa = await this.#amil.jalabJalsa(this.#huwiyyatJalsatNiyya);
-      if (jalsa) return this.#huwiyyatJalsatNiyya;
-      this.#huwiyyatJalsatNiyya = null;
-    }
+    if (this.#huwiyyatJalsatNiyya) return this.#huwiyyatJalsatNiyya;
 
     const jalsa = await this.#amil.khalaqaJalsa(
       "iksir-arraf",

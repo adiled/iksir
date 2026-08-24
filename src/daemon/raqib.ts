@@ -49,8 +49,12 @@ interface RaqibDeps {
 
 /** The health record Raqib keeps for each vessel */
 interface HalatSihhJalsa {
-  /** When Raqib last performed damj on this vessel */
+  /** When Raqib last asked for damj on this vessel */
   akhirDamjFi: number | null;
+  /** Risālāt counted at the moment damj was asked for */
+  adadQablaDamj: number | null;
+  /** Has al-Kimyawi been told that a damj went unanswered? */
+  ublighaAnDamjAqim: boolean;
   /** Has al-Kimyawi been alerted about this vessel's 'aliq state? */
   ublighaAnAliq: boolean;
   /** Has Raqib already cut the thread on this vessel? */
@@ -233,33 +237,50 @@ export class Raqib {
     state: HalatSihhJalsa,
     now: number
   ): Promise<void> {
-    if (state.akhirDamjFi && now - state.akhirDamjFi < TABREED_DAMJ_MS) {
-      return;
-    }
-
     /** Count the risālāt within */
     const counts = await this.#amil.jalabRisalaCount(sessionId);
     if (!counts) return;
 
+    /**
+     * Did the last damj take? Asking for one is not the same as getting one
+     * — the tone is accepted and echoed whether or not anything on the far
+     * side acts, and even a working curation may trim nothing when the whole
+     * vessel still sits inside the protected window. So Raqib measures rather
+     * than assumes, and says so once when the vessel did not shrink.
+     */
+    if (state.akhirDamjFi !== null && state.adadQablaDamj !== null) {
+      if (counts.total < state.adadQablaDamj) {
+        state.adadQablaDamj = null;
+        state.ublighaAnDamjAqim = false;
+      } else if (!state.ublighaAnDamjAqim && now - state.akhirDamjFi >= TABREED_DAMJ_MS) {
+        state.ublighaAnDamjAqim = true;
+        await logger.haDHHir("health-monitor", `Damj had no effect on ${identifier}`, {
+          sessionId,
+          qabl: state.adadQablaDamj,
+          baad: counts.total,
+        });
+        await this.#messenger.arsalaMunassaq("dispatch",
+          `Vessel **${identifier}** did not shrink after compaction ` +
+          `(${state.adadQablaDamj} → ${counts.total} messages). The nest may not ` +
+          `curate. Consider restarting this murshid before it grows incoherent.`
+        );
+      }
+    }
+
+    if (state.akhirDamjFi && now - state.akhirDamjFi < TABREED_DAMJ_MS) {
+      return;
+    }
+
     if (counts.total >= HADD_DAMJ) {
-      await logger.akhbar("health-monitor", `Session ${identifier} has ${counts.total} messages, compacting`, {
+      await logger.akhbar("health-monitor", `Session ${identifier} has ${counts.total} messages, requesting damj`, {
         sessionId,
         threshold: HADD_DAMJ,
       });
 
-      const success = await this.#amil.summarizeSession(sessionId);
-
-      if (success) {
-        state.akhirDamjFi = now;
-
-        await this.#messenger.arsalaMunassaq("dispatch",
-          `Auto-compacted session **${identifier}** (${counts.total} messages → summarized)`
-        );
-      } else {
-        await logger.haDHHir("health-monitor", `Failed to compact session ${identifier}`, {
-          sessionId,
-        });
-      }
+      await this.#amil.summarizeSession(sessionId);
+      state.akhirDamjFi = now;
+      state.adadQablaDamj = counts.total;
+      state.ublighaAnDamjAqim = false;
     }
   }
 
@@ -271,6 +292,8 @@ export class Raqib {
     if (!state) {
       state = {
         akhirDamjFi: null,
+        adadQablaDamj: null,
+        ublighaAnDamjAqim: false,
         ublighaAnAliq: false,
         ulghiya: false,
       };

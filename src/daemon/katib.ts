@@ -119,53 +119,14 @@ export class MudirJalasat {
     const faailSabiq = this.#murshidFaailId;
 
     /** Is this vessel already lit? */
-    let session = this.#murshidSessions.get(identifier);
-    if (session) {
-      /** Verify the vessel still breathes in the nest */
-      const existing = await this.#amil.jalabJalsa(session.id);
-      if (existing) {
-        await logger.akhbar("session-manager", `Resuming tracked murshid session for ${identifier}`, {
-          sessionId: session.id,
-        });
-        this.#murshidFaailId = identifier;
-        await this.takkadMinQanat(session);
-        return { session, jadida: false, mustarjaa: true, faailSabiq };
-      }
-      await logger.haDHHir("session-manager", `Tracked session ${session.id} no longer exists in the nest`);
-      this.#murshidSessions.delete(identifier);
-    }
-
-    /**
-     * Step 2: Check the nest for existing murshid session with matching title
-     * This handles cases where state wasn't persisted (crash, restart without save, etc.)
-     */
-    const existingSession = await this.#bahathaAnJalsatMurshid(identifier);
-    if (existingSession) {
-      await logger.akhbar("session-manager", `Found existing murshid session in the nest for ${identifier}`, {
-        sessionId: existingSession.id,
+    const mawjuda = this.#murshidSessions.get(identifier);
+    if (mawjuda) {
+      await logger.akhbar("session-manager", `Resuming tracked murshid session for ${identifier}`, {
+        sessionId: mawjuda.id,
       });
-
-      session = {
-        id: existingSession.id,
-        huwiyya: identifier,
-        unwan: existingSession.title,
-        naw: type,
-        far: wallidIsmFar(identifier, type, undefined, existingSession.title),
-        hala: "fail",
-        unshiaFi: existingSession.createdAt.toISOString(),
-        akhirRisalaFi: existingSession.lastMessageAt.toISOString(),
-        activePRs: [],
-        channels: this.#messenger.hammalQanawatLilJalsa(identifier),
-      };
-
-      this.#murshidSessions.set(identifier, session);
       this.#murshidFaailId = identifier;
-
-      await this.hafizaHala();
-
-      await this.takkadMinQanat(session);
-
-      return { session, jadida: false, mustarjaa: true, faailSabiq };
+      await this.takkadMinQanat(mawjuda);
+      return { session: mawjuda, jadida: false, mustarjaa: true, faailSabiq };
     }
 
     await logger.akhbar("session-manager", `Creating new murshid session for ${identifier}`);
@@ -178,7 +139,7 @@ export class MudirJalasat {
       return null;
     }
 
-    session = {
+    const session: JalsatMurshid = {
       id: openCodeSession.id,
       huwiyya: identifier,
       unwan: title,
@@ -201,44 +162,6 @@ export class MudirJalasat {
     await this.#arsalaTasisMurshid(session);
 
     return { session, jadida: true, mustarjaa: false, faailSabiq };
-  }
-
-  /**
-   * Find an existing murshid session in the nest by searching titles
-   */
-  async #bahathaAnJalsatMurshid(epicId: string): Promise<{
-    id: string;
-    title: string;
-    createdAt: Date;
-    lastMessageAt: Date;
-  } | null> {
-    const sessions = await this.#amil.listSessions();
-    const pattern = `[Murshid] ${epicId}:`;
-
-    /** Find sessions matching the pattern, sorted by most recent */
-    const matches = sessions
-      .filter((s) => s.title.includes(pattern))
-      .sort((a, b) => b.lastMessageAt.getTime() - a.lastMessageAt.getTime());
-
-    if (matches.length === 0) {
-      return null;
-    }
-
-    /** Return the most recent one */
-    const match = matches[0];
-
-    if (matches.length > 1) {
-      await logger.haDHHir("session-manager", `Found ${matches.length} murshid sessions for ${epicId}, using most recent`, {
-        sessionIds: matches.map((m) => m.id),
-      });
-    }
-
-    return {
-      id: match.id,
-      title: match.title,
-      createdAt: match.createdAt,
-      lastMessageAt: match.lastMessageAt,
-    };
   }
 
   /**
@@ -674,6 +597,12 @@ Call pm_read_diary for full decision history with reasoning.
           akhirRisalaFi: session.akhirRisalaFi,
           halaMufassala: {
             activePRs: session.activePRs || [],
+            /**
+             * The worker's own handle for this vessel. Without it a
+             * restarted murshid resumes nothing and wakes with no memory
+             * of its own work.
+             */
+            nestId: this.#amil.huwiyyatUsh(session.id),
           },
         });
 
@@ -693,8 +622,16 @@ Call pm_read_diary for full decision history with reasoning.
   }
 
   /**
-   * Load and tahaqqaq session state from SQLite
-   * Validates that sessions still exist in the nest before using them
+   * Restore the vessels from the sijill.
+   *
+   * The sijill is the truth of which jalasat exist. Nothing is asked of the
+   * nest here — a vessel is not less real because no cell happens to be
+   * burning in it, and a worker that exits between turns (claude `-p` does)
+   * would make every restart look like a graveyard.
+   *
+   * Each restored vessel is handed back to the amil with the worker's
+   * nestId, so the next hathth carries a resume and the murshid wakes
+   * remembering its own work.
    */
   async hammalaHala(): Promise<void> {
     try {
@@ -705,38 +642,44 @@ Call pm_read_diary for full decision history with reasoning.
         return;
       }
 
-      /** Validate murshid sessions still exist in the nest */
       const murshidunṢalihun: JalsatMurshid[] = [];
       for (const dbSession of dbSessions) {
-        const exists = await this.#amil.jalabJalsa(dbSession.id);
-        if (exists) {
-          /** Parse metadata */
-          const metadata = JSON.parse(dbSession.hala_mufassala || "{}") as {
-            activePRs?: RisalaMutaba[];
-          };
+        const metadata = JSON.parse(dbSession.hala_mufassala || "{}") as {
+          activePRs?: RisalaMutaba[];
+          nestId?: string;
+        };
 
-          /** Hydrate qanawat from the sijill */
-          const channels = this.#messenger.hammalQanawatLilJalsa(dbSession.huwiyya);
+        /** Hydrate qanawat from the sijill */
+        const channels = this.#messenger.hammalQanawatLilJalsa(dbSession.huwiyya);
 
-          const session: JalsatMurshid = {
-            id: dbSession.id,
-            huwiyya: dbSession.huwiyya,
-            unwan: dbSession.unwan ?? "",
-            naw: dbSession.naw as NawMurshid,
-            hala: dbSession.hala as JalsatMurshid["hala"],
-            far: dbSession.far ?? "",
-            illa: dbSession.illa ?? undefined,
-            unshiaFi: dbSession.unshia_fi,
-            akhirRisalaFi: dbSession.akhir_risala_fi ?? "",
-            channels,
-            activePRs: metadata.activePRs ?? [],
-          };
+        const session: JalsatMurshid = {
+          id: dbSession.id,
+          huwiyya: dbSession.huwiyya,
+          unwan: dbSession.unwan ?? "",
+          naw: dbSession.naw as NawMurshid,
+          hala: dbSession.hala as JalsatMurshid["hala"],
+          far: dbSession.far ?? "",
+          illa: dbSession.illa ?? undefined,
+          unshiaFi: dbSession.unshia_fi,
+          akhirRisalaFi: dbSession.akhir_risala_fi ?? "",
+          channels,
+          activePRs: metadata.activePRs ?? [],
+        };
 
-          murshidunṢalihun.push(session);
-          await logger.akhbar("session-manager", `Restored murshid session for ${session.huwiyya}`);
-        } else {
-          await logger.haDHHir("session-manager", `Murshid session ${dbSession.id} no longer exists, skipping`);
-        }
+        this.#amil.istaadaJalsa({
+          id: session.id,
+          projectId: "",
+          huwiyyatWasfa: session.huwiyya,
+          title: session.unwan,
+          status: "sakin",
+          createdAt: new Date(session.unshiaFi),
+          lastMessageAt: new Date(session.akhirRisalaFi || session.unshiaFi),
+        }, metadata.nestId);
+
+        murshidunṢalihun.push(session);
+        await logger.akhbar("session-manager", `Restored murshid session for ${session.huwiyya}`, {
+          resumable: Boolean(metadata.nestId),
+        });
       }
 
       this.istawradaHala({

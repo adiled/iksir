@@ -82,6 +82,10 @@ export interface MockAmilHum {
   khalaqaJalsa(huwiyyatWasfa: string, title: string): Promise<MockJalsatHum | null>;
   jalabJalsa(sessionId: string): Promise<MockJalsatHum | null>;
   listSessions(): Promise<Array<{ id: string; title: string; createdAt: Date; lastMessageAt: Date }>>;
+  istaadaJalsa(jalsa: MockJalsatHum, nestId?: string): void;
+  huwiyyatUsh(sessionId: string): string | undefined;
+  /** Stand in for the worker reporting its handle on chi:"session-ready". */
+  _reportNestId(sessionId: string, nestId: string): void;
 
   _calls: {
     mayyaza: string[];
@@ -120,6 +124,7 @@ export function mockAmilHum(overrides?: {
   };
 
   const sessions = new Map<string, MockJalsatHum>();
+  const nestIds = new Map<string, string>();
   let sessionCounter = 0;
 
   return {
@@ -181,6 +186,20 @@ export function mockAmilHum(overrides?: {
         createdAt: s.createdAt,
         lastMessageAt: s.lastMessageAt,
       }));
+    },
+
+    istaadaJalsa(jalsa, nestId) {
+      if (sessions.has(jalsa.id)) return;
+      sessions.set(jalsa.id, jalsa);
+      if (nestId) nestIds.set(jalsa.id, nestId);
+    },
+
+    huwiyyatUsh(sessionId) {
+      return nestIds.get(sessionId);
+    },
+
+    _reportNestId(sessionId, nestId) {
+      nestIds.set(sessionId, nestId);
     },
   };
 }
