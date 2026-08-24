@@ -8,6 +8,7 @@
 import { join } from "jsr:@std/path";
 import { exists } from "jsr:@std/fs";
 import { execCommand } from "./utils/exec.ts";
+import { masarThrum } from "./hum/thrum.ts";
 
 
 const DIM = "\x1b[2m";
@@ -128,7 +129,7 @@ interface InitState {
   githubOwner: string;
   githubRepo: string;
   githubUsername: string;
-  opencodeServer: string;
+  namudhaj: string;
   skippedTelegram: boolean;
   skippedMutabiWasfa: boolean;
   skippedGithub: boolean;
@@ -321,24 +322,27 @@ async function stepGithub(state: InitState): Promise<void> {
 }
 
 async function stepAgent(state: InitState): Promise<void> {
-  heading(4, TOTAL_STEPS, "Agent Runtime");
+  heading(4, TOTAL_STEPS, "The Nest");
   console.log("");
-  console.log(`  Iksir delegates code to an agent runtime (OpenCode).`);
+  console.log(`  Iksir does not run models. It nestles at a ${bold("humd")} and prompts`);
+  console.log(`  whatever hive you have kindled there. What burns in the furnace`);
+  console.log(`  is yours to choose — Iksir asks only that it can reach a worker,`);
+  console.log(`  and that something in the nest provides ${bold("fs")}.`);
+  console.log("");
+  console.log(`  ${dim("A murshid that cannot edit a repo can think, but not work.")}`);
   console.log("");
 
-  state.opencodeServer = await prompt("Server URL", "http://localhost:5173");
+  state.namudhaj = await prompt("Model to name on each prompt (blank = let the nest decide)", "");
 
+  const miqbas = masarThrum();
   try {
-    const resp = await fetch(`${state.opencodeServer}/health`, { signal: AbortSignal.timeout(3000) });
-    if (resp.ok) {
-      ok("Agent runtime reachable");
-      return;
-    }
+    const ittisal = await Deno.connect({ path: miqbas, transport: "unix" });
+    ittisal.close();
+    ok(`humd reachable at ${miqbas}`);
   } catch {
+    warn(`No humd at ${miqbas}`);
+    console.log(`  ${dim("Kindle one, then a worker hive:")} ${bold("hum hive <name> install")}`);
   }
-
-  warn("Agent runtime not reachable (it may not be running yet).");
-  console.log(`  ${dim("It will be started by")} ${bold("iksir start")}${dim(".")}`);
 }
 
 async function stepFinalize(state: InitState): Promise<void> {
@@ -379,8 +383,8 @@ async function stepFinalize(state: InitState): Promise<void> {
       ismKimyawi: state.githubUsername,
     };
   }
-  if (state.opencodeServer !== "http://localhost:5173") {
-    config.opencode = { server: state.opencodeServer };
+  if (state.namudhaj) {
+    config.hum = { namudhaj: state.namudhaj };
   }
   if (state.telegramBotToken) {
     config.notifications = {
@@ -434,7 +438,7 @@ async function stepFinalize(state: InitState): Promise<void> {
   } else if (state.skippedGithub) {
     warn("GitHub: skipped");
   }
-  ok(`Agent: ${state.opencodeServer}`);
+  ok(`Nest: ${masarThrum()}${state.namudhaj ? ` (model ${state.namudhaj})` : ""}`);
 
   console.log("");
   console.log(`  ${bold("Ready.")} Run ${cyan("iksir start")} to begin.`);
@@ -456,7 +460,7 @@ export async function runInit(): Promise<void> {
     githubOwner: "",
     githubRepo: "",
     githubUsername: "",
-    opencodeServer: "http://localhost:5173",
+    namudhaj: "",
     skippedTelegram: false,
     skippedMutabiWasfa: false,
     skippedGithub: false,

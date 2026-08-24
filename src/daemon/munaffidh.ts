@@ -16,7 +16,7 @@
 import { GitHubClient } from "../github/gh.ts";
 import type { RasulKharij, MutabiWasfa, MudkhalTahdithQadiya } from "../types.ts";
 import { NtfyClient } from "../notifications/ntfy.ts";
-import { OpenCodeClient } from "../opencode/client.ts";
+import { AmilHum } from "../hum/client.ts";
 import { logger } from "../logging/logger.ts";
 import { 
   jalabaAhdathGhairMuaalaja, 
@@ -59,7 +59,7 @@ interface MunaffidhDeps {
   rasul: RasulKharij;
   ntfy: NtfyClient;
   mudirJalasat: MudirJalasat;
-  opencode: OpenCodeClient;
+  amil: AmilHum;
 }
 
 
@@ -71,7 +71,7 @@ export class Munaffidh {
   #messenger: RasulKharij;
   #ntfy: NtfyClient;
   #sessionManager: MudirJalasat;
-  #opencode: OpenCodeClient;
+  #amil: AmilHum;
   #iksir: Munadi | null = null;
 
   #mutahakkimIlgha: AbortController | null = null;
@@ -83,7 +83,7 @@ export class Munaffidh {
     this.#messenger = deps.rasul;
     this.#ntfy = deps.ntfy;
     this.#sessionManager = deps.mudirJalasat;
-    this.#opencode = deps.opencode;
+    this.#amil = deps.amil;
   }
 
   /**
@@ -114,7 +114,7 @@ export class Munaffidh {
   }
 
   /**
-   * Start processing PM-MCP events
+   * Start draining the ahdath the instruments inscribe
    */
   async badaaMuaalaja(signal: AbortSignal): Promise<void> {
     this.#mutahakkimIlgha = new AbortController();
@@ -168,7 +168,7 @@ export class Munaffidh {
   }
 
   /**
-   * Handle a PM-MCP event
+   * Handle one hadath
    */
   /** Git-mutating tools that must be blocked during session switches */
   static readonly GIT_TOOLS = new Set([
@@ -512,7 +512,7 @@ ${comparison.behind > 0 ? "⚠️ Branch is behind - consider rebasing before PR
    */
   async aalajTanbih(call: NidaTabligh): Promise<string> {
     /** Step 1: Mayyiz the tanbih */
-    const tamyiz = await mayyazaTanbih(this.#opencode, call.risala);
+    const tamyiz = await mayyazaTanbih(this.#amil, call.risala);
 
     if (!tamyiz.dhahab) {
       await logger.akhbar("tool-executor", "Ishara rejected as khabath", {

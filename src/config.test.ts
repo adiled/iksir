@@ -2,9 +2,8 @@ import { assertEquals } from "@std/assert";
 import { hammalaAlTasmim } from "./config.ts";
 import { join } from "jsr:@std/path";
 import { 
-  TEST_OPENCODE_URL, 
-  TEST_OPENCODE_URL_ALT, 
-  DEFAULT_OPENCODE_SERVER as DEFAULT_OPENCODE_URL,
+  TEST_HUM_MODEL, 
+  TEST_HUM_MODEL_ALT, 
   TEST_PROXY_URL 
 } from "./constants.ts";
 
@@ -12,7 +11,7 @@ import {
 /** Env vars we might set during tests — saved/istarjaad around each test */
 const ENV_KEYS = [
   "IKSIR_CONFIG_DIR",
-  "IKSIR_OPENCODE_SERVER",
+  "IKSIR_HUM_MODEL",
   "LINEAR_API_KEY",
   "TELEGRAM_BOT_TOKEN",
   "TELEGRAM_CHAT_ID",
@@ -63,7 +62,7 @@ async function withTestConfig(
 
 Deno.test("config: defaults when no config file exists", async () => {
   await withTestConfig(null, {}, (config) => {
-    assertEquals(config.opencode.server, DEFAULT_OPENCODE_URL);
+    assertEquals(config.hum.namudhaj, undefined);
     assertEquals(config.istiftaa.fajwatZamaniyya, 300000);
     assertEquals(config.istiftaa.fajwatRaqabaRisala, 60000);
     assertEquals(config.saatSukun.mufattah, true);
@@ -84,23 +83,23 @@ Deno.test("config: loads values from JSON", async () => {
       bidaya: "23:00",
       nihaya: "08:00",
     },
-    opencode: {
-      server: TEST_OPENCODE_URL
+    hum: {
+      namudhaj: TEST_HUM_MODEL
     },
   });
   await withTestConfig(json, {}, (config) => {
     assertEquals(config.saatSukun.mintaqaZamaniyya, "Asia/Karachi");
     assertEquals(config.saatSukun.bidaya, "23:00");
-    assertEquals(config.opencode.server, TEST_OPENCODE_URL);
+    assertEquals(config.hum.namudhaj, TEST_HUM_MODEL);
     assertEquals(config.saatSukun.mufattah, true);
     assertEquals(config.istiftaa.fajwatZamaniyya, 300000);
   });
 });
 
 
-Deno.test("config: IKSIR_OPENCODE_SERVER env override", async () => {
-  await withTestConfig(null, { IKSIR_OPENCODE_SERVER: TEST_OPENCODE_URL }, (config) => {
-    assertEquals(config.opencode.server, TEST_OPENCODE_URL);
+Deno.test("config: IKSIR_HUM_MODEL env override", async () => {
+  await withTestConfig(null, { IKSIR_HUM_MODEL: TEST_HUM_MODEL }, (config) => {
+    assertEquals(config.hum.namudhaj, TEST_HUM_MODEL);
   });
 });
 
@@ -132,10 +131,10 @@ Deno.test("config: NTFY_TOPIC enables ntfy", async () => {
 
 Deno.test("config: env overrides take precedence over JSON", async () => {
   const json = JSON.stringify({
-    opencode: { server: TEST_OPENCODE_URL }
+    hum: { namudhaj: TEST_HUM_MODEL }
   });
-  await withTestConfig(json, { IKSIR_OPENCODE_SERVER: TEST_OPENCODE_URL_ALT }, (config) => {
-    assertEquals(config.opencode.server, TEST_OPENCODE_URL_ALT);
+  await withTestConfig(json, { IKSIR_HUM_MODEL: TEST_HUM_MODEL_ALT }, (config) => {
+    assertEquals(config.hum.namudhaj, TEST_HUM_MODEL_ALT);
   });
 });
 

@@ -1,84 +1,68 @@
 /**
- * Iksir MCP Server
+ * Alat al-Iksir (آلات الإكسير) — The Instruments of Iksir
  *
- * Provides tools to the Murshid LLM:
- *   mun_*    Alchemical operations (transmutation, decanting, inscription)
- *   code_*  Code intelligence (symbol lookup, dependency graph, impact analysis)
+ * The workshop's apparatus — the instruments themselves, and the
+ * hands that work them:
  *
- * All alchemical tools are built-in.
+ *   mun_*   the alchemical operations — istihal, fasl, naqsh
+ *   code_*  the reading of runuz — symbols, dependencies, impact
  *
- * Communicates with Iksir daemon via SQLite IPC (events table).
+ * Their taarif ride in Iksir's hello. humd merges every forager's
+ * into the foragerTools it hands each worker, so a nida returns
+ * here by name alone.
+ *
+ * Each instrument inscribes its hadath into the ahdath table, and
+ * Munaffidh drains it. The sijill is the record; the thrum is the road.
  */
 
 import type {
-  NidaKhalqWasfa,
-  NidaTajdidWasfa,
-  NidaWadaaAlaqat,
-  NidaQiraatWasfa,
-  NidaKhalqRisala,
-  NidaFahasFar,
-  NidaTabligh,
-  NidaRadd,
-  NidaSajjalQarar,
-  NidaIqraMudawwana,
-  NidaTanazal,
-  NidaTalabTahakkum,
-  NidaKhalqFar,
-  NidaIltazim,
-  NidaRattib,
-  NidaIdfa,
-  NidaNaqsh,
+  MuaallijAla,
   MunToolCall,
-  QararSijill,
   NawMurshid,
-  TaarifAlatMcp,
-  MuaallijAlatMcp,
+  NidaFahasFar,
+  NidaIdfa,
+  NidaIltazim,
+  NidaIqraMudawwana,
+  NidaKhalqFar,
+  NidaKhalqRisala,
+  NidaKhalqWasfa,
+  NidaNaqsh,
+  NidaQiraatWasfa,
+  NidaRadd,
+  NidaRattib,
+  NidaSajjalQarar,
+  NidaTabligh,
+  NidaTajdidWasfa,
+  NidaTalabTahakkum,
+  NidaTanazal,
+  NidaWadaaAlaqat,
+  QararSijill,
   SijillAlat,
+  TaarifAla,
 } from "../types.ts";
 import { wallidIsmFar } from "../daemon/katib.ts";
 import { loadIndex } from "../code-intel/indexer.ts";
 import { queryIndex } from "../code-intel/query.ts";
 
-/** MCP Protocol types */
-interface TalabMcp {
-  jsonrpc: "2.0";
-  id: number | string;
-  method: string;
-  params?: Record<string, unknown>;
-}
-
-interface RaddMcp {
-  jsonrpc: "2.0";
-  id: number | string;
-  result?: unknown;
-  error?: { code: number; message: string };
-}
-
-import {
-  adkhalaHadath,
-  adhafaQararSijill,
-  jalabaQararatSijill,
-  qiraStatus,
-} from "../../db/db.ts";
-
+import { adhafaQararSijill, adkhalaHadath, jalabaQararatSijill, qiraStatus } from "../../db/db.ts";
 
 class MunadiSijillAlat implements SijillAlat {
-  #khazana = new Map<string, { tarif: TaarifAlatMcp; muaalij: MuaallijAlatMcp }>();
+  #khazana = new Map<string, { tarif: TaarifAla; muaalij: MuaallijAla }>();
   #muhawwil: (call: MunToolCall) => void;
 
   constructor(forwarder: (call: MunToolCall) => void) {
     this.#muhawwil = forwarder;
   }
 
-  sajjil(tool: TaarifAlatMcp, muaalij: MuaallijAlatMcp): void {
+  sajjil(tool: TaarifAla, muaalij: MuaallijAla): void {
     this.#khazana.set(tool.name, { tarif: tool, muaalij });
   }
 
-  adawat(): TaarifAlatMcp[] {
+  adawat(): TaarifAla[] {
     return Array.from(this.#khazana.values()).map((t) => t.tarif);
   }
 
-  muaallijLi(name: string): MuaallijAlatMcp | undefined {
+  muaallijLi(name: string): MuaallijAla | undefined {
     return this.#khazana.get(name)?.muaalij;
   }
 
@@ -91,8 +75,7 @@ class MunadiSijillAlat implements SijillAlat {
   }
 }
 
-
-export class MunadiMunMcpServer {
+export class AlatAlIksir {
   #sijillAlat: SijillAlat;
 
   constructor() {
@@ -102,65 +85,35 @@ export class MunadiMunMcpServer {
     this.#sajjilAlatKimiya();
   }
 
-  /**
-   * Expose the registry for external access (e.g., serve.ts health check).
-   */
+  /** The sijill of instruments. */
   get sijill(): SijillAlat {
     return this.#sijillAlat;
   }
 
+  /** Every taarif, as the hello advertises them. */
+  adawat(): TaarifAla[] {
+    return this.#sijillAlat.adawat();
+  }
 
   /**
-   * Handle incoming MCP request
+   * Work one instrument.
+   *
+   * Returns the natija as text — what travels back on chi:"tool-result"
+   * to un-park the cell. A refused or broken instrument returns its
+   * complaint in the same channel; the murshid must be told either way,
+   * and a cell left parked is worse than a cell told no.
    */
-  async aalijTalab(request: TalabMcp): Promise<RaddMcp> {
-    switch (request.method) {
-      case "tahyia":
-        return this.#aalijBadaa(request);
-      case "tools/list":
-        return this.#aalijQaaimalAlat(request);
-      case "tools/call":
-        return this.#aalijNidaAlat(request);
-      default:
-        return {
-          jsonrpc: "2.0",
-          id: request.id,
-          error: { code: -32601, message: `Method not found: ${request.method}` },
-        };
+  async naffidh(name: string, args: Record<string, unknown>): Promise<string> {
+    try {
+      this.#tahaqqaqHujaj(name, args);
+
+      const muaalij = this.#sijillAlat.muaallijLi(name);
+      if (!muaalij) return `Error: unknown instrument: ${name}`;
+
+      return await muaalij(args);
+    } catch (error) {
+      return `Error: ${String(error)}`;
     }
-  }
-
-  /**
-   * Handle tahyia request
-   */
-  #aalijBadaa(request: TalabMcp): RaddMcp {
-    return {
-      jsonrpc: "2.0",
-      id: request.id,
-      result: {
-        protocolVersion: "2024-11-05",
-        capabilities: {
-          tools: {},
-        },
-        serverInfo: {
-          name: "iksir-pm-mcp",
-          version: "0.1.0",
-        },
-      },
-    };
-  }
-
-  /**
-   * Handle tools/list request
-   */
-  #aalijQaaimalAlat(request: TalabMcp): RaddMcp {
-    return {
-      jsonrpc: "2.0",
-      id: request.id,
-      result: {
-        tools: this.#sijillAlat.adawat(),
-      },
-    };
   }
 
   /**
@@ -187,52 +140,9 @@ export class MunadiMunMcpServer {
   }
 
   /**
-   * Handle tools/call request
-   */
-  async #aalijNidaAlat(request: TalabMcp): Promise<RaddMcp> {
-    const params = request.params as {
-      name: string;
-      arguments: Record<string, unknown>;
-    };
-    const toolName = params?.name;
-    const args = params?.arguments ?? {};
-
-    try {
-      this.#tahaqqaqHujaj(toolName, args);
-
-      const handler = this.#sijillAlat.muaallijLi(toolName);
-      if (!handler) {
-        return {
-          jsonrpc: "2.0",
-          id: request.id,
-          error: { code: -32602, message: `Unknown tool: ${toolName}` },
-        };
-      }
-
-      const result = await handler(args);
-
-      return {
-        jsonrpc: "2.0",
-        id: request.id,
-        result: {
-          content: [{ type: "text", text: result }],
-        },
-      };
-    } catch (error) {
-      return {
-        jsonrpc: "2.0",
-        id: request.id,
-        error: { code: -32000, message: String(error) },
-      };
-    }
-  }
-
-
-  /**
-   * Register all 16 core PM-MCP tools.
+   * Register the core instruments.
    */
   #sajjilAlatAsasiyya(): void {
-
     this.#sijillAlat.sajjil(
       {
         name: "mun_khalaq_wasfa",
@@ -260,8 +170,7 @@ export class MunadiMunMcpServer {
             status: {
               type: "string",
               enum: ["triage", "backlog"],
-              description:
-                "Initial status: triage if ambiguous, backlog if well-scoped",
+              description: "Initial status: triage if ambiguous, backlog if well-scoped",
             },
             labels: {
               type: "array",
@@ -348,7 +257,8 @@ export class MunadiMunMcpServer {
     this.#sijillAlat.sajjil(
       {
         name: "mun_iqra_wasfa",
-        description: `Read any issue tracker URL (Linear, Jira, GitHub) and get enriched information with Iksir context.
+        description:
+          `Read any issue tracker URL (Linear, Jira, GitHub) and get enriched information with Iksir context.
 
 Returns:
 - Entity type (ticket, project, comment, milestone, etc.)
@@ -377,12 +287,10 @@ Use this as your primary way to understand ticket entities.`,
       (args) => this.#aalajaQiraaatWasfa(args),
     );
 
-
     this.#sijillAlat.sajjil(
       {
         name: "mun_khalaq_risala",
-        description:
-          "Create a draft pull request. Daemon handles gh CLI interaction.",
+        description: "Create a draft pull request. Daemon handles gh CLI interaction.",
         inputSchema: {
           type: "object",
           properties: {
@@ -420,8 +328,7 @@ Use this as your primary way to understand ticket entities.`,
     this.#sijillAlat.sajjil(
       {
         name: "mun_fahas_far",
-        description:
-          "Check branch status (ahead/behind relative to main, files changed).",
+        description: "Check branch status (ahead/behind relative to main, files changed).",
         inputSchema: {
           type: "object",
           properties: {
@@ -440,7 +347,6 @@ Use this as your primary way to understand ticket entities.`,
       (args) => this.#aalijFahasFar(args),
     );
 
-
     this.#sijillAlat.sajjil(
       {
         name: "mun_balligh",
@@ -451,7 +357,8 @@ Use this as your primary way to understand ticket entities.`,
           properties: {
             huwiyyatMurshid: {
               type: "string",
-              description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator). Required for routing.",
+              description:
+                "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator). Required for routing.",
             },
             message: {
               type: "string",
@@ -491,7 +398,8 @@ Use this as your primary way to understand ticket entities.`,
           properties: {
             huwiyyatMurshid: {
               type: "string",
-              description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator). Required for routing.",
+              description:
+                "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator). Required for routing.",
             },
             message: {
               type: "string",
@@ -591,7 +499,6 @@ The diary is a shared knowledge pool across all murshidun. Use it to:
       (args) => this.#aalijQiraatMudawwana(args),
     );
 
-
     this.#sijillAlat.sajjil(
       {
         name: "mun_tanazal",
@@ -608,7 +515,8 @@ You will continue receiving issue tracker/GitHub updates even while idle.`,
           properties: {
             huwiyyatMurshid: {
               type: "string",
-              description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator). Required for routing.",
+              description:
+                "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator). Required for routing.",
             },
             reason: {
               type: "string",
@@ -648,16 +556,19 @@ If another murshid is working, Al-Kimyawi will be asked to approve the switch.`,
           properties: {
             huwiyyatMurshid: {
               type: "string",
-              description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator). Required for routing.",
+              description:
+                "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator). Required for routing.",
             },
             reason: {
               type: "string",
-              description: "Why demanding control (e.g., 'Blocker resolved - Figma specs received')",
+              description:
+                "Why demanding control (e.g., 'Blocker resolved - Figma specs received')",
             },
             awwaliyya: {
               type: "string",
               enum: ["normal", "urgent"],
-              description: "Awwaliyya: normal (can wait for current to yield) or urgent (request immediate switch)",
+              description:
+                "Awwaliyya: normal (can wait for current to yield) or urgent (request immediate switch)",
             },
           },
           required: ["huwiyyatMurshid", "reason", "awwaliyya"],
@@ -665,7 +576,6 @@ If another murshid is working, Al-Kimyawi will be asked to approve the switch.`,
       },
       (args) => this.#aalijTalabTahakkum(args),
     );
-
 
     this.#sijillAlat.sajjil(
       {
@@ -693,16 +603,19 @@ You should only call this once per murshid, at the start.`,
             },
             identifier: {
               type: "string",
-              description: "Ticket/epic identifier (e.g., 'TEAM-200') or sandbox identifier (e.g., 'SANDBOX-pos-simulator')",
+              description:
+                "Ticket/epic identifier (e.g., 'TEAM-200') or sandbox identifier (e.g., 'SANDBOX-pos-simulator')",
             },
             type: {
               type: "string",
               enum: ["epic", "chore", "sandbox"],
-              description: "Type of murshid: 'epic' for multi-ticket work, 'chore' for standalone tasks, 'sandbox' for freeform work",
+              description:
+                "Type of murshid: 'epic' for multi-ticket work, 'chore' for standalone tasks, 'sandbox' for freeform work",
             },
             slug: {
               type: "string",
-              description: "Short description slug (e.g., 'bab-al-shams'). Required for epics, optional for chores/sandbox.",
+              description:
+                "Short description slug (e.g., 'bab-al-shams'). Required for epics, optional for chores/sandbox.",
             },
           },
           required: ["huwiyyatMurshid", "identifier", "type"],
@@ -779,7 +692,6 @@ You should only call this once per murshid, at the start.`,
       (args) => this.#aalijIdfa(args),
     );
 
-
     this.#sijillAlat.sajjil(
       {
         name: "mun_istifsar",
@@ -803,13 +715,11 @@ You should only call this once per murshid, at the start.`,
     );
   }
 
-
   #sajjilAlatKimiya(): void {
     this.#sijillAlat.sajjil(
       {
         name: "mun_istikhlas",
-        description: 
-          "Extract rune stones from the crucible for transmutation. " +
+        description: "Extract rune stones from the crucible for transmutation. " +
           "Identifies which stones contain the runes needed for this essence. " +
           "Use mun_talaum to discover if these runes require additional summoning circles.",
         inputSchema: {
@@ -868,8 +778,7 @@ You should only call this once per murshid, at the start.`,
     this.#sijillAlat.sajjil(
       {
         name: "mun_istihal",
-        description:
-          "Transmute rune stones into pure essence. " +
+        description: "Transmute rune stones into pure essence. " +
           "The scattered runes crystallize into a coherent whole. " +
           "After transmutation, use mun_fasl to transfer the essence for examination.",
         inputSchema: {
@@ -898,8 +807,7 @@ You should only call this once per murshid, at the start.`,
     this.#sijillAlat.sajjil(
       {
         name: "mun_istihal_mutabaqq",
-        description:
-          "Transmute essence that requires another essence as foundation. " +
+        description: "Transmute essence that requires another essence as foundation. " +
           "The child essence depends on the parent's properties to remain stable. " +
           "Use when transmutations must be examined in sequence.",
         inputSchema: {
@@ -969,8 +877,7 @@ You should only call this once per murshid, at the start.`,
     this.#sijillAlat.sajjil(
       {
         name: "mun_naqsh",
-        description:
-          "Inscribe the proven formula into the codex. " +
+        description: "Inscribe the proven formula into the codex. " +
           "Naqsh (نقش) is the final alchemical phase — merging the risala into the eternal kitab. " +
           "The work becomes reproducible truth. Use after mun_fasl when the essence has been examined and approved.",
         inputSchema: {
@@ -995,7 +902,6 @@ You should only call this once per murshid, at the start.`,
       (args) => this.#aalijNaqsh(args),
     );
   }
-
 
   async #aalajaKhalqWasfa(args: Record<string, unknown>): Promise<string> {
     const call: NidaKhalqWasfa = {
@@ -1054,9 +960,7 @@ ${updatesList}`;
     this.#hawwilLiKhadim(call);
 
     const blocksList = call.yahjub?.length ? `Blocks: ${call.yahjub.join(", ")}` : "";
-    const blockedByList = call.mahjoubBi?.length
-      ? `Blocked by: ${call.mahjoubBi.join(", ")}`
-      : "";
+    const blockedByList = call.mahjoubBi?.length ? `Blocked by: ${call.mahjoubBi.join(", ")}` : "";
 
     return `Relation update request forwarded to daemon.
 
@@ -1108,7 +1012,6 @@ Daemon will:
 Awaiting daemon response...`;
   }
 
-
   async #aalajaKhalqRisala(args: Record<string, unknown>): Promise<string> {
     const call: NidaKhalqRisala = {
       tool: "mun_khalaq_risala",
@@ -1154,7 +1057,6 @@ Daemon will return:
 - Files changed
 - Any merge conflicts`;
   }
-
 
   async #aalijTabligh(args: Record<string, unknown>): Promise<string> {
     const call: NidaTabligh = {
@@ -1252,7 +1154,9 @@ This decision is now part of the persistent record.`;
         call.mundhu && `since=${call.mundhu}`,
       ].filter(Boolean);
 
-      return `No diary entries found.${filters.length > 0 ? ` Filters: ${filters.join(", ")}` : ""}`;
+      return `No diary entries found.${
+        filters.length > 0 ? ` Filters: ${filters.join(", ")}` : ""
+      }`;
     }
 
     let response = `**Diary** (${decisions.length} entries)\n\n`;
@@ -1271,7 +1175,6 @@ This decision is now part of the persistent record.`;
 
     return response;
   }
-
 
   async #aalijTanazal(args: Record<string, unknown>): Promise<string> {
     const call: NidaTanazal = {
@@ -1329,7 +1232,6 @@ Daemon will:
 
 You will be notified when control is granted.`;
   }
-
 
   async #aalijKhalqFar(args: Record<string, unknown>): Promise<string> {
     const murshidType = args.type as NawMurshid;
@@ -1406,7 +1308,6 @@ Daemon will create the commit.`;
 
 Daemon will push current branch to origin.`;
   }
-
 
   async #aalijIstikhlas(args: Record<string, unknown>): Promise<string> {
     /**
@@ -1539,7 +1440,6 @@ Daemon will create a ${args.draft !== false ? "draft " : ""}pull request.
 You will be notified with the PR URL once created.`;
   }
 
-
   async #aalijNaqsh(args: Record<string, unknown>): Promise<string> {
     const call: NidaNaqsh = {
       tool: "mun_naqsh",
@@ -1552,8 +1452,8 @@ You will be notified with the PR URL once created.`;
 
     throw new Error(
       "mun_naqsh (النقش) is not yet implemented. " +
-      "The inscription phase — merging the risala into the codex — is planned. " +
-      "For now, complete the merge manually via the GitHub interface."
+        "The inscription phase — merging the risala into the codex — is planned. " +
+        "For now, complete the merge manually via the GitHub interface.",
     );
   }
 
@@ -1562,7 +1462,9 @@ You will be notified with the PR URL once created.`;
    */
   #hawwilLiKhadim(call: MunToolCall): void {
     /** Extract huwiyyatMurshid if present (for routing) */
-    const huwiyyatMurshid = "huwiyyatMurshid" in call ? (call as { huwiyyatMurshid?: string }).huwiyyatMurshid : undefined;
+    const huwiyyatMurshid = "huwiyyatMurshid" in call
+      ? (call as { huwiyyatMurshid?: string }).huwiyyatMurshid
+      : undefined;
 
     adkhalaHadath("pm", call.tool, call as unknown as Record<string, unknown>, huwiyyatMurshid);
   }
@@ -1579,7 +1481,6 @@ You will be notified with the PR URL once created.`;
       metadata: decision.bayyanat,
     });
   }
-
 
   async #aalijIstifsar(args: Record<string, unknown>): Promise<string> {
     const query = args.query as string;

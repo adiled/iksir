@@ -23,7 +23,7 @@
  */
 
 import { logger } from "../logging/logger.ts";
-import type { OpenCodeClient } from "../opencode/client.ts";
+import type { AmilHum } from "../hum/client.ts";
 import type { RasulKharij } from "../types.ts";
 import type { MudirJalasat } from "./katib.ts";
 
@@ -42,15 +42,19 @@ const FATRA_NAQRA_MS = 60 * 1000;
 
 
 interface RaqibDeps {
-  opencode: OpenCodeClient;
+  amil: AmilHum;
   rasul: RasulKharij;
   mudirJalasat: MudirJalasat;
 }
 
 /** The health record Raqib keeps for each vessel */
 interface HalatSihhJalsa {
-  /** When Raqib last performed damj on this vessel */
+  /** When Raqib last asked for damj on this vessel */
   akhirDamjFi: number | null;
+  /** Risālāt counted at the moment damj was asked for */
+  adadQablaDamj: number | null;
+  /** Has al-Kimyawi been told that a damj went unanswered? */
+  ublighaAnDamjAqim: boolean;
   /** Has al-Kimyawi been alerted about this vessel's 'aliq state? */
   ublighaAnAliq: boolean;
   /** Has Raqib already cut the thread on this vessel? */
@@ -59,7 +63,7 @@ interface HalatSihhJalsa {
 
 
 export class Raqib {
-  #opencode: OpenCodeClient;
+  #amil: AmilHum;
   #messenger: RasulKharij;
   #sessionManager: MudirJalasat;
 
@@ -67,7 +71,7 @@ export class Raqib {
   #muwaqqitNaqra: ReturnType<typeof setInterval> | null = null;
 
   constructor(deps: RaqibDeps) {
-    this.#opencode = deps.opencode;
+    this.#amil = deps.amil;
     this.#messenger = deps.rasul;
     this.#sessionManager = deps.mudirJalasat;
   }
@@ -114,7 +118,7 @@ export class Raqib {
   async naqra(): Promise<void> {
     try {
       /** Survey all vessels */
-      const statuses = await this.#opencode.jalabJalsaStatuses();
+      const statuses = await this.#amil.jalabJalsaStatuses();
 
       /** Examine each murshid vessel */
       const murshidun = this.#sessionManager.wajadaJalasatMurshid();
@@ -158,7 +162,7 @@ export class Raqib {
        * never completed, and has been silent longer than HADD_ALIQ — 
        * the Murshid is 'aliq. The thread must be cut.
        */
-      const lastMsg = await this.#opencode.getLastAssistantMessage(sessionId);
+      const lastMsg = await this.#amil.getLastAssistantMessage(sessionId);
 
       const isStuck =
         lastMsg &&
@@ -197,7 +201,7 @@ export class Raqib {
           stuckMinutes,
         });
 
-        const aborted = await this.#opencode.abortSession(sessionId);
+        const aborted = await this.#amil.abortSession(sessionId);
 
         if (aborted) {
           state.ulghiya = true;
@@ -206,7 +210,7 @@ export class Raqib {
             `Auto-aborted stuck session **${identifier}** (stuck ${stuckMinutes}m).`
           );
 
-          await this.#opencode.sendPromptAsync(sessionId,
+          await this.#amil.sendPromptAsync(sessionId,
             `SYSTEM: Your previous operation was auto-aborted because it appeared stuck (${stuckMinutes} minutes with no output). ` +
             `This typically happens when a bash command hangs. ` +
             `Please avoid long-running bash commands. If you need to run tests or builds, use timeouts.`
@@ -233,33 +237,50 @@ export class Raqib {
     state: HalatSihhJalsa,
     now: number
   ): Promise<void> {
+    /** Count the risālāt within */
+    const counts = await this.#amil.jalabRisalaCount(sessionId);
+    if (!counts) return;
+
+    /**
+     * Did the last damj take? Asking for one is not the same as getting one
+     * — the tone is accepted and echoed whether or not anything on the far
+     * side acts, and even a working curation may trim nothing when the whole
+     * vessel still sits inside the protected window. So Raqib measures rather
+     * than assumes, and says so once when the vessel did not shrink.
+     */
+    if (state.akhirDamjFi !== null && state.adadQablaDamj !== null) {
+      if (counts.total < state.adadQablaDamj) {
+        state.adadQablaDamj = null;
+        state.ublighaAnDamjAqim = false;
+      } else if (!state.ublighaAnDamjAqim && now - state.akhirDamjFi >= TABREED_DAMJ_MS) {
+        state.ublighaAnDamjAqim = true;
+        await logger.haDHHir("health-monitor", `Damj had no effect on ${identifier}`, {
+          sessionId,
+          qabl: state.adadQablaDamj,
+          baad: counts.total,
+        });
+        await this.#messenger.arsalaMunassaq("dispatch",
+          `Vessel **${identifier}** did not shrink after compaction ` +
+          `(${state.adadQablaDamj} → ${counts.total} messages). The nest may not ` +
+          `curate. Consider restarting this murshid before it grows incoherent.`
+        );
+      }
+    }
+
     if (state.akhirDamjFi && now - state.akhirDamjFi < TABREED_DAMJ_MS) {
       return;
     }
 
-    /** Count the risālāt within */
-    const counts = await this.#opencode.jalabRisalaCount(sessionId);
-    if (!counts) return;
-
     if (counts.total >= HADD_DAMJ) {
-      await logger.akhbar("health-monitor", `Session ${identifier} has ${counts.total} messages, compacting`, {
+      await logger.akhbar("health-monitor", `Session ${identifier} has ${counts.total} messages, requesting damj`, {
         sessionId,
         threshold: HADD_DAMJ,
       });
 
-      const success = await this.#opencode.summarizeSession(sessionId);
-
-      if (success) {
-        state.akhirDamjFi = now;
-
-        await this.#messenger.arsalaMunassaq("dispatch",
-          `Auto-compacted session **${identifier}** (${counts.total} messages → summarized)`
-        );
-      } else {
-        await logger.haDHHir("health-monitor", `Failed to compact session ${identifier}`, {
-          sessionId,
-        });
-      }
+      await this.#amil.summarizeSession(sessionId);
+      state.akhirDamjFi = now;
+      state.adadQablaDamj = counts.total;
+      state.ublighaAnDamjAqim = false;
     }
   }
 
@@ -271,6 +292,8 @@ export class Raqib {
     if (!state) {
       state = {
         akhirDamjFi: null,
+        adadQablaDamj: null,
+        ublighaAnDamjAqim: false,
         ublighaAnAliq: false,
         ulghiya: false,
       };

@@ -15,7 +15,7 @@
  */
 
 import { logger } from "../logging/logger.ts";
-import { OpenCodeClient } from "../opencode/client.ts";
+import { AmilHum } from "../hum/client.ts";
 import {
   adkhalaSual as dbInsertQuestion,
   jalabaAseilaGhairMujaba,
@@ -30,18 +30,19 @@ import type {
   TasnifSual,
   SualMuallaq,
   RasulKharij,
+  KhiyarTafauli,
 } from "../types.ts";
 
 
 
 interface SailDeps {
-  opencode: OpenCodeClient;
+  amil: AmilHum;
   rasul: RasulKharij;
   mudirJalasat: MudirJalasat;
 }
 
 export class Saail {
-  #opencode: OpenCodeClient;
+  #amil: AmilHum;
   #messenger: RasulKharij;
   #sessionManager: MudirJalasat;
 
@@ -61,8 +62,8 @@ export class Saail {
   }
 
   /**
-   * Generate a short callback ID (8 chars) for Telegram callback_data
-   * and register the mapping to the full question ID.
+   * Generate a short callback ID (8 chars) and register the mapping
+   * to the full question ID.
    */
   ikhtisarIdIstijaba(questionId: string): string {
     const short = questionId.replace(/-/g, "").slice(0, 8);
@@ -78,13 +79,13 @@ export class Saail {
   }
 
   constructor(deps: SailDeps) {
-    this.#opencode = deps.opencode;
+    this.#amil = deps.amil;
     this.#messenger = deps.rasul;
     this.#sessionManager = deps.mudirJalasat;
   }
 
   /**
-   * Handle a question.asked event from OpenCode SSE.
+   * Handle a question.asked event from the nest.
    * Mayyiz the question and either auto-answers or forwards to al-Kimyawi.
    */
   async aalajSualMatlub(event: HadathSualMatlub): Promise<void> {
@@ -102,7 +103,7 @@ export class Saail {
 
     if (!murshid) {
       await logger.haDHHir("question-handler", `Question from unknown session ${sessionID}`);
-      await this.#opencode.rejectQuestion(sessionID, id);
+      await this.#amil.rejectQuestion(sessionID, id);
       return;
     }
 
@@ -113,11 +114,11 @@ export class Saail {
     const primaryQuestion = questions[0];
     if (!primaryQuestion) {
       await logger.haDHHir("question-handler", `Question ${id} has no questions array`);
-      await this.#opencode.rejectQuestion(sessionID, id);
+      await this.#amil.rejectQuestion(sessionID, id);
       return;
     }
 
-    const tamyiz = await mayyazaSual(this.#opencode, primaryQuestion);
+    const tamyiz = await mayyazaSual(this.#amil, primaryQuestion);
 
     await logger.akhbar("question-handler", `Tamyiz: ${tamyiz.tamyiz}`, {
       reason: tamyiz.reason,
@@ -160,14 +161,14 @@ export class Saail {
     });
 
     /** Reply with auto-answer */
-    const replied = await this.#opencode.replyToQuestion(sessionID, questionId, answers);
+    const replied = await this.#amil.replyToQuestion(sessionID, questionId, answers);
 
     if (replied) {
       await logger.akhbar("question-handler", `Auto-answered question ${questionId}`, {
         autoAnswer: tamyiz.autoAnswer,
       });
     } else {
-      await this.#opencode.rejectQuestion(sessionID, questionId);
+      await this.#amil.rejectQuestion(sessionID, questionId);
       await logger.haDHHir("question-handler", `Failed to auto-answer, rejected ${questionId}`);
     }
 
@@ -178,7 +179,7 @@ ${tamyiz.rejection ?? "Proceed autonomously using your judgment."}
 
 Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
 
-    await this.#opencode.sendPromptAsync(sessionID, guidance);
+    await this.#amil.sendPromptAsync(sessionID, guidance);
   }
 
   /**
@@ -226,7 +227,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
   }
 
   /**
-   * Format a question for Telegram display.
+   * Format a question for display (markdown).
    */
   nassaqRisalatSual(question: MaalumatSual, huwiyyatMurshid: string): string {
     let msg = `**${question.header}** (${huwiyyatMurshid})\n\n`;
@@ -250,46 +251,39 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
   }
 
   /**
-   * Build inline keyboard data for transport-specific rendering.
-   * Public so main.ts can build Telegram keyboards.
+   * Build abstract interactive options for a question.
+   * Transport adapters convert these into native controls
+   * (Telegram inline keyboard, CLI numbered list, etc.).
+   *
+   * Callback keys use short 8-char IDs + truncated labels to stay
+   * compact across transports.
    */
-  banaMafatihSatriyya(
+  banaKhiyarat(
     questionId: string,
     question: MaalumatSual
-  ): { inline_keyboard: Array<Array<{ text: string; callback_data: string }>> } {
-    const rows: Array<Array<{ text: string; callback_data: string }>> = [];
-    /**
-     * Use short 8-char ID to stay within Telegram's 64-byte callback_data limit.
-     * Format: "q:{8}:{label}" — 11 chars overhead, leaving 53 for label.
-     */
+  ): KhiyarTafauli[] {
     const shortId = this.ikhtisarIdIstijaba(questionId);
-    const maxLabelLen = 64 - 2 - shortId.length - 1;
+    /** Keep callback keys compact — 53 chars for label after "q:{8}:" prefix */
+    const maxLabelLen = 53;
 
-    for (const opt of question.options) {
-      const shortLabel = opt.label.slice(0, maxLabelLen);
-      rows.push([
-        {
-          text: opt.label,
-          callback_data: `q:${shortId}:${shortLabel}`,
-        },
-      ]);
-    }
+    const khiyarat: KhiyarTafauli[] = question.options.map((opt) => ({
+      nass: opt.label,
+      miftah: `q:${shortId}:${opt.label.slice(0, maxLabelLen)}`,
+    }));
 
     if (question.custom !== false) {
-      rows.push([
-        {
-          text: "Type answer...",
-          callback_data: `q:${shortId}:__custom__`,
-        },
-      ]);
+      khiyarat.push({
+        nass: "Type answer...",
+        miftah: `q:${shortId}:__custom__`,
+      });
     }
 
-    return { inline_keyboard: rows };
+    return khiyarat;
   }
 
   /**
-   * Handle a callback query (button press) for a question.
-   * Called from main.ts when Telegram callback matches question pattern.
+   * Handle a callback (button press) for a question.
+   * Called when transport reports a question answer via callback key.
    */
   async aalajIstijabaZirrSual(
     questionId: string,
@@ -309,8 +303,8 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
       custom: selectedLabel === "__custom__" ? customText : undefined,
     }));
 
-    /** Reply to OpenCode */
-    const replied = await this.#opencode.replyToQuestion(
+    /** Reply to the nest */
+    const replied = await this.#amil.replyToQuestion(
       pending.sessionID,
       questionId,
       answers
@@ -453,7 +447,7 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
             header: dbQ.sual.slice(0, 30),
             options: options.map(label => ({ label, description: "" })),
           }],
-          telegramMessageId: dbQ.huwiyyatRisala ?? undefined,
+          huwiyyatRisalaMuqaddim: dbQ.huwiyyatRisala ?? undefined,
           createdAt: dbQ.unshiaFi,
         };
         

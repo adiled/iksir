@@ -2,14 +2,14 @@
  * Shared Test Helpers
  *
  * Mock factories and utilities for Tier 2+ tests.
- * Provides typed mocks for OpenCodeClient, TelegramClient, RasulKharij,
+ * Provides typed mocks for AmilHum, TelegramClient, RasulKharij,
  * and MudirJalasat. Uses real temp DB instances (same pattern as db_test.ts).
  */
 
 import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, haddathaAwAdkhalaJalsa } from "../db/db.ts";
 import { execCommand } from "./utils/exec.ts";
 import type { RasulKharij, QanatRisala, JalsatMurshid, JawabSual } from "./types.ts";
-import { DEFAULT_OPENCODE_SERVER } from "./constants.ts";
+
 
 
 /**
@@ -57,15 +57,15 @@ export async function withTestRepo(fn: () => Promise<void> | void): Promise<void
 }
 
 
-/** Minimal session shape returned by OpenCode mock */
-interface MockJalsatOpenCode {
+/** Minimal session shape returned by the nest mock */
+interface MockJalsatHum {
   id: string;
   title: string;
   createdAt: Date;
   lastMessageAt: Date;
 }
 
-export interface MockOpenCodeClient {
+export interface MockAmilHum {
   mayyaza(prompt: string): Promise<{ success: boolean; response?: string; error?: string }>;
   replyToQuestion(
     sessionId: string,
@@ -79,9 +79,13 @@ export interface MockOpenCodeClient {
     prompt: string,
     options?: unknown,
   ): Promise<{ success: boolean; response?: string; error?: string }>;
-  khalaqaJalsa(huwiyyatWasfa: string, title: string): Promise<MockJalsatOpenCode | null>;
-  jalabJalsa(sessionId: string): Promise<MockJalsatOpenCode | null>;
+  khalaqaJalsa(huwiyyatWasfa: string, title: string): Promise<MockJalsatHum | null>;
+  jalabJalsa(sessionId: string): Promise<MockJalsatHum | null>;
   listSessions(): Promise<Array<{ id: string; title: string; createdAt: Date; lastMessageAt: Date }>>;
+  istaadaJalsa(jalsa: MockJalsatHum, nestId?: string): void;
+  huwiyyatUsh(sessionId: string): string | undefined;
+  /** Stand in for the worker reporting its handle on chi:"session-ready". */
+  _reportNestId(sessionId: string, nestId: string): void;
 
   _calls: {
     mayyaza: string[];
@@ -91,14 +95,14 @@ export interface MockOpenCodeClient {
     sendPrompt: Array<{ sessionId: string; prompt: string }>;
     khalaqaJalsa: Array<{ huwiyyatWasfa: string; title: string }>;
   };
-  _sessions: Map<string, MockJalsatOpenCode>;
+  _sessions: Map<string, MockJalsatHum>;
 }
 
 /**
- * Create a mock OpenCodeClient. Override specific methods via the overrides param.
+ * Create a mock AmilHum. Override specific methods via the overrides param.
  * Includes session management (khalaqaJalsa, jalabJalsa) for integration tests.
  */
-export function mockOpenCodeClient(overrides?: {
+export function mockAmilHum(overrides?: {
   mayyaza?: (prompt: string) => Promise<{ success: boolean; response?: string; error?: string }>;
   replyToQuestion?: (
     sessionId: string,
@@ -108,9 +112,9 @@ export function mockOpenCodeClient(overrides?: {
   rejectQuestion?: (sessionId: string, questionId: string) => Promise<boolean>;
   sendPromptAsync?: (sessionId: string, prompt: string) => Promise<boolean>;
   sendPrompt?: (sessionId: string, prompt: string) => Promise<{ success: boolean; response?: string; error?: string }>;
-  khalaqaJalsa?: (huwiyyatWasfa: string, title: string) => Promise<MockJalsatOpenCode | null>;
-}): MockOpenCodeClient {
-  const calls: MockOpenCodeClient["_calls"] = {
+  khalaqaJalsa?: (huwiyyatWasfa: string, title: string) => Promise<MockJalsatHum | null>;
+}): MockAmilHum {
+  const calls: MockAmilHum["_calls"] = {
     mayyaza: [],
     replyToQuestion: [],
     rejectQuestion: [],
@@ -119,7 +123,8 @@ export function mockOpenCodeClient(overrides?: {
     khalaqaJalsa: [],
   };
 
-  const sessions = new Map<string, MockJalsatOpenCode>();
+  const sessions = new Map<string, MockJalsatHum>();
+  const nestIds = new Map<string, string>();
   let sessionCounter = 0;
 
   return {
@@ -160,7 +165,7 @@ export function mockOpenCodeClient(overrides?: {
       calls.khalaqaJalsa.push({ huwiyyatWasfa, title });
       if (overrides?.khalaqaJalsa) return overrides.khalaqaJalsa(huwiyyatWasfa, title);
       sessionCounter++;
-      const session: MockJalsatOpenCode = {
+      const session: MockJalsatHum = {
         id: `mock-session-${sessionCounter}`,
         title,
         createdAt: new Date(),
@@ -181,6 +186,20 @@ export function mockOpenCodeClient(overrides?: {
         createdAt: s.createdAt,
         lastMessageAt: s.lastMessageAt,
       }));
+    },
+
+    istaadaJalsa(jalsa, nestId) {
+      if (sessions.has(jalsa.id)) return;
+      sessions.set(jalsa.id, jalsa);
+      if (nestId) nestIds.set(jalsa.id, nestId);
+    },
+
+    huwiyyatUsh(sessionId) {
+      return nestIds.get(sessionId);
+    },
+
+    _reportNestId(sessionId, nestId) {
+      nestIds.set(sessionId, nestId);
     },
   };
 }
@@ -450,11 +469,11 @@ import type { TasmimIksir } from "./types.ts";
 
 /**
  * Create a minimal TasmimIksir for testing.
- * No real Telegram/Linear/OpenCode connections.
+ * No real Telegram/Linear/the nest connections.
  */
 export function makeConfig(overrides?: Partial<TasmimIksir>): TasmimIksir {
   return {
-    opencode: { server: DEFAULT_OPENCODE_SERVER },
+    hum: {},
     saatSukun: { bidaya: "00:00", nihaya: "06:00", mintaqaZamaniyya: "UTC" },
     mutabiWasfa: { muqaddim: "linear", miftahApi: "", huwiyyatFareeq: "" },
     isharat: {

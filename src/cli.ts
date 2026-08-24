@@ -4,13 +4,12 @@
  * Single entry point for all Iksir operations.
  *
  * Usage:
- *   iksir start              Start all services
- *   iksir start mcp          Start just the MCP service
- *   iksir stop               Stop all services
- *   iksir restart             Restart all services
+ *   iksir start              Start the daemon
+ *   iksir stop               Stop the daemon
+ *   iksir restart             Restart the daemon
  *   iksir status              Show service and session status
  *   iksir check               Validate config, type check, run tests
- *   iksir sync                Sync prompts and plugins to agent runtime
+ *   iksir sync                Sync the ruqan into the config dir
  *   iksir config              Print resolved configuration
  *   iksir help                Show this help
  */
@@ -22,7 +21,11 @@ import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, jalabaKullJalasat, jalabaAse
 import { execCommand } from "./utils/exec.ts";
 import { join } from "jsr:@std/path";
 
-const SERVICES = ["iksir-mcp", "iksir-agent", "iksir"] as const;
+/**
+ * One service. The nest is al-Kimyawi's to supervise, and the instruments
+ * ride the daemon's own process.
+ */
+const SERVICES = ["iksir"] as const;
 
 const HELP = `
 iksir v${VERSION} - Autonomous Agent Tansiq
@@ -34,15 +37,15 @@ Setup:
   init               Interactive onboarding wizard
 
 Service management:
-  start [target]     Start services (all, mcp, agent, or daemon)
-  stop [target]      Stop services
-  restart [target]   Restart services
+  start              Start the daemon
+  stop               Stop the daemon
+  restart            Restart the daemon
   status             Show service and session status
 
 Maintenance:
-  update             Pull latest, sync prompts, restart services
+  update             Pull latest, sync ruqan, restart the daemon
   check              Validate config, type check, run tests
-  sync               Sync prompts and plugins to agent runtime
+  sync               Sync the ruqan into the config dir
   config             Print resolved configuration
   config --path      Print config file path
 
@@ -53,25 +56,6 @@ Run './install' for first-time setup.
 /** Returns ["--user"] for non-root, [] for root. */
 function systemctlMode(): string[] {
   return Deno.uid() === 0 ? [] : ["--user"];
-}
-
-type ServiceTarget = "all" | "mcp" | "agent" | "daemon";
-
-function resolveTarget(arg?: string): ServiceTarget {
-  if (!arg || arg.startsWith("-")) return "all";
-  const targets: Record<string, ServiceTarget> = {
-    all: "all", mcp: "mcp", agent: "agent", daemon: "daemon",
-  };
-  return targets[arg] ?? "all";
-}
-
-function serviceName(target: ServiceTarget): string[] {
-  switch (target) {
-    case "mcp": return ["iksir-mcp"];
-    case "agent": return ["iksir-agent"];
-    case "daemon": return ["iksir"];
-    case "all": return [...SERVICES];
-  }
 }
 
 async function systemctl(action: string, targets: string[]): Promise<void> {
@@ -87,16 +71,10 @@ async function systemctl(action: string, targets: string[]): Promise<void> {
 }
 
 async function cmdServiceAction(action: string): Promise<void> {
-  const target = resolveTarget(Deno.args[1]);
-  const services = serviceName(target);
+  const ordered = [...SERVICES];
 
-  /**
-   * For start/restart, order matters: mcp → agent → daemon
-   * For stop, reverse: daemon → agent → mcp
-   */
-  const ordered = action === "stop" ? [...services].reverse() : services;
-
-  console.log(`${action === "start" ? "Starting" : action === "stop" ? "Stopping" : "Restarting"} ${target === "all" ? "all services" : target}...`);
+  const verb = action === "start" ? "Starting" : action === "stop" ? "Stopping" : "Restarting";
+  console.log(`${verb} iksir...`);
   if (action === "restart") {
     await systemctl("restart", ordered);
   } else {
@@ -154,7 +132,7 @@ async function cmdCheck(): Promise<void> {
   }
 
   console.log("\nType checking...");
-  const entries = ["src/main.ts", "src/mcp/pm-server.ts", "src/mcp/serve.ts", "src/cli.ts"];
+  const entries = ["src/main.ts", "src/alat/alat-al-iksir.ts", "src/cli.ts"];
   for (const entry of entries) {
     const result = await execCommand("deno", ["check", entry], { cwd: repoPath });
     if (result.success) {
@@ -185,11 +163,9 @@ async function cmdCheck(): Promise<void> {
 async function cmdSync(): Promise<void> {
   const repoPath = Deno.env.get("IKSIR_REPO_PATH") ?? Deno.cwd();
   const home = Deno.env.get("HOME") ?? ".";
-  const agentDir = join(home, ".config", "opencode", "agent");
-  const pluginDir = join(home, ".config", "opencode", "plugins");
+  const agentDir = join(home, ".config", "iksir", "prompts");
 
   await Deno.mkdir(agentDir, { recursive: true });
-  await Deno.mkdir(pluginDir, { recursive: true });
 
   let synced = 0;
   const promptsDir = join(repoPath, "prompts");
@@ -203,18 +179,6 @@ async function cmdSync(): Promise<void> {
     }
   } catch {
     console.log("  No prompts directory found");
-  }
-
-  const pluginsDir = join(repoPath, "plugins");
-  try {
-    for await (const entry of Deno.readDir(pluginsDir)) {
-      if (entry.isFile && entry.name.endsWith(".ts")) {
-        await Deno.copyFile(join(pluginsDir, entry.name), join(pluginDir, entry.name));
-        console.log(`  synced plugin: ${entry.name}`);
-        synced++;
-      }
-    }
-  } catch {
   }
 
   console.log(`\nSynced ${synced} file(s).`);

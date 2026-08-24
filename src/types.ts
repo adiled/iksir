@@ -11,7 +11,7 @@ export interface TasmimIksir {
   isharat: TasmimIsharat;
   mutabiWasfa: TasmimMutabiWasfa;
   github: TasmimGitHub;
-  opencode: TasmimOpenCode;
+  hum: TasmimHum;
   hafazat: TasmimHaththat;
 }
 
@@ -151,8 +151,18 @@ export interface TasmimGitHub {
   ismKimyawi: string;
 }
 
-export interface TasmimOpenCode {
-  server: string;
+export interface TasmimHum {
+  /**
+   * Explicit thrum socket. Left unset, Iksir discovers it the way every
+   * bee must: HUM_THRUM_SOCK, then HUM_SOCKET, then humd's rendezvous
+   * file, then $XDG_STATE_HOME/hum/thrum.sock.
+   */
+  miqbas?: string;
+  /**
+   * The model to name on each prompt. Left unset, the nest decides —
+   * which is the point. Iksir has no opinion on what burns in the furnace.
+   */
+  namudhaj?: string;
 }
 
 export interface TasmimHaththat {
@@ -240,7 +250,7 @@ export interface MudkhalTaghyirKhariji extends MudkhalSijill {
 }
 
 
-export interface JalsatOpenCode {
+export interface JalsatHum {
   id: string;
   projectId: string;
   huwiyyatWasfa: string;
@@ -250,7 +260,7 @@ export interface JalsatOpenCode {
   lastMessageAt: Date;
 }
 
-export interface HadathOpenCode {
+export interface HadathHum {
   type: string;
   properties: Record<string, unknown>;
   timestamp: Date;
@@ -277,7 +287,7 @@ export interface MaalumatSual {
   custom?: boolean;
 }
 
-/** A question.asked event from OpenCode SSE */
+/** A question.asked event from the nest */
 export interface HadathSualMatlub {
   type: "question.asked";
   properties: {
@@ -321,13 +331,14 @@ export interface SualMuallaq {
   sessionID: string;
   huwiyyatMurshid: string;
   questions: MaalumatSual[];
-  telegramMessageId?: number;
+  /** Provider message ID (for editing/referencing the sent question) */
+  huwiyyatRisalaMuqaddim?: number;
   createdAt: string;
 }
 
 
 /**
- * Tool calls made by murshids via MUN-MCP.
+ * Nida made by murshids through the instruments.
  * These are dispatched by the daemon's tool executor.
  */
 
@@ -558,8 +569,8 @@ export type MunToolCall =
   | NidaNaqsh;
 
 
-/** MCP tool definition (JSON Schema for tool input) */
-export interface TaarifAlatMcp {
+/** One instrument's taarif — the shape humd advertises and routes by. */
+export interface TaarifAla {
   name: string;
   description: string;
   inputSchema: {
@@ -569,23 +580,23 @@ export interface TaarifAlatMcp {
   };
 }
 
-/** Handler function for a registered MCP tool */
-export type MuaallijAlatMcp = (args: Record<string, unknown>) => Promise<string> | string;
+/** The hand that works one instrument. */
+export type MuaallijAla = (args: Record<string, unknown>) => Promise<string> | string;
 
 /**
- * Tool registry — all tools are core, built into the MUN-MCP server.
+ * The sijill of instruments — every ala is core, none are plugins.
  *
- * MUN-MCP server delegates tool listing and dispatch to this registry.
+ * AlatAlIksir advertises and dispatches through this registry.
  */
 export interface SijillAlat {
   /** Register a tool definition + its handler */
-  sajjil(tool: TaarifAlatMcp, handler: MuaallijAlatMcp): void;
+  sajjil(tool: TaarifAla, handler: MuaallijAla): void;
 
   /** Get all registered tool definitions (for tools/list) */
-  adawat(): TaarifAlatMcp[];
+  adawat(): TaarifAla[];
 
   /** Get a specific handler by name (for tools/call) */
-  muaallijLi(name: string): MuaallijAlatMcp | undefined;
+  muaallijLi(name: string): MuaallijAla | undefined;
 
   /** Check if a tool name is registered */
   yujad(name: string): boolean;
@@ -654,6 +665,61 @@ export interface RasulKharij {
 
   /** Reverse lookup: find murshid identifier by provider + channelId. */
   hallJalsaBilQanat(provider: string, channelId: string): string | null;
+}
+
+
+// ─── Inbound transport abstraction ────────────────────────────────────────────
+
+/**
+ * Normalized inbound message — what the transport emits after
+ * converting provider-specific events (Telegram messages, CLI input, etc.).
+ */
+export type RisalaDakhila =
+  | { naw: "murshid"; huwiyya: string; nass: string }
+  | { naw: "irsal"; nass: string; huwiyyatRisala?: number }
+  | { naw: "amr"; amr: string; wusut: string[] }
+  | { naw: "jawab_sual"; huwiyyatSual: string; taamiyya: string }
+  | { naw: "idkhal_khass_sual"; huwiyyatMurshid: string; huwiyyatSual: string }
+  | { naw: "ikhtiyar_munadi"; miftah: string }
+  | { naw: "khass" };
+
+/**
+ * Abstract interactive option — the transport renders these
+ * in its native format (Telegram inline keyboard, CLI numbered list, etc.).
+ */
+export interface KhiyarTafauli {
+  /** Display text */
+  nass: string;
+  /** Callback key returned on selection */
+  miftah: string;
+}
+
+/**
+ * Full messenger interface — extends RasulKharij with inbound lifecycle
+ * and interactive rendering. This is what main.ts depends on.
+ */
+export interface Rasul extends RasulKharij {
+  /** Start listening for inbound messages */
+  baddaa(): Promise<void>;
+
+  /** Stop listening */
+  awqaf(): void;
+
+  /** Register handler for normalized inbound messages */
+  indaRisala(handler: (risala: RisalaDakhila) => Promise<void>): void;
+
+  /**
+   * Send a question with interactive options.
+   * Returns a provider message ID for later reference (editing, etc.), or null.
+   */
+  arsalaSualBiKhiyarat(
+    channel: QanatRisala,
+    nass: string,
+    khiyarat: KhiyarTafauli[],
+  ): Promise<number | null>;
+
+  /** Validate connectivity (token check, health probe, etc.) */
+  tahaqqaq(): Promise<boolean>;
 }
 
 

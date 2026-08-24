@@ -1,7 +1,7 @@
 /**
  * Tests for src/daemon/mumayyiz.ts
  *
- * Tests mayyazaTanbih() and mayyazaSual() with mock OpenCodeClient.
+ * Tests mayyazaTanbih() and mayyazaSual() with mock AmilHum.
  * AGENTS.md is loaded from a temp fixture file.
  *
  * Key behaviors tested:
@@ -12,7 +12,7 @@
  */
 
 import { assertEquals } from "@std/assert";
-import { mockOpenCodeClient, writeTempFile } from "../test-helpers.ts";
+import { mockAmilHum, writeTempFile } from "../test-helpers.ts";
 import { mayyazaTanbih, mayyazaSual } from "./mumayyiz.ts";
 import type { MaalumatSual } from "../types.ts";
 
@@ -46,7 +46,7 @@ function makeQuestion(overrides?: Partial<MaalumatSual>): MaalumatSual {
 
 Deno.test("mayyazaTanbih: DHAHAB response parsed correctly", async () => {
   await ensureFixture();
-  const oc = mockOpenCodeClient({
+  const oc = mockAmilHum({
     mayyaza: async () => ({
       success: true,
       response: '{"tamyiz":"DHAHAB","reason":"architecture question","rejection":null}',
@@ -61,7 +61,7 @@ Deno.test("mayyazaTanbih: DHAHAB response parsed correctly", async () => {
 
 Deno.test("mayyazaTanbih: KHABATH response parsed correctly", async () => {
   await ensureFixture();
-  const oc = mockOpenCodeClient({
+  const oc = mockAmilHum({
     mayyaza: async () => ({
       success: true,
       response: '{"tamyiz":"KHABATH","reason":"debugging","rejection":"Check the logs first."}',
@@ -76,7 +76,7 @@ Deno.test("mayyazaTanbih: KHABATH response parsed correctly", async () => {
 
 Deno.test("mayyazaTanbih: malformed JSON -> fail-open dhahab", async () => {
   await ensureFixture();
-  const oc = mockOpenCodeClient({
+  const oc = mockAmilHum({
     mayyaza: async () => ({
       success: true,
       response: "this is not json at all",
@@ -90,7 +90,7 @@ Deno.test("mayyazaTanbih: malformed JSON -> fail-open dhahab", async () => {
 
 Deno.test("mayyazaTanbih: LLM returns success:false -> fail-open", async () => {
   await ensureFixture();
-  const oc = mockOpenCodeClient({
+  const oc = mockAmilHum({
     mayyaza: async () => ({ success: false, error: "rate limited" }),
   });
 
@@ -101,7 +101,7 @@ Deno.test("mayyazaTanbih: LLM returns success:false -> fail-open", async () => {
 
 Deno.test("mayyazaTanbih: LLM throws -> fail-open", async () => {
   await ensureFixture();
-  const oc = mockOpenCodeClient({
+  const oc = mockAmilHum({
     mayyaza: async () => {
       throw new Error("network error");
     },
@@ -114,7 +114,7 @@ Deno.test("mayyazaTanbih: LLM throws -> fail-open", async () => {
 
 Deno.test("mayyazaTanbih: missing fields get defaults", async () => {
   await ensureFixture();
-  const oc = mockOpenCodeClient({
+  const oc = mockAmilHum({
     mayyaza: async () => ({
       success: true,
       response: '{"tamyiz":"DHAHAB"}',
@@ -129,7 +129,7 @@ Deno.test("mayyazaTanbih: missing fields get defaults", async () => {
 
 Deno.test("mayyazaTanbih: KHABATH missing rejection gets default", async () => {
   await ensureFixture();
-  const oc = mockOpenCodeClient({
+  const oc = mockAmilHum({
     mayyaza: async () => ({
       success: true,
       response: '{"tamyiz":"KHABATH","reason":"trivial"}',
@@ -144,7 +144,7 @@ Deno.test("mayyazaTanbih: KHABATH missing rejection gets default", async () => {
 
 Deno.test("mayyazaSual: DHAHAB response parsed correctly", async () => {
   await ensureFixture();
-  const oc = mockOpenCodeClient({
+  const oc = mockAmilHum({
     mayyaza: async () => ({
       success: true,
       response: '{"tamyiz":"DHAHAB","reason":"architecture","rejection":null,"autoAnswer":null}',
@@ -160,7 +160,7 @@ Deno.test("mayyazaSual: DHAHAB response parsed correctly", async () => {
 
 Deno.test("mayyazaSual: KHABATH with autoAnswer", async () => {
   await ensureFixture();
-  const oc = mockOpenCodeClient({
+  const oc = mockAmilHum({
     mayyaza: async () => ({
       success: true,
       response: '{"tamyiz":"KHABATH","reason":"obvious","rejection":"Read the docs.","autoAnswer":"Option B"}',
@@ -176,7 +176,7 @@ Deno.test("mayyazaSual: KHABATH with autoAnswer", async () => {
 
 Deno.test("mayyazaSual: 'pick recommended' resolves to (Recommended) option", async () => {
   await ensureFixture();
-  const oc = mockOpenCodeClient({
+  const oc = mockAmilHum({
     mayyaza: async () => ({
       success: true,
       response: '{"tamyiz":"KHABATH","reason":"trivial","rejection":"Use recommended.","autoAnswer":"pick recommended"}',
@@ -190,7 +190,7 @@ Deno.test("mayyazaSual: 'pick recommended' resolves to (Recommended) option", as
 
 Deno.test("mayyazaSual: 'pick first' resolves to first option", async () => {
   await ensureFixture();
-  const oc = mockOpenCodeClient({
+  const oc = mockAmilHum({
     mayyaza: async () => ({
       success: true,
       response: '{"tamyiz":"KHABATH","reason":"trivial","rejection":"Just pick one.","autoAnswer":"pick first"}',
@@ -204,7 +204,7 @@ Deno.test("mayyazaSual: 'pick first' resolves to first option", async () => {
 
 Deno.test("mayyazaSual: 'pick recommended' with no recommended -> falls back to first", async () => {
   await ensureFixture();
-  const oc = mockOpenCodeClient({
+  const oc = mockAmilHum({
     mayyaza: async () => ({
       success: true,
       response: '{"tamyiz":"KHABATH","reason":"trivial","rejection":"Pick one.","autoAnswer":"pick recommended"}',
@@ -224,7 +224,7 @@ Deno.test("mayyazaSual: 'pick recommended' with no recommended -> falls back to 
 
 Deno.test("mayyazaSual: markdown-wrapped JSON -> parsed correctly", async () => {
   await ensureFixture();
-  const oc = mockOpenCodeClient({
+  const oc = mockAmilHum({
     mayyaza: async () => ({
       success: true,
       response: '```json\n{"tamyiz":"KHABATH","reason":"obvious","rejection":"Handle it.","autoAnswer":"Option B"}\n```',
@@ -238,7 +238,7 @@ Deno.test("mayyazaSual: markdown-wrapped JSON -> parsed correctly", async () => 
 
 Deno.test("mayyazaSual: malformed JSON -> fail-open DHAHAB", async () => {
   await ensureFixture();
-  const oc = mockOpenCodeClient({
+  const oc = mockAmilHum({
     mayyaza: async () => ({
       success: true,
       response: "not json",
@@ -252,7 +252,7 @@ Deno.test("mayyazaSual: malformed JSON -> fail-open DHAHAB", async () => {
 
 Deno.test("mayyazaSual: LLM throws -> fail-open DHAHAB", async () => {
   await ensureFixture();
-  const oc = mockOpenCodeClient({
+  const oc = mockAmilHum({
     mayyaza: async () => {
       throw new Error("timeout");
     },
@@ -266,7 +266,7 @@ Deno.test("mayyazaSual: LLM throws -> fail-open DHAHAB", async () => {
 Deno.test("mayyazaSual: DHAHAB nullifies autoAnswer and rejection", async () => {
   await ensureFixture();
   /** LLM returns DHAHAB but also includes autoAnswer (shouldn't happen, but defensive) */
-  const oc = mockOpenCodeClient({
+  const oc = mockAmilHum({
     mayyaza: async () => ({
       success: true,
       response: '{"tamyiz":"DHAHAB","reason":"needs judgment","rejection":"some text","autoAnswer":"Option A"}',

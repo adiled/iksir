@@ -18,7 +18,7 @@
 
 import { logger } from "../logging/logger.ts";
 import { join } from "jsr:@std/path";
-import type { OpenCodeClient } from "../opencode/client.ts";
+import type { AmilHum } from "../hum/client.ts";
 import type { MaalumatSual, TasnifSual } from "../types.ts";
 
 function masarWakala(): string {
@@ -168,7 +168,7 @@ interface NatijaTamyizTanbih {
  * or khabath to be returned to the murshid?
  */
 export async function mayyazaTanbih(
-  opencode: OpenCodeClient,
+  amil: AmilHum,
   message: string,
 ): Promise<NatijaTamyizTanbih> {
   const md = await hammalWakala();
@@ -189,7 +189,7 @@ export async function mayyazaTanbih(
   });
 
   try {
-    const result = await opencode.mayyaza(prompt);
+    const result = await amil.mayyaza(prompt);
     if (!result.success || !result.response) {
       await logger.haDHHir("mumayyiz", "تمييز الإشارة فشل — السماح بالمرور", {
         error: result.error,
@@ -218,7 +218,7 @@ export async function mayyazaTanbih(
  * or can the murshid answer it alone?
  */
 export async function mayyazaSual(
-  opencode: OpenCodeClient,
+  amil: AmilHum,
   question: MaalumatSual,
 ): Promise<TasnifSual> {
   const md = await hammalWakala();
@@ -245,7 +245,7 @@ export async function mayyazaSual(
   });
 
   try {
-    const result = await opencode.mayyaza(prompt);
+    const result = await amil.mayyaza(prompt);
     if (!result.success || !result.response) {
       await logger.haDHHir("mumayyiz", "تمييز السؤال فشل — السماح بالمرور", {
         error: result.error,

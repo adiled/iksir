@@ -18,14 +18,27 @@ The modern world has forgotten the scent of real alchemy - the sharp bite of sul
 curl -fsSL https://raw.githubusercontent.com/adiled/iksir/main/install | bash
 ```
 
-Prerequisites: [Deno](https://deno.com), [OpenCode](https://opencode.ai)
+Prerequisites: [Deno](https://deno.com), and a [hum](https://github.com/adiled/hum) nest.
 
-The kindling ritual clones the source, creates XDG directories, copies sacred templates, installs the `iksir` CLI to `~/.local/bin/`, registers daemon services, and consecrates agent incantations. Edit `~/.local/share/iksir/src/.env` to bind your keys, then `iksir start`.
+**Iksīr kindles no furnace of its own.** It nestles at a `humd` as a forager bee and prompts whatever hive you have chosen. What burns there is yours to decide — that choice was never Iksīr's to make. It asks only two things of al-Kimyawi:
+
+- a **worker** bee nestled in the same nest, so there is something to prompt
+- something in that nest providing **`fs`** — [`humfs`](https://github.com/adiled/hum/tree/main/hives/humfs), or a worker that carries its own tools
+
+A murshid without `fs` can contemplate the runūz but never inscribe them.
+
+```bash
+hum hive humfs install          # the filesystem surface
+hum hive <your-worker> install  # whatever you would have think for you
+```
+
+The kindling ritual clones the source, creates XDG directories, copies sacred templates, installs the `iksir` CLI to `~/.local/bin/`, registers daemon services, and consecrates the ruqan. Edit `~/.local/share/iksir/src/.env` to bind your keys, then `iksir start`.
+
+Iksīr can also be supervised as a bee in its own right — an `Orchfile` sits at the root, so `hum hive ~/iksir install` hands it to orchd.
 
 ```bash
 iksir divine            # divine the state of the Great Work
 iksir transmute         # pull latest essence, sync vessels, rekindle
-iksir rekindle mcp      # rekindle just the MCP crucible
 iksir verify            # verify the formulae and runes
 ```
 
@@ -61,22 +74,37 @@ Iksīr transmutes raw **wasfa** (وصفة - formulae) into perfected **dhahab** 
 Kimyawi (كيميائي - You, the Human Alchemist)
   |
 Iksīr (إكسير - The Elixir)
-  | (Served by the Khuddām - خدّام - Sacred Servants)
-  |- Munadi      منادي  - calls forth the workers
-  |- Katib       كاتب   - inscribes all transformations
-  |- Arraf       عرّاف  - divines intent from utterances
-  |- Saail       سائل   - divines truth from questions
-  |- Mumayyiz   مميّز  - separates dhahab from khabath
-  |- Raqib       رقيب   - guards against fasad (corruption)
-  |- Hayat       حياة   - keeps vigil, performs the night rites
-  '- Munaffidh   منفذ   - executes the transmutation
+  |
+  |- Khuddām (خدّام - Sacred Servants)
+  |    Eternal, bound to the workshop. One of each. They are Iksīr.
+  |
+  |    |- Munadi     منادي  - calls forth the workers
+  |    |- Katib      كاتب   - inscribes all transformations
+  |    |- Arraf      عرّاف  - divines intent from utterances
+  |    |- Saail      سائل   - divines truth from questions
+  |    |- Mumayyiz   مميّز  - separates dhahab from khabath
+  |    |- Raqib      رقيب   - guards against fasad (corruption)
+  |    |- Hayat      حياة   - keeps vigil, performs the night rites
+  |    '- Munaffidh  منفذ   - executes the transmutation
+  |
+  '- Murshidun (مرشدون - The Guides)
+       Summoned per wasfa, many, but only one at the flame. They perish
+       when the work is done. Iksīr does not contain them; it tends them.
+       Each dwells in its own inā', on its own branch, and never touches
+       the source directly.
+       |
+       '- Sani (صانع - The Craftsman)
+            Summoned by a Murshid for one waṣfa. Inscribes the runūz.
+            Returns to the void when the work is complete.
   |
 Buwtaqa (بوتقة - The Crucible)
   |
 Athanor (أثانور - The Sacred Furnace)
 ```
 
-The sacred tools are forged within: transmutation rites, formula inscription, essence decanting. Additional instruments may be consecrated through the mystical registry.
+The Khuddām are Iksīr's own flesh. The Murshidun are not — they are cells burning in a nest al-Kimyawi has kindled, reached across the thrum. Iksīr summons them, guards the single flame among them, and carries their words to you; what they are made of was never Iksīr's to decide.
+
+The **Ālāt al-Iksīr** (آلات الإكسير - instruments of the Elixir) are forged within: transmutation rites, formula inscription, essence decanting. They are advertised to the nest in Iksīr's own hello, and a summons returns to them by name. Additional instruments may be consecrated through the sijill.
 
 ## The Sacred Laws
 
