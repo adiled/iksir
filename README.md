@@ -74,20 +74,35 @@ Iksīr transmutes raw **wasfa** (وصفة - formulae) into perfected **dhahab** 
 Kimyawi (كيميائي - You, the Human Alchemist)
   |
 Iksīr (إكسير - The Elixir)
-  | (Served by the Khuddām - خدّام - Sacred Servants)
-  |- Munadi      منادي  - calls forth the workers
-  |- Katib       كاتب   - inscribes all transformations
-  |- Arraf       عرّاف  - divines intent from utterances
-  |- Saail       سائل   - divines truth from questions
-  |- Mumayyiz   مميّز  - separates dhahab from khabath
-  |- Raqib       رقيب   - guards against fasad (corruption)
-  |- Hayat       حياة   - keeps vigil, performs the night rites
-  '- Munaffidh   منفذ   - executes the transmutation
+  |
+  |- Khuddām (خدّام - Sacred Servants)
+  |    Eternal, bound to the workshop. One of each. They are Iksīr.
+  |
+  |    |- Munadi     منادي  - calls forth the workers
+  |    |- Katib      كاتب   - inscribes all transformations
+  |    |- Arraf      عرّاف  - divines intent from utterances
+  |    |- Saail      سائل   - divines truth from questions
+  |    |- Mumayyiz   مميّز  - separates dhahab from khabath
+  |    |- Raqib      رقيب   - guards against fasad (corruption)
+  |    |- Hayat      حياة   - keeps vigil, performs the night rites
+  |    '- Munaffidh  منفذ   - executes the transmutation
+  |
+  '- Murshidun (مرشدون - The Guides)
+       Summoned per wasfa, many, but only one at the flame. They perish
+       when the work is done. Iksīr does not contain them; it tends them.
+       Each dwells in its own inā', on its own branch, and never touches
+       the source directly.
+       |
+       '- Sani (صانع - The Craftsman)
+            Summoned by a Murshid for one waṣfa. Inscribes the runūz.
+            Returns to the void when the work is complete.
   |
 Buwtaqa (بوتقة - The Crucible)
   |
 Athanor (أثانور - The Sacred Furnace)
 ```
+
+The Khuddām are Iksīr's own flesh. The Murshidun are not — they are cells burning in a nest al-Kimyawi has kindled, reached across the thrum. Iksīr summons them, guards the single flame among them, and carries their words to you; what they are made of was never Iksīr's to decide.
 
 The **Ālāt al-Iksīr** (آلات الإكسير - instruments of the Elixir) are forged within: transmutation rites, formula inscription, essence decanting. They are advertised to the nest in Iksīr's own hello, and a summons returns to them by name. Additional instruments may be consecrated through the sijill.
 
