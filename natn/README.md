@@ -17,6 +17,7 @@ else. A test enforces it.
 | | translates | into |
 |---|---|---|
 | `hayula-git/` | git | `Hayula` |
+| `hayula-nass/` | a markdown file | `Hayula` |
 | `fasl-github/` | GitHub | `Fasl` |
 
 ## What is still outside
