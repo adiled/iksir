@@ -9,7 +9,7 @@
  * client_id changes with every reconnection; the hid does not.
  * Should the mark be absent or malformed, humd cannot recognize
  * a returning bee — and every reconnection leaves behind a ghost
- * manifest, the tool count swelling by twenty-four each time until
+ * manifest, the tool count swelling by twenty-three each time until
  * the daemon is restarted.
  *
  * Mirrors hives/common/src/identity.rs byte-for-byte, so the seed

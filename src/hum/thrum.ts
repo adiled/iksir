@@ -73,10 +73,10 @@ function iqraMaalumatTashghil(): MaalumatTashghil | null {
 /**
  * Where humd listens, in the order a client must ask.
  *
- * Mirrors hum_paths::thrum_sock_resolved — the rendezvous file wins over
- * the default because humd may have bound somewhere else entirely.
- * (WIRE.md still documents an XDG_RUNTIME_DIR path; the Rust source
- * does not agree, and the Rust source is what binds the socket.)
+ * Mirrors hum_paths::thrum_sock_resolved. The rendezvous file wins over the
+ * default because the default has moved: humd bound under XDG_RUNTIME_DIR
+ * through 0.31, and under the state dir from 0.32. A live 0.31 daemon and
+ * a fresh 0.32 one disagree, and only runtime.json knows which is listening.
  */
 export function masarThrum(sarih?: string): string {
   if (sarih) return sarih;
