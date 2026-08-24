@@ -1,5 +1,5 @@
 /**
- * Tests for src/notifications/messenger.ts
+ * Tests for src/rasul/messenger.ts
  *
  * Tests TelegramMessenger (RasulKharij implementation) with:
  * - Mock TelegramClient (injected via constructor)

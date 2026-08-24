@@ -3,15 +3,13 @@
  *
  * One of the sacred Khuddām (خدّام) of Iksīr.
  *
- * While others sleep, Hayat breathes. The slow pulse —
- * watching over risālāt as they wait for judgement, listening for the
- * murmur of new taaliqat, sensing when a risala has been merged into
- * the codex or abandoned by its author.
+ * While others sleep, Hayat breathes. The slow pulse — listening at each
+ * decanted jawhar for what has been said of it, and carrying those words
+ * to the murshid that made it.
  *
- * In the quiet hours, when al-Kimyawi rests, Hayat performs the
- * sacred rites of seyana — merging the river of main into each
- * murshid's forge branch, rebuilding the code-intel index, ensuring
- * everything is clean and ready for the dawn.
+ * In the quiet hours, when al-Kimyawi rests, Hayat performs the sacred
+ * rites of seyana — drawing the codex in beneath each murshid's vessel,
+ * so nothing stands on ground that has moved.
  *
  * Hayat does not think. Hayat does not decide. Hayat watches,
  * breathes, and keeps the flame from going cold.
@@ -20,7 +18,6 @@
 import type { Fasl } from "../hayula/fasl.ts";
 import { mayyazaTaaliq } from "./mumayyiz.ts";
 import type { SijillWasfat } from "../wasfa/sijill-wasfat.ts";
-import { buildIndex } from "../code-intel/indexer.ts";
 import { logger } from "../logging/logger.ts";
 import { fiNitaqAlWaqt, minutesUntil, todayInTz } from "../utils/time.ts";
 import type { Hayula } from "../hayula/hayula.ts";
@@ -104,8 +101,8 @@ export class DawratHayat {
   }
 
   /**
-   * A single breath. Poll all tracked risālāt,
-   * and if the hour is right, perform the night rites.
+   * A single breath. Listen at each decanted jawhar, and if the hour is
+   * right, perform the night rites.
    */
   async dawra(): Promise<void> {
     const mafsula = await this.#wasfat.bihala("mafsul", 50);
@@ -191,9 +188,8 @@ export class DawratHayat {
   /**
    * The night rites — seyana.
    *
-   * Merge the river of main into each murshid's forge branch.
-   * Rebuild the code-intel index. Report what was found.
-   * If taarudat arise, do not resolve them — only report.
+   * Draw the codex in beneath each murshid's vessel, and report what was
+   * found. If taarudat arise, do not resolve them — only report.
    */
   async naffadhSeyana(): Promise<void> {
     if (!this.fiAkhirSaatHudu()) {
@@ -242,13 +238,6 @@ export class DawratHayat {
           await logger.sajjalKhata("keepalive", `Failed to istarjaa branch ${originalBranch}, falling back to main`);
           await this.#hayula.dakhala(await this.#hayula.asas());
         }
-      }
-
-      try {
-        const repoPath = Deno.env.get("IKSIR_REPO_PATH") ?? ".";
-        await buildIndex(repoPath);
-      } catch (error) {
-        await logger.haDHHir("keepalive", "Code-intel index build failed", { error: String(error) });
       }
 
       await this.#istijabat.indaIktimalSeyana(results);

@@ -17,7 +17,7 @@ import {
   mockArraf,
   makeConfig,
 } from "../src/test-helpers.ts";
-import { TelegramMessenger } from "../src/notifications/messenger.ts";
+import { TelegramMessenger } from "../src/rasul/messenger.ts";
 import { MudirJalasat } from "../src/khuddam/katib.ts";
 import { Munadi } from "../src/khuddam/munadi.ts";
 import { Saail } from "../src/khuddam/saail.ts";

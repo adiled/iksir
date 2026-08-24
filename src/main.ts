@@ -29,10 +29,10 @@ import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, haddathaHuwiyyatRisalaSual }
 import { createAmilHum } from "./hum/client.ts";
 import { masarThrum } from "./hum/thrum.ts";
 import { AlatAlIksir } from "./alat/alat-al-iksir.ts";
-import { anshaaNtfyAmil } from "./notifications/ntfy.ts";
-import { anshaaTelegramAmil } from "./notifications/telegram.ts";
-import { anshaaTelegramRasul } from "./notifications/messenger.ts";
-import { anshaaRasulUnbub } from "./notifications/rasul-anbub.ts";
+import { anshaaNtfyAmil } from "./rasul/ntfy.ts";
+import { anshaaTelegramAmil } from "./rasul/telegram.ts";
+import { anshaaTelegramRasul } from "./rasul/messenger.ts";
+import { anshaaRasulUnbub } from "./rasul/rasul-anbub.ts";
 import { anshaaSijillWasfat } from "./wasfa/sijill.ts";
 import { AMAL_FASL, AMAL_HAYULA, AMAL_SAFA, istadaa } from "./hayula/istadaa.ts";
 import type { Hayula } from "./hayula/hayula.ts";

@@ -17,7 +17,7 @@ import type { Fasl } from "../hayula/fasl.ts";
 import type { Safa } from "../hayula/safa.ts";
 import type { RasulKharij } from "../types.ts";
 import type { SijillWasfat, Wasfa } from "../wasfa/sijill-wasfat.ts";
-import { NtfyClient } from "../notifications/ntfy.ts";
+import { NtfyClient } from "../rasul/ntfy.ts";
 import { AmilHum } from "../hum/client.ts";
 import { logger } from "../logging/logger.ts";
 import { 

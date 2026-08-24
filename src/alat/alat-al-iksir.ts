@@ -4,8 +4,7 @@
  * The workshop's apparatus — the instruments themselves, and the
  * hands that work them:
  *
- *   mun_*   the alchemical operations — istihal, fasl, naqsh
- *   code_*  the reading of runuz — symbols, dependencies, impact
+ *   mun_*   the alchemical operations — istihal, safa, fasl
  *
  * Their taarif ride in Iksir's hello. humd merges every forager's
  * into the foragerTools it hands each worker, so a nida returns
@@ -41,8 +40,6 @@ import type {
   TaarifAla,
 } from "../types.ts";
 import { wallidIsmFar } from "../khuddam/katib.ts";
-import { loadIndex } from "../code-intel/indexer.ts";
-import { queryIndex } from "../code-intel/query.ts";
 
 import { adhafaQararSijill, adkhalaHadath, jalabaQararatSijill, qiraStatus } from "../../db/db.ts";
 
@@ -649,27 +646,6 @@ You should only call this once per murshid, at the start.`,
       (args) => this.#aalijIdfa(args),
     );
 
-    this.#sijillAlat.sajjil(
-      {
-        name: "mun_istifsar",
-        description:
-          "Query the codebase index for symbol locations, dependencies, impact analysis, and search. " +
-          "Use this BEFORE grepping or globbing — it's faster and gives structured results. " +
-          "Examples: 'where is MudirJalasat', 'what depends on types.ts', 'impact of changing TasmimIksir', " +
-          "'exports of mumayyiz.ts', 'files related to auth'.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            query: {
-              type: "string",
-              description: "Natural language query about the codebase",
-            },
-          },
-          required: ["query"],
-        },
-      },
-      (args) => this.#aalijIstifsar(args),
-    );
   }
 
   #sajjilAlatKimiya(): void {
@@ -1366,19 +1342,4 @@ Note: CI may fail if parent PR is unmerged. This is expected for incremental rev
       `It will be refused if the matter has not withstood its fire.`;
   }
 
-  async #aalijIstifsar(args: Record<string, unknown>): Promise<string> {
-    const query = args.query as string;
-    if (!query) return JSON.stringify({ error: "query is required" });
-
-    const index = await loadIndex();
-    if (!index) {
-      return JSON.stringify({
-        error: "Code index not built yet. It will be available after the next maintenance cycle.",
-        hint: "The keepalive process builds the index during its housekeeping window.",
-      });
-    }
-
-    const result = queryIndex(index, query);
-    return JSON.stringify(result, null, 2);
-  }
 }
