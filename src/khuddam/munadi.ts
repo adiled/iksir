@@ -1211,7 +1211,7 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
   }
 
   /**
-   * Restore active murshid on daemon startup.
+   * Restore the murshid at the flame when al-Khadim wakes.
    * Uses the centralized #naffadhaTahwilMurshid to ensure branch intaqalaIla,
    * notification, and all other switchover logic happens.
    */

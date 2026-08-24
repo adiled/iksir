@@ -40,7 +40,7 @@ import type {
   SijillAlat,
   TaarifAla,
 } from "../types.ts";
-import { wallidIsmFar } from "../daemon/katib.ts";
+import { wallidIsmFar } from "../khuddam/katib.ts";
 import { loadIndex } from "../code-intel/indexer.ts";
 import { queryIndex } from "../code-intel/query.ts";
 
@@ -505,7 +505,7 @@ Use this when:
 - A PR was merged and you have follow-up work
 - An external change means you can continue
 
-This signals to the daemon that you want to become active.
+This tells al-Khadim you would take the flame.
 If no other murshid is active, you'll be granted control immediately.
 If another murshid is working, Al-Kimyawi will be asked to approve the switch.`,
         inputSchema: {
@@ -539,7 +539,7 @@ If another murshid is working, Al-Kimyawi will be asked to approve the switch.`,
         name: "mun_khalaq_far",
         description: `Create the branch for a new murshid. Called once when starting work.
 
-The daemon will:
+al-Khadim will:
 1. Ensure main is checked out and clean
 2. Pull latest main
 3. Create and intaqalaIla the branch
@@ -880,7 +880,7 @@ judged — it is set before al-Kimyawī having already survived its fire.`,
 
     this.#hawwilLiKhadim(call);
 
-    return `Ticket creation request forwarded to daemon.
+    return `The inscription of a wasfa is carried to al-Khadim.
 
 Title: ${call.unwan}
 Status: ${call.hala ?? "backlog"}
@@ -904,7 +904,7 @@ Daemon will create the ticket and return the ticket ID.`;
       .map(([k, v]) => `  ${k}: ${v}`)
       .join("\n");
 
-    return `Ticket update request forwarded to daemon.
+    return `The alteration is carried to al-Khadim.
 
 Ticket: ${call.huwiyyatWasfa}
 Updates:
@@ -925,7 +925,7 @@ ${updatesList}`;
     const blocksList = call.yahjub?.length ? `Blocks: ${call.yahjub.join(", ")}` : "";
     const blockedByList = call.mahjoubBi?.length ? `Blocked by: ${call.mahjoubBi.join(", ")}` : "";
 
-    return `Relation update request forwarded to daemon.
+    return `The binding is carried to al-Khadim.
 
 Ticket: ${call.huwiyyatWasfa}
 ${blocksList}
@@ -966,7 +966,7 @@ ${hala.summary ? `- Summary: ${hala.summary}` : ""}`;
 
     this.#hawwilLiKhadim(call);
 
-    return `Branch status request forwarded to daemon.
+    return `The question of the vessel is carried to al-Khadim.
 
 Branch: ${call.far}
 

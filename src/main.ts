@@ -1,7 +1,7 @@
 /**
  * Iksir Daemon - Autonomous Agent Tansiq
  *
- * Main entry point for the Iksir daemon.
+ * Where al-Khadim wakes.
  * 
  * Architecture:
  * - MudirJalasat: Manages murshid jalasat at the nest
@@ -38,13 +38,13 @@ import { AMAL_FASL, AMAL_HAYULA, AMAL_SAFA, istadaa } from "./hayula/istadaa.ts"
 import type { Hayula } from "./hayula/hayula.ts";
 import type { Fasl } from "./hayula/fasl.ts";
 import type { Safa } from "./hayula/safa.ts";
-import { istadaaKatib } from "./daemon/katib.ts";
-import { istadaaMunaffidh } from "./daemon/munaffidh.ts";
-import { istadaaMunadi } from "./daemon/munadi.ts";
-import { istadaaArraf } from "./daemon/arraf.ts";
-import { awqadaHayat, type NatijaSeyana } from "./daemon/hayat.ts";
-import { istadaaSaail } from "./daemon/saail.ts";
-import { istadaaRaqib } from "./daemon/raqib.ts";
+import { istadaaKatib } from "./khuddam/katib.ts";
+import { istadaaMunaffidh } from "./khuddam/munaffidh.ts";
+import { istadaaMunadi } from "./khuddam/munadi.ts";
+import { istadaaArraf } from "./khuddam/arraf.ts";
+import { awqadaHayat, type NatijaSeyana } from "./khuddam/hayat.ts";
+import { istadaaSaail } from "./khuddam/saail.ts";
+import { istadaaRaqib } from "./khuddam/raqib.ts";
 import type { TasmimIksir, Rasul, RisalaDakhila, TaaliqMuraja, JalsatMurshid, HadathSualMatlub, MaalumatSual, SualMuallaq } from "./types.ts";
 import type { SijillWasfat } from "./wasfa/sijill-wasfat.ts";
 

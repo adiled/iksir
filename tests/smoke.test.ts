@@ -18,10 +18,10 @@ import {
   makeConfig,
 } from "../src/test-helpers.ts";
 import { TelegramMessenger } from "../src/notifications/messenger.ts";
-import { MudirJalasat } from "../src/daemon/katib.ts";
-import { Munadi } from "../src/daemon/munadi.ts";
-import { Saail } from "../src/daemon/saail.ts";
-import type { NiyyaMuhallala } from "../src/daemon/arraf.ts";
+import { MudirJalasat } from "../src/khuddam/katib.ts";
+import { Munadi } from "../src/khuddam/munadi.ts";
+import { Saail } from "../src/khuddam/saail.ts";
+import type { NiyyaMuhallala } from "../src/khuddam/arraf.ts";
 import { jalabaAseilaGhairMujaba } from "../db/db.ts";
 
 

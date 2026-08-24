@@ -429,7 +429,7 @@ export async function writeTempFile(content: string, prefix = "iksir-fixture-"):
 }
 
 
-import type { NiyyaMuhallala } from "./daemon/arraf.ts";
+import type { NiyyaMuhallala } from "./khuddam/arraf.ts";
 
 export interface MockArraf {
   halla(text: string, context?: unknown): Promise<NiyyaMuhallala>;

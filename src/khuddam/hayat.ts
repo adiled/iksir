@@ -46,7 +46,7 @@ export interface NatijaSeyana {
 
 /**
  * IstijabatHayat — the signals Hayat sends when it witnesses change.
- * The daemon receives these and acts.
+ * al-Khadim receives these and acts.
  */
 interface IstijabatHayat {
   /** Al-Kimyawi has spoken upon a jawhar — a command to obey */

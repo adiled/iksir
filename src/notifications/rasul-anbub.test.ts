@@ -91,7 +91,7 @@ Deno.test("unbub: speaking into an empty room does not block", async () => {
 
     /**
      * Nothing is following the mouth. The workshop must still be able to
-     * speak — a fifo here would have stopped the daemon mid-word.
+     * speak — a fifo here would have stopped al-Khadim mid-word.
      */
     const qabl = Date.now();
     await rasul.send("dispatch", "is anyone there");

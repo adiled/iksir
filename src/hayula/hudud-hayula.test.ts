@@ -5,7 +5,7 @@ import { relative } from "jsr:@std/path";
 const JIDHR = new URL("../..", import.meta.url).pathname;
 
 /** Where Iksīr speaks kimiya and nothing else. */
-const QALB = ["src/daemon", "src/kimiya", "src/alat", "src/hum"];
+const QALB = ["src/khuddam", "src/kimiya", "src/alat", "src/hum"];
 
 /** Contrivances core may no longer name. */
 const KALIMAT_NATINA = [

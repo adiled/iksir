@@ -274,7 +274,7 @@ export interface SualMuallaq {
 
 /**
  * Nida made by murshids through the instruments.
- * These are dispatched by the daemon's tool executor.
+ * These are worked by Munaffidh.
  */
 
 /** Create a new ticket */
@@ -535,7 +535,7 @@ export interface SijillAlat {
   /** Check if a tool name is registered */
   yujad(name: string): boolean;
 
-  /** Get the IPC forwarder (for sending events to daemon) */
+  /** The forwarder that carries a nida to al-Khadim */
   muwassil(): (call: MunToolCall) => void;
 }
 
@@ -577,7 +577,7 @@ export type QanatRisala =
   | "kimyawi"
   | { murshid: string };
 
-/** Outbound messaging interface — what daemon modules depend on */
+/** Outbound messaging — what the khuddam depend on */
 export interface RasulKharij {
   /** Is the messenger operational? */
   mumakkan(): boolean;
