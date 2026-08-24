@@ -477,6 +477,7 @@ export function makeConfig(overrides?: Partial<TasmimIksir>): TasmimIksir {
     hum: {},
     saatSukun: { bidaya: "00:00", nihaya: "06:00", mintaqaZamaniyya: "UTC" },
     wasfat: {},
+    madda: { hayula: "/dev/null/hayula.ts" },
     isharat: {
       telegram: {
         mufattah: false,

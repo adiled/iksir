@@ -33,5 +33,10 @@
     "repo": "your-repo",
     "operatorUsername": "your-github-username"
   },
+  "madda": {
+    "hayula": "/root/natn-ila-iksir/hayula-nass/mod.ts",
+    "safa": "/root/natn-ila-iksir/safa-amr/mod.ts",
+    "masar": "./codex.md"
+  },
   "hum": {}
 }

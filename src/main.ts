@@ -34,9 +34,10 @@ import { anshaaTelegramAmil } from "./notifications/telegram.ts";
 import { anshaaTelegramRasul } from "./notifications/messenger.ts";
 import { anshaaRasulUnbub } from "./notifications/rasul-anbub.ts";
 import { anshaaSijillWasfat } from "./wasfa/sijill.ts";
-import { anshaaHayulaGit } from "../natn/hayula-git/mod.ts";
-import { anshaaFaslGitHub } from "../natn/fasl-github/mod.ts";
-import { anshaaSafaAmr } from "../natn/safa-amr/mod.ts";
+import { AMAL_FASL, AMAL_HAYULA, AMAL_SAFA, istadaa } from "./hayula/istadaa.ts";
+import type { Hayula } from "./hayula/hayula.ts";
+import type { Fasl } from "./hayula/fasl.ts";
+import type { Safa } from "./hayula/safa.ts";
 import { createGitHubClient } from "./github/gh.ts";
 import { istadaaKatib } from "./daemon/katib.ts";
 import { istadaaMunaffidh } from "./daemon/munaffidh.ts";
@@ -48,6 +49,35 @@ import { istadaaRaqib } from "./daemon/raqib.ts";
 import type { TasmimIksir, Rasul, RisalaDakhila, TaaliqMuraja, JalsatMurshid, RisalaMutaba, HadathSualMatlub, MaalumatSual, SualMuallaq } from "./types.ts";
 import type { SijillWasfat } from "./wasfa/sijill-wasfat.ts";
 
+/**
+ * A fire that burns nothing, for a workshop that has declared none. It
+ * refuses rather than passing — an unassayed jawhar must not reach faṣl by
+ * accident.
+ */
+function safaSakita(): Safa {
+  return {
+    naw: "sakita",
+    assa: (mayayir: string[]) =>
+      Promise.resolve({
+        thabata: false,
+        ihtamala: [],
+        ihtaraq: mayayir.map((m) => ({ mayar: m, qawl: "no safa is kindled" })),
+      }),
+  };
+}
+
+/** Nowhere to set a jawhar down. It says so rather than pretending. */
+function faslSakit(): Fasl {
+  return {
+    naw: "sakit",
+    qaddama: () => Promise.resolve(null),
+    hala: () => Promise.resolve(null),
+    taaliqat: () => Promise.resolve([]),
+    thabit: () => Promise.resolve(false),
+    farq: () => Promise.resolve(null),
+  };
+}
+
 interface SiyaqKhadim {
   tasmim: TasmimIksir;
   amil: ReturnType<typeof createAmilHum>;
@@ -55,7 +85,7 @@ interface SiyaqKhadim {
   rasul: Rasul;
   wasfat: SijillWasfat;
   github: ReturnType<typeof createGitHubClient>;
-  hayula: ReturnType<typeof anshaaHayulaGit>;
+  hayula: Hayula;
   mudirJalasat: ReturnType<typeof istadaaKatib>;
   munaffidh: ReturnType<typeof istadaaMunaffidh>;
   munadi: ReturnType<typeof istadaaMunadi>;
@@ -800,12 +830,27 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
    * so an unannounced ada is an unreachable one.
    */
   /**
-   * The one place Iksīr names a contrivance. Everything below is handed a
-   * Hayūlā and never asks what kind — swap this line and the same daemon
-   * works a lexicon or a body of law instead of a corpus of runūz.
+   * The matter, and the fire, and the place a jawhar is set down. Iksīr is
+   * handed all three and asks nothing of what they are made from.
    */
-  const hayula = anshaaHayulaGit();
-  const safa = anshaaSafaAmr(Deno.env.get("IKSIR_REPO_PATH"));
+  const siyaqMadda = {
+    tasmim: config,
+    warsha: Deno.env.get("IKSIR_REPO_PATH"),
+    masar: config.madda.masar,
+  };
+
+  if (!config.madda?.hayula) {
+    await logger.sajjalKhata(
+      "main",
+      "No hayula named. Iksir works upon matter, and must be handed some: set madda.hayula.",
+    );
+    Deno.exit(1);
+  }
+
+  const hayula = await istadaa<Hayula>(config.madda.hayula, siyaqMadda, AMAL_HAYULA);
+  const safa = config.madda.safa
+    ? await istadaa<Safa>(config.madda.safa, siyaqMadda, AMAL_SAFA)
+    : safaSakita();
 
   const alat = new AlatAlIksir();
   const amil = createAmilHum(config, alat.adawat());
@@ -833,7 +878,9 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   const wasfat = anshaaSijillWasfat(config.wasfat?.sabiqa);
 
   const github = createGitHubClient(config);
-  const fasl = anshaaFaslGitHub(github);
+  const fasl = config.madda.fasl
+    ? await istadaa<Fasl>(config.madda.fasl, siyaqMadda, AMAL_FASL)
+    : faslSakit();
   const abortController = new AbortController();
 
   /** Initialize session manager and istarjaa persisted state */

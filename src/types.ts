@@ -11,6 +11,7 @@ export interface TasmimIksir {
   isharat: TasmimIsharat;
   wasfat: TasmimWasfat;
   github: TasmimGitHub;
+  madda: TasmimMadda;
   hum: TasmimHum;
   hafazat: TasmimHaththat;
 }
@@ -68,6 +69,22 @@ export interface TasmimGitHub {
   sahib: string;
   makhzan: string;
   ismKimyawi: string;
+}
+
+/**
+ * Madda (مادة) — where the matter and its trials are summoned from.
+ *
+ * Iksīr names no contrivance. al-Kimyawī says which one, and where.
+ */
+export interface TasmimMadda {
+  /** The hayūlā worked upon. */
+  hayula: string;
+  /** Where a jawhar is set down for examination. */
+  fasl?: string;
+  /** The fire a waṣfa is put to. */
+  safa?: string;
+  /** Handed to whichever is summoned. */
+  masar?: string;
 }
 
 export interface TasmimHum {
