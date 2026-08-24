@@ -4,9 +4,9 @@
  * Single entry point for all Iksir operations.
  *
  * Usage:
- *   iksir start              Start the daemon
- *   iksir stop               Stop the daemon
- *   iksir restart             Restart the daemon
+ *   iksir start              Wake al-Khadim
+ *   iksir stop               Still al-Khadim
+ *   iksir restart             Wake it anew
  *   iksir status              Show service and session status
  *   iksir check               Validate config, type check, run tests
  *   iksir sync                Sync the ruqan into the config dir
@@ -23,7 +23,7 @@ import { join } from "jsr:@std/path";
 
 /**
  * One service. The nest is al-Kimyawi's to supervise, and the instruments
- * ride the daemon's own process.
+ * ride al-Khadim's own process.
  */
 const SERVICES = ["iksir"] as const;
 
@@ -37,13 +37,13 @@ Setup:
   init               Interactive onboarding wizard
 
 Service management:
-  start              Start the daemon
-  stop               Stop the daemon
-  restart            Restart the daemon
+  start              Wake al-Khadim
+  stop               Still al-Khadim
+  restart            Wake it anew
   status             Show service and session status
 
 Maintenance:
-  update             Pull latest, sync ruqan, restart the daemon
+  update             Pull latest, sync ruqan, wake anew
   check              Validate config, type check, run tests
   sync               Sync the ruqan into the config dir
   config             Print resolved configuration
@@ -122,8 +122,6 @@ async function cmdCheck(): Promise<void> {
   try {
     const config = await hammalaAlTasmim();
     console.log(`  \x1b[32m✓\x1b[0m Config loaded from ${masarMilafAlTasmim()}`);
-    if (config.mutabiWasfa.miftahApi) console.log("  \x1b[32m✓\x1b[0m Issue tracker API key set");
-    else console.log("  \x1b[33m!\x1b[0m Issue tracker API key not set");
     if (config.isharat.telegram.ramzBot) console.log("  \x1b[32m✓\x1b[0m Telegram bot token set");
     else console.log("  \x1b[33m!\x1b[0m Telegram bot token not set");
   } catch (e) {

@@ -1,5 +1,5 @@
 /**
- * Tests for src/daemon/mumayyiz.ts
+ * Tests for src/khuddam/mumayyiz.ts
  *
  * Tests mayyazaTanbih() and mayyazaSual() with mock AmilHum.
  * AGENTS.md is loaded from a temp fixture file.

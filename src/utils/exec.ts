@@ -1,7 +1,7 @@
 /**
  * Shell command execution utility.
  *
- * Single abstraction for running CLI tools (git, gh, curl, etc.).
+ * Running a command the workshop needs.
  * Centralizes Deno.Command usage for testability — tests can mock
  * execCommand() instead of stubbing Deno.Command everywhere.
  */
@@ -25,7 +25,7 @@ export interface ExecOptions {
 /**
  * Execute a shell command and capture output.
  *
- * @param binary - The command to run (e.g., "git", "gh", "curl")
+ * @param binary - The command to run
  * @param args - Arguments to pass to the command
  * @param options - Optional cwd, signal, env
  * @returns ExecResult with stdout, stderr, success, and exit code

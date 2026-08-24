@@ -3,7 +3,7 @@
  *
  * Exercises the full inbound message pipeline with real Iksir,
  * MudirJalasat, Sail, and TelegramMessenger — mocking only
- * the external boundaries (OpenCode API, Linear API, Telegram API).
+ * the outward boundaries — the nest, the register, the messenger.
  *
  * Run: deno test --allow-all tests/smoke_test.ts
  */
@@ -12,15 +12,16 @@ import { assertEquals, assertExists, assertStringIncludes } from "@std/assert";
 import {
   withTestRepo,
   mockAmilHum,
+  mockHayula,
   mockTelegramClient,
   mockArraf,
   makeConfig,
 } from "../src/test-helpers.ts";
-import { TelegramMessenger } from "../src/notifications/messenger.ts";
-import { MudirJalasat } from "../src/daemon/katib.ts";
-import { Munadi } from "../src/daemon/munadi.ts";
-import { Saail } from "../src/daemon/saail.ts";
-import type { NiyyaMuhallala } from "../src/daemon/arraf.ts";
+import { TelegramMessenger } from "../src/rasul/messenger.ts";
+import { MudirJalasat } from "../src/khuddam/katib.ts";
+import { Munadi } from "../src/khuddam/munadi.ts";
+import { Saail } from "../src/khuddam/saail.ts";
+import type { NiyyaMuhallala } from "../src/khuddam/arraf.ts";
 import { jalabaAseilaGhairMujaba } from "../db/db.ts";
 
 
@@ -30,6 +31,7 @@ function buildContext() {
   const telegram = mockTelegramClient();
   const messenger = new TelegramMessenger(telegram as never);
   const intentResolver = mockArraf();
+  const hayula = mockHayula();
 
   const sessionManager = new MudirJalasat({
     tasmim: config,
@@ -41,7 +43,8 @@ function buildContext() {
     mudirJalasat: sessionManager,
     arraf: intentResolver as never,
     rasul: messenger,
-    namatWasfa: config.mutabiWasfa?.namatWasfa,
+    hayula,
+    namatWasfa: config.wasfat?.namatWasfa,
   });
 
   const questionHandler = new Saail({
@@ -50,7 +53,7 @@ function buildContext() {
     mudirJalasat: sessionManager as never,
   });
 
-  return { config, amil, telegram, messenger, sessionManager, dispatcher, intentResolver, questionHandler };
+  return { config, amil, telegram, messenger, sessionManager, dispatcher, intentResolver, questionHandler, hayula };
 }
 
 
@@ -74,10 +77,9 @@ Deno.test("smoke: activateForTicketUrl creates session + topic", async () => {
   await withTestRepo(async () => {
     const { dispatcher, amil, telegram, sessionManager } = buildContext();
 
-    const result = await dispatcher.faaalLiRabitWasfa(
+    const result = await dispatcher.faaalLiWasfa(
       "TEAM-1000",
-      "Bab Al Shams Portal",
-      "https://linear.app/team/issue/TEAM-XXX"
+      "Bab Al Shams Portal"
     );
 
     assertEquals(result.tuulija, true);
@@ -108,10 +110,9 @@ Deno.test("smoke: message routed to active murshid via sendPromptAsync", async (
   await withTestRepo(async () => {
     const { dispatcher, amil, sessionManager } = buildContext();
 
-    await dispatcher.faaalLiRabitWasfa(
+    await dispatcher.faaalLiWasfa(
       "TEAM-2000",
-      "Alf Layla Migration",
-      "https://linear.app/team/issue/TEAM-XXX"
+      "Alf Layla Migration"
     );
 
     /** Clear the init prompt calls so we can track the next one */
@@ -138,10 +139,9 @@ Deno.test("smoke: /status with active session shows identifier", async () => {
   await withTestRepo(async () => {
     const { dispatcher } = buildContext();
 
-    await dispatcher.faaalLiRabitWasfa(
+    await dispatcher.faaalLiWasfa(
       "TEAM-3000",
-      "Qasr Al Hikma",
-      "https://linear.app/team/issue/TEAM-XXX"
+      "Qasr Al Hikma"
     );
 
     /** Now check status */
@@ -168,7 +168,6 @@ Deno.test("smoke: dispatch message uses intent resolver for natural language", a
         id: "issue-abc",
         huwiyya: "TEAM-4000",
         unwan: "Majlis Refactor",
-        url: "https://linear.app/team/issue/TEAM-XXX"
       },
       nassKham: "work on the majlis refactor",
       tariqa: "bahth_fikri",
@@ -195,10 +194,9 @@ Deno.test("smoke: murshid topic message routes to correct session", async () => 
   await withTestRepo(async () => {
     const { dispatcher, amil, sessionManager } = buildContext();
 
-    await dispatcher.faaalLiRabitWasfa(
+    await dispatcher.faaalLiWasfa(
       "TEAM-5000",
-      "Diwan Al Rasail",
-      "https://linear.app/team/issue/TEAM-XXX"
+      "Diwan Al Rasail"
     );
 
     const session = sessionManager.wajadaJalasatMurshid()[0];
@@ -222,7 +220,7 @@ Deno.test("smoke: murshid topic message routes to correct session", async () => 
 
     assertEquals(success, true);
 
-    /** Step 5: Verify message reached the correct OpenCode session */
+    /** Step 5: Verify the message reached the right vessel */
     const lastPrompt = amil._calls.sendPromptAsync[amil._calls.sendPromptAsync.length - 1];
     assertEquals(lastPrompt.sessionId, session.id);
     assertStringIncludes(lastPrompt.prompt, "GET /users");
@@ -235,10 +233,9 @@ Deno.test("smoke: question event classified and forwarded to murshid topic", asy
   await withTestRepo(async () => {
     const { dispatcher, questionHandler, sessionManager } = buildContext();
 
-    await dispatcher.faaalLiRabitWasfa(
+    await dispatcher.faaalLiWasfa(
       "TEAM-6000",
-      "Funduq Search",
-      "https://linear.app/team/issue/TEAM-XXX"
+      "Funduq Search"
     );
 
     const session = sessionManager.wajadaJalasatMurshid()[0];
@@ -276,10 +273,9 @@ Deno.test("smoke: question answered via callback", async () => {
   await withTestRepo(async () => {
     const { dispatcher, amil, questionHandler, sessionManager } = buildContext();
 
-    await dispatcher.faaalLiRabitWasfa(
+    await dispatcher.faaalLiWasfa(
       "TEAM-7000",
-      "Bayt Al Hikma",
-      "https://linear.app/team/issue/TEAM-XXX"
+      "Bayt Al Hikma"
     );
 
     const session = sessionManager.wajadaJalasatMurshid()[0];
@@ -322,10 +318,10 @@ Deno.test("smoke: second murshid activation switches active session", async () =
   await withTestRepo(async () => {
     const { dispatcher, sessionManager } = buildContext();
 
-    await dispatcher.faaalLiRabitWasfa("TEAM-8001", "Rihla Alpha", "https://linear.app/team/TEAM-8001");
+    await dispatcher.faaalLiWasfa("TEAM-8001", "Rihla Alpha");
     assertEquals(dispatcher.hawiyyaFaila(), "TEAM-8001");
 
-    await dispatcher.faaalLiRabitWasfa("TEAM-8002", "Rihla Beta", "https://linear.app/team/TEAM-8002");
+    await dispatcher.faaalLiWasfa("TEAM-8002", "Rihla Beta");
     assertEquals(dispatcher.hawiyyaFaila(), "TEAM-8002");
 
     assertEquals(sessionManager.wajadaJalasatMurshid().length, 2);
@@ -337,7 +333,7 @@ Deno.test("smoke: vessels survive a restart, carrying their nestId", async () =>
   await withTestRepo(async () => {
     /** First life — light a vessel and let the worker name its handle. */
     const first = buildContext();
-    await first.dispatcher.faaalLiRabitWasfa("TEAM-9001", "Rihla Baqiya", "https://linear.app/team/TEAM-9001");
+    await first.dispatcher.faaalLiWasfa("TEAM-9001", "Rihla Baqiya");
 
     const lit = first.sessionManager.jalabMurshid("TEAM-9001");
     assertEquals(lit !== null, true);

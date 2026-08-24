@@ -9,8 +9,9 @@ export interface TasmimIksir {
   istiftaa: TasmimIstiftaa;
   saatSukun: TasmimSaatSukun;
   isharat: TasmimIsharat;
-  mutabiWasfa: TasmimMutabiWasfa;
-  github: TasmimGitHub;
+  wasfat: TasmimWasfat;
+  kimyawi: TasmimKimyawi;
+  madda: TasmimMadda;
   hum: TasmimHum;
   hafazat: TasmimHaththat;
 }
@@ -54,101 +55,35 @@ export interface TasmimTelegram {
   proxy?: string;
 }
 
-export interface TasmimMutabiWasfa {
-  /** Provider name: "linear" | "jira" | "github" */
-  muqaddim?: string;
-  miftahApi: string;
-  huwiyyatFareeq: string;
-  /** Regex pattern for ticket identifiers. Default: "[A-Z]+-\\d+" */
+export interface TasmimWasfat {
+  /** The mark a minted waṣfa name carries. Default: "W" */
+  sabiqa?: string;
+  /** How a waṣfa name is recognised in an utterance. Default: "[A-Z]+-\\d+" */
   namatWasfa?: string;
 }
 
 
-export type NawKiyan = "wasfa" | "malhamat" | "marhala" | "mashru" | "majhul";
+export type NawKiyan = "wasfa" | "malhamat" | "majhul";
 
-export interface WasfaMutaba {
-  id: string;
-  identifier: string;
-  title: string;
-  description?: string;
-  status?: string;
-  url?: string;
-  parentId?: string;
-  parent?: { identifier: string; title: string };
-  labels?: string[];
-  estimate?: number;
+/** Who al-Kimyawī is, so their own words are known as theirs. */
+export interface TasmimKimyawi {
+  ism: string;
 }
 
-export interface MashruMutabi {
-  id: string;
-  name: string;
-  description?: string;
-  url?: string;
-  issueCount?: number;
-}
-
-export interface MaalimMutabi {
-  id: string;
-  name: string;
-  url?: string;
-  startsAt?: string;
-  endsAt?: string;
-}
-
-export interface RabitWasfaMuhallal {
-  naw: NawKiyan;
-  id: string;
-}
-
-export interface MudkhalKhalqQadiya {
-  title: string;
-  description?: string;
-  estimate?: number;
-  status?: string;
-  labels?: string[];
-  parentId?: string;
-}
-
-export interface MudkhalTahdithQadiya {
-  title?: string;
-  description?: string;
-  estimate?: number;
-  status?: string;
-}
-
-export interface MurashihatQadiya {
-  assigneeId?: string;
-  status?: string;
-  cycleId?: string;
-}
-
-export interface MutabiWasfa {
-  readonly provider: string;
-  isAuthenticated(): Promise<boolean>;
-
-  getIssue(identifier: string): Promise<WasfaMutaba | null>;
-  getProject(id: string): Promise<MashruMutabi | null>;
-  searchIssues(query: string, limit?: number): Promise<WasfaMutaba[]>;
-  searchProjects(query: string): Promise<MashruMutabi[]>;
-
-  createIssue(input: MudkhalKhalqQadiya): Promise<WasfaMutaba>;
-  updateIssue(id: string, input: MudkhalTahdithQadiya): Promise<WasfaMutaba>;
-  setRelations(identifier: string, blocks?: string[], blockedBy?: string[]): Promise<void>;
-
-  parseUrl(url: string): RabitWasfaMuhallal | null;
-  getUrlPattern(): RegExp;
-
-  getStateId(name: string): Promise<string | null>;
-
-  searchMilestones?(query: string): Promise<MaalimMutabi[]>;
-  getActiveMilestone?(): Promise<MaalimMutabi | null>;
-  getFilteredIssues?(filters: MurashihatQadiya, limit?: number): Promise<WasfaMutaba[]>;
-}
-
-export interface TasmimGitHub {
-  sahib: string;
-  makhzan: string;
-  ismKimyawi: string;
+/**
+ * Madda (مادة) — where the matter and its trials are summoned from.
+ *
+ * Iksīr names no contrivance. al-Kimyawī says which one, and where.
+ */
+export interface TasmimMadda {
+  /** The hayūlā worked upon. */
+  hayula: string;
+  /** Where a jawhar is set down for examination. */
+  fasl?: string;
+  /** The fire a waṣfa is put to. */
+  safa?: string;
+  /** Handed to whichever is summoned. */
+  masar?: string;
 }
 
 export interface TasmimHum {
@@ -179,9 +114,8 @@ export type SinfIshara =
   | "blocker"
   | "decision"
   | "progress"
-  | "pr_ready"
-  | "review_comments"
-  | "milestone"
+  | "jawhar_mafsul"
+  | "taaliqat"
   | "external_change"
   | "quiet_hours_exit";
 
@@ -205,7 +139,8 @@ export interface FiilIshara {
 
 export interface TaaliqMuraja {
   id: string;
-  raqamRisala: number;
+  /** The waṣfa whose jawhar was spoken of. */
+  huwiyyatWasfa: string;
   author: string;
   body: string;
   path?: string;
@@ -241,7 +176,7 @@ export interface DecisionMudkhalSijill extends MudkhalSijill {
 }
 
 export interface MudkhalTaghyirKhariji extends MudkhalSijill {
-  source: "linear" | "github" | "figma" | "notion";
+  source: string;
   entityType: string;
   entityId: string;
   author: string;
@@ -339,7 +274,7 @@ export interface SualMuallaq {
 
 /**
  * Nida made by murshids through the instruments.
- * These are dispatched by the daemon's tool executor.
+ * These are worked by Munaffidh.
  */
 
 /** Create a new ticket */
@@ -380,7 +315,7 @@ export interface NidaWadaaAlaqat {
 export interface NidaQiraatWasfa {
   tool: "mun_iqra_wasfa";
   huwiyyatMurshid: string;
-  url: string;
+  huwiyya: string;
 }
 
 /** Create a draft PR */
@@ -536,12 +471,11 @@ export interface NidaFasl {
   musawwada?: boolean;
 }
 
-/** Naqsh (نقش — inscription): merge the risala into the codex */
-export interface NidaNaqsh {
-  tool: "mun_naqsh";
+/** Ṣafāʾ (صفاء): put the matter to the fire the waṣfa declared */
+export interface NidaSafa {
+  tool: "mun_safa";
   huwiyyatMurshid: string;
   huwiyyatWasfa: string;
-  raqamRisala: number;
 }
 
 export type MunToolCall =
@@ -566,7 +500,7 @@ export type MunToolCall =
   | NidaIstihal
   | NidaIstihalMutabaqq
   | NidaFasl
-  | NidaNaqsh;
+  | NidaSafa;
 
 
 /** One instrument's taarif — the shape humd advertises and routes by. */
@@ -601,7 +535,7 @@ export interface SijillAlat {
   /** Check if a tool name is registered */
   yujad(name: string): boolean;
 
-  /** Get the IPC forwarder (for sending events to daemon) */
+  /** The forwarder that carries a nida to al-Khadim */
   muwassil(): (call: MunToolCall) => void;
 }
 
@@ -643,7 +577,7 @@ export type QanatRisala =
   | "kimyawi"
   | { murshid: string };
 
-/** Outbound messaging interface — what daemon modules depend on */
+/** Outbound messaging — what the khuddam depend on */
 export interface RasulKharij {
   /** Is the messenger operational? */
   mumakkan(): boolean;
@@ -726,23 +660,6 @@ export interface Rasul extends RasulKharij {
 /** Murshid status for control handover */
 export type HalatMurshid = "sakin" | "fail" | "masdud" | "muntazir";
 
-/** PR status for keepalive tracking */
-export type RisalaMutabaStatus = "draft" | "open" | "merged" | "closed";
-
-/** A PR being tracked by keepalive for PR tracking */
-export interface RisalaMutaba {
-  huwiyyatWasfa: string;
-  raqamRisala: number;
-  far: string;
-  hala: RisalaMutabaStatus;
-  /** When PR was created */
-  unshiaFi: string;
-  /** When status last changed */
-  ghuyiratHalaFi: string;
-  /** When comments were last polled (persisted to prevent re-fetching on restart) */
-  akhirRaqabaFi?: string;
-}
-
 /** Murshid type */
 export type NawMurshid = "epic" | "chore" | "sandbox";
 
@@ -757,7 +674,7 @@ export type NawMurshid = "epic" | "chore" | "sandbox";
  */
 export interface JalsatMurshid {
   id: string;
-  /** Linear ticket identifier (e.g., TEAM-200, TEAM-300) */
+  /** The waṣfa this belongs to */
   huwiyya: string;
   unwan: string;
   /** Epic = multi-ticket work, Chore = standalone task */
@@ -776,7 +693,6 @@ export interface JalsatMurshid {
    * - Merge detection (paves way for next risāla cycle)
    * - Comment interpretation (conditional action per command protocol)
    */
-  activePRs: RisalaMutaba[];
   /**
    * Messaging channel IDs keyed by provider.
    * e.g., { telegram: "12345", slack: "C07ABC" }

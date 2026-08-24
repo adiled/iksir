@@ -79,16 +79,9 @@ function tasmimAsasi(): TasmimIksir {
         proxy: "",
       },
     },
-    mutabiWasfa: {
-      muqaddim: "linear",
-      miftahApi: "",
-      huwiyyatFareeq: "",
-    },
-    github: {
-      sahib: "",
-      makhzan: "",
-      ismKimyawi: "",
-    },
+    wasfat: {},
+    kimyawi: { ism: "" },
+    madda: { hayula: "" },
     hum: {},
     hafazat: {},
   };
@@ -141,19 +134,6 @@ function tahaqqaqConfig(config: TasmimIksir): string[] {
     }
   }
 
-  if (config.mutabiWasfa.miftahApi && !config.mutabiWasfa.huwiyyatFareeq) {
-    errors.push("issueTracker.teamId is required when API key is provided");
-  }
-
-  if (config.github.sahib) {
-    if (!config.github.makhzan) {
-      errors.push("github.repo is required when github.owner is set");
-    }
-    if (!config.github.ismKimyawi) {
-      errors.push("github.ismKimyawi is required when github.owner is set");
-    }
-  }
-
   return errors;
 }
 
@@ -185,9 +165,6 @@ export async function hammalaAlTasmim(): Promise<TasmimIksir> {
 
   if (Deno.env.get("IKSIR_HUM_MODEL")) {
     envOverrides.hum = { ...config.hum, namudhaj: Deno.env.get("IKSIR_HUM_MODEL")! };
-  }
-  if (Deno.env.get("LINEAR_API_KEY")) {
-    envOverrides.mutabiWasfa = { ...config.mutabiWasfa, miftahApi: Deno.env.get("LINEAR_API_KEY")! };
   }
   if (Deno.env.get("TELEGRAM_BOT_TOKEN")) {
     envOverrides.isharat = {

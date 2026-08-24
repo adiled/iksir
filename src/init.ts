@@ -7,7 +7,6 @@
 
 import { join } from "jsr:@std/path";
 import { exists } from "jsr:@std/fs";
-import { execCommand } from "./utils/exec.ts";
 import { masarThrum } from "./hum/thrum.ts";
 
 
@@ -102,37 +101,15 @@ async function telegramApi(token: string, method: string): Promise<{ ok: boolean
   }
 }
 
-async function linearApi(apiKey: string, query: string): Promise<{ data?: unknown; errors?: unknown[] }> {
-  try {
-    const resp = await fetch("https://api.linear.app/graphql", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": apiKey,
-      },
-      body: JSON.stringify({ query }),
-    });
-    return await resp.json();
-  } catch {
-    return { errors: [{ message: "Network error" }] };
-  }
-}
-
 
 interface InitState {
   telegramBotToken: string;
   telegramChatId: string;
   telegramBotName: string;
-  issueTrackerApiKey: string;
-  issueTrackerTeamId: string;
-  issueTrackerTeamName: string;
-  githubOwner: string;
-  githubRepo: string;
-  githubUsername: string;
+  ismKimyawi: string;
   namudhaj: string;
   skippedTelegram: boolean;
-  skippedMutabiWasfa: boolean;
-  skippedGithub: boolean;
+  sabiqaWasfa: string;
 }
 
 const TOTAL_STEPS = 5;
@@ -211,114 +188,24 @@ async function stepTelegram(state: InitState): Promise<void> {
   }
 }
 
-async function stepMutabiWasfa(state: InitState): Promise<void> {
-  heading(2, TOTAL_STEPS, "Issue Tracker");
+async function stepWasfat(state: InitState): Promise<void> {
+  heading(2, TOTAL_STEPS, "The Register");
   console.log("");
-  console.log(`  Iksir creates and manages tickets. Linear is the default provider.`);
-  console.log("");
-
-  if (!await confirm("Set up Linear?")) {
-    state.skippedMutabiWasfa = true;
-    warn("Skipped. You can configure the issue tracker later in .env");
-    return;
-  }
-
-  console.log("");
-  console.log(`  ${dim("1.")} Go to ${bold("linear.app")} > Settings > API`);
-  console.log(`  ${dim("2.")} Create a Personal API Key`);
+  console.log(`  The waṣfāt live in Iksīr's own sijill. Nothing to configure.`);
   console.log("");
 
-  while (true) {
-    const key = await promptSecret("API key");
-    if (!key) {
-      if (await confirm("Skip Linear?", false)) {
-        state.skippedMutabiWasfa = true;
-        return;
-      }
-      continue;
-    }
-
-    /** Validate + fetch teams */
-    const result = await linearApi(key, "{ teams { nodes { id key name } } }");
-    if (result.errors || !result.data) {
-      fail("Invalid API key or network error");
-      continue;
-    }
-
-    const data = result.data as { teams: { nodes: { id: string; key: string; name: string }[] } };
-    const teams = data.teams.nodes;
-
-    if (teams.length === 0) {
-      fail("No teams found in your Linear workspace");
-      continue;
-    }
-
-    state.issueTrackerApiKey = key;
-
-    if (teams.length === 1) {
-      state.issueTrackerTeamId = teams[0].key;
-      state.issueTrackerTeamName = teams[0].name;
-      ok(`Connected to Linear, team: ${bold(teams[0].name)} (${teams[0].key})`);
-    } else {
-      ok("Connected to Linear");
-      console.log("");
-      console.log("  Teams found:");
-      for (const t of teams) {
-        console.log(`    ${bold(t.key)} — ${t.name}`);
-      }
-      console.log("");
-      state.issueTrackerTeamId = await prompt("Team ID", teams[0].key);
-      const match = teams.find((t) => t.key === state.issueTrackerTeamId);
-      state.issueTrackerTeamName = match?.name ?? state.issueTrackerTeamId;
-    }
-    break;
-  }
+  state.sabiqaWasfa = await prompt("Mark that minted waṣfa names carry", "W");
+  ok(`Waṣfāt will be named ${bold(`${state.sabiqaWasfa}-1`)}, ${state.sabiqaWasfa}-2, …`);
 }
 
-async function stepGithub(state: InitState): Promise<void> {
-  heading(3, TOTAL_STEPS, "GitHub");
+async function stepKimyawi(state: InitState): Promise<void> {
+  heading(3, TOTAL_STEPS, "al-Kimyawī");
   console.log("");
-  console.log(`  Iksir creates PRs and monitors your repository.`);
+  console.log(`  So that your own words are known as yours.`);
   console.log("");
 
-  if (!await confirm("Set up GitHub?")) {
-    state.skippedGithub = true;
-    warn("Skipped. You can configure GitHub later in iksir.json");
-    return;
-  }
-
-  /** Check gh CLI */
-  const ghCheck = await execCommand("gh", ["auth", "status"]);
-  if (!ghCheck.success) {
-    warn("gh CLI not authenticated.");
-    console.log("");
-    console.log(`  ${dim("Run:")} ${bold("gh auth login")}`);
-    console.log("");
-    pause("Press Enter after authenticating...");
-  } else {
-    ok("gh CLI authenticated");
-  }
-
-  console.log("");
-  const ownerRepo = await prompt("Repository (owner/repo)");
-  if (ownerRepo.includes("/")) {
-    const [owner, repo] = ownerRepo.split("/", 2);
-    state.githubOwner = owner;
-    state.githubRepo = repo;
-
-    /** Validate repo access */
-    const check = await execCommand("gh", ["repo", "view", ownerRepo, "--json", "name"]);
-    if (check.success) {
-      ok(`Repository accessible: ${bold(ownerRepo)}`);
-    } else {
-      warn("Could not verify repository access. Check permissions later.");
-    }
-  }
-
-  state.githubUsername = await prompt("Your GitHub username");
-  if (state.githubUsername) {
-    ok(`Username: ${bold(state.githubUsername)}`);
-  }
+  state.ismKimyawi = await prompt("The name you are known by");
+  if (state.ismKimyawi) ok(`You are ${bold(state.ismKimyawi)}`);
 }
 
 async function stepAgent(state: InitState): Promise<void> {
@@ -363,9 +250,6 @@ async function stepFinalize(state: InitState): Promise<void> {
     envLines.push(`TELEGRAM_BOT_TOKEN=${state.telegramBotToken}`);
     envLines.push(`TELEGRAM_CHAT_ID=${state.telegramChatId}`);
   }
-  if (state.issueTrackerApiKey) {
-    envLines.push(`LINEAR_API_KEY=${state.issueTrackerApiKey}`);
-  }
   envLines.push("");
 
   /** Build iksir.json */
@@ -373,15 +257,11 @@ async function stepFinalize(state: InitState): Promise<void> {
     $schema: "./iksir.schema.json",
   };
 
-  if (state.issueTrackerTeamId) {
-    config.issueTracker = { provider: "linear", teamId: state.issueTrackerTeamId };
+  if (state.sabiqaWasfa && state.sabiqaWasfa !== "W") {
+    config.wasfat = { sabiqa: state.sabiqaWasfa };
   }
-  if (state.githubOwner) {
-    config.github = {
-      owner: state.githubOwner,
-      repo: state.githubRepo,
-      ismKimyawi: state.githubUsername,
-    };
+  if (state.ismKimyawi) {
+    config.kimyawi = { ism: state.ismKimyawi };
   }
   if (state.namudhaj) {
     config.hum = { namudhaj: state.namudhaj };
@@ -397,7 +277,7 @@ async function stepFinalize(state: InitState): Promise<void> {
 
   if (await exists(envPath)) {
     const existing = await Deno.readTextFile(envPath);
-    if (existing.includes("TELEGRAM_BOT_TOKEN") || existing.includes("LINEAR_API_KEY")) {
+    if (existing.includes("TELEGRAM_BOT_TOKEN")) {
       if (!await confirm("  .env already has credentials. Overwrite?", false)) {
         warn(".env preserved. New values not written.");
         console.log(`  ${dim("You can edit manually:")} ${envPath}`);
@@ -428,15 +308,11 @@ async function stepFinalize(state: InitState): Promise<void> {
   } else if (state.skippedTelegram) {
     warn("Telegram: skipped");
   }
-  if (state.issueTrackerApiKey) {
-    ok(`Issue tracker: ${state.issueTrackerTeamName} (Linear)`);
-  } else if (state.skippedMutabiWasfa) {
-    warn("Issue tracker: skipped");
+  if (state.sabiqaWasfa) {
+    ok(`Waṣfāt: named ${state.sabiqaWasfa}-1, ${state.sabiqaWasfa}-2, …`);
   }
-  if (state.githubOwner) {
-    ok(`GitHub: ${state.githubOwner}/${state.githubRepo}`);
-  } else if (state.skippedGithub) {
-    warn("GitHub: skipped");
+  if (state.ismKimyawi) {
+    ok(`al-Kimyawī: ${state.ismKimyawi}`);
   }
   ok(`Nest: ${masarThrum()}${state.namudhaj ? ` (model ${state.namudhaj})` : ""}`);
 
@@ -454,21 +330,15 @@ export async function runInit(): Promise<void> {
     telegramBotToken: "",
     telegramChatId: "",
     telegramBotName: "",
-    issueTrackerApiKey: "",
-    issueTrackerTeamId: "",
-    issueTrackerTeamName: "",
-    githubOwner: "",
-    githubRepo: "",
-    githubUsername: "",
+    ismKimyawi: "",
     namudhaj: "",
     skippedTelegram: false,
-    skippedMutabiWasfa: false,
-    skippedGithub: false,
+    sabiqaWasfa: "W",
   };
 
   await stepTelegram(state);
-  await stepMutabiWasfa(state);
-  await stepGithub(state);
+  await stepWasfat(state);
+  await stepKimyawi(state);
   await stepAgent(state);
   await stepFinalize(state);
 }

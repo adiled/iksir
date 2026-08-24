@@ -26,7 +26,7 @@ import {
   type NiyyaMuhallala,
   type NawKiyan,
 } from "./arraf.ts";
-import * as git from "../git/operations.ts";
+import type { Hayula } from "../hayula/hayula.ts";
 import type { JalsatMurshid, RasulKharij } from "../types.ts";
 
 
@@ -48,7 +48,6 @@ interface RisalaWarida {
   source: InboundSource;
   text: string;
   messageId?: string | number;
-  raqamRisala?: number;
   katib?: string;
 }
 
@@ -101,10 +100,8 @@ export interface SiyaqMuhadatha {
   /** The current focus entity (most recently resolved) */
   focusEntity?: {
     naw: NawKiyan;
-    id: string;
-    huwiyya?: string;
+    huwiyya: string;
     unwan: string;
-    url: string;
     resolvedAt: Date;
   };
 }
@@ -113,6 +110,8 @@ interface MunadiDeps {
   mudirJalasat: MudirJalasat;
   arraf: Arraf;
   rasul: RasulKharij;
+  /** The matter worked upon, for the intiqāl between vessels. */
+  hayula: Hayula;
   namatWasfa?: string;
 }
 
@@ -127,13 +126,12 @@ interface MuatayatKhalqMurshid {
   /** Init message to send to new murshidun */
   initMessage: string;
   /** Optional ticket URL for ticket-based murshidun */
-  url?: string;
 }
 
 
 const NAMAT_AMR = /^\/(\w+)(?:\s+(.*))?$/;
 
-/** Default ticket pattern matches any JIRA/Linear/GitHub style ID (ABC-123) */
+/** How a wasfa names itself by default — ABC-123 */
 const NAMAT_WASFA_IFTIRADHI = "[A-Z]+-\\d+";
 
 /**
@@ -308,10 +306,13 @@ export class Munadi {
 
   static readonly AQSA_RASAAIL_SIYAQ = 10;
 
+  #hayula: Hayula;
+
   constructor(deps: MunadiDeps) {
     this.mudirJalasat = deps.mudirJalasat;
     this.arraf = deps.arraf;
     this.rasul = deps.rasul;
+    this.#hayula = deps.hayula;
     this.namatWasfa = banaNamatWasfa(deps.namatWasfa);
   }
 
@@ -584,8 +585,7 @@ export class Munadi {
     const lines = [`Found ${murashshahun.length} ticket(s):\n`];
 
     for (const c of murashshahun) {
-      const id = c.huwiyya ?? c.id.slice(0, 8);
-      lines.push(`• ${id}: ${escapeMarkdown(c.unwan)}`);
+      lines.push(`• ${c.huwiyya}: ${escapeMarkdown(c.unwan)}`);
     }
 
     return {
@@ -607,7 +607,7 @@ export class Munadi {
     this.wadaKiyanMurakkazAlayh(entity);
 
     /** Determine epic ID based on entity type */
-    const epicId = entity.huwiyya ?? entity.id;
+    const epicId = entity.huwiyya;
 
     /** Check if murshid already exists for this ticket */
     const existingSession = this.mudirJalasat.wajadaJalasatMurshid().find(
@@ -745,10 +745,8 @@ export class Munadi {
       { source, text: pending.nassAsli },
       {
         naw: selected.naw,
-        id: selected.id,
         huwiyya: selected.huwiyya,
         unwan: selected.unwan,
-        url: selected.url,
       }
     );
   }
@@ -823,10 +821,8 @@ Work on the parent instead?`;
     const entity = useParent
       ? {
           naw: "wasfa" as NawKiyan,
-          id: pending.ab.id,
           huwiyya: pending.ab.huwiyya,
           unwan: pending.ab.unwan,
-          url: pending.ab.url,
         }
       : pending.wasfa;
 
@@ -847,7 +843,7 @@ Work on the parent instead?`;
   async #khalaqaWaFailaMurshid(
     params: MuatayatKhalqMurshid
   ): Promise<NatijaIrsal> {
-    const { huwiyya, unwan, type, initMessage, url } = params;
+    const { huwiyya, unwan, type, initMessage } = params;
 
     await logger.akhbar("dispatcher", `Creating/activating murshid: ${huwiyya}`, { naw: type, unwan });
 
@@ -893,9 +889,6 @@ Work on the parent instead?`;
       radd += `Title: ${escapeMarkdown(unwan)}\n`;
       radd += `Branch: \`${session.far}\`\n`;
       radd += `Session: \`${session.id.slice(0, 16)}...\`\n`;
-      if (url) {
-        radd += `URL: ${url}\n`;
-      }
     } else if (mustarjaa) {
       radd = `**Resumed murshid for ${huwiyya}**\n\n`;
       radd += `Title: ${escapeMarkdown(unwan)}\n`;
@@ -954,10 +947,10 @@ Work on the parent instead?`;
     }
 
     /** Step 2: WIP commit if dirty */
-    const huwaWasikh = await git.huwaWasikh();
+    const huwaWasikh = await this.#hayula.mudtarib();
     if (huwaWasikh && previousActive) {
       await logger.akhbar("dispatcher", `Working directory dirty, creating WIP commit for ${previousActive}`);
-      wipCommitted = await git.khalaqaIltizamMuaqqat(previousActive);
+      wipCommitted = await this.#hayula.jammada(previousActive);
     }
 
     if (previousSession) {
@@ -966,7 +959,7 @@ Work on the parent instead?`;
     }
 
     /** Step 4: Checkout target branch (creates if doesn't exist for new murshidun) */
-    const intaqalaIlaSuccess = await git.intaqalaIla(session.far);
+    const intaqalaIlaSuccess = await this.#hayula.dakhala(session.far);
     if (!intaqalaIlaSuccess) {
       if (previousSession) {
         await this.mudirJalasat.jaddadaḤalatMurshid(previousActive!, "fail");
@@ -978,7 +971,7 @@ Work on the parent instead?`;
     }
 
     if (!isNew) {
-      await git.pull(session.far);
+      await this.#hayula.sahaba(session.far);
     }
 
     try {
@@ -1031,19 +1024,18 @@ Work on the parent instead?`;
     _msg: RisalaWarida,
     entity: NonNullable<NiyyaMuhallala["kiyan"]>
   ): Promise<NatijaIrsal> {
-    const huwiyya = entity.huwiyya ?? entity.id;
+    const huwiyya = entity.huwiyya;
 
     const initMessage = `You have been assigned you to work on:
 
 **${entity.naw.toUpperCase()}**: ${entity.unwan}
-**ID**: ${huwiyya}
-**URL**: ${entity.url}
+**Name**: ${huwiyya}
 
-Use \`mun_iqra_wasfa\` to fetch full details and begin planning.`;
+Use \`mun_iqra_wasfa\` to read it in full and begin.`;
 
     /** Map naw kiyan to naw murshid */
     const nawMurshid: "epic" | "chore" =
-      (entity.naw === "malhamat" || entity.naw === "mashru" || entity.naw === "marhala")
+      entity.naw === "malhamat"
         ? "epic"
         : "chore";
 
@@ -1052,35 +1044,32 @@ Use \`mun_iqra_wasfa\` to fetch full details and begin planning.`;
       unwan: entity.unwan,
       type: nawMurshid,
       initMessage,
-      url: entity.url,
     });
   }
 
   /**
-   * Public entry point for activating an murshid from a ticket URL.
-   * Routes through the full switch protocol (#khalaqaWaFailaMurshid)
-   * so WIP commit, branch intaqalaIla, and interrupts all happen correctly.
+   * Light a murshid on a named waṣfa.
+   *
+   * Routes through the full intiqāl so the molten is frozen, the vessel is
+   * entered and any interruption lands, in that order.
    */
-  async faaalLiRabitWasfa(
+  async faaalLiWasfa(
     huwiyya: string,
     unwan: string,
-    url: string,
-    additionalContext?: string,
+    siyaqZaid?: string,
   ): Promise<NatijaIrsal> {
-    const contextLine = additionalContext ? `\nAdditional context: ${additionalContext}` : "";
+    const zaid = siyaqZaid ? `\n\n${siyaqZaid}` : "";
 
-    const initMessage = `A ticket URL has been provided to work on:
+    const initMessage = `You are set to work on **${huwiyya}** — ${unwan}.${zaid}
 
-URL: ${url}${contextLine}
-
-Use \`mun_iqra_wasfa\` to understand this entity, then plan your approach.`;
+Read it with \`mun_iqra_wasfa\`, learn what the matter is before you touch it,
+then draft your khuṭṭa.`;
 
     return this.#khalaqaWaFailaMurshid({
       huwiyya,
       unwan,
       type: "epic",
       initMessage,
-      url,
     });
   }
 
@@ -1222,7 +1211,7 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
   }
 
   /**
-   * Restore active murshid on daemon startup.
+   * Restore the murshid at the flame when al-Khadim wakes.
    * Uses the centralized #naffadhaTahwilMurshid to ensure branch intaqalaIla,
    * notification, and all other switchover logic happens.
    */
@@ -1287,7 +1276,7 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
     const interruptMsg = `🛑 INTERRUPT: Control is being transferred to ${newActiveId}.
 
 STOP all operations immediately.
-Do NOT make any more git operations.
+Do NOT touch the matter further.
 Do NOT invoke any more sanis.
 
 You will be notified when you are IDLE.`;
@@ -1306,7 +1295,7 @@ You will be notified when you are IDLE.`;
 Branch: ${session.far} (no longer checked out)
 WIP: ${wipCommitted ? "committed" : "clean"}
 
-You will continue to receive issue tracker/GitHub updates.
+Whispers will still reach you.
 Use \`pm_demand_control\` when you have actionable work.`;
 
     await this.mudirJalasat.arsalaIlaMurshidById(session.huwiyya, msg);
@@ -1321,7 +1310,7 @@ Use \`pm_demand_control\` when you have actionable work.`;
 Branch: ${session.far} (checked out)
 Previous active: ${previousId ?? "none"}
 
-You may now perform git operations.`;
+The matter is yours again.`;
 
     await this.mudirJalasat.arsalaIlaMurshidById(session.huwiyya, msg);
   }

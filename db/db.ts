@@ -12,6 +12,8 @@
  *   qararat          — القرارات: decisions inscribed in the mudawwana
  *   ahwal_tanfidh    — أحوال التنفيذ: implementation states per wasfa
  *   matalib_muallaq  — المطالب المعلّقة: pending demands
+ *   wasfat           — الوصفات: formulae, the work itself
+ *   alaqat_wasfat    — علاقات الوصفات: what waits on what
  */
 
 import { Database } from "@db/sqlite";
@@ -26,7 +28,7 @@ function masarHalatSijill(): string {
 
 let db: Database | null = null;
 
-function jalabSijill(): Database {
+export function jalabSijill(): Database {
   if (!db) {
     throw new Error("Sijill not tahyiad. Call baddaaQaidatBayanat() first.");
   }
@@ -159,6 +161,31 @@ function tatbiqSchema(d: Database): void {
     )
   `);
 
+  /** وصفات — the formulae themselves */
+  d.exec(`
+    CREATE TABLE IF NOT EXISTS wasfat (
+      huwiyya TEXT PRIMARY KEY,
+      unwan TEXT NOT NULL,
+      matn TEXT,
+      hala TEXT,
+      wasm TEXT,
+      ab TEXT,
+      qadr REAL,
+      mayayir TEXT,
+      unshia_fi TEXT NOT NULL,
+      jaddad_fi TEXT NOT NULL
+    )
+  `);
+
+  /** علاقات الوصفات — what waits on what */
+  d.exec(`
+    CREATE TABLE IF NOT EXISTS alaqat_wasfat (
+      yamnaa TEXT NOT NULL,
+      mamnu TEXT NOT NULL,
+      PRIMARY KEY (yamnaa, mamnu)
+    )
+  `);
+
   d.exec("CREATE INDEX IF NOT EXISTS idx_ahdath_kham ON ahdath(muaalaj, naw) WHERE muaalaj = 0");
   d.exec("CREATE INDEX IF NOT EXISTS idx_ahdath_unshia ON ahdath(unshia_fi)");
   d.exec("CREATE INDEX IF NOT EXISTS idx_asila_jalsa ON asila(huwiyat_jalsa)");
@@ -166,8 +193,10 @@ function tatbiqSchema(d: Database): void {
   d.exec("CREATE INDEX IF NOT EXISTS idx_qararat_murshid ON qararat(huwiyat_murshid)");
   d.exec("CREATE INDEX IF NOT EXISTS idx_qanawat_bahth ON qanawat(muqaddim, huwiyat_qanat)");
 
+  d.exec("CREATE INDEX IF NOT EXISTS idx_wasfat_hala ON wasfat(hala)");
+
   d.prepare("INSERT OR IGNORE INTO schema_version VALUES (?, ?)").run(
-    3,
+    5,
     new Date().toISOString(),
   );
 }

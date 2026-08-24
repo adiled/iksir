@@ -27,10 +27,14 @@
 import { join as joinMasar } from "jsr:@std/path";
 import { logger } from "../logging/logger.ts";
 import { type Nagham, nuskhatHumd, ridJadid, type TaarifAda, Thrum } from "./thrum.ts";
+import { ADAWAT_MAHJUBA } from "./hudud.ts";
 import type { HadathHum, JalsatHum, TasmimIksir } from "../types.ts";
 
 /** How long a blocking prompt waits before it is abandoned. */
 const MUHLAT_IFTIRADIYYA_MS = 30_000;
+
+/** How long a nida to another bee waits. Organs answer fast or not at all. */
+const MUHLAT_NIDA_MS = 15_000;
 
 /** What Iksir remembers of a jalsa. Nothing else remembers it. */
 interface HalatJalsa {
@@ -81,10 +85,14 @@ export class AmilHum {
   #mustamiuunNida: MustamiNida[] = [];
   #jalsatMumayyiz: string | null = null;
   #namudhaj?: string;
+  #warsha: string;
   #ruqan = new Map<string, string>();
+  /** Hathth held back while a murshid is mid-turn, in the order spoken. */
+  #tabur = new Map<string, Array<{ prompt: string; options?: { agent?: string } }>>();
 
   constructor(tasmim: TasmimIksir, adawat: TaarifAda[] = []) {
     this.#namudhaj = tasmim.hum?.namudhaj;
+    this.#warsha = Deno.env.get("IKSIR_REPO_PATH") ?? Deno.cwd();
     this.#thrum = new Thrum({
       masarMiqbas: tasmim.hum?.miqbas,
       adawat,
@@ -204,10 +212,15 @@ export class AmilHum {
     const mahfuz = this.#ruqan.get(ism);
     if (mahfuz !== undefined) return mahfuz || undefined;
 
-    const makhzan = Deno.env.get("IKSIR_REPO_PATH") ?? ".";
+    /**
+     * The ruqan ship with Iksīr, not with the workshop. Looking for them
+     * beside the matter finds nothing, and a murshid arrives unnamed —
+     * which is worse than failing, because it works anyway and badly.
+     */
+    const maskan = new URL("../../prompts/", import.meta.url).pathname;
     let nass = "";
     try {
-      nass = Deno.readTextFileSync(joinMasar(makhzan, "prompts", `${ism}.md`));
+      nass = Deno.readTextFileSync(joinMasar(maskan, `${ism}.md`));
     } catch {
       // A missing ruqya is not fatal — the murshid simply arrives unnamed.
       logger.haDHHir("hum", `No ruqya found for ${ism}; prompting without one`);
@@ -238,8 +251,16 @@ export class AmilHum {
       sid: sessionId,
       hive: "iksir",
       content: prompt,
+      /**
+       * Where the matter lies. Unsaid, humd hands the worker "/" and the
+       * murshid goes looking for the workshop at the root of the world.
+       */
+      cwd: this.#warsha,
       ...(this.#namudhaj ? { modelId: this.#namudhaj } : {}),
       ...(system ? { systemPrompt: system } : {}),
+      // The ḥadd. humd hands every forager's adawat to the worker, organs
+      // included — this names the ones no murshid may hold.
+      disallowedTools: ADAWAT_MAHJUBA,
       // The worker rehydrates its prior context from this handle. Without
       // it every turn starts cold and the murshid forgets its own work.
       ...(h?.nestId ? { resume: h.nestId } : {}),
@@ -308,14 +329,47 @@ export class AmilHum {
    * Send without waiting. The murshid's ordinary mode — the turn's
    * output arrives as ahdath, not as a return value.
    */
+  /**
+   * Send without waiting for the answer — but never while the murshid is
+   * already mid-turn.
+   *
+   * A cell takes one turn at a time. Two hathth arriving in the same instant
+   * do not queue themselves: one of them is simply lost, and the murshid
+   * proceeds having never heard it. Which is the same law Iksīr keeps above
+   * — one at the flame — kept here inside a single vessel.
+   */
   async sendPromptAsync(
     sessionId: string,
     prompt: string,
     options?: { agent?: string },
   ): Promise<boolean> {
+    const h = this.#jalasat.get(sessionId);
+
+    if (h?.fail) {
+      const tabur = this.#tabur.get(sessionId) ?? [];
+      tabur.push({ prompt, options });
+      this.#tabur.set(sessionId, tabur);
+      await logger.akhbar("hum", `Held for ${sessionId} — a turn is in flight`, {
+        muntazir: tabur.length,
+      });
+      return true;
+    }
+
     this.#thrum.ursil(this.#naghamHathth(sessionId, prompt, options));
     await logger.akhbar("hum", `Sent prompt to jalsa ${sessionId}`);
     return true;
+  }
+
+  /** The turn closed. If anything was held back, it goes now. */
+  #atliqMuntazir(sessionId: string): void {
+    const tabur = this.#tabur.get(sessionId);
+    if (!tabur || tabur.length === 0) return;
+
+    const talii = tabur.shift()!;
+    if (tabur.length === 0) this.#tabur.delete(sessionId);
+
+    this.#thrum.ursil(this.#naghamHathth(sessionId, talii.prompt, talii.options));
+    logger.akhbar("hum", `Released a held prompt to ${sessionId}`);
   }
 
   async abortSession(sessionId: string): Promise<boolean> {
@@ -443,6 +497,61 @@ export class AmilHum {
     this.#thrum.ursil({ chi: "tool-result", rid: ridJadid(), sid, callId, result: natija });
   }
 
+  /**
+   * Call an ada that belongs to another bee, and wait for its natija.
+   *
+   * humd routes a nida by name to whichever forager's manifest declares it
+   * — and it does this for any sender, not only workers mid-turn. So the
+   * entry can reach its own organs the same way a murshid reaches them.
+   * That is what lets an udw hold a credential the entry no longer needs.
+   */
+  async nadi(
+    name: string,
+    args: Record<string, unknown>,
+    muhlaMs = MUHLAT_NIDA_MS,
+  ): Promise<{ najah: boolean; natija?: string; khata?: string }> {
+    const callId = `nida-${ridJadid()}`;
+    const sid = `iksir-nida-${callId}`;
+
+    return await new Promise((hall) => {
+      let intaha = false;
+      const anhi = (r: { najah: boolean; natija?: string; khata?: string }) => {
+        if (intaha) return;
+        intaha = true;
+        clearTimeout(muaqqit);
+        this.#thrum.azilSid(sid);
+        hall(r);
+      };
+
+      const muaqqit = setTimeout(
+        () => anhi({ najah: false, khata: `nida ${name} timed out after ${muhlaMs}ms` }),
+        muhlaMs,
+      );
+
+      this.#thrum.alaSid(sid, (nagham) => {
+        if (nagham.callId !== callId) return;
+        if (nagham.chi === "tool-result") {
+          const natija = nagham.result;
+          anhi({ najah: true, natija: typeof natija === "string" ? natija : JSON.stringify(natija) });
+          return;
+        }
+        if (nagham.chi === "error") {
+          anhi({ najah: false, khata: String(nagham.message ?? "unknown") });
+        }
+      });
+
+      this.#thrum.ursil({
+        chi: "tool-call",
+        rid: ridJadid(),
+        sid,
+        callId,
+        name,
+        toolName: name,
+        args,
+      });
+    });
+  }
+
   // ── Ahdath ──────────────────────────────────────────────────────
 
   #istaqbil(nagham: Nagham): void {
@@ -468,6 +577,7 @@ export class AmilHum {
           h.akhirDawra.tokensOutput = usage.output_tokens ?? 0;
         }
       }
+      this.#atliqMuntazir(sid);
       return;
     }
 
@@ -480,6 +590,7 @@ export class AmilHum {
           h.akhirDawra.error = String(nagham.message ?? "unknown");
         }
       }
+      this.#atliqMuntazir(sid);
       return;
     }
 

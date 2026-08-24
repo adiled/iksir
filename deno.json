@@ -38,8 +38,14 @@
   },
   "lint": {
     "rules": {
-      "tags": ["recommended"],
-      "include": ["no-unused-vars", "no-explicit-any", "prefer-const"]
+      "tags": [
+        "recommended"
+      ],
+      "include": [
+        "no-unused-vars",
+        "no-explicit-any",
+        "prefer-const"
+      ]
     }
   }
 }

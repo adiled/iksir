@@ -1,5 +1,5 @@
 /**
- * Tests for src/daemon/question-handler.ts
+ * Tests for src/khuddam/question-handler.ts
  *
  * Tests Sail with:
  * - Mock AmilHum, RasulKharij, MudirJalasat

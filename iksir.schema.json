@@ -53,7 +53,11 @@
           "type": "string",
           "description": "IANA timezone identifier.",
           "default": "UTC",
-          "examples": ["UTC", "America/New_York", "Asia/Tokyo"]
+          "examples": [
+            "UTC",
+            "America/New_York",
+            "Asia/Tokyo"
+          ]
         },
         "blockersPassthrough": {
           "type": "boolean",
@@ -124,55 +128,12 @@
             "proxy": {
               "type": "string",
               "description": "SOCKS5 proxy URL for Telegram API calls.",
-              "examples": ["socks5://localhost:1080"]
+              "examples": [
+                "socks5://localhost:1080"
+              ]
             }
           },
           "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    "issueTracker": {
-      "type": "object",
-      "description": "Issue tracker integration (Linear by default).",
-      "properties": {
-        "provider": {
-          "type": "string",
-          "description": "Issue tracker provider.",
-          "default": "linear",
-          "enum": ["linear"]
-        },
-        "apiKey": {
-          "type": "string",
-          "description": "API key for the issue tracker. Prefer LINEAR_API_KEY env var."
-        },
-        "teamId": {
-          "type": "string",
-          "description": "Team identifier (the prefix in ticket IDs, e.g. 'ENG')."
-        },
-        "ticketPattern": {
-          "type": "string",
-          "description": "Regex pattern for matching ticket identifiers in messages.",
-          "default": "[A-Z]+-\\d+"
-        }
-      },
-      "additionalProperties": false
-    },
-    "github": {
-      "type": "object",
-      "description": "GitHub repository for PR operations. Auth handled by gh CLI.",
-      "properties": {
-        "owner": {
-          "type": "string",
-          "description": "GitHub repository owner (org or user)."
-        },
-        "repo": {
-          "type": "string",
-          "description": "GitHub repository name."
-        },
-        "operatorUsername": {
-          "type": "string",
-          "description": "GitHub username used by the operator for filtering own comments."
         }
       },
       "additionalProperties": false
@@ -205,6 +166,60 @@
           "description": "Path to question classification prompt template."
         }
       },
+      "additionalProperties": false
+    },
+    "kimyawi": {
+      "type": "object",
+      "description": "Who al-Kimyawi is, so their own words are known as theirs.",
+      "properties": {
+        "ism": {
+          "type": "string",
+          "description": "The name al-Kimyawi is known by."
+        }
+      },
+      "additionalProperties": false
+    },
+    "wasfat": {
+      "type": "object",
+      "description": "The register of formulae.",
+      "properties": {
+        "sabiqa": {
+          "type": "string",
+          "description": "The mark a minted wasfa name carries.",
+          "default": "W"
+        },
+        "namatWasfa": {
+          "type": "string",
+          "description": "How a wasfa name is recognised in an utterance.",
+          "default": "[A-Z]+-\\d+"
+        }
+      },
+      "additionalProperties": false
+    },
+    "madda": {
+      "type": "object",
+      "description": "Where the matter, its fire, and the place a jawhar is set down are summoned from.",
+      "properties": {
+        "hayula": {
+          "type": "string",
+          "description": "Path to the hayula. Required."
+        },
+        "fasl": {
+          "type": "string",
+          "description": "Path to the fasl. Without one, a jawhar has nowhere to go."
+        },
+        "safa": {
+          "type": "string",
+          "description": "Path to the safa. Without one, nothing passes the fire."
+        },
+        "masar": {
+          "type": "string",
+          "description": "Handed to whichever is summoned."
+        }
+      },
+      "required": [
+        "hayula"
+      ],
       "additionalProperties": false
     }
   },

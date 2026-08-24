@@ -4,8 +4,7 @@
  * The workshop's apparatus — the instruments themselves, and the
  * hands that work them:
  *
- *   mun_*   the alchemical operations — istihal, fasl, naqsh
- *   code_*  the reading of runuz — symbols, dependencies, impact
+ *   mun_*   the alchemical operations — istihal, safa, fasl
  *
  * Their taarif ride in Iksir's hello. humd merges every forager's
  * into the foragerTools it hands each worker, so a nida returns
@@ -24,15 +23,15 @@ import type {
   NidaIltazim,
   NidaIqraMudawwana,
   NidaKhalqFar,
-  NidaKhalqRisala,
+  NidaFasl,
   NidaKhalqWasfa,
-  NidaNaqsh,
-  NidaQiraatWasfa,
+  NidaSafa,
   NidaRadd,
   NidaRattib,
   NidaSajjalQarar,
   NidaTabligh,
   NidaTajdidWasfa,
+  NidaTalaum,
   NidaTalabTahakkum,
   NidaTanazal,
   NidaWadaaAlaqat,
@@ -40,9 +39,8 @@ import type {
   SijillAlat,
   TaarifAla,
 } from "../types.ts";
-import { wallidIsmFar } from "../daemon/katib.ts";
-import { loadIndex } from "../code-intel/indexer.ts";
-import { queryIndex } from "../code-intel/query.ts";
+import { wallidIsmFar } from "../khuddam/katib.ts";
+import type { SijillWasfat } from "../wasfa/sijill-wasfat.ts";
 
 import { adhafaQararSijill, adkhalaHadath, jalabaQararatSijill, qiraStatus } from "../../db/db.ts";
 
@@ -77,8 +75,18 @@ class MunadiSijillAlat implements SijillAlat {
 
 export class AlatAlIksir {
   #sijillAlat: SijillAlat;
+  #wasfat?: SijillWasfat;
 
-  constructor() {
+  /**
+   * @param wasfat the register, for instruments that only read.
+   *
+   * A read has no reason to travel. It once did — the daemon could not
+   * answer a tool call inline, so every instrument returned an
+   * acknowledgement and the answer arrived later as a message. The murshid
+   * would ask for a waṣfa and be told that reading had begun.
+   */
+  constructor(wasfat?: SijillWasfat) {
+    this.#wasfat = wasfat;
     this.#sijillAlat = new MunadiSijillAlat((call) => this.#hawwilLiKhadim(call));
 
     this.#sajjilAlatAsasiyya();
@@ -258,72 +266,29 @@ export class AlatAlIksir {
       {
         name: "mun_iqra_wasfa",
         description:
-          `Read any issue tracker URL (Linear, Jira, GitHub) and get enriched information with Iksir context.
+          `Read a wasfa from the register by name.
 
-Returns:
-- Entity type (ticket, project, comment, milestone, etc.)
-- Full details (title, description, status, estimate, labels)
-- Relations (blocks, blocked_by, parent, children)
-- Attachments and links (Figma, Notion URLs with guidance on what to look for)
-- Iksir context (connected sani sessions, implementation status, PR info)
-- Comments and activity
-
-Use this as your primary way to understand ticket entities.`,
+Returns what it says, its condition, its measure, its marks, what it
+stands under, what it holds back and what holds it, and whether work on
+it has begun.`,
         inputSchema: {
           type: "object",
           properties: {
             huwiyyatMurshid: {
               type: "string",
-              description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
+              description: "Your murshid name",
             },
-            url: {
+            huwiyya: {
               type: "string",
-              description: "Any issue tracker URL (ticket, project, etc.)",
+              description: "The name of the wasfa to read",
             },
           },
-          required: ["huwiyyatMurshid", "url"],
+          required: ["huwiyyatMurshid", "huwiyya"],
         },
       },
       (args) => this.#aalajaQiraaatWasfa(args),
     );
 
-    this.#sijillAlat.sajjil(
-      {
-        name: "mun_khalaq_risala",
-        description: "Create a draft pull request. Daemon handles gh CLI interaction.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            huwiyyatMurshid: {
-              type: "string",
-              description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
-            },
-            huwiyyatWasfa: {
-              type: "string",
-              description: "Ticket the PR implements",
-            },
-            title: {
-              type: "string",
-              description: "PR title - format: 'Description (TICKET-ID)'",
-            },
-            body: {
-              type: "string",
-              description: "PR description (markdown)",
-            },
-            base: {
-              type: "string",
-              description: "Base branch (usually crucible or main)",
-            },
-            head: {
-              type: "string",
-              description: "Head branch with changes",
-            },
-          },
-          required: ["huwiyyatMurshid", "huwiyyatWasfa", "title", "body", "base", "head"],
-        },
-      },
-      (args) => this.#aalajaKhalqRisala(args),
-    );
 
     this.#sijillAlat.sajjil(
       {
@@ -509,7 +474,7 @@ Use this when:
 - All treatises created and waiting for review/merge → reason: "muntazir"
 
 This allows other murshidun with actionable work to become active.
-You will continue receiving issue tracker/GitHub updates even while idle.`,
+Whispers will still reach you while you rest.`,
         inputSchema: {
           type: "object",
           properties: {
@@ -548,7 +513,7 @@ Use this when:
 - A PR was merged and you have follow-up work
 - An external change means you can continue
 
-This signals to the daemon that you want to become active.
+This tells al-Khadim you would take the flame.
 If no other murshid is active, you'll be granted control immediately.
 If another murshid is working, Al-Kimyawi will be asked to approve the switch.`,
         inputSchema: {
@@ -582,7 +547,7 @@ If another murshid is working, Al-Kimyawi will be asked to approve the switch.`,
         name: "mun_khalaq_far",
         description: `Create the branch for a new murshid. Called once when starting work.
 
-The daemon will:
+al-Khadim will:
 1. Ensure main is checked out and clean
 2. Pull latest main
 3. Create and intaqalaIla the branch
@@ -665,7 +630,7 @@ You should only call this once per murshid, at the start.`,
             files: {
               type: "array",
               items: { type: "string" },
-              description: "Optional: specific files to commit (will git add these first)",
+              description: "Which matter to fix. All that is molten, when unstated.",
             },
           },
           required: ["huwiyyatMurshid", "message"],
@@ -692,27 +657,6 @@ You should only call this once per murshid, at the start.`,
       (args) => this.#aalijIdfa(args),
     );
 
-    this.#sijillAlat.sajjil(
-      {
-        name: "mun_istifsar",
-        description:
-          "Query the codebase index for symbol locations, dependencies, impact analysis, and search. " +
-          "Use this BEFORE grepping or globbing — it's faster and gives structured results. " +
-          "Examples: 'where is MudirJalasat', 'what depends on types.ts', 'impact of changing TasmimIksir', " +
-          "'exports of mumayyiz.ts', 'files related to auth'.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            query: {
-              type: "string",
-              description: "Natural language query about the codebase",
-            },
-          },
-          required: ["query"],
-        },
-      },
-      (args) => this.#aalijIstifsar(args),
-    );
   }
 
   #sajjilAlatKimiya(): void {
@@ -839,6 +783,30 @@ You should only call this once per murshid, at the start.`,
 
     this.#sijillAlat.sajjil(
       {
+        name: "mun_safa",
+        description:
+          `Set the jawhar to the fire the waṣfa declared.
+
+The maʿāyīr al-ṣafāʾ were written into the waṣfa before the work began.
+This puts the matter to them. It withstands them or it does not; there is
+no opinion in it and nothing to negotiate.
+
+Ṣafāʾ must hold before faṣl. A jawhar is not set before al-Kimyawī to be
+judged — it is set before al-Kimyawī having already survived its fire.`,
+        inputSchema: {
+          type: "object",
+          properties: {
+            huwiyyatMurshid: { type: "string", description: "Your murshid name" },
+            huwiyyatWasfa: { type: "string", description: "The waṣfa whose fire this is" },
+          },
+          required: ["huwiyyatMurshid", "huwiyyatWasfa"],
+        },
+      },
+      (args) => this.#aalijSafa(args),
+    );
+
+    this.#sijillAlat.sajjil(
+      {
         name: "mun_fasl",
         description:
           "Decant the clear essence, separating it from sediment and transferring it for examination. " +
@@ -873,34 +841,16 @@ You should only call this once per murshid, at the start.`,
       },
       (args) => this.#aalijFasl(args),
     );
+  }
 
-    this.#sijillAlat.sajjil(
-      {
-        name: "mun_naqsh",
-        description: "Inscribe the proven formula into the codex. " +
-          "Naqsh (نقش) is the final alchemical phase — merging the risala into the eternal kitab. " +
-          "The work becomes reproducible truth. Use after mun_fasl when the essence has been examined and approved.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            huwiyyatMurshid: {
-              type: "string",
-              description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
-            },
-            huwiyyatWasfa: {
-              type: "string",
-              description: "Ticket whose risala is being inscribed",
-            },
-            raqamRisala: {
-              type: "number",
-              description: "PR number to merge",
-            },
-          },
-          required: ["huwiyyatMurshid", "huwiyyatWasfa", "raqamRisala"],
-        },
-      },
-      (args) => this.#aalijNaqsh(args),
-    );
+  #aalijSafa(args: Record<string, unknown>): string {
+    const call: NidaSafa = {
+      tool: "mun_safa",
+      huwiyyatMurshid: args.huwiyyatMurshid as string,
+      huwiyyatWasfa: args.huwiyyatWasfa as string,
+    };
+    this.#hawwilLiKhadim(call);
+    return `The matter of ${call.huwiyyatWasfa} goes to the fire. You will be told what stood.`;
   }
 
   async #aalajaKhalqWasfa(args: Record<string, unknown>): Promise<string> {
@@ -917,7 +867,7 @@ You should only call this once per murshid, at the start.`,
 
     this.#hawwilLiKhadim(call);
 
-    return `Ticket creation request forwarded to daemon.
+    return `The inscription of a wasfa is carried to al-Khadim.
 
 Title: ${call.unwan}
 Status: ${call.hala ?? "backlog"}
@@ -941,7 +891,7 @@ Daemon will create the ticket and return the ticket ID.`;
       .map(([k, v]) => `  ${k}: ${v}`)
       .join("\n");
 
-    return `Ticket update request forwarded to daemon.
+    return `The alteration is carried to al-Khadim.
 
 Ticket: ${call.huwiyyatWasfa}
 Updates:
@@ -962,7 +912,7 @@ ${updatesList}`;
     const blocksList = call.yahjub?.length ? `Blocks: ${call.yahjub.join(", ")}` : "";
     const blockedByList = call.mahjoubBi?.length ? `Blocked by: ${call.mahjoubBi.join(", ")}` : "";
 
-    return `Relation update request forwarded to daemon.
+    return `The binding is carried to al-Khadim.
 
 Ticket: ${call.huwiyyatWasfa}
 ${blocksList}
@@ -972,71 +922,43 @@ Relations control execution order: blocked tickets wait for blockers to complete
   }
 
   async #aalajaQiraaatWasfa(args: Record<string, unknown>): Promise<string> {
-    const call: NidaQiraatWasfa = {
-      tool: "mun_iqra_wasfa",
-      huwiyyatMurshid: args.huwiyyatMurshid as string,
-      url: args.url as string,
-    };
+    const huwiyya = args.huwiyya as string;
 
-    this.#hawwilLiKhadim(call);
-
-    /** Extract ticket ID from URL if possible (heuristic) */
-    const ticketMatch = call.url.match(/([A-Z]+-\d+)/);
-    const huwiyyatWasfa = ticketMatch?.[1];
-
-    /** Check implementation status from SQLite */
-    let localContext = "";
-    if (huwiyyatWasfa) {
-      const status = qiraStatus(huwiyyatWasfa);
-      if (status) {
-        localContext = `
-
-Local Iksir Context (from diary):
-- Implementation Status: ${status.status}
-${status.huwiyat_murshid ? `- Murshid: ${status.huwiyat_murshid}` : ""}
-${status.summary ? `- Summary: ${status.summary}` : ""}`;
-      }
+    if (!this.#wasfat) {
+      return `The register is not at hand.`;
     }
 
-    return `Ticket read request forwarded to daemon.
+    const wasfa = await this.#wasfat.iqra(huwiyya);
+    if (!wasfa) return `No wasfa by that name: ${huwiyya}`;
 
-URL: ${call.url}
+    const ajzaa: string[] = [`## ${wasfa.huwiyya} — ${wasfa.unwan}`, ""];
 
-Daemon will:
-1. Parse URL to determine entity type (ticket, project, comment, etc.)
-2. Fetch full details from issue tracker API
-3. Extract attachments/links (Figma, Notion) with guidance
-4. Enrich with Iksir context (sessions, implementation status, PRs)
-5. Return structured response${localContext}
+    if (wasfa.hala) ajzaa.push(`**Condition:** ${wasfa.hala}`);
+    if (wasfa.qadr) ajzaa.push(`**Measure:** ${wasfa.qadr}`);
+    if (wasfa.wasm?.length) ajzaa.push(`**Marks:** ${wasfa.wasm.join(", ")}`);
+    if (wasfa.ab) ajzaa.push(`**Under:** ${wasfa.ab}`);
+    ajzaa.push("");
 
-Awaiting daemon response...`;
-  }
+    if (wasfa.matn) ajzaa.push("## Statement", wasfa.matn, "");
 
-  async #aalajaKhalqRisala(args: Record<string, unknown>): Promise<string> {
-    const call: NidaKhalqRisala = {
-      tool: "mun_khalaq_risala",
-      huwiyyatMurshid: args.huwiyyatMurshid as string,
-      huwiyyatWasfa: args.huwiyyatWasfa as string,
-      unwan: args.title as string,
-      matn: args.body as string,
-      asas: args.base as string,
-      ras: args.head as string,
-    };
+    if (wasfa.mayayir?.length) {
+      ajzaa.push("## Maʿāyīr al-Ṣafāʾ — the fire this must withstand", "");
+      for (const m of wasfa.mayayir) ajzaa.push(`- \`${m}\``);
+      ajzaa.push("", "Put the matter to them with mun_safa before mun_fasl.", "");
+    }
 
-    this.#hawwilLiKhadim(call);
+    const alaqat = await this.#wasfat.alaqat(wasfa.huwiyya);
+    if (alaqat.yamnaa.length || alaqat.mamnu.length) {
+      ajzaa.push("## Bindings");
+      if (alaqat.yamnaa.length) ajzaa.push(`**Holds back:** ${alaqat.yamnaa.join(", ")}`);
+      if (alaqat.mamnu.length) ajzaa.push(`**Held by:** ${alaqat.mamnu.join(", ")}`);
+      ajzaa.push("");
+    }
 
-    return `PR creation request forwarded to daemon.
+    const hala = qiraStatus(wasfa.huwiyya);
+    ajzaa.push("## Working", `**State:** ${hala ? hala.status : "not begun"}`);
 
-Ticket: ${call.huwiyyatWasfa}
-Title: ${call.unwan}
-Base: ${call.asas}
-Head: ${call.ras}
-
-Daemon will:
-1. Push branch if needed
-2. Create draft PR via gh CLI
-3. Return PR number and URL
-4. Update diary with PR info`;
+    return ajzaa.join("\n");
   }
 
   async #aalijFahasFar(args: Record<string, unknown>): Promise<string> {
@@ -1048,7 +970,7 @@ Daemon will:
 
     this.#hawwilLiKhadim(call);
 
-    return `Branch status request forwarded to daemon.
+    return `The question of the vessel is carried to al-Khadim.
 
 Branch: ${call.far}
 
@@ -1204,7 +1126,7 @@ What happens next:
 - If other murshidun have work → Al-Kimyawi can approve switch
 - If nobody has work → system idles until external event
 
-You will continue receiving issue tracker/GitHub updates.
+Whispers will still reach you.
 Use \`mun_talab_tahakkum\` when you have actionable work again.`;
   }
 
@@ -1327,29 +1249,21 @@ Next steps:
 2. Use mun_istihal to crystallize into essence`;
   }
 
-  async #aalijTalaum(args: Record<string, unknown>): Promise<string> {
-    /**
-     * TODO: Implement smart dependency discovery
-     * For now, return a placeholder that suggests manual review
-     */
-    const huwiyyatWasfa = args.huwiyyatWasfa as string;
-    const files = args.files as string[];
+  /**
+   * The matter answers this, not Iksīr. Munaffidh puts the question to the
+   * hayūlā and returns what it says.
+   */
+  #aalijTalaum(args: Record<string, unknown>): string {
+    const call: NidaTalaum = {
+      tool: "mun_talaum",
+      huwiyyatMurshid: args.huwiyyatMurshid as string,
+      huwiyyatWasfa: args.huwiyyatWasfa as string,
+      ahjar: (args.files ?? args.ahjar ?? []) as string[],
+    };
 
-    return `Attunement analysis for ${huwiyyatWasfa}:
+    this.#hawwilLiKhadim(call);
 
-Rune stones selected (${files.length}):
-${files.map((f) => `  - ${f}`).join("\n")}
-
-Runic Analysis:
-- Summoning circles: Check if all summoned stones are included
-- Contract dependencies: Verify all contracts are complete
-- Purity runes: Ensure test stones accompany incantation stones
-
-This is a placeholder. Future implementation will:
-- Trace summoning runes to their source stones
-- Detect incomplete contract chains
-- Identify coupled incantations
-- Determine if layered transmutation is needed`;
+    return `The matter is asked whether these ${call.ahjar.length} ahjar would hold apart.`;
   }
 
   async #aalijIstihal(args: Record<string, unknown>): Promise<string> {
@@ -1413,55 +1327,7 @@ On success, use mun_fasl with base pointing to parent branch.
 Note: CI may fail if parent PR is unmerged. This is expected for incremental review.`;
   }
 
-  async #aalijFasl(args: Record<string, unknown>): Promise<string> {
-    /** This is essentially mun_khalaq_risala with better terminology */
-    const huwiyyatWasfa = args.huwiyyatWasfa as string;
-    const essenceBranch = wallidIsmFar(huwiyyatWasfa, "chore");
-
-    const call: NidaKhalqRisala = {
-      tool: "mun_khalaq_risala",
-      huwiyyatMurshid: args.huwiyyatMurshid as string,
-      huwiyyatWasfa: huwiyyatWasfa,
-      unwan: args.title as string,
-      matn: args.body as string,
-      asas: "main",
-      ras: essenceBranch,
-    };
-
-    this.#hawwilLiKhadim(call);
-
-    return `Unveiling request submitted.
-
-Ticket: ${huwiyyatWasfa}
-Title: ${call.unwan}
-Branch: ${essenceBranch}
-
-Daemon will create a ${args.draft !== false ? "draft " : ""}pull request.
-You will be notified with the PR URL once created.`;
-  }
-
-  async #aalijNaqsh(args: Record<string, unknown>): Promise<string> {
-    const call: NidaNaqsh = {
-      tool: "mun_naqsh",
-      huwiyyatMurshid: args.huwiyyatMurshid as string,
-      huwiyyatWasfa: args.huwiyyatWasfa as string,
-      raqamRisala: args.raqamRisala as number,
-    };
-
-    void call; // suppress unused warning — naqsh is not yet implemented in the daemon
-
-    throw new Error(
-      "mun_naqsh (النقش) is not yet implemented. " +
-        "The inscription phase — merging the risala into the codex — is planned. " +
-        "For now, complete the merge manually via the GitHub interface.",
-    );
-  }
-
-  /**
-   * Forward a tool call to the Iksir daemon via SQLite
-   */
   #hawwilLiKhadim(call: MunToolCall): void {
-    /** Extract huwiyyatMurshid if present (for routing) */
     const huwiyyatMurshid = "huwiyyatMurshid" in call
       ? (call as { huwiyyatMurshid?: string }).huwiyyatMurshid
       : undefined;
@@ -1469,9 +1335,7 @@ You will be notified with the PR URL once created.`;
     adkhalaHadath("pm", call.tool, call as unknown as Record<string, unknown>, huwiyyatMurshid);
   }
 
-  /**
-   * Append a decision to the diary (SQLite)
-   */
+  /** Append a qarar to the mudawwana. */
   #adhifQararSijill(decision: QararSijill, huwiyyatMurshid: string = "unknown"): void {
     adhafaQararSijill({
       huwiyyatMurshid,
@@ -1482,19 +1346,20 @@ You will be notified with the PR URL once created.`;
     });
   }
 
-  async #aalijIstifsar(args: Record<string, unknown>): Promise<string> {
-    const query = args.query as string;
-    if (!query) return JSON.stringify({ error: "query is required" });
+  #aalijFasl(args: Record<string, unknown>): string {
+    const call: NidaFasl = {
+      tool: "mun_fasl",
+      huwiyyatMurshid: args.huwiyyatMurshid as string,
+      huwiyyatWasfa: args.huwiyyatWasfa as string,
+      unwan: args.title as string,
+      matn: args.body as string,
+      musawwada: args.draft !== false,
+    };
 
-    const index = await loadIndex();
-    if (!index) {
-      return JSON.stringify({
-        error: "Code index not built yet. It will be available after the next maintenance cycle.",
-        hint: "The keepalive process builds the index during its housekeeping window.",
-      });
-    }
+    this.#hawwilLiKhadim(call);
 
-    const result = queryIndex(index, query);
-    return JSON.stringify(result, null, 2);
+    return `The jawhar of ${call.huwiyyatWasfa} goes to be set down.\n\n` +
+      `It will be refused if the matter has not withstood its fire.`;
   }
+
 }

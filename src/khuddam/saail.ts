@@ -407,14 +407,14 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
    * Save question handler state.
    * Questions are persisted to SQLite on insert (dbInsertQuestion) and on
    * answer (dbMarkJawabSualed), so this is a no-op kept for interface
-   * compatibility with the daemon lifecycle.
+   * compatibility with al-Khadim's lifecycle.
    */
   async hafizaHala(): Promise<void> {
   }
 
   /**
    * Load question handler state from SQLite.
-   * Called at daemon startup to istarjaa pending questions.
+   * Called when al-Khadim wakes, to istarjaa suspended asila.
    */
   async hammalaHala(): Promise<void> {
     try {
