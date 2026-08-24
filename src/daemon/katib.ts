@@ -28,8 +28,6 @@ import {
 import type {
   TasmimIksir,
   JalsatMurshid,
-  RisalaMutaba,
-  RisalaMutabaStatus,
   NawMurshid,
   RasulKharij,
 } from "../types.ts";
@@ -148,7 +146,6 @@ export class MudirJalasat {
       hala: "fail",
       unshiaFi: new Date().toISOString(),
       akhirRisalaFi: new Date().toISOString(),
-      activePRs: [],
       channels: {},
     };
 
@@ -264,126 +261,6 @@ export class MudirJalasat {
     return true;
   }
 
-
-  /**
-   * Register a new PR for tracking.
-   * Called after successful PR creation via gh pr create.
-   */
-  async sajjalRisala(
-    epicId: string,
-    pr: Omit<RisalaMutaba, "createdAt" | "statusChangedAt">
-  ): Promise<boolean> {
-    const session = this.#murshidSessions.get(epicId);
-    if (!session) {
-      await logger.haDHHir("session-manager", `Cannot register PR - no session for ${epicId}`);
-      return false;
-    }
-
-    /** Check if PR already tracked */
-    const existing = session.activePRs.find((p) => p.raqamRisala === pr.raqamRisala);
-    if (existing) {
-      await logger.haDHHir("session-manager", `PR #${pr.raqamRisala} already tracked for ${epicId}`);
-      return false;
-    }
-
-    const now = new Date().toISOString();
-    const trackedPR: RisalaMutaba = {
-      ...pr,
-      unshiaFi: now,
-      ghuyiratHalaFi: now,
-    };
-
-    session.activePRs.push(trackedPR);
-    await this.hafizaHala();
-
-    await logger.akhbar("session-manager", `Registered PR #${pr.raqamRisala} for ${epicId}`, {
-      huwiyyatWasfa: pr.huwiyyatWasfa,
-      branch: pr.far,
-    });
-
-    return true;
-  }
-
-  /**
-   * Get murshid session by PR number.
-   * Used by keepalive to find which murshid owns a PR.
-   */
-  jalabJalsaBiRisala(raqamRisala: number): JalsatMurshid | null {
-    for (const session of this.#murshidSessions.values()) {
-      if (session.activePRs.some((pr) => pr.raqamRisala === raqamRisala)) {
-        return session;
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Update PR status (e.g., when merged or closed).
-   * Returns the previous status for comparison.
-   */
-  async jaddadaHalatRisala(
-    raqamRisala: number,
-    status: RisalaMutabaStatus
-  ): Promise<{ session: JalsatMurshid; previousStatus: RisalaMutabaStatus } | null> {
-    for (const session of this.#murshidSessions.values()) {
-      const pr = session.activePRs.find((p) => p.raqamRisala === raqamRisala);
-      if (pr) {
-        const previousStatus = pr.hala;
-        if (previousStatus === status) {
-          return null;
-        }
-
-        pr.hala = status;
-        pr.ghuyiratHalaFi = new Date().toISOString();
-        await this.hafizaHala();
-
-        await logger.akhbar("session-manager", `Updated PR #${raqamRisala} status: ${previousStatus} → ${status}`, {
-          identifier: session.huwiyya,
-          huwiyyatWasfa: pr.huwiyyatWasfa,
-        });
-
-        return { session, previousStatus };
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Update the last polled time for a PR (persisted to prevent re-fetching comments on restart).
-   */
-  async jaddadaAkhirRaqaba(raqamRisala: number): Promise<void> {
-    for (const session of this.#murshidSessions.values()) {
-      const pr = session.activePRs.find((p) => p.raqamRisala === raqamRisala);
-      if (pr) {
-        pr.akhirRaqabaFi = new Date().toISOString();
-        await this.hafizaHala();
-        return;
-      }
-    }
-  }
-
-  /**
-   * Get all PRs being tracked across all sessions.
-   * Useful for keepalive to poll all active PRs.
-   */
-  jalabaKullRasaailMutaba(): Array<{ session: JalsatMurshid; pr: RisalaMutaba }> {
-    const result: Array<{ session: JalsatMurshid; pr: RisalaMutaba }> = [];
-    for (const session of this.#murshidSessions.values()) {
-      for (const pr of session.activePRs) {
-        result.push({ session, pr });
-      }
-    }
-    return result;
-  }
-
-  /**
-   * Get PRs for a specific murshid that are not yet merged/closed.
-   */
-  wajadaRasaailFaailaLiMurshid(epicId: string): RisalaMutaba[] {
-    const session = this.#murshidSessions.get(epicId);
-    if (!session) return [];
-    return session.activePRs.filter((pr) => pr.hala !== "merged" && pr.hala !== "closed");
-  }
 
   /**
    * Send a message to a specific murshid by epicId.
@@ -596,7 +473,6 @@ Call pm_read_diary for full decision history with reasoning.
           unshiaFi: session.unshiaFi,
           akhirRisalaFi: session.akhirRisalaFi,
           halaMufassala: {
-            activePRs: session.activePRs || [],
             /**
              * The worker's own handle for this vessel. Without it a
              * restarted murshid resumes nothing and wakes with no memory
@@ -645,7 +521,6 @@ Call pm_read_diary for full decision history with reasoning.
       const murshidunṢalihun: JalsatMurshid[] = [];
       for (const dbSession of dbSessions) {
         const metadata = JSON.parse(dbSession.hala_mufassala || "{}") as {
-          activePRs?: RisalaMutaba[];
           nestId?: string;
         };
 
@@ -663,7 +538,6 @@ Call pm_read_diary for full decision history with reasoning.
           unshiaFi: dbSession.unshia_fi,
           akhirRisalaFi: dbSession.akhir_risala_fi ?? "",
           channels,
-          activePRs: metadata.activePRs ?? [],
         };
 
         this.#amil.istaadaJalsa({

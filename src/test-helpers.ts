@@ -394,7 +394,6 @@ export function makeSession(overrides?: Partial<JalsatMurshid>): JalsatMurshid {
     hala: "fail",
     unshiaFi: new Date().toISOString(),
     akhirRisalaFi: new Date().toISOString(),
-    activePRs: [],
     channels: {},
     ...overrides,
   };

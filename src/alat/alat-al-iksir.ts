@@ -24,7 +24,7 @@ import type {
   NidaIltazim,
   NidaIqraMudawwana,
   NidaKhalqFar,
-  NidaKhalqRisala,
+  NidaFasl,
   NidaKhalqWasfa,
   NidaSafa,
   NidaQiraatWasfa,
@@ -281,43 +281,6 @@ it has begun.`,
       (args) => this.#aalajaQiraaatWasfa(args),
     );
 
-    this.#sijillAlat.sajjil(
-      {
-        name: "mun_khalaq_risala",
-        description: "Set the jawhar down where al-Kimyawi will examine it.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            huwiyyatMurshid: {
-              type: "string",
-              description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
-            },
-            huwiyyatWasfa: {
-              type: "string",
-              description: "Ticket the PR implements",
-            },
-            title: {
-              type: "string",
-              description: "PR title - format: 'Description (TICKET-ID)'",
-            },
-            body: {
-              type: "string",
-              description: "PR description (markdown)",
-            },
-            base: {
-              type: "string",
-              description: "Base branch (usually crucible or main)",
-            },
-            head: {
-              type: "string",
-              description: "Head branch with changes",
-            },
-          },
-          required: ["huwiyyatMurshid", "huwiyyatWasfa", "title", "body", "base", "head"],
-        },
-      },
-      (args) => this.#aalajaKhalqRisala(args),
-    );
 
     this.#sijillAlat.sajjil(
       {
@@ -994,33 +957,6 @@ ${hala.summary ? `- Summary: ${hala.summary}` : ""}`;
     return `Reading ${call.huwiyya} from the register.${siyaqMahalli}`;
   }
 
-  async #aalajaKhalqRisala(args: Record<string, unknown>): Promise<string> {
-    const call: NidaKhalqRisala = {
-      tool: "mun_khalaq_risala",
-      huwiyyatMurshid: args.huwiyyatMurshid as string,
-      huwiyyatWasfa: args.huwiyyatWasfa as string,
-      unwan: args.title as string,
-      matn: args.body as string,
-      asas: args.base as string,
-      ras: args.head as string,
-    };
-
-    this.#hawwilLiKhadim(call);
-
-    return `PR creation request forwarded to daemon.
-
-Ticket: ${call.huwiyyatWasfa}
-Title: ${call.unwan}
-Base: ${call.asas}
-Head: ${call.ras}
-
-Daemon will:
-1. Push branch if needed
-2. Create draft PR via gh CLI
-3. Return PR number and URL
-4. Update diary with PR info`;
-  }
-
   async #aalijFahasFar(args: Record<string, unknown>): Promise<string> {
     const call: NidaFahasFar = {
       tool: "mun_fahas_far",
@@ -1395,39 +1331,7 @@ On success, use mun_fasl with base pointing to parent branch.
 Note: CI may fail if parent PR is unmerged. This is expected for incremental review.`;
   }
 
-  async #aalijFasl(args: Record<string, unknown>): Promise<string> {
-    /** This is essentially mun_khalaq_risala with better terminology */
-    const huwiyyatWasfa = args.huwiyyatWasfa as string;
-    const essenceBranch = wallidIsmFar(huwiyyatWasfa, "chore");
-
-    const call: NidaKhalqRisala = {
-      tool: "mun_khalaq_risala",
-      huwiyyatMurshid: args.huwiyyatMurshid as string,
-      huwiyyatWasfa: huwiyyatWasfa,
-      unwan: args.title as string,
-      matn: args.body as string,
-      asas: "main",
-      ras: essenceBranch,
-    };
-
-    this.#hawwilLiKhadim(call);
-
-    return `Unveiling request submitted.
-
-Ticket: ${huwiyyatWasfa}
-Title: ${call.unwan}
-Branch: ${essenceBranch}
-
-The jawhar will be set down${args.draft !== false ? " as a draft" : ""}.
-You will be notified with the PR URL once created.`;
-  }
-
-
-  /**
-   * Forward a tool call to the Iksir daemon via SQLite
-   */
   #hawwilLiKhadim(call: MunToolCall): void {
-    /** Extract huwiyyatMurshid if present (for routing) */
     const huwiyyatMurshid = "huwiyyatMurshid" in call
       ? (call as { huwiyyatMurshid?: string }).huwiyyatMurshid
       : undefined;
@@ -1435,9 +1339,7 @@ You will be notified with the PR URL once created.`;
     adkhalaHadath("pm", call.tool, call as unknown as Record<string, unknown>, huwiyyatMurshid);
   }
 
-  /**
-   * Append a decision to the diary (SQLite)
-   */
+  /** Append a qarar to the mudawwana. */
   #adhifQararSijill(decision: QararSijill, huwiyyatMurshid: string = "unknown"): void {
     adhafaQararSijill({
       huwiyyatMurshid,
@@ -1446,6 +1348,22 @@ You will be notified with the PR URL once created.`;
       reasoning: decision.mantiq,
       metadata: decision.bayyanat,
     });
+  }
+
+  #aalijFasl(args: Record<string, unknown>): string {
+    const call: NidaFasl = {
+      tool: "mun_fasl",
+      huwiyyatMurshid: args.huwiyyatMurshid as string,
+      huwiyyatWasfa: args.huwiyyatWasfa as string,
+      unwan: args.title as string,
+      matn: args.body as string,
+      musawwada: args.draft !== false,
+    };
+
+    this.#hawwilLiKhadim(call);
+
+    return `The jawhar of ${call.huwiyyatWasfa} goes to be set down.\n\n` +
+      `It will be refused if the matter has not withstood its fire.`;
   }
 
   async #aalijIstifsar(args: Record<string, unknown>): Promise<string> {

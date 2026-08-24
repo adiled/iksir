@@ -17,8 +17,9 @@
  * breathes, and keeps the flame from going cold.
  */
 
-import type { Fasl, HalatFasl } from "../hayula/fasl.ts";
+import type { Fasl } from "../hayula/fasl.ts";
 import { mayyazaTaaliq } from "./mumayyiz.ts";
+import type { SijillWasfat } from "../wasfa/sijill-wasfat.ts";
 import { buildIndex } from "../code-intel/indexer.ts";
 import { logger } from "../logging/logger.ts";
 import { fiNitaqAlWaqt, minutesUntil, todayInTz } from "../utils/time.ts";
@@ -27,8 +28,6 @@ import type {
   TasmimIksir,
   TaaliqMuraja,
   JalsatMurshid,
-  RisalaMutaba,
-  RisalaMutabaStatus,
 } from "../types.ts";
 import type { MudirJalasat } from "./katib.ts";
 
@@ -50,42 +49,18 @@ export interface NatijaSeyana {
  * The daemon receives these and acts.
  */
 interface IstijabatHayat {
-  /** A risala was merged into the codex */
-  indaDamjRisala: (
-    session: JalsatMurshid,
-    pr: RisalaMutaba
-  ) => Promise<void>;
-
-  /** A risala was abandoned — closed without merge */
-  indaIghlaqRisala: (
-    session: JalsatMurshid,
-    pr: RisalaMutaba
-  ) => Promise<void>;
-
-  /** Al-Kimyawi has spoken on a risala — a command to obey */
+  /** Al-Kimyawi has spoken upon a jawhar — a command to obey */
   indaAmrAlKimyawi: (
     session: JalsatMurshid,
-    raqamRisala: number,
+    huwiyyatWasfa: string,
     comment: TaaliqMuraja
   ) => Promise<void>;
 
-  /** Others have spoken on a risala — for al-Kimyawi's consideration */
+  /** Others have spoken upon a jawhar — for al-Kimyawi's consideration */
   indaTaaliqatJadida: (
     session: JalsatMurshid,
-    raqamRisala: number,
+    huwiyyatWasfa: string,
     comments: TaaliqMuraja[]
-  ) => Promise<void>;
-
-  /** A risala has taarudat — conflicting inscriptions */
-  indaTaarudRisala: (
-    session: JalsatMurshid,
-    pr: RisalaMutaba
-  ) => Promise<void>;
-
-  /** The fahs (tests) have failed on a risala */
-  indaFashalFahs: (
-    session: JalsatMurshid,
-    pr: RisalaMutaba
   ) => Promise<void>;
 
   /** Request seyana — all must be still */
@@ -104,6 +79,7 @@ interface MutatallabatHayat {
   fasl: Fasl;
   /** The matter tended through the night rites. */
   hayula: Hayula;
+  wasfat: SijillWasfat;
 }
 
 export class DawratHayat {
@@ -114,14 +90,16 @@ export class DawratHayat {
   #istijabat: IstijabatHayat;
   #tarikhAkhirSeyana: string | null = null;
   #seyanaJariya = false;
-  #ublighaAnTaarud: Set<number> = new Set();
-  #ublighaAnFashal: Set<number> = new Set();
+  #wasfat: SijillWasfat;
+  /** When each decanted jawhar was last listened at. */
+  #akhirIstimaa: Map<string, string> = new Map();
 
   constructor(deps: MutatallabatHayat, callbacks: IstijabatHayat) {
     this.#tasmim = deps.tasmim;
     this.#mudirJalasat = deps.mudirJalasat;
     this.#fasl = deps.fasl;
     this.#hayula = deps.hayula;
+    this.#wasfat = deps.wasfat;
     this.#istijabat = callbacks;
   }
 
@@ -130,185 +108,70 @@ export class DawratHayat {
    * and if the hour is right, perform the night rites.
    */
   async dawra(): Promise<void> {
-    const trackedPRs = this.#mudirJalasat.jalabaKullRasaailMutaba();
+    const mafsula = await this.#wasfat.bihala("mafsul", 50);
 
-    if (trackedPRs.length === 0) {
-      await logger.tatbeeq("keepalive", "No PRs to monitor");
-      return;
-    }
-
-    await logger.tatbeeq("keepalive", `Starting cycle: ${trackedPRs.length} PRs to monitor`);
-
-    for (const { session, pr } of trackedPRs) {
-      if (pr.hala === "merged" || pr.hala === "closed") {
-        continue;
+    if (mafsula.length > 0) {
+      await logger.tatbeeq("hayat", `Watching ${mafsula.length} decanted jawhar`);
+      for (const wasfa of mafsula) {
+        await this.raqabJawhar(wasfa.huwiyya);
       }
-
-      await this.raqabRisala(session, pr);
     }
 
     if (this.fiSaatHudu()) {
       await this.naffadhSeyana();
     }
 
-    await logger.tatbeeq("keepalive", "Cycle complete");
+    await logger.tatbeeq("hayat", "Breath complete");
   }
 
   /**
-   * Watch a single risala — has it been merged? Closed? Commented upon?
+   * Listen at a decanted jawhar for what al-Kimyawī has said of it.
+   *
+   * Nothing here asks whether the jawhar was accepted. Naqsh is an act
+   * al-Kimyawī performs, not a state to be discovered by polling.
    */
-  async raqabRisala(session: JalsatMurshid, trackedPR: RisalaMutaba): Promise<void> {
-    const raqamRisala = trackedPR.raqamRisala;
-    const now = new Date();
+  async raqabJawhar(huwiyya: string): Promise<void> {
+    const session = this.#mudirJalasat.jalabMurshid(huwiyya);
+    if (!session) return;
 
-    /**
-     * Rate limit: don't poll same PR more than configured interval
-     * Use persisted lastPolledAt from RisalaMutaba (survives daemon restarts)
-     */
-    const lastPoll = trackedPR.akhirRaqabaFi ? new Date(trackedPR.akhirRaqabaFi) : null;
-    if (lastPoll && now.getTime() - lastPoll.getTime() < this.#tasmim.istiftaa.fajwatRaqabaRisala) {
-      return;
-    }
+    const mundhu = this.#akhirIstimaa.get(huwiyya);
+    const waridat = await this.#fasl.taaliqat(huwiyya, mundhu);
+    this.#akhirIstimaa.set(huwiyya, new Date().toISOString());
 
-    try {
-      const pr = await this.#fasl.hala(String(raqamRisala));
-      if (!pr) {
-        await logger.haDHHir("keepalive", `PR #${raqamRisala} not found`);
-        return;
-      }
+    if (waridat.length === 0) return;
 
-      await this.fahasTaghayyurHala(session, trackedPR, pr.hala);
-
-      if (!pr.yastaqirr && trackedPR.hala !== "merged") {
-        if (!this.#ublighaAnTaarud.has(raqamRisala)) {
-          await logger.haDHHir("keepalive", `PR #${raqamRisala} has conflicts`);
-          await this.#istijabat.indaTaarudRisala(session, trackedPR);
-          this.#ublighaAnTaarud.add(raqamRisala);
-        }
-      } else {
-        this.#ublighaAnTaarud.delete(raqamRisala);
-      }
-
-      if (trackedPR.hala === "draft") {
-        const checksPassing = await this.#fasl.thabit(String(raqamRisala));
-        if (!checksPassing) {
-          if (!this.#ublighaAnFashal.has(raqamRisala)) {
-            await logger.haDHHir("keepalive", `PR #${raqamRisala} CI failing`);
-            await this.#istijabat.indaFashalFahs(session, trackedPR);
-            this.#ublighaAnFashal.add(raqamRisala);
-          }
-        } else {
-          this.#ublighaAnFashal.delete(raqamRisala);
-        }
-      }
-
-      /**
-       * Check for new comments (since last poll or PR creation)
-       * Uses persisted lastPolledAt to prevent re-fetching all comments on daemon restart
-       */
-      const commentsSince = lastPoll ?? new Date(trackedPR.unshiaFi);
-      const waridat = await this.#fasl.taaliqat(String(raqamRisala), commentsSince.toISOString());
-      const newComments: TaaliqMuraja[] = waridat.map((t) => ({
-        id: t.huwiyya,
-        raqamRisala,
-        author: t.qail,
-        body: t.nass,
-        path: t.mawdi?.split(":")[0],
-        line: t.mawdi?.includes(":") ? Number(t.mawdi.split(":")[1]) : undefined,
-        createdAt: new Date(t.qila_fi),
-        isAlKimyawi: t.qail === this.#tasmim.kimyawi.ism,
-        assessment: mayyazaTaaliq(t.nass, t.qail === this.#tasmim.kimyawi.ism),
-      }));
-      if (newComments.length > 0) {
-        await this.aalajTaaliqatJadida(session, raqamRisala, newComments);
-      }
-
-      await this.#mudirJalasat.jaddadaAkhirRaqaba(raqamRisala);
-    } catch (error) {
-      await logger.sajjalKhata("keepalive", `Failed to poll PR #${raqamRisala}`, {
-        error: String(error),
-        epicId: session.huwiyya,
-      });
-    }
-  }
-
-  /**
-   * Has the hala of this risala changed since last we looked?
-   */
-  async fahasTaghayyurHala(
-    session: JalsatMurshid,
-    trackedPR: RisalaMutaba,
-    halaFasl: HalatFasl,
-  ): Promise<void> {
-    const raqamRisala = trackedPR.raqamRisala;
-    let newStatus: RisalaMutabaStatus | null = null;
-
-    if (halaFasl === "maqbul" && trackedPR.hala !== "merged") {
-      newStatus = "merged";
-      await logger.akhbar("keepalive", `PR #${raqamRisala} merged`, {
-        epicId: session.huwiyya,
-        huwiyyatWasfa: trackedPR.huwiyyatWasfa,
-      });
-    } else if (halaFasl === "mardud" && trackedPR.hala !== "closed") {
-      newStatus = "closed";
-      await logger.akhbar("keepalive", `PR #${raqamRisala} closed`, {
-        epicId: session.huwiyya,
-        huwiyyatWasfa: trackedPR.huwiyyatWasfa,
-      });
-    } else if (halaFasl === "manzur" && trackedPR.hala === "draft") {
-      newStatus = "open";
-      await logger.akhbar("keepalive", `PR #${raqamRisala} promoted to open`, {
-        epicId: session.huwiyya,
-      });
-    }
-
-    if (newStatus) {
-      /** Update tracking */
-      const result = await this.#mudirJalasat.jaddadaHalatRisala(raqamRisala, newStatus);
-
-      if (newStatus === "merged" && result) {
-        await this.#istijabat.indaDamjRisala(result.session, trackedPR);
-      } else if (newStatus === "closed" && result) {
-        await this.#istijabat.indaIghlaqRisala(result.session, trackedPR);
-      }
-    }
-  }
-
-  /**
-   * New taaliqat on a risala — separate al-Kimyawi's commands from others' words
-   */
-  async aalajTaaliqatJadida(
-    session: JalsatMurshid,
-    raqamRisala: number,
-    comments: TaaliqMuraja[]
-  ): Promise<void> {
     const ismKimyawi = this.#tasmim.kimyawi.ism;
-    const awamirAlKimyawi: TaaliqMuraja[] = [];
-    const taaliqatUkhra: TaaliqMuraja[] = [];
+    const awamir: TaaliqMuraja[] = [];
+    const ukhra: TaaliqMuraja[] = [];
 
-    for (const comment of comments) {
-      if (comment.author === ismKimyawi && comment.assessment.isCommand) {
-        awamirAlKimyawi.push(comment);
-      } else if (comment.author !== ismKimyawi) {
-        taaliqatUkhra.push(comment);
-      }
+    for (const warid of waridat) {
+      const minhu = warid.qail === ismKimyawi;
+      const taaliq: TaaliqMuraja = {
+        id: warid.huwiyya,
+        huwiyyatWasfa: huwiyya,
+        author: warid.qail,
+        body: warid.nass,
+        path: warid.mawdi?.split(":")[0],
+        line: warid.mawdi?.includes(":") ? Number(warid.mawdi.split(":")[1]) : undefined,
+        createdAt: new Date(warid.qila_fi),
+        isAlKimyawi: minhu,
+        assessment: mayyazaTaaliq(warid.nass, minhu),
+      };
+      if (minhu && taaliq.assessment.isCommand) awamir.push(taaliq);
+      else if (!minhu) ukhra.push(taaliq);
     }
 
-    for (const cmd of awamirAlKimyawi) {
-      await logger.akhbar("keepalive", `amr al-Kimyawi on PR #${raqamRisala}`, {
-        body: cmd.body.slice(0, 100),
+    for (const amr of awamir) {
+      await logger.akhbar("hayat", `amr al-Kimyawi upon ${huwiyya}`, {
+        body: amr.body.slice(0, 100),
       });
-      await this.#istijabat.indaAmrAlKimyawi(session, raqamRisala, cmd);
+      await this.#istijabat.indaAmrAlKimyawi(session, huwiyya, amr);
     }
 
-    if (taaliqatUkhra.length > 0) {
-      await logger.akhbar("keepalive", `${taaliqatUkhra.length} new comments on PR #${raqamRisala}`, {
-        authors: [...new Set(taaliqatUkhra.map((c) => c.author))],
-      });
-      await this.#istijabat.indaTaaliqatJadida(session, raqamRisala, taaliqatUkhra);
+    if (ukhra.length > 0) {
+      await this.#istijabat.indaTaaliqatJadida(session, huwiyya, ukhra);
     }
   }
-
 
   /** Are we in the saat al-sukun — the quiet hours? */
   fiSaatHudu(): boolean {

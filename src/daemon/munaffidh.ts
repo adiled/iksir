@@ -24,7 +24,6 @@ import {
   jalabaAhdathGhairMuaalaja, 
   allamaHadathMuaalaj,
   qiraStatus,
-  naqshStatus,
   haddathaAwAdkhalaMatlabMuallaq,
   mahaqaMatlabMuallaq,
   jalabaMatalebMuallaq,
@@ -36,7 +35,6 @@ import type {
   NidaTajdidWasfa,
   NidaWadaaAlaqat,
   NidaQiraatWasfa,
-  NidaKhalqRisala,
   NidaFahasFar,
   NidaTabligh,
   NidaRadd,
@@ -220,9 +218,6 @@ export class Munaffidh {
           result = await this.aalajAlaqat(event);
           break;
 
-        case "mun_khalaq_risala":
-          result = await this.#aalajaKhalqRisala(event);
-          break;
         case "mun_fahas_far":
           result = await this.aalajFahsFar(event);
           break;
@@ -396,61 +391,6 @@ ${call.mahjoubBi?.length ? `**Blocked by:** ${call.mahjoubBi.join(", ")}` : ""}`
   }
 
   /**
-   * Handle pm_create_risala
-   */
-  async #aalajaKhalqRisala(call: NidaKhalqRisala): Promise<string> {
-    const result = await this.#fasl.qaddama({
-      unwan: call.unwan,
-      matn: call.matn,
-      jawhar: call.ras,
-      asas: call.asas,
-      musawwada: true,
-    });
-
-    if (!result) {
-      return `The jawhar of ${call.huwiyyatWasfa} could not be set down.`;
-    }
-
-    /** Update implementation status with PR info */
-    const activeOrch = this.#sessionManager.wajadaMurshidFaail();
-    naqshStatus({
-      huwiyyatWasfa: call.huwiyyatWasfa,
-      huwiyyatMurshid: activeOrch?.huwiyya ?? "unknown",
-      status: "complete",
-      summary: `Jawhar ${result.huwiyya}`,
-    });
-
-    /**
-     * Register PR for keepalive tracking (PR tracking)
-     * This enables merge detection to trigger next PR cycle
-     */
-    const murshidFaail = this.#sessionManager.wajadaMurshidFaail();
-    if (murshidFaail) {
-      await this.#sessionManager.sajjalRisala(murshidFaail.huwiyya, {
-        huwiyyatWasfa: call.huwiyyatWasfa,
-        raqamRisala: Number(result.huwiyya),
-        far: call.ras,
-        hala: "draft",
-        unshiaFi: new Date().toISOString(),
-        ghuyiratHalaFi: new Date().toISOString(),
-      });
-    } else {
-      await logger.haDHHir("tool-executor", `Jawhar ${result.huwiyya} decanted but no active murshid to tend it`);
-    }
-
-    return `Draft PR created successfully!
-
-**Jawhar:** ${result.huwiyya}
-**Where:** ${result.rabit ?? "—"}
-**Title:** ${call.unwan}
-**Base:** ${call.asas}
-**Head:** ${call.ras}
-
-The PR is in draft mode. It will be promoted it when ready for review.
-PR is now being tracked by keepalive for merge detection.`;
-  }
-
-  /**
    * Handle pm_check_branch_status
    */
   async aalajFahsFar(call: NidaFahasFar): Promise<string> {
@@ -458,16 +398,20 @@ PR is now being tracked by keepalive for merge detection.`;
     const comparison = await this.#fasl.farq(defaultBranch, call.far);
 
     if (!comparison) {
-      return `Failed to check branch status for ${call.far}. Branch may not exist.`;
+      return `The vessel ${call.far} could not be compared. It may not exist.`;
     }
 
-    return `## Branch Status: ${call.far}
+    return `## Vessel: ${call.far}
 
-**Ahead of ${defaultBranch}:** ${comparison.amam}
-**Behind ${defaultBranch}:** ${comparison.khalf}
+**Ahead of the codex:** ${comparison.amam}
+**Behind it:** ${comparison.khalf}
 **Matter changed:** ${comparison.ahjar}
 
-${comparison.khalf > 0 ? "⚠️ Branch is behind - consider rebasing before PR." : "✓ Branch is up to date with main."}`;
+${
+      comparison.khalf > 0
+        ? "⚠️ The codex has moved beneath this vessel. Draw it in before decanting."
+        : "✓ The vessel stands on current ground."
+    }`;
   }
 
   /**

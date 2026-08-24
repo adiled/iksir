@@ -48,7 +48,6 @@ interface RisalaWarida {
   source: InboundSource;
   text: string;
   messageId?: string | number;
-  raqamRisala?: number;
   katib?: string;
 }
 

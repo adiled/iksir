@@ -114,9 +114,8 @@ export type SinfIshara =
   | "blocker"
   | "decision"
   | "progress"
-  | "pr_ready"
-  | "review_comments"
-  | "milestone"
+  | "jawhar_mafsul"
+  | "taaliqat"
   | "external_change"
   | "quiet_hours_exit";
 
@@ -140,7 +139,8 @@ export interface FiilIshara {
 
 export interface TaaliqMuraja {
   id: string;
-  raqamRisala: number;
+  /** The waṣfa whose jawhar was spoken of. */
+  huwiyyatWasfa: string;
   author: string;
   body: string;
   path?: string;
@@ -660,23 +660,6 @@ export interface Rasul extends RasulKharij {
 /** Murshid status for control handover */
 export type HalatMurshid = "sakin" | "fail" | "masdud" | "muntazir";
 
-/** PR status for keepalive tracking */
-export type RisalaMutabaStatus = "draft" | "open" | "merged" | "closed";
-
-/** A PR being tracked by keepalive for PR tracking */
-export interface RisalaMutaba {
-  huwiyyatWasfa: string;
-  raqamRisala: number;
-  far: string;
-  hala: RisalaMutabaStatus;
-  /** When PR was created */
-  unshiaFi: string;
-  /** When status last changed */
-  ghuyiratHalaFi: string;
-  /** When comments were last polled (persisted to prevent re-fetching on restart) */
-  akhirRaqabaFi?: string;
-}
-
 /** Murshid type */
 export type NawMurshid = "epic" | "chore" | "sandbox";
 
@@ -710,7 +693,6 @@ export interface JalsatMurshid {
    * - Merge detection (paves way for next risāla cycle)
    * - Comment interpretation (conditional action per command protocol)
    */
-  activePRs: RisalaMutaba[];
   /**
    * Messaging channel IDs keyed by provider.
    * e.g., { telegram: "12345", slack: "C07ABC" }
