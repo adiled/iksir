@@ -26,7 +26,6 @@ import type {
   NidaFasl,
   NidaKhalqWasfa,
   NidaSafa,
-  NidaQiraatWasfa,
   NidaRadd,
   NidaRattib,
   NidaSajjalQarar,
@@ -41,6 +40,7 @@ import type {
   TaarifAla,
 } from "../types.ts";
 import { wallidIsmFar } from "../khuddam/katib.ts";
+import type { SijillWasfat } from "../wasfa/sijill-wasfat.ts";
 
 import { adhafaQararSijill, adkhalaHadath, jalabaQararatSijill, qiraStatus } from "../../db/db.ts";
 
@@ -75,8 +75,18 @@ class MunadiSijillAlat implements SijillAlat {
 
 export class AlatAlIksir {
   #sijillAlat: SijillAlat;
+  #wasfat?: SijillWasfat;
 
-  constructor() {
+  /**
+   * @param wasfat the register, for instruments that only read.
+   *
+   * A read has no reason to travel. It once did — the daemon could not
+   * answer a tool call inline, so every instrument returned an
+   * acknowledgement and the answer arrived later as a message. The murshid
+   * would ask for a waṣfa and be told that reading had begun.
+   */
+  constructor(wasfat?: SijillWasfat) {
+    this.#wasfat = wasfat;
     this.#sijillAlat = new MunadiSijillAlat((call) => this.#hawwilLiKhadim(call));
 
     this.#sajjilAlatAsasiyya();
@@ -912,26 +922,43 @@ Relations control execution order: blocked tickets wait for blockers to complete
   }
 
   async #aalajaQiraaatWasfa(args: Record<string, unknown>): Promise<string> {
-    const call: NidaQiraatWasfa = {
-      tool: "mun_iqra_wasfa",
-      huwiyyatMurshid: args.huwiyyatMurshid as string,
-      huwiyya: args.huwiyya as string,
-    };
+    const huwiyya = args.huwiyya as string;
 
-    this.#hawwilLiKhadim(call);
-
-    let siyaqMahalli = "";
-    const hala = qiraStatus(call.huwiyya);
-    if (hala) {
-      siyaqMahalli = `
-
-From the sijill:
-- State: ${hala.status}
-${hala.huwiyat_murshid ? `- Murshid: ${hala.huwiyat_murshid}` : ""}
-${hala.summary ? `- Summary: ${hala.summary}` : ""}`;
+    if (!this.#wasfat) {
+      return `The register is not at hand.`;
     }
 
-    return `Reading ${call.huwiyya} from the register.${siyaqMahalli}`;
+    const wasfa = await this.#wasfat.iqra(huwiyya);
+    if (!wasfa) return `No wasfa by that name: ${huwiyya}`;
+
+    const ajzaa: string[] = [`## ${wasfa.huwiyya} — ${wasfa.unwan}`, ""];
+
+    if (wasfa.hala) ajzaa.push(`**Condition:** ${wasfa.hala}`);
+    if (wasfa.qadr) ajzaa.push(`**Measure:** ${wasfa.qadr}`);
+    if (wasfa.wasm?.length) ajzaa.push(`**Marks:** ${wasfa.wasm.join(", ")}`);
+    if (wasfa.ab) ajzaa.push(`**Under:** ${wasfa.ab}`);
+    ajzaa.push("");
+
+    if (wasfa.matn) ajzaa.push("## Statement", wasfa.matn, "");
+
+    if (wasfa.mayayir?.length) {
+      ajzaa.push("## Maʿāyīr al-Ṣafāʾ — the fire this must withstand", "");
+      for (const m of wasfa.mayayir) ajzaa.push(`- \`${m}\``);
+      ajzaa.push("", "Put the matter to them with mun_safa before mun_fasl.", "");
+    }
+
+    const alaqat = await this.#wasfat.alaqat(wasfa.huwiyya);
+    if (alaqat.yamnaa.length || alaqat.mamnu.length) {
+      ajzaa.push("## Bindings");
+      if (alaqat.yamnaa.length) ajzaa.push(`**Holds back:** ${alaqat.yamnaa.join(", ")}`);
+      if (alaqat.mamnu.length) ajzaa.push(`**Held by:** ${alaqat.mamnu.join(", ")}`);
+      ajzaa.push("");
+    }
+
+    const hala = qiraStatus(wasfa.huwiyya);
+    ajzaa.push("## Working", `**State:** ${hala ? hala.status : "not begun"}`);
+
+    return ajzaa.join("\n");
   }
 
   async #aalijFahasFar(args: Record<string, unknown>): Promise<string> {

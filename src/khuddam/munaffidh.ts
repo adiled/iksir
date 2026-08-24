@@ -23,7 +23,6 @@ import { logger } from "../logging/logger.ts";
 import { 
   jalabaAhdathGhairMuaalaja, 
   allamaHadathMuaalaj,
-  qiraStatus,
   haddathaAwAdkhalaMatlabMuallaq,
   mahaqaMatlabMuallaq,
   jalabaMatalebMuallaq,
@@ -34,7 +33,6 @@ import type {
   NidaKhalqWasfa,
   NidaTajdidWasfa,
   NidaWadaaAlaqat,
-  NidaQiraatWasfa,
   NidaFahasFar,
   NidaTabligh,
   NidaRadd,
@@ -206,9 +204,6 @@ export class Munaffidh {
 
     try {
       switch (event.tool) {
-        case "mun_iqra_wasfa":
-          result = await this.#aalajaQiraaatWasfa(event);
-          break;
         case "mun_khalaq_wasfa":
           result = await this.#aalajaKhalqWasfa(event);
           break;
@@ -290,43 +285,6 @@ export class Munaffidh {
     }
   }
 
-
-  /**
-   * Handle pm_read_wasfa
-   */
-  async #aalajaQiraaatWasfa(call: NidaQiraatWasfa): Promise<string> {
-    const wasfa = await this.#wasfat.iqra(call.huwiyya);
-    if (!wasfa) return `No wasfa by that name: ${call.huwiyya}`;
-
-    const ajzaa: string[] = [
-      `## ${wasfa.huwiyya} — ${wasfa.unwan}`,
-      "",
-    ];
-
-    if (wasfa.hala) ajzaa.push(`**Condition:** ${wasfa.hala}`);
-    if (wasfa.qadr) ajzaa.push(`**Measure:** ${wasfa.qadr}`);
-    if (wasfa.wasm?.length) ajzaa.push(`**Marks:** ${wasfa.wasm.join(", ")}`);
-    if (wasfa.ab) ajzaa.push(`**Under:** ${wasfa.ab}`);
-    ajzaa.push("");
-
-    if (wasfa.matn) {
-      ajzaa.push("## Statement", wasfa.matn, "");
-    }
-
-    const alaqat = await this.#wasfat.alaqat(wasfa.huwiyya);
-    if (alaqat.yamnaa.length || alaqat.mamnu.length) {
-      ajzaa.push("## Bindings");
-      if (alaqat.yamnaa.length) ajzaa.push(`**Holds back:** ${alaqat.yamnaa.join(", ")}`);
-      if (alaqat.mamnu.length) ajzaa.push(`**Held by:** ${alaqat.mamnu.join(", ")}`);
-      ajzaa.push("");
-    }
-
-    const halaTanfidh = qiraStatus(wasfa.huwiyya);
-    ajzaa.push("## Working");
-    ajzaa.push(`**State:** ${halaTanfidh ? halaTanfidh.status : "not begun"}`);
-
-    return ajzaa.join("\n");
-  }
 
   /**
    * Handle pm_create_wasfa

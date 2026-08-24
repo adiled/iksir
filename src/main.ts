@@ -723,7 +723,11 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     ? await istadaa<Safa>(config.madda.safa, siyaqMadda, AMAL_SAFA)
     : safaSakita();
 
-  const alat = new AlatAlIksir();
+  /** The formulae live in the sijill. */
+  const wasfat = anshaaSijillWasfat(config.wasfat?.sabiqa);
+
+  const alat = new AlatAlIksir(wasfat);
+
   const amil = createAmilHum(config, alat.adawat());
 
   /**
@@ -745,8 +749,6 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   const messenger: Rasul = config.isharat.telegram.mufattah
     ? anshaaTelegramRasul(telegram)
     : anshaaRasulUnbub();
-  /** The formulae live in the sijill. */
-  const wasfat = anshaaSijillWasfat(config.wasfat?.sabiqa);
 
   const fasl = config.madda.fasl
     ? await istadaa<Fasl>(config.madda.fasl, siyaqMadda, AMAL_FASL)

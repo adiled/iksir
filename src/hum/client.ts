@@ -87,6 +87,8 @@ export class AmilHum {
   #namudhaj?: string;
   #warsha: string;
   #ruqan = new Map<string, string>();
+  /** Hathth held back while a murshid is mid-turn, in the order spoken. */
+  #tabur = new Map<string, Array<{ prompt: string; options?: { agent?: string } }>>();
 
   constructor(tasmim: TasmimIksir, adawat: TaarifAda[] = []) {
     this.#namudhaj = tasmim.hum?.namudhaj;
@@ -327,14 +329,47 @@ export class AmilHum {
    * Send without waiting. The murshid's ordinary mode — the turn's
    * output arrives as ahdath, not as a return value.
    */
+  /**
+   * Send without waiting for the answer — but never while the murshid is
+   * already mid-turn.
+   *
+   * A cell takes one turn at a time. Two hathth arriving in the same instant
+   * do not queue themselves: one of them is simply lost, and the murshid
+   * proceeds having never heard it. Which is the same law Iksīr keeps above
+   * — one at the flame — kept here inside a single vessel.
+   */
   async sendPromptAsync(
     sessionId: string,
     prompt: string,
     options?: { agent?: string },
   ): Promise<boolean> {
+    const h = this.#jalasat.get(sessionId);
+
+    if (h?.fail) {
+      const tabur = this.#tabur.get(sessionId) ?? [];
+      tabur.push({ prompt, options });
+      this.#tabur.set(sessionId, tabur);
+      await logger.akhbar("hum", `Held for ${sessionId} — a turn is in flight`, {
+        muntazir: tabur.length,
+      });
+      return true;
+    }
+
     this.#thrum.ursil(this.#naghamHathth(sessionId, prompt, options));
     await logger.akhbar("hum", `Sent prompt to jalsa ${sessionId}`);
     return true;
+  }
+
+  /** The turn closed. If anything was held back, it goes now. */
+  #atliqMuntazir(sessionId: string): void {
+    const tabur = this.#tabur.get(sessionId);
+    if (!tabur || tabur.length === 0) return;
+
+    const talii = tabur.shift()!;
+    if (tabur.length === 0) this.#tabur.delete(sessionId);
+
+    this.#thrum.ursil(this.#naghamHathth(sessionId, talii.prompt, talii.options));
+    logger.akhbar("hum", `Released a held prompt to ${sessionId}`);
   }
 
   async abortSession(sessionId: string): Promise<boolean> {
@@ -542,6 +577,7 @@ export class AmilHum {
           h.akhirDawra.tokensOutput = usage.output_tokens ?? 0;
         }
       }
+      this.#atliqMuntazir(sid);
       return;
     }
 
@@ -554,6 +590,7 @@ export class AmilHum {
           h.akhirDawra.error = String(nagham.message ?? "unknown");
         }
       }
+      this.#atliqMuntazir(sid);
       return;
     }
 
