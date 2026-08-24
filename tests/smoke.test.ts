@@ -12,6 +12,7 @@ import { assertEquals, assertExists, assertStringIncludes } from "@std/assert";
 import {
   withTestRepo,
   mockAmilHum,
+  mockHayula,
   mockTelegramClient,
   mockArraf,
   makeConfig,
@@ -30,6 +31,7 @@ function buildContext() {
   const telegram = mockTelegramClient();
   const messenger = new TelegramMessenger(telegram as never);
   const intentResolver = mockArraf();
+  const hayula = mockHayula();
 
   const sessionManager = new MudirJalasat({
     tasmim: config,
@@ -41,6 +43,7 @@ function buildContext() {
     mudirJalasat: sessionManager,
     arraf: intentResolver as never,
     rasul: messenger,
+    hayula,
     namatWasfa: config.mutabiWasfa?.namatWasfa,
   });
 
@@ -50,7 +53,7 @@ function buildContext() {
     mudirJalasat: sessionManager as never,
   });
 
-  return { config, amil, telegram, messenger, sessionManager, dispatcher, intentResolver, questionHandler };
+  return { config, amil, telegram, messenger, sessionManager, dispatcher, intentResolver, questionHandler, hayula };
 }
 
 

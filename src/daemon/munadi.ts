@@ -26,7 +26,7 @@ import {
   type NiyyaMuhallala,
   type NawKiyan,
 } from "./arraf.ts";
-import * as git from "../git/operations.ts";
+import type { Hayula } from "../hayula/hayula.ts";
 import type { JalsatMurshid, RasulKharij } from "../types.ts";
 
 
@@ -113,6 +113,8 @@ interface MunadiDeps {
   mudirJalasat: MudirJalasat;
   arraf: Arraf;
   rasul: RasulKharij;
+  /** The matter worked upon, for the intiqāl between vessels. */
+  hayula: Hayula;
   namatWasfa?: string;
 }
 
@@ -308,10 +310,13 @@ export class Munadi {
 
   static readonly AQSA_RASAAIL_SIYAQ = 10;
 
+  #hayula: Hayula;
+
   constructor(deps: MunadiDeps) {
     this.mudirJalasat = deps.mudirJalasat;
     this.arraf = deps.arraf;
     this.rasul = deps.rasul;
+    this.#hayula = deps.hayula;
     this.namatWasfa = banaNamatWasfa(deps.namatWasfa);
   }
 
@@ -954,10 +959,10 @@ Work on the parent instead?`;
     }
 
     /** Step 2: WIP commit if dirty */
-    const huwaWasikh = await git.huwaWasikh();
+    const huwaWasikh = await this.#hayula.mudtarib();
     if (huwaWasikh && previousActive) {
       await logger.akhbar("dispatcher", `Working directory dirty, creating WIP commit for ${previousActive}`);
-      wipCommitted = await git.khalaqaIltizamMuaqqat(previousActive);
+      wipCommitted = await this.#hayula.jammada(previousActive);
     }
 
     if (previousSession) {
@@ -966,7 +971,7 @@ Work on the parent instead?`;
     }
 
     /** Step 4: Checkout target branch (creates if doesn't exist for new murshidun) */
-    const intaqalaIlaSuccess = await git.intaqalaIla(session.far);
+    const intaqalaIlaSuccess = await this.#hayula.dakhala(session.far);
     if (!intaqalaIlaSuccess) {
       if (previousSession) {
         await this.mudirJalasat.jaddadaḤalatMurshid(previousActive!, "fail");
@@ -978,7 +983,7 @@ Work on the parent instead?`;
     }
 
     if (!isNew) {
-      await git.pull(session.far);
+      await this.#hayula.sahaba(session.far);
     }
 
     try {

@@ -21,7 +21,7 @@ import { GitHubClient } from "../github/gh.ts";
 import { buildIndex } from "../code-intel/indexer.ts";
 import { logger } from "../logging/logger.ts";
 import { fiNitaqAlWaqt, minutesUntil, todayInTz } from "../utils/time.ts";
-import * as git from "../git/operations.ts";
+import type { Hayula } from "../hayula/hayula.ts";
 import type {
   TasmimIksir,
   TaaliqMuraja,
@@ -101,12 +101,15 @@ interface MutatallabatHayat {
   tasmim: TasmimIksir;
   mudirJalasat: MudirJalasat;
   github: GitHubClient;
+  /** The matter tended through the night rites. */
+  hayula: Hayula;
 }
 
 export class DawratHayat {
   #tasmim: TasmimIksir;
   #mudirJalasat: MudirJalasat;
   #github: GitHubClient;
+  #hayula: Hayula;
   #istijabat: IstijabatHayat;
   #tarikhAkhirSeyana: string | null = null;
   #seyanaJariya = false;
@@ -117,6 +120,7 @@ export class DawratHayat {
     this.#tasmim = deps.tasmim;
     this.#mudirJalasat = deps.mudirJalasat;
     this.#github = deps.github;
+    this.#hayula = deps.hayula;
     this.#istijabat = callbacks;
   }
 
@@ -349,9 +353,8 @@ export class DawratHayat {
       const sessions = this.#mudirJalasat.wajadaJalasatMurshid();
 
       /** Remember where we stood */
-      const originalBranch = await git.farAlHali();
+      const originalBranch = await this.#hayula.waqif();
 
-      await git.fetch();
 
       for (const session of sessions) {
         const result = await this.sayanFar(session);
@@ -359,10 +362,10 @@ export class DawratHayat {
       }
 
       if (originalBranch) {
-        const istarjaad = await git.intaqalaIla(originalBranch);
+        const istarjaad = await this.#hayula.dakhala(originalBranch);
         if (!istarjaad) {
           await logger.sajjalKhata("keepalive", `Failed to istarjaa branch ${originalBranch}, falling back to main`);
-          await git.intaqalaIla("main");
+          await this.#hayula.dakhala(await this.#hayula.asas());
         }
       }
 
@@ -399,7 +402,7 @@ export class DawratHayat {
 
     try {
       /** Enter the far */
-      const checkedOut = await git.intaqalaIla(far);
+      const checkedOut = await this.#hayula.dakhala(far);
       if (!checkedOut) {
         return {
           far,
@@ -411,7 +414,7 @@ export class DawratHayat {
       }
 
       /** How far has the river of main flowed past this far? */
-      const behind = await git.commitsBehindMain(far);
+      const behind = await this.#hayula.masafa(far);
       if (behind === 0) {
         return {
           far,
@@ -424,10 +427,10 @@ export class DawratHayat {
       }
 
       /** Attempt the merging of waters */
-      const mergeResult = await git.mergeMain();
+      const mergeResult = await this.#hayula.sahaba();
 
-      if (mergeResult.success) {
-        await git.push(far);
+      if (mergeResult.najah) {
+        await this.#hayula.azhara?.(far);
 
         return {
           far,
@@ -435,7 +438,7 @@ export class DawratHayat {
           najah: true,
           fil: "udmija",
           iltizamatKhalfa: behind,
-          nass: `Merged ${behind} commit(s) from main`,
+          nass: `Drew in ${behind} change(s) from the codex`,
         };
       }
 
@@ -444,9 +447,9 @@ export class DawratHayat {
         huwiyya,
         najah: false,
         fil: "taarudat",
-        taarudat: mergeResult.conflicts,
+        taarudat: mergeResult.taarudat,
         iltizamatKhalfa: behind,
-        nass: mergeResult.message,
+        nass: mergeResult.khata ?? "the codex would not settle beneath this vessel",
       };
     } catch (error) {
       return {

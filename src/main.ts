@@ -33,6 +33,7 @@ import { anshaaNtfyAmil } from "./notifications/ntfy.ts";
 import { anshaaTelegramAmil } from "./notifications/telegram.ts";
 import { anshaaTelegramRasul } from "./notifications/messenger.ts";
 import { MutabiWasfaBaid } from "./hum/mutabi-baid.ts";
+import { anshaaHayulaGit } from "../stink/hayula-git/mod.ts";
 import { createGitHubClient } from "./github/gh.ts";
 import { istadaaKatib } from "./daemon/katib.ts";
 import { istadaaMunaffidh } from "./daemon/munaffidh.ts";
@@ -810,6 +811,13 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
    * humd routes a nida by name to whichever hive's manifest declares it,
    * so an unannounced ada is an unreachable one.
    */
+  /**
+   * The one place Iksīr names a contrivance. Everything below is handed a
+   * Hayūlā and never asks what kind — swap this line and the same daemon
+   * works a lexicon or a body of law instead of a corpus of runūz.
+   */
+  const hayula = anshaaHayulaGit();
+
   const alat = new AlatAlIksir();
   const amil = createAmilHum(config, alat.adawat());
 
@@ -852,6 +860,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     ntfy,
     mudirJalasat: sessionManager,
     amil,
+    hayula,
   });
   await ipcProcessor.hammalaHala();
 
@@ -863,6 +872,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     mudirJalasat: sessionManager,
     arraf: intentResolver,
     rasul: messenger,
+    hayula,
     namatWasfa: config.mutabiWasfa?.namatWasfa,
   });
 
@@ -924,6 +934,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
       tasmim: config,
       mudirJalasat: sessionManager,
       github,
+      hayula,
     },
     {
       indaDamjRisala: async (session, pr) => {

@@ -50,7 +50,7 @@ import { wallidIsmFar } from "./katib.ts";
 import { mayyazaTanbih } from "./mumayyiz.ts";
 import type { MudirJalasat } from "./katib.ts";
 import type { Munadi } from "./munadi.ts";
-import * as git from "../git/operations.ts";
+import type { Hayula } from "../hayula/hayula.ts";
 
 interface MunaffidhDeps {
   tasmim: TasmimIksir;
@@ -60,6 +60,8 @@ interface MunaffidhDeps {
   ntfy: NtfyClient;
   mudirJalasat: MudirJalasat;
   amil: AmilHum;
+  /** The matter worked upon. Iksīr never asks what kind. */
+  hayula: Hayula;
 }
 
 
@@ -72,6 +74,7 @@ export class Munaffidh {
   #ntfy: NtfyClient;
   #sessionManager: MudirJalasat;
   #amil: AmilHum;
+  #hayula: Hayula;
   #iksir: Munadi | null = null;
 
   #mutahakkimIlgha: AbortController | null = null;
@@ -84,6 +87,7 @@ export class Munaffidh {
     this.#ntfy = deps.ntfy;
     this.#sessionManager = deps.mudirJalasat;
     this.#amil = deps.amil;
+    this.#hayula = deps.hayula;
   }
 
   /**
@@ -741,29 +745,29 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
 
     await logger.akhbar("tool-executor", `Creating branch: ${branchName}`);
 
-    if (await git.huwaWasikh()) {
+    if (await this.#hayula.mudtarib()) {
       return `Error: Working directory is dirty. Cannot create branch.
 
 Please commit or stash changes first.`;
     }
 
     /** Checkout default branch and pull */
-    const defaultBranch = await git.farAlAsasi();
-    const intaqalaIlaMain = await git.intaqalaIla(defaultBranch);
+    const defaultBranch = await this.#hayula.asas();
+    const intaqalaIlaMain = await this.#hayula.dakhala(defaultBranch);
     if (!intaqalaIlaMain) {
       return `Error: Failed to intaqalaIla ${defaultBranch} branch.`;
     }
 
-    await git.pull(defaultBranch);
+    await this.#hayula.sahaba(defaultBranch);
 
     /** Create new branch */
-    const intaqalaIlaNew = await git.intaqalaIla(branchName);
+    const intaqalaIlaNew = await this.#hayula.dakhala(branchName);
     if (!intaqalaIlaNew) {
       return `Error: Failed to create branch ${branchName}.`;
     }
 
     /** Push with -u */
-    const pushed = await git.push(branchName, true);
+    const pushed = await this.#hayula.azhara?.(branchName, true);
     if (!pushed) {
       return `Branch created locally but failed to push.
 
@@ -788,48 +792,44 @@ You can now start implementation.`;
   }
 
   /**
-   * Handle pm_git_add - stage files
+   * Rattib — choose which matter is to be fixed.
+   *
+   * Some hayūlā keep a staging ground between the molten and the fixed;
+   * most do not. Iksīr does not pretend to one. The choice is acknowledged
+   * here and carried into the fixing itself, where thabbata takes the same
+   * list. Nothing is done to the matter yet.
    */
-  async aalajGitAdd(call: NidaRattib): Promise<string> {
-    const result = await git.gitAdd(call.ahjar);
-    if (!result.success) {
-      return `Error staging files: ${result.error}`;
-    }
-
-    return `Files staged successfully.
-
-Files (${call.ahjar.length}):
-${call.ahjar.map((f) => `  ✓ ${f}`).join("\n")}`;
+  aalajGitAdd(call: NidaRattib): Promise<string> {
+    return Promise.resolve(
+      `Chosen for fixing (${call.ahjar.length}):\n${call.ahjar.map((f) => `  · ${f}`).join("\n")}\n\n` +
+        `Nothing is fixed until mun_iltazim.`,
+    );
   }
 
   /**
    * Handle pm_commit - commit staged changes
    */
   async aalajIltizam(call: NidaIltazim): Promise<string> {
-    const result = await git.commit(call.risala, call.ahjar);
-    if (!result.success) {
-      if (result.error === "nothing to commit") {
-        return `Nothing to commit. Working tree clean.`;
-      }
-      return `Error creating commit: ${result.error}`;
+    const najah = await this.#hayula.thabbata(call.risala, call.ahjar);
+    if (!najah) {
+      return `The matter would not be fixed. It may already be settled, or nothing was molten.`;
     }
 
-    return `Commit created successfully.
+    return `Matter fixed into the vessel.
 
-Commit: ${result.hash ?? "unknown"}
-Message: ${call.risala}`;
+Reason: ${call.risala}`;
   }
 
   /**
    * Handle pm_git_push - push current branch
    */
   async aalajGitPush(): Promise<string> {
-    const currentBranch = await git.farAlHali();
+    const currentBranch = await this.#hayula.waqif();
     if (!currentBranch) {
       return `Error: Could not determine current branch.`;
     }
 
-    const pushed = await git.push(currentBranch);
+    const pushed = await this.#hayula.azhara?.(currentBranch);
     if (!pushed) {
       return `Error: Failed to push ${currentBranch} to origin.`;
     }
@@ -850,11 +850,10 @@ Remote: origin`;
 
     const jawharBranch = wallidIsmFar(call.huwiyyatWasfa, "chore");
 
-    const { istihal } = await import("../kimiya/istihal.ts");
-    const result = await istihal(jawharBranch, call.ahjar);
+    const result = await this.#hayula.istahala(jawharBranch, call.ahjar);
 
     if (!result.najah) {
-      if (result.nawKhata === "conflicts" && result.taarudat) {
+      if (result.nawKhata === "taarud" && result.taarudat) {
         return `Istihal failed: Ahjar conflict with codex.
 
 Conflicted ahjar:
@@ -889,11 +888,10 @@ Next: Use mun_fasl to create the risala.`;
     const jawharBranch = wallidIsmFar(call.huwiyyatWasfa, "chore");
     const parentJawhar = wallidIsmFar(call.huwiyyatAbWasfa, "chore");
 
-    const { istihal } = await import("../kimiya/istihal.ts");
-    const result = await istihal(jawharBranch, call.ahjar, parentJawhar);
+    const result = await this.#hayula.istahala(jawharBranch, call.ahjar, parentJawhar);
 
     if (!result.najah) {
-      if (result.nawKhata === "conflicts" && result.taarudat) {
+      if (result.nawKhata === "taarud" && result.taarudat) {
         return `Layered istihal failed: Conflicts with codex.
 
 Conflicted ahjar:
@@ -904,7 +902,7 @@ Resolve conflicts in buwtaqa before retrying.`;
       return `Layered istihal failed (${result.nawKhata}): ${result.khata}`;
     }
 
-    const codex = await git.farAlAsasi();
+    const codex = await this.#hayula.asas();
 
     return `Layered istihal complete.
 

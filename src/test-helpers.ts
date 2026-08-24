@@ -9,6 +9,7 @@
 import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, haddathaAwAdkhalaJalsa } from "../db/db.ts";
 import { execCommand } from "./utils/exec.ts";
 import type { RasulKharij, QanatRisala, JalsatMurshid, JawabSual } from "./types.ts";
+import type { Hayula } from "./hayula/hayula.ts";
 
 
 
@@ -494,4 +495,59 @@ export function makeConfig(overrides?: Partial<TasmimIksir>): TasmimIksir {
     hafazat: {},
     ...overrides,
   } as TasmimIksir;
+}
+
+
+/**
+ * A hayūlā of nothing in particular.
+ *
+ * Core is handed matter and never asks what kind, so a test can hand it
+ * matter that is not there at all. That these tests pass without a repo,
+ * a remote, or a single git invocation is the abstraction proving itself.
+ */
+export function mockHayula(): Hayula & { _amal: string[] } {
+  const amal: string[] = [];
+  let waqif = "codex";
+  return {
+    _amal: amal,
+    naw: "wahm",
+    dakhala(ina) {
+      amal.push(`dakhala:${ina}`);
+      waqif = ina;
+      return Promise.resolve(true);
+    },
+    waqif() {
+      return Promise.resolve(waqif);
+    },
+    asas() {
+      return Promise.resolve("codex");
+    },
+    mudtarib() {
+      amal.push("mudtarib");
+      return Promise.resolve(false);
+    },
+    jammada(sabab) {
+      amal.push(`jammada:${sabab}`);
+      return Promise.resolve(true);
+    },
+    thabbata(sabab) {
+      amal.push(`thabbata:${sabab}`);
+      return Promise.resolve(true);
+    },
+    sahaba(ina) {
+      amal.push(`sahaba:${ina ?? "-"}`);
+      return Promise.resolve({ najah: true });
+    },
+    masafa() {
+      return Promise.resolve(0);
+    },
+    azhara(ina) {
+      amal.push(`azhara:${ina}`);
+      return Promise.resolve(true);
+    },
+    istahala(jawhar, ahjar) {
+      amal.push(`istahala:${jawhar}:${ahjar.length}`);
+      return Promise.resolve({ najah: true, jawhar, adadAhjar: ahjar.length });
+    },
+  };
 }

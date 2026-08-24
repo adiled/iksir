@@ -8,8 +8,8 @@
  * Uses the stink-world git tools underneath, but this layer speaks kimiya.
  */
 
-import { logger } from "../logging/logger.ts";
-import { exec, farAlHali, farAlAsasi } from "../git/operations.ts";
+import { logger } from "../../src/logging/logger.ts";
+import { exec, farAlHali, farAlAsasi } from "../../src/git/operations.ts";
 
 export interface NatijaIstihal {
   najah: boolean;
