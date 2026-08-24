@@ -85,10 +85,12 @@ export class AmilHum {
   #mustamiuunNida: MustamiNida[] = [];
   #jalsatMumayyiz: string | null = null;
   #namudhaj?: string;
+  #warsha: string;
   #ruqan = new Map<string, string>();
 
   constructor(tasmim: TasmimIksir, adawat: TaarifAda[] = []) {
     this.#namudhaj = tasmim.hum?.namudhaj;
+    this.#warsha = Deno.env.get("IKSIR_REPO_PATH") ?? Deno.cwd();
     this.#thrum = new Thrum({
       masarMiqbas: tasmim.hum?.miqbas,
       adawat,
@@ -208,10 +210,15 @@ export class AmilHum {
     const mahfuz = this.#ruqan.get(ism);
     if (mahfuz !== undefined) return mahfuz || undefined;
 
-    const makhzan = Deno.env.get("IKSIR_REPO_PATH") ?? ".";
+    /**
+     * The ruqan ship with Iksīr, not with the workshop. Looking for them
+     * beside the matter finds nothing, and a murshid arrives unnamed —
+     * which is worse than failing, because it works anyway and badly.
+     */
+    const maskan = new URL("../../prompts/", import.meta.url).pathname;
     let nass = "";
     try {
-      nass = Deno.readTextFileSync(joinMasar(makhzan, "prompts", `${ism}.md`));
+      nass = Deno.readTextFileSync(joinMasar(maskan, `${ism}.md`));
     } catch {
       // A missing ruqya is not fatal — the murshid simply arrives unnamed.
       logger.haDHHir("hum", `No ruqya found for ${ism}; prompting without one`);
@@ -242,6 +249,11 @@ export class AmilHum {
       sid: sessionId,
       hive: "iksir",
       content: prompt,
+      /**
+       * Where the matter lies. Unsaid, humd hands the worker "/" and the
+       * murshid goes looking for the workshop at the root of the world.
+       */
+      cwd: this.#warsha,
       ...(this.#namudhaj ? { modelId: this.#namudhaj } : {}),
       ...(system ? { systemPrompt: system } : {}),
       // The ḥadd. humd hands every forager's adawat to the worker, organs
