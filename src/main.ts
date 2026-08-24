@@ -542,13 +542,23 @@ async function aalajAmrDakhil(ctx: SiyaqKhadim, amr: string, wusut: string[]): P
         );
         break;
       }
-      const naqasha = await ctx.hayula.naqasha(huwiyya);
+      /**
+       * The vessel, not the waṣfa. A murshid works in an ināʾ whose name
+       * the katib chose, and it is that which enters the codex.
+       */
+      const jalsa = ctx.mudirJalasat.jalabMurshid(huwiyya);
+      const ina = jalsa?.far || huwiyya;
+
+      const naqasha = await ctx.hayula.naqasha(ina);
       if (!naqasha) {
         await ctx.rasul.send("dispatch", `The codex would not take ${huwiyya}.`);
         break;
       }
       await ctx.wasfat.jaddid(huwiyya, { hala: "manqush" });
-      await ctx.rasul.send("dispatch", `${huwiyya} is inscribed. It is canon now.`);
+      await ctx.rasul.send(
+        "dispatch",
+        `${huwiyya} is inscribed from ${ina}. It is canon now.`,
+      );
       break;
     }
 
