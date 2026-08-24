@@ -171,6 +171,7 @@ function tatbiqSchema(d: Database): void {
       wasm TEXT,
       ab TEXT,
       qadr REAL,
+      mayayir TEXT,
       unshia_fi TEXT NOT NULL,
       jaddad_fi TEXT NOT NULL
     )
@@ -195,7 +196,7 @@ function tatbiqSchema(d: Database): void {
   d.exec("CREATE INDEX IF NOT EXISTS idx_wasfat_hala ON wasfat(hala)");
 
   d.prepare("INSERT OR IGNORE INTO schema_version VALUES (?, ?)").run(
-    4,
+    5,
     new Date().toISOString(),
   );
 }

@@ -13,6 +13,7 @@ interface SafWasfa {
   wasm: string | null;
   ab: string | null;
   qadr: number | null;
+  mayayir: string | null;
 }
 
 function minSaf(saf: SafWasfa): Wasfa {
@@ -24,10 +25,11 @@ function minSaf(saf: SafWasfa): Wasfa {
     wasm: saf.wasm ? JSON.parse(saf.wasm) : undefined,
     ab: saf.ab ?? undefined,
     qadr: saf.qadr ?? undefined,
+    mayayir: saf.mayayir ? JSON.parse(saf.mayayir) : undefined,
   };
 }
 
-const AMUDA = "huwiyya, unwan, matn, hala, wasm, ab, qadr";
+const AMUDA = "huwiyya, unwan, matn, hala, wasm, ab, qadr, mayayir";
 
 export class SijillWasfatMahalli implements SijillWasfat {
   #sabiqa: string;
@@ -81,8 +83,8 @@ export class SijillWasfatMahalli implements SijillWasfat {
     const alan = new Date().toISOString();
     jalabSijill()
       .prepare(
-        `INSERT INTO wasfat (huwiyya, unwan, matn, hala, wasm, ab, qadr, unshia_fi, jaddad_fi)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO wasfat (huwiyya, unwan, matn, hala, wasm, ab, qadr, mayayir, unshia_fi, jaddad_fi)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         huwiyya,
@@ -92,6 +94,7 @@ export class SijillWasfatMahalli implements SijillWasfat {
         wasfa.wasm ? JSON.stringify(wasfa.wasm) : null,
         wasfa.ab ?? null,
         wasfa.qadr ?? null,
+        wasfa.mayayir ? JSON.stringify(wasfa.mayayir) : null,
         alan,
         alan,
       );
@@ -108,7 +111,7 @@ export class SijillWasfatMahalli implements SijillWasfat {
     const baad: Wasfa = { ...qaim, ...taghyir, huwiyya };
     jalabSijill()
       .prepare(
-        `UPDATE wasfat SET unwan = ?, matn = ?, hala = ?, wasm = ?, ab = ?, qadr = ?, jaddad_fi = ?
+        `UPDATE wasfat SET unwan = ?, matn = ?, hala = ?, wasm = ?, ab = ?, qadr = ?, mayayir = ?, jaddad_fi = ?
          WHERE huwiyya = ?`,
       )
       .run(
@@ -118,6 +121,7 @@ export class SijillWasfatMahalli implements SijillWasfat {
         baad.wasm ? JSON.stringify(baad.wasm) : null,
         baad.ab ?? null,
         baad.qadr ?? null,
+        baad.mayayir ? JSON.stringify(baad.mayayir) : null,
         new Date().toISOString(),
         huwiyya,
       );

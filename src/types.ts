@@ -455,12 +455,11 @@ export interface NidaFasl {
   musawwada?: boolean;
 }
 
-/** Naqsh (نقش — inscription): merge the risala into the codex */
-export interface NidaNaqsh {
-  tool: "mun_naqsh";
+/** Ṣafāʾ (صفاء): put the matter to the fire the waṣfa declared */
+export interface NidaSafa {
+  tool: "mun_safa";
   huwiyyatMurshid: string;
   huwiyyatWasfa: string;
-  raqamRisala: number;
 }
 
 export type MunToolCall =
@@ -485,7 +484,7 @@ export type MunToolCall =
   | NidaIstihal
   | NidaIstihalMutabaqq
   | NidaFasl
-  | NidaNaqsh;
+  | NidaSafa;
 
 
 /** One instrument's taarif — the shape humd advertises and routes by. */

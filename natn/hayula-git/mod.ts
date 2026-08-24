@@ -102,6 +102,18 @@ export class HayulaGit implements Hayula {
    * Fourteen invocations of a content-addressed store, none of which Iksīr
    * has any business knowing about.
    */
+  /** git's way: bring the vessel into the codex and show the codex on. */
+  async naqasha(ina: string): Promise<boolean> {
+    const codex = await git.farAlAsasi();
+    if (!await git.intaqalaIla(codex)) return false;
+    const damj = await git.exec(["merge", "--no-ff", ina, "--no-edit"]);
+    if (!damj.success) {
+      await git.exec(["merge", "--abort"]);
+      return false;
+    }
+    return await git.push(codex);
+  }
+
   async istahala(jawhar: string, ahjar: string[], asas?: string): Promise<NatijaIstihala> {
     const natija = await istihal(jawhar, ahjar, asas);
     return { ...natija, nawKhata: NAW_KHATA[natija.nawKhata ?? ""] };

@@ -14,6 +14,7 @@
  */
 
 import type { Fasl } from "../hayula/fasl.ts";
+import type { Safa } from "../hayula/safa.ts";
 import type { RasulKharij } from "../types.ts";
 import type { SijillWasfat, Wasfa } from "../wasfa/sijill-wasfat.ts";
 import { NtfyClient } from "../notifications/ntfy.ts";
@@ -42,6 +43,8 @@ import type {
   NidaTanazal,
   NidaTalabTahakkum,
   NidaKhalqFar,
+  NidaSafa,
+  NidaFasl,
   NidaIstihal,
   NidaIstihalMutabaqq,
   NidaIltazim,
@@ -63,6 +66,8 @@ interface MunaffidhDeps {
   amil: AmilHum;
   /** The matter worked upon. Iksīr never asks what kind. */
   hayula: Hayula;
+  /** The fire a waṣfa declares for itself. */
+  safa: Safa;
 }
 
 
@@ -76,6 +81,7 @@ export class Munaffidh {
   #sessionManager: MudirJalasat;
   #amil: AmilHum;
   #hayula: Hayula;
+  #safa: Safa;
   #iksir: Munadi | null = null;
 
   #mutahakkimIlgha: AbortController | null = null;
@@ -89,6 +95,7 @@ export class Munaffidh {
     this.#sessionManager = deps.mudirJalasat;
     this.#amil = deps.amil;
     this.#hayula = deps.hayula;
+    this.#safa = deps.safa;
   }
 
   /**
@@ -250,6 +257,12 @@ export class Munaffidh {
           break;
         case "mun_istihal_mutabaqq":
           result = await this.aalajIstihalMutabaqq(event);
+          break;
+        case "mun_safa":
+          result = await this.aalajSafa(event);
+          break;
+        case "mun_fasl":
+          result = await this.aalajFasl(event);
           break;
         default:
           result = `Unknown tool: ${(event as { tool: string }).tool}`;
@@ -736,6 +749,68 @@ Branch: ${branchName}
 Status: Checked out and tracking origin
 
 You can now start implementation.`;
+  }
+
+  /**
+   * Ṣafāʾ — set the matter to the fire the waṣfa declared.
+   *
+   * The maʿāyīr were written into the waṣfa before the work began. Nothing
+   * here decides anything; it reports what stood.
+   */
+  async aalajSafa(call: NidaSafa): Promise<string> {
+    const wasfa = await this.#wasfat.iqra(call.huwiyyatWasfa);
+    if (!wasfa) return `No wasfa by that name: ${call.huwiyyatWasfa}`;
+
+    const mayayir = wasfa.mayayir ?? [];
+    if (mayayir.length === 0) {
+      return `${wasfa.huwiyya} declares no maʿāyīr al-ṣafāʾ. ` +
+        `A waṣfa without a fire cannot be assayed — state them with mun_jaddid_wasfa first.`;
+    }
+
+    const natija = await this.#safa.assa(mayayir);
+
+    if (natija.thabata) {
+      await this.#wasfat.jaddid(wasfa.huwiyya, { hala: "safi" });
+      return `The matter stood. All ${natija.ihtamala.length} maʿyār withstood.\n\n` +
+        `${wasfa.huwiyya} is ṣāfī. You may now perform faṣl.`;
+    }
+
+    const ihtaraq = natija.ihtaraq
+      .map((b) => `- ${b.mayar}\n  ${b.qawl.split("\n").slice(0, 6).join("\n  ")}`)
+      .join("\n\n");
+
+    return `The matter did not stand.\n\nWithstood: ${natija.ihtamala.length}\n` +
+      `Burned away:\n\n${ihtaraq}\n\nReturn to the buwtaqa.`;
+  }
+
+  /**
+   * Faṣl — pour the clear off the dead head and set it before al-Kimyawī.
+   *
+   * Refused before ṣafāʾ. A jawhar is not presented to be judged; it is
+   * presented having already survived its fire.
+   */
+  async aalajFasl(call: NidaFasl): Promise<string> {
+    const wasfa = await this.#wasfat.iqra(call.huwiyyatWasfa);
+    if (!wasfa) return `No wasfa by that name: ${call.huwiyyatWasfa}`;
+
+    if (wasfa.hala !== "safi") {
+      return `Faṣl refused: ${wasfa.huwiyya} has not withstood its fire. ` +
+        `Run mun_safa first.`;
+    }
+
+    const jawhar = await this.#fasl.qaddama({
+      unwan: call.unwan,
+      matn: call.matn,
+      jawhar: (await this.#hayula.waqif()) ?? call.huwiyyatWasfa,
+      asas: await this.#hayula.asas(),
+      musawwada: call.musawwada,
+    });
+
+    if (!jawhar) return `The jawhar could not be set down.`;
+
+    await this.#wasfat.jaddid(wasfa.huwiyya, { hala: "mafsul" });
+    return `Decanted. ${jawhar.huwiyya} stands before al-Kimyawī.\n\n` +
+      `Naqsh is not yours to perform.`;
   }
 
   /**

@@ -18,6 +18,11 @@ export interface Wasfa {
   /** A waṣfa this one belongs under. */
   ab?: string;
   qadr?: number;
+  /**
+   * Maʿāyīr al-Ṣafāʾ — the fire this work must withstand, declared here so
+   * that nothing decided afterward can move it.
+   */
+  mayayir?: string[];
 }
 
 /** What one waṣfa waits on, and what waits on it. */

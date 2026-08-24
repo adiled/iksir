@@ -23,6 +23,7 @@
  *   masafa    how far this vessel has drifted from the codex
  *   azhara    make the vessel visible beyond this workshop
  *   istahala  draw chosen matter out of a vessel onto a clean one
+ *   naqasha   set a vessel into the codex, where it becomes canon
  *
  * An implementation that cannot do one of these says so by refusing. A
  * hayūlā with no outside has no azhara, and Iksīr must not assume it does.
@@ -104,4 +105,12 @@ export interface Hayula {
    * @param asas   what to raise it on; the codex when absent
    */
   istahala(jawhar: string, ahjar: string[], asas?: string): Promise<NatijaIstihala>;
+
+  /**
+   * Naqsh (نقش) — inscribe a vessel into the codex.
+   *
+   * The last act, and not the murshid's. What is inscribed becomes what the
+   * matter says; everything before this was proposal.
+   */
+  naqasha(ina: string): Promise<boolean>;
 }

@@ -19,6 +19,7 @@ else. A test enforces it.
 | `hayula-git/` | git | `Hayula` |
 | `hayula-nass/` | a markdown file | `Hayula` |
 | `fasl-github/` | GitHub | `Fasl` |
+| `safa-amr/` | a shell command | `Safa` |
 | `wasfa-linear/` | Linear | a mirror, for those who want one |
 
 

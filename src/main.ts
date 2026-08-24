@@ -36,6 +36,7 @@ import { anshaaRasulUnbub } from "./notifications/rasul-anbub.ts";
 import { anshaaSijillWasfat } from "./wasfa/sijill.ts";
 import { anshaaHayulaGit } from "../natn/hayula-git/mod.ts";
 import { anshaaFaslGitHub } from "../natn/fasl-github/mod.ts";
+import { anshaaSafaAmr } from "../natn/safa-amr/mod.ts";
 import { createGitHubClient } from "./github/gh.ts";
 import { istadaaKatib } from "./daemon/katib.ts";
 import { istadaaMunaffidh } from "./daemon/munaffidh.ts";
@@ -54,6 +55,7 @@ interface SiyaqKhadim {
   rasul: Rasul;
   wasfat: SijillWasfat;
   github: ReturnType<typeof createGitHubClient>;
+  hayula: ReturnType<typeof anshaaHayulaGit>;
   mudirJalasat: ReturnType<typeof istadaaKatib>;
   munaffidh: ReturnType<typeof istadaaMunaffidh>;
   munadi: ReturnType<typeof istadaaMunadi>;
@@ -450,17 +452,51 @@ async function aalajAmrDakhil(ctx: SiyaqKhadim, amr: string, wusut: string[]): P
       break;
     }
 
+    case "naqsh": {
+      /**
+       * Naqsh (نقش) — inscription into the codex.
+       *
+       * al-Kimyawi's act, and no one else's. The murshid guides the work to
+       * the point where it may be inscribed; whether it enters the canon is
+       * not a thing it may decide, so it holds no instrument for this.
+       */
+      if (wusut.length === 0) {
+        await ctx.rasul.send("dispatch", "**Usage:** /naqsh <wasfa>");
+        break;
+      }
+      const huwiyya = wusut[0];
+      const wasfa = await ctx.wasfat.iqra(huwiyya);
+      if (!wasfa) {
+        await ctx.rasul.send("dispatch", `No wasfa by that name: ${huwiyya}`);
+        break;
+      }
+      if (wasfa.hala !== "mafsul") {
+        await ctx.rasul.send(
+          "dispatch",
+          `${huwiyya} has not been decanted. It stands at: ${wasfa.hala ?? "khaam"}`,
+        );
+        break;
+      }
+      const naqasha = await ctx.hayula.naqasha(huwiyya);
+      if (!naqasha) {
+        await ctx.rasul.send("dispatch", `The codex would not take ${huwiyya}.`);
+        break;
+      }
+      await ctx.wasfat.jaddid(huwiyya, { hala: "manqush" });
+      await ctx.rasul.send("dispatch", `${huwiyya} is inscribed. It is canon now.`);
+      break;
+    }
+
     case "help":
       await ctx.rasul.send("dispatch", `**Commands**
 
-/start <url> - Start murshid for ticket URL
-/status - Show active murshid status
-/sessions - List all sessions
-/help - Show this help
+/start <wasfa> - light a murshid on a wasfa
+/naqsh <wasfa> - inscribe a decanted jawhar into the codex
+/status - what stands at the flame
+/sessions - every vessel
+/help - this
 
-**Usage**
-Send a ticket URL to start working on a ticket/project.
-Each murshid gets its own topic for conversation.
+Name a wasfa to begin. Each murshid keeps its own channel.
 `);
       break;
 
@@ -769,6 +805,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
    * works a lexicon or a body of law instead of a corpus of runūz.
    */
   const hayula = anshaaHayulaGit();
+  const safa = anshaaSafaAmr(Deno.env.get("IKSIR_REPO_PATH"));
 
   const alat = new AlatAlIksir();
   const amil = createAmilHum(config, alat.adawat());
@@ -813,6 +850,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     mudirJalasat: sessionManager,
     amil,
     hayula,
+    safa,
   });
   await ipcProcessor.hammalaHala();
 
@@ -873,6 +911,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     hayat: null as unknown as ReturnType<typeof awqadaHayat>,
     sail: questionHandler,
     wasfat,
+    hayula,
     raqib: healthMonitor,
     mutahakkimIlgha: abortController,
   };

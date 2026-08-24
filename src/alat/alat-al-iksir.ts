@@ -26,7 +26,7 @@ import type {
   NidaKhalqFar,
   NidaKhalqRisala,
   NidaKhalqWasfa,
-  NidaNaqsh,
+  NidaSafa,
   NidaQiraatWasfa,
   NidaRadd,
   NidaRattib,
@@ -833,6 +833,30 @@ You should only call this once per murshid, at the start.`,
 
     this.#sijillAlat.sajjil(
       {
+        name: "mun_safa",
+        description:
+          `Set the jawhar to the fire the waṣfa declared.
+
+The maʿāyīr al-ṣafāʾ were written into the waṣfa before the work began.
+This puts the matter to them. It withstands them or it does not; there is
+no opinion in it and nothing to negotiate.
+
+Ṣafāʾ must hold before faṣl. A jawhar is not set before al-Kimyawī to be
+judged — it is set before al-Kimyawī having already survived its fire.`,
+        inputSchema: {
+          type: "object",
+          properties: {
+            huwiyyatMurshid: { type: "string", description: "Your murshid name" },
+            huwiyyatWasfa: { type: "string", description: "The waṣfa whose fire this is" },
+          },
+          required: ["huwiyyatMurshid", "huwiyyatWasfa"],
+        },
+      },
+      (args) => this.#aalijSafa(args),
+    );
+
+    this.#sijillAlat.sajjil(
+      {
         name: "mun_fasl",
         description:
           "Decant the clear essence, separating it from sediment and transferring it for examination. " +
@@ -867,34 +891,16 @@ You should only call this once per murshid, at the start.`,
       },
       (args) => this.#aalijFasl(args),
     );
+  }
 
-    this.#sijillAlat.sajjil(
-      {
-        name: "mun_naqsh",
-        description: "Inscribe the proven formula into the codex. " +
-          "Naqsh (نقش) is the final alchemical phase — merging the risala into the eternal kitab. " +
-          "The work becomes reproducible truth. Use after mun_fasl when the essence has been examined and approved.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            huwiyyatMurshid: {
-              type: "string",
-              description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
-            },
-            huwiyyatWasfa: {
-              type: "string",
-              description: "Ticket whose risala is being inscribed",
-            },
-            raqamRisala: {
-              type: "number",
-              description: "PR number to merge",
-            },
-          },
-          required: ["huwiyyatMurshid", "huwiyyatWasfa", "raqamRisala"],
-        },
-      },
-      (args) => this.#aalijNaqsh(args),
-    );
+  #aalijSafa(args: Record<string, unknown>): string {
+    const call: NidaSafa = {
+      tool: "mun_safa",
+      huwiyyatMurshid: args.huwiyyatMurshid as string,
+      huwiyyatWasfa: args.huwiyyatWasfa as string,
+    };
+    this.#hawwilLiKhadim(call);
+    return `The matter of ${call.huwiyyatWasfa} goes to the fire. You will be told what stood.`;
   }
 
   async #aalajaKhalqWasfa(args: Record<string, unknown>): Promise<string> {
@@ -1416,22 +1422,6 @@ Daemon will create a ${args.draft !== false ? "draft " : ""}pull request.
 You will be notified with the PR URL once created.`;
   }
 
-  async #aalijNaqsh(args: Record<string, unknown>): Promise<string> {
-    const call: NidaNaqsh = {
-      tool: "mun_naqsh",
-      huwiyyatMurshid: args.huwiyyatMurshid as string,
-      huwiyyatWasfa: args.huwiyyatWasfa as string,
-      raqamRisala: args.raqamRisala as number,
-    };
-
-    void call; // suppress unused warning — naqsh is not yet implemented in the daemon
-
-    throw new Error(
-      "mun_naqsh (النقش) is not yet implemented. " +
-        "The inscription phase — merging the risala into the codex — is planned. " +
-        "For now, complete the merge manually via the GitHub interface.",
-    );
-  }
 
   /**
    * Forward a tool call to the Iksir daemon via SQLite
