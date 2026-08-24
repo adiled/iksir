@@ -32,6 +32,7 @@ import { AlatAlIksir } from "./alat/alat-al-iksir.ts";
 import { anshaaNtfyAmil } from "./notifications/ntfy.ts";
 import { anshaaTelegramAmil } from "./notifications/telegram.ts";
 import { anshaaTelegramRasul } from "./notifications/messenger.ts";
+import { anshaaRasulUnbub } from "./notifications/rasul-anbub.ts";
 import { MutabiWasfaBaid } from "./hum/mutabi-baid.ts";
 import { anshaaHayulaGit } from "../natn/hayula-git/mod.ts";
 import { anshaaFaslGitHub } from "../natn/fasl-github/mod.ts";
@@ -833,8 +834,14 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     amil.raddNida(nida.sid, nida.callId, natija);
   });
   const ntfy = anshaaNtfyAmil(config);
+  /**
+   * How al-Kimyawī is reached. Telegram when it is configured, and
+   * otherwise a pipe on this machine — which owes nothing to anyone.
+   */
   const telegram = anshaaTelegramAmil(config);
-  const messenger = anshaaTelegramRasul(telegram);
+  const messenger: Rasul = config.isharat.telegram.mufattah
+    ? anshaaTelegramRasul(telegram)
+    : anshaaRasulUnbub();
   /**
    * The tracker is reached, not held. Its key lives in the wasfa organ,
    * a bee of its own; the entry only knows how to ask. Arraf and Munaffidh
