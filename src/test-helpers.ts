@@ -552,5 +552,9 @@ export function mockHayula(): Hayula & { _amal: string[] } {
       amal.push(`naqasha:${ina}`);
       return Promise.resolve(true);
     },
+    talaam(ahjar) {
+      amal.push(`talaam:${ahjar.length}`);
+      return Promise.resolve({ yaqif: true, yahtaj: [] });
+    },
   };
 }

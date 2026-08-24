@@ -22,6 +22,7 @@
  *   sahaba    draw in what the codex has changed beneath us
  *   masafa    how far this vessel has drifted from the codex
  *   azhara    make the vessel visible beyond this workshop
+ *   talaam    would these stones hold apart, and what else must come
  *   istahala  draw chosen matter out of a vessel onto a clean one
  *   naqasha   set a vessel into the codex, where it becomes canon
  *
@@ -35,6 +36,16 @@ export interface NatijaSahb {
   /** Matter that could not be reconciled and needs al-Kimyawi's hand. */
   taarudat?: string[];
   khata?: string;
+}
+
+/** Whether an extraction would hold, and what it still wants. */
+export interface NatijaTalaum {
+  /** Would these stones stand on their own? */
+  yaqif: boolean;
+  /** What else must be drawn across for them to hold. */
+  yahtaj: string[];
+  /** Why, where the matter can say. */
+  bayan?: string;
 }
 
 /** What became of a transmutation. */
@@ -92,6 +103,22 @@ export interface Hayula {
    * must ask whether it can before assuming it does.
    */
   azhara?(ina: string, awwalMarra?: boolean): Promise<boolean>;
+
+  /**
+   * Talāʾum (تلاؤم) — would these stones hold apart from the crucible?
+   *
+   * The root is لأم: to fit together, what a wound does when it closes. An
+   * extraction is rarely self-sufficient. A rule about vowel length leans on
+   * an inventory of sounds still sitting in the crucible; a clause cites a
+   * definition that did not travel with it. The jawhar looks whole and is
+   * not.
+   *
+   * Asked before istiḥāla, and of the matter itself — only it knows what
+   * its own pieces need. A hayūlā that cannot tell says so by answering
+   * that it does not know, which is honest, and different from answering
+   * that everything is fine.
+   */
+  talaam?(ahjar: string[], ina?: string): Promise<NatijaTalaum>;
 
   /**
    * Istiḥāla (استحالة) — draw chosen matter out of the crucible and set it

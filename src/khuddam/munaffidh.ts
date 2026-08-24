@@ -42,6 +42,7 @@ import type {
   NidaTalabTahakkum,
   NidaKhalqFar,
   NidaSafa,
+  NidaTalaum,
   NidaFasl,
   NidaIstihal,
   NidaIstihalMutabaqq,
@@ -246,6 +247,9 @@ export class Munaffidh {
           break;
         case "mun_idfa":
           result = await this.aalajGitPush();
+          break;
+        case "mun_talaum":
+          result = await this.aalajTalaum(event);
           break;
         case "mun_istihal":
           result = await this.aalajIstihal(event);
@@ -693,6 +697,32 @@ Branch: ${branchName}
 Status: Checked out and tracking origin
 
 You can now start implementation.`;
+  }
+
+  /**
+   * Talāʾum — ask the matter whether these ahjar would hold apart from it.
+   *
+   * Iksīr does not answer this. Only the matter knows what its own pieces
+   * need, and a hayūlā that cannot tell says so rather than pretending all
+   * is well.
+   */
+  async aalajTalaum(call: NidaTalaum): Promise<string> {
+    if (!this.#hayula.talaam) {
+      return `This matter cannot say whether ${call.ahjar.length} ahjar would hold ` +
+        `apart from it. Judge for yourself, and let safa find what you missed.`;
+    }
+
+    const natija = await this.#hayula.talaam(call.ahjar);
+
+    if (natija.yaqif) {
+      return `These ${call.ahjar.length} ahjar would hold on their own.` +
+        (natija.bayan ? `\n\n${natija.bayan}` : "");
+    }
+
+    const yahtaj = natija.yahtaj.map((h) => `  - ${h}`).join("\n");
+    return `These ahjar would not hold apart. They still want:\n\n${yahtaj}\n\n` +
+      `Carry these across too, or the jawhar will be whole in appearance only.` +
+      (natija.bayan ? `\n\n${natija.bayan}` : "");
   }
 
   /**

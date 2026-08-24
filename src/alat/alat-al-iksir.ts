@@ -32,6 +32,7 @@ import type {
   NidaSajjalQarar,
   NidaTabligh,
   NidaTajdidWasfa,
+  NidaTalaum,
   NidaTalabTahakkum,
   NidaTanazal,
   NidaWadaaAlaqat,
@@ -1221,29 +1222,21 @@ Next steps:
 2. Use mun_istihal to crystallize into essence`;
   }
 
-  async #aalijTalaum(args: Record<string, unknown>): Promise<string> {
-    /**
-     * TODO: Implement smart dependency discovery
-     * For now, return a placeholder that suggests manual review
-     */
-    const huwiyyatWasfa = args.huwiyyatWasfa as string;
-    const files = args.files as string[];
+  /**
+   * The matter answers this, not Iksīr. Munaffidh puts the question to the
+   * hayūlā and returns what it says.
+   */
+  #aalijTalaum(args: Record<string, unknown>): string {
+    const call: NidaTalaum = {
+      tool: "mun_talaum",
+      huwiyyatMurshid: args.huwiyyatMurshid as string,
+      huwiyyatWasfa: args.huwiyyatWasfa as string,
+      ahjar: (args.files ?? args.ahjar ?? []) as string[],
+    };
 
-    return `Attunement analysis for ${huwiyyatWasfa}:
+    this.#hawwilLiKhadim(call);
 
-Rune stones selected (${files.length}):
-${files.map((f) => `  - ${f}`).join("\n")}
-
-Runic Analysis:
-- Summoning circles: Check if all summoned stones are included
-- Contract dependencies: Verify all contracts are complete
-- Purity runes: Ensure test stones accompany incantation stones
-
-This is a placeholder. Future implementation will:
-- Trace summoning runes to their source stones
-- Detect incomplete contract chains
-- Identify coupled incantations
-- Determine if layered transmutation is needed`;
+    return `The matter is asked whether these ${call.ahjar.length} ahjar would hold apart.`;
   }
 
   async #aalijIstihal(args: Record<string, unknown>): Promise<string> {
