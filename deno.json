@@ -20,7 +20,6 @@
     "@std/": "jsr:@std/",
     "@std/assert": "jsr:@std/assert@^1",
     "@std/testing": "jsr:@std/testing@^1",
-    "@opencode/sdk": "npm:@opencode-ai/sdk@^1.2.10",
     "@db/sqlite": "jsr:@db/sqlite@^0.12.0"
   },
   "compilerOptions": {

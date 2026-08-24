@@ -9,7 +9,7 @@ import { join } from "jsr:@std/path";
 import { exists } from "jsr:@std/fs";
 import type { TasmimIksir } from "./types.ts";
 import { logger } from "./logging/logger.ts";
-import { DEFAULT_OPENCODE_SERVER, DEFAULT_NTFY_SERVER } from "./constants.ts";
+import { DEFAULT_NTFY_SERVER } from "./constants.ts";
 const DEFAULT_POLL_INTERVAL_MS = 300000;
 const DEFAULT_PR_POLL_INTERVAL_MS = 60000;
 
@@ -89,9 +89,7 @@ function tasmimAsasi(): TasmimIksir {
       makhzan: "",
       ismKimyawi: "",
     },
-    opencode: {
-      server: DEFAULT_OPENCODE_SERVER,
-    },
+    hum: {},
     hafazat: {},
   };
 }
@@ -125,9 +123,8 @@ function deepMerge(target: TasmimIksir, source: Partial<TasmimIksir>): TasmimIks
 function tahaqqaqConfig(config: TasmimIksir): string[] {
   const errors: string[] = [];
 
-  if (!config.opencode.server) {
-    errors.push("opencode.server is required");
-  }
+  // Nothing to require of hum: the socket is discovered, and the model is
+  // al-Kimyawi's to choose by kindling a hive — not Iksir's to demand.
 
   if (config.isharat.telegram.mufattah) {
     if (!config.isharat.telegram.ramzBot) {
@@ -186,8 +183,8 @@ export async function hammalaAlTasmim(): Promise<TasmimIksir> {
   /** Override with environment variables */
   const envOverrides: Partial<TasmimIksir> = {};
 
-  if (Deno.env.get("IKSIR_OPENCODE_SERVER")) {
-    envOverrides.opencode = { server: Deno.env.get("IKSIR_OPENCODE_SERVER")! };
+  if (Deno.env.get("IKSIR_HUM_MODEL")) {
+    envOverrides.hum = { ...config.hum, namudhaj: Deno.env.get("IKSIR_HUM_MODEL")! };
   }
   if (Deno.env.get("LINEAR_API_KEY")) {
     envOverrides.mutabiWasfa = { ...config.mutabiWasfa, miftahApi: Deno.env.get("LINEAR_API_KEY")! };

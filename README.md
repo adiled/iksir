@@ -18,9 +18,23 @@ The modern world has forgotten the scent of real alchemy - the sharp bite of sul
 curl -fsSL https://raw.githubusercontent.com/adiled/iksir/main/install | bash
 ```
 
-Prerequisites: [Deno](https://deno.com), [OpenCode](https://opencode.ai)
+Prerequisites: [Deno](https://deno.com), and a [hum](https://github.com/adiled/hum) nest.
 
-The kindling ritual clones the source, creates XDG directories, copies sacred templates, installs the `iksir` CLI to `~/.local/bin/`, registers daemon services, and consecrates agent incantations. Edit `~/.local/share/iksir/src/.env` to bind your keys, then `iksir start`.
+**Iksīr kindles no furnace of its own.** It nestles at a `humd` as a forager bee and prompts whatever hive you have chosen. What burns there is yours to decide — that choice was never Iksīr's to make. It asks only two things of al-Kimyawi:
+
+- a **worker** bee nestled in the same nest, so there is something to prompt
+- something in that nest providing **`fs`** — [`humfs`](https://github.com/adiled/hum/tree/main/hives/humfs), or a worker that carries its own tools
+
+A murshid without `fs` can contemplate the runūz but never inscribe them.
+
+```bash
+hum hive humfs install          # the filesystem surface
+hum hive <your-worker> install  # whatever you would have think
+```
+
+The kindling ritual clones the source, creates XDG directories, copies sacred templates, installs the `iksir` CLI to `~/.local/bin/`, registers daemon services, and consecrates the ruqan. Edit `~/.local/share/iksir/src/.env` to bind your keys, then `iksir start`.
+
+Iksīr can also be supervised as a bee in its own right — an `Orchfile` sits at the root, so `hum hive ~/iksir install` hands it to orchd.
 
 ```bash
 iksir divine            # divine the state of the Great Work

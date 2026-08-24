@@ -11,7 +11,7 @@ export interface TasmimIksir {
   isharat: TasmimIsharat;
   mutabiWasfa: TasmimMutabiWasfa;
   github: TasmimGitHub;
-  opencode: TasmimOpenCode;
+  hum: TasmimHum;
   hafazat: TasmimHaththat;
 }
 
@@ -151,8 +151,18 @@ export interface TasmimGitHub {
   ismKimyawi: string;
 }
 
-export interface TasmimOpenCode {
-  server: string;
+export interface TasmimHum {
+  /**
+   * Explicit thrum socket. Left unset, Iksir discovers it the way every
+   * bee must: HUM_THRUM_SOCK, then HUM_SOCKET, then humd's rendezvous
+   * file, then $XDG_STATE_HOME/hum/thrum.sock.
+   */
+  miqbas?: string;
+  /**
+   * The model to name on each prompt. Left unset, the nest decides —
+   * which is the point. Iksir has no opinion on what burns in the furnace.
+   */
+  namudhaj?: string;
 }
 
 export interface TasmimHaththat {
@@ -240,7 +250,7 @@ export interface MudkhalTaghyirKhariji extends MudkhalSijill {
 }
 
 
-export interface JalsatOpenCode {
+export interface JalsatHum {
   id: string;
   projectId: string;
   huwiyyatWasfa: string;
@@ -250,7 +260,7 @@ export interface JalsatOpenCode {
   lastMessageAt: Date;
 }
 
-export interface HadathOpenCode {
+export interface HadathHum {
   type: string;
   properties: Record<string, unknown>;
   timestamp: Date;
@@ -277,7 +287,7 @@ export interface MaalumatSual {
   custom?: boolean;
 }
 
-/** A question.asked event from OpenCode SSE */
+/** A question.asked event from the nest */
 export interface HadathSualMatlub {
   type: "question.asked";
   properties: {

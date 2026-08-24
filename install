@@ -14,7 +14,6 @@ BIN_DIR="$HOME/.local/bin"
 IKSIR_REPO="https://github.com/adiled/iksir.git"
 IKSIR_SRC="$IKSIR_DATA/src"
 
-AGENT_PORT="${IKSIR_AGENT_PORT:-4096}"
 MCP_PORT="${IKSIR_MCP_PORT:-3100}"
 
 OS="$(uname -s)"
@@ -34,8 +33,14 @@ check_prereqs() {
   DENO_BIN="${DENO_BIN:-$(command -v deno 2>/dev/null || echo "$HOME/.deno/bin/deno")}"
   [ -x "$DENO_BIN" ] || die "deno required — https://docs.deno.com/runtime/getting_started/installation/"
 
-  OPENCODE_BIN="${OPENCODE_BIN:-$(command -v opencode 2>/dev/null || echo "$HOME/.opencode/bin/opencode")}"
-  [ -x "$OPENCODE_BIN" ] || die "opencode required — https://opencode.ai"
+  # Iksir runs no models. It nestles at a humd and prompts whichever hive is
+  # kindled there. humd need not be running yet, but nothing works without one.
+  THRUM_SOCK="${HUM_THRUM_SOCK:-${HUM_SOCKET:-${XDG_STATE_HOME:-$HOME/.local/state}/hum/thrum.sock}}"
+  if [ ! -S "$THRUM_SOCK" ]; then
+    warn "no humd at $THRUM_SOCK"
+    warn "install one — https://github.com/adiled/hum — then kindle a worker hive"
+    warn "and something providing 'fs', or the murshid can think but not work."
+  fi
 }
 
 ensure_dirs() {
@@ -99,19 +104,15 @@ sync_config() {
   fi
 }
 
-sync_opencode() {
-  local AGENT_DIR="$XDG_CONFIG_HOME/opencode/agent"
-  local PLUGIN_DIR="$XDG_CONFIG_HOME/opencode/plugins"
-  mkdir -p "$AGENT_DIR" "$PLUGIN_DIR"
-
-  # Symlink agent prompts (only iksir-* are OC agents, mayyaza-* are internal)
-  for file in "$IKSIR_SRC"/prompts/iksir-*.md; do
-    [ -f "$file" ] && ln -sf "$file" "$AGENT_DIR/$(basename "$file")"
+sync_ruqan() {
+  # The ruqan are Iksir's own now — read from prompts/ and sent as the
+  # systemPrompt on each tone. No foreign config dir holds them.
+  local RUQAN_DIR="$IKSIR_CONFIG/prompts"
+  mkdir -p "$RUQAN_DIR"
+  for file in "$IKSIR_SRC"/prompts/*.md; do
+    [ -f "$file" ] && ln -sf "$file" "$RUQAN_DIR/$(basename "$file")"
   done
-
-  # Symlink the plugin
-  ln -sf "$IKSIR_SRC/plugins/iksir.ts" "$PLUGIN_DIR/iksir.ts"
-  info "linked opencode agents and plugin"
+  info "linked ruqan"
 }
 
 install_cli() {
@@ -187,31 +188,12 @@ $ENV_VARS
 WantedBy=$WM
 EOF
 
-  # Agent runtime
-  cat > "$SERVICE_DIR/iksir-agent.service" <<EOF
-[Unit]
-Description=Iksir Agent Runtime (OpenCode)
-After=network.target iksir-mcp.service
-Requires=iksir-mcp.service
-
-[Service]
-Type=simple
-WorkingDirectory=$IKSIR_SRC
-ExecStart=$OPENCODE_BIN serve --port $AGENT_PORT --hostname 0.0.0.0
-Restart=on-failure
-RestartSec=10
-Environment=HOME=$HOME
-
-[Install]
-WantedBy=$WM
-EOF
-
   # Daemon
   cat > "$SERVICE_DIR/iksir.service" <<EOF
 [Unit]
 Description=Iksir
-After=network.target iksir-agent.service
-Requires=iksir-agent.service
+After=network.target iksir-mcp.service
+Requires=iksir-mcp.service
 
 [Service]
 Type=simple
@@ -226,7 +208,7 @@ WantedBy=$WM
 EOF
 
   $SC daemon-reload
-  $SC enable iksir-mcp iksir-agent iksir 2>/dev/null
+  $SC enable iksir-mcp iksir 2>/dev/null
   info "registered systemd services"
 }
 
@@ -234,7 +216,7 @@ start_daemon() {
   local SC="systemctl"
   $IS_ROOT || SC="systemctl --user"
 
-  $SC restart iksir-mcp iksir-agent iksir
+  $SC restart iksir-mcp iksir
   sleep 2
   if $SC is-active --quiet iksir; then
     info "running"
@@ -246,7 +228,7 @@ start_daemon() {
 stop_daemon() {
   local SC="systemctl"
   $IS_ROOT || SC="systemctl --user"
-  $SC stop iksir iksir-agent iksir-mcp 2>/dev/null || true
+  $SC stop iksir iksir-mcp 2>/dev/null || true
 }
 
 # ─── commands ────────────────────────────────────────────────────────────────
@@ -261,10 +243,10 @@ print_status() {
   echo ""
   if $IS_ROOT; then
     echo "  logs:   journalctl -u iksir -f"
-    echo "  stop:   systemctl stop iksir iksir-agent iksir-mcp"
+    echo "  stop:   systemctl stop iksir iksir-mcp"
   else
     echo "  logs:   journalctl --user -u iksir -f"
-    echo "  stop:   systemctl --user stop iksir iksir-agent iksir-mcp"
+    echo "  stop:   systemctl --user stop iksir iksir-mcp"
   fi
   echo ""
   echo "  First time? Edit $IKSIR_SRC/.env then: iksir start"
@@ -277,7 +259,7 @@ cmd_install() {
   ensure_dirs
   ensure_source
   sync_config
-  sync_opencode
+  sync_ruqan
   install_cli
 
   info "registering services..."
@@ -296,7 +278,7 @@ cmd_update() {
 
   stop_daemon
   sync_config
-  sync_opencode
+  sync_ruqan
   install_cli
   register_services
 
@@ -319,7 +301,7 @@ cmd_uninstall() {
     SERVICE_DIR="$HOME/.config/systemd/user"
   fi
 
-  $SC disable iksir iksir-agent iksir-mcp 2>/dev/null || true
+  $SC disable iksir iksir-mcp 2>/dev/null || true
   rm -f "$SERVICE_DIR"/iksir*.service
   $SC daemon-reload 2>/dev/null || true
   info "removed systemd services"
@@ -327,11 +309,6 @@ cmd_uninstall() {
   rm -f "$BIN_DIR/iksir"
   info "removed CLI"
 
-  # Remove opencode symlinks
-  local AGENT_DIR="$XDG_CONFIG_HOME/opencode/agent"
-  local PLUGIN_DIR="$XDG_CONFIG_HOME/opencode/plugins"
-  rm -f "$AGENT_DIR"/iksir-*.md "$PLUGIN_DIR/iksir.ts" 2>/dev/null || true
-  info "removed opencode symlinks"
 
   echo ""
   info "uninstalled. data left in place:"
@@ -354,10 +331,8 @@ case "$CMD" in
     echo "  uninstall  — stop, remove services, remove CLI"
     echo ""
     echo "Environment:"
-    echo "  IKSIR_AGENT_PORT   Agent port (default: 4096)"
     echo "  IKSIR_MCP_PORT     MCP port (default: 3100)"
     echo "  DENO_BIN            Path to deno binary"
-    echo "  OPENCODE_BIN        Path to opencode binary"
     exit 1
     ;;
 esac

@@ -185,11 +185,9 @@ async function cmdCheck(): Promise<void> {
 async function cmdSync(): Promise<void> {
   const repoPath = Deno.env.get("IKSIR_REPO_PATH") ?? Deno.cwd();
   const home = Deno.env.get("HOME") ?? ".";
-  const agentDir = join(home, ".config", "opencode", "agent");
-  const pluginDir = join(home, ".config", "opencode", "plugins");
+  const agentDir = join(home, ".config", "iksir", "prompts");
 
   await Deno.mkdir(agentDir, { recursive: true });
-  await Deno.mkdir(pluginDir, { recursive: true });
 
   let synced = 0;
   const promptsDir = join(repoPath, "prompts");
@@ -203,18 +201,6 @@ async function cmdSync(): Promise<void> {
     }
   } catch {
     console.log("  No prompts directory found");
-  }
-
-  const pluginsDir = join(repoPath, "plugins");
-  try {
-    for await (const entry of Deno.readDir(pluginsDir)) {
-      if (entry.isFile && entry.name.endsWith(".ts")) {
-        await Deno.copyFile(join(pluginsDir, entry.name), join(pluginDir, entry.name));
-        console.log(`  synced plugin: ${entry.name}`);
-        synced++;
-      }
-    }
-  } catch {
   }
 
   console.log(`\nSynced ${synced} file(s).`);

@@ -6,7 +6,9 @@
  *
  *   POST /pm → PM-MCP server
  *
- * OpenCode connects via type: "remote" with url: "http://localhost:3100/"
+ * A second door. Iksir's own murshidun no longer come this way — humd routes
+ * nida over the thrum by tool name — but the adawat remain reachable over HTTP
+ * for anything else that speaks MCP: type "remote", url "http://localhost:3100/"
  */
 
 interface McpServer {

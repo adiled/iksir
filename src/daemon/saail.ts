@@ -15,7 +15,7 @@
  */
 
 import { logger } from "../logging/logger.ts";
-import { OpenCodeClient } from "../opencode/client.ts";
+import { AmilHum } from "../hum/client.ts";
 import {
   adkhalaSual as dbInsertQuestion,
   jalabaAseilaGhairMujaba,
@@ -36,13 +36,13 @@ import type {
 
 
 interface SailDeps {
-  opencode: OpenCodeClient;
+  amil: AmilHum;
   rasul: RasulKharij;
   mudirJalasat: MudirJalasat;
 }
 
 export class Saail {
-  #opencode: OpenCodeClient;
+  #amil: AmilHum;
   #messenger: RasulKharij;
   #sessionManager: MudirJalasat;
 
@@ -79,13 +79,13 @@ export class Saail {
   }
 
   constructor(deps: SailDeps) {
-    this.#opencode = deps.opencode;
+    this.#amil = deps.amil;
     this.#messenger = deps.rasul;
     this.#sessionManager = deps.mudirJalasat;
   }
 
   /**
-   * Handle a question.asked event from OpenCode SSE.
+   * Handle a question.asked event from the nest.
    * Mayyiz the question and either auto-answers or forwards to al-Kimyawi.
    */
   async aalajSualMatlub(event: HadathSualMatlub): Promise<void> {
@@ -103,7 +103,7 @@ export class Saail {
 
     if (!murshid) {
       await logger.haDHHir("question-handler", `Question from unknown session ${sessionID}`);
-      await this.#opencode.rejectQuestion(sessionID, id);
+      await this.#amil.rejectQuestion(sessionID, id);
       return;
     }
 
@@ -114,11 +114,11 @@ export class Saail {
     const primaryQuestion = questions[0];
     if (!primaryQuestion) {
       await logger.haDHHir("question-handler", `Question ${id} has no questions array`);
-      await this.#opencode.rejectQuestion(sessionID, id);
+      await this.#amil.rejectQuestion(sessionID, id);
       return;
     }
 
-    const tamyiz = await mayyazaSual(this.#opencode, primaryQuestion);
+    const tamyiz = await mayyazaSual(this.#amil, primaryQuestion);
 
     await logger.akhbar("question-handler", `Tamyiz: ${tamyiz.tamyiz}`, {
       reason: tamyiz.reason,
@@ -161,14 +161,14 @@ export class Saail {
     });
 
     /** Reply with auto-answer */
-    const replied = await this.#opencode.replyToQuestion(sessionID, questionId, answers);
+    const replied = await this.#amil.replyToQuestion(sessionID, questionId, answers);
 
     if (replied) {
       await logger.akhbar("question-handler", `Auto-answered question ${questionId}`, {
         autoAnswer: tamyiz.autoAnswer,
       });
     } else {
-      await this.#opencode.rejectQuestion(sessionID, questionId);
+      await this.#amil.rejectQuestion(sessionID, questionId);
       await logger.haDHHir("question-handler", `Failed to auto-answer, rejected ${questionId}`);
     }
 
@@ -179,7 +179,7 @@ ${tamyiz.rejection ?? "Proceed autonomously using your judgment."}
 
 Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
 
-    await this.#opencode.sendPromptAsync(sessionID, guidance);
+    await this.#amil.sendPromptAsync(sessionID, guidance);
   }
 
   /**
@@ -303,8 +303,8 @@ Auto-selected: ${answers.map((a) => a.selected.join(", ")).join("; ")}`;
       custom: selectedLabel === "__custom__" ? customText : undefined,
     }));
 
-    /** Reply to OpenCode */
-    const replied = await this.#opencode.replyToQuestion(
+    /** Reply to the nest */
+    const replied = await this.#amil.replyToQuestion(
       pending.sessionID,
       questionId,
       answers

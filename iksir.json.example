@@ -33,7 +33,5 @@
     "repo": "your-repo",
     "operatorUsername": "your-github-username"
   },
-  "opencode": {
-    "server": "http://localhost:4096"
-  }
+  "hum": {}
 }

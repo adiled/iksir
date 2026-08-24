@@ -17,7 +17,7 @@
  * No state persists that Katib has not recorded.
  */
 
-import { OpenCodeClient } from "../opencode/client.ts";
+import { AmilHum } from "../hum/client.ts";
 import { logger } from "../logging/logger.ts";
 import { 
   haddathaAwAdkhalaJalsa,
@@ -70,13 +70,13 @@ export function wallidIsmFar(
 
 interface TasmimMudirJalasat {
   tasmim: TasmimIksir;
-  opencode: OpenCodeClient;
+  amil: AmilHum;
   rasul: RasulKharij;
 }
 
 export class MudirJalasat {
   #config: TasmimIksir;
-  #opencode: OpenCodeClient;
+  #amil: AmilHum;
   #messenger: RasulKharij;
 
   #murshidSessions: Map<string, JalsatMurshid> = new Map();
@@ -87,7 +87,7 @@ export class MudirJalasat {
 
   constructor(deps: TasmimMudirJalasat) {
     this.#config = deps.tasmim;
-    this.#opencode = deps.opencode;
+    this.#amil = deps.amil;
     this.#messenger = deps.rasul;
   }
 
@@ -121,8 +121,8 @@ export class MudirJalasat {
     /** Is this vessel already lit? */
     let session = this.#murshidSessions.get(identifier);
     if (session) {
-      /** Verify the vessel still breathes in OpenCode */
-      const existing = await this.#opencode.jalabJalsa(session.id);
+      /** Verify the vessel still breathes in the nest */
+      const existing = await this.#amil.jalabJalsa(session.id);
       if (existing) {
         await logger.akhbar("session-manager", `Resuming tracked murshid session for ${identifier}`, {
           sessionId: session.id,
@@ -131,17 +131,17 @@ export class MudirJalasat {
         await this.takkadMinQanat(session);
         return { session, jadida: false, mustarjaa: true, faailSabiq };
       }
-      await logger.haDHHir("session-manager", `Tracked session ${session.id} no longer exists in OpenCode`);
+      await logger.haDHHir("session-manager", `Tracked session ${session.id} no longer exists in the nest`);
       this.#murshidSessions.delete(identifier);
     }
 
     /**
-     * Step 2: Check OpenCode for existing murshid session with matching title
+     * Step 2: Check the nest for existing murshid session with matching title
      * This handles cases where state wasn't persisted (crash, restart without save, etc.)
      */
     const existingSession = await this.#bahathaAnJalsatMurshid(identifier);
     if (existingSession) {
-      await logger.akhbar("session-manager", `Found existing murshid session in OpenCode for ${identifier}`, {
+      await logger.akhbar("session-manager", `Found existing murshid session in the nest for ${identifier}`, {
         sessionId: existingSession.id,
       });
 
@@ -171,7 +171,7 @@ export class MudirJalasat {
     await logger.akhbar("session-manager", `Creating new murshid session for ${identifier}`);
 
     const sessionTitle = `[Murshid] ${identifier}: ${title}`;
-    const openCodeSession = await this.#opencode.khalaqaJalsa(identifier, sessionTitle);
+    const openCodeSession = await this.#amil.khalaqaJalsa(identifier, sessionTitle);
 
     if (!openCodeSession) {
       await logger.sajjalKhata("session-manager", `Failed to create murshid session for ${identifier}`);
@@ -204,7 +204,7 @@ export class MudirJalasat {
   }
 
   /**
-   * Find an existing murshid session in OpenCode by searching titles
+   * Find an existing murshid session in the nest by searching titles
    */
   async #bahathaAnJalsatMurshid(epicId: string): Promise<{
     id: string;
@@ -212,7 +212,7 @@ export class MudirJalasat {
     createdAt: Date;
     lastMessageAt: Date;
   } | null> {
-    const sessions = await this.#opencode.listSessions();
+    const sessions = await this.#amil.listSessions();
     const pattern = `[Murshid] ${epicId}:`;
 
     /** Find sessions matching the pattern, sorted by most recent */
@@ -289,7 +289,7 @@ export class MudirJalasat {
         `Murshid session started for ${session.huwiyya}.\n\nAll messages for this epic will appear here.`,
       );
 
-      await this.#opencode.sendPromptAsync(
+      await this.#amil.sendPromptAsync(
         session.id,
         `SYSTEM: Your messaging channel is now active. ` +
         `All pm_reply and pm_notify messages will appear there. ` +
@@ -474,7 +474,7 @@ export class MudirJalasat {
     }
 
     const messageWithReminder = this.maaTadhkirNizam(session, message);
-    const success = await this.#opencode.sendPromptAsync(session.id, messageWithReminder);
+    const success = await this.#amil.sendPromptAsync(session.id, messageWithReminder);
     if (success) {
       session.akhirRisalaFi = new Date().toISOString();
     }
@@ -493,7 +493,7 @@ export class MudirJalasat {
     }
 
     const messageWithReminder = this.maaTadhkirNizam(session, message);
-    const success = await this.#opencode.sendPromptAsync(session.id, messageWithReminder);
+    const success = await this.#amil.sendPromptAsync(session.id, messageWithReminder);
     if (success) {
       session.akhirRisalaFi = new Date().toISOString();
     }
@@ -541,15 +541,15 @@ When done, use \`mun_istihal\` to create a PR.
 
 Awaiting direction from al-Kimyawi...`;
 
-    await this.#opencode.sendPromptAsync(session.id, prompt, {
+    await this.#amil.sendPromptAsync(session.id, prompt, {
       agent: "iksir-murshid",
     });
   }
 
 
   /**
-   * Get murshid by OpenCode session ID (reverse lookup).
-   * Used by SSE event handlers where only the OpenCode session ID is known.
+   * Get murshid by the nest session ID (reverse lookup).
+   * Used by SSE event handlers where only the the nest session ID is known.
    */
   wajadaMurshidBiHuwiyyatJalsa(sessionId: string): JalsatMurshid | null {
     for (const session of this.#murshidSessions.values()) {
@@ -567,7 +567,7 @@ Awaiting direction from al-Kimyawi...`;
    * message with diary entries and a reminder to use pm_read_diary.
    *
    * This catches both Daemon-triggered compactions (health-monitor) and
-   * OpenCode-triggered compactions (token overflow).
+   * the nest-triggered compactions (token overflow).
    */
   async aalajaDamj(sessionId: string): Promise<void> {
     const session = this.wajadaMurshidBiHuwiyyatJalsa(sessionId);
@@ -584,7 +584,7 @@ Awaiting direction from al-Kimyawi...`;
     });
 
     if (entries.length === 0) {
-      await this.#opencode.sendPromptAsync(session.id,
+      await this.#amil.sendPromptAsync(session.id,
         `<system-reminder>
 Context compaction occurred. Your conversation history was summarized.
 Your murshid ID is: ${session.huwiyya}
@@ -603,7 +603,7 @@ Use pm_read_diary to reload full decision history if needed.
       )
       .join("\n");
 
-    await this.#opencode.sendPromptAsync(session.id,
+    await this.#amil.sendPromptAsync(session.id,
       `<system-reminder>
 Context compaction occurred. Key diary decisions for your reference:
 
@@ -694,7 +694,7 @@ Call pm_read_diary for full decision history with reasoning.
 
   /**
    * Load and tahaqqaq session state from SQLite
-   * Validates that sessions still exist in OpenCode before using them
+   * Validates that sessions still exist in the nest before using them
    */
   async hammalaHala(): Promise<void> {
     try {
@@ -705,10 +705,10 @@ Call pm_read_diary for full decision history with reasoning.
         return;
       }
 
-      /** Validate murshid sessions still exist in OpenCode */
+      /** Validate murshid sessions still exist in the nest */
       const murshidunṢalihun: JalsatMurshid[] = [];
       for (const dbSession of dbSessions) {
-        const exists = await this.#opencode.jalabJalsa(dbSession.id);
+        const exists = await this.#amil.jalabJalsa(dbSession.id);
         if (exists) {
           /** Parse metadata */
           const metadata = JSON.parse(dbSession.hala_mufassala || "{}") as {

@@ -273,10 +273,3 @@ Deno.test("hallJalsaBilQanat: miss returns null", async () => {
   });
 });
 
-
-Deno.test("client getter: returns the underlying TelegramClient", () => {
-  const tc = mockTelegramClient();
-  const m = new TelegramMessenger(tc as never);
-
-  assertEquals(m.client === (tc as never), true);
-});

@@ -177,15 +177,17 @@
       },
       "additionalProperties": false
     },
-    "opencode": {
+    "hum": {
       "type": "object",
-      "description": "Agent runtime connection.",
+      "description": "The nest Iksir nestles at. Both fields are optional: the socket is discovered, and the model is chosen by kindling a hive.",
       "properties": {
-        "server": {
+        "miqbas": {
           "type": "string",
-          "description": "OpenCode server URL.",
-          "format": "uri",
-          "default": "http://localhost:4096"
+          "description": "Explicit thrum socket path. Omit to discover via HUM_THRUM_SOCK, HUM_SOCKET, humd's runtime.json, then $XDG_STATE_HOME/hum/thrum.sock."
+        },
+        "namudhaj": {
+          "type": "string",
+          "description": "Model id to name on each prompt. Omit to let the nest decide."
         }
       },
       "additionalProperties": false

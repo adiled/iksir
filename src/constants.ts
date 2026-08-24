@@ -10,12 +10,11 @@ export const PROTOCOL_HTTPS = "https://";
 export const PROTOCOL_SOCKS5 = "socks5://";
 
 /* Default Server URLs */
-export const DEFAULT_OPENCODE_SERVER = "http://localhost:5173";
 export const DEFAULT_NTFY_SERVER = "https://ntfy.sh";
 
-/* Test URLs */
-export const TEST_OPENCODE_URL = "http://localhost:5000";
-export const TEST_OPENCODE_URL_ALT = "http://localhost:6000";
+/* Test values */
+export const TEST_HUM_MODEL = "test-model";
+export const TEST_HUM_MODEL_ALT = "test-model-alt";
 export const TEST_PROXY_URL = "socks5://localhost:1080";
 
 /* API Endpoints */

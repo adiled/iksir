@@ -11,7 +11,7 @@
 import { assertEquals, assertExists, assertStringIncludes } from "@std/assert";
 import {
   withTestRepo,
-  mockOpenCodeClient,
+  mockAmilHum,
   mockTelegramClient,
   mockArraf,
   makeConfig,
@@ -26,14 +26,14 @@ import { jalabaAseilaGhairMujaba } from "../db/db.ts";
 
 function buildContext() {
   const config = makeConfig();
-  const opencode = mockOpenCodeClient();
+  const amil = mockAmilHum();
   const telegram = mockTelegramClient();
   const messenger = new TelegramMessenger(telegram as never);
   const intentResolver = mockArraf();
 
   const sessionManager = new MudirJalasat({
     tasmim: config,
-    opencode: opencode as never,
+    amil: amil as never,
     rasul: messenger,
   });
 
@@ -45,12 +45,12 @@ function buildContext() {
   });
 
   const questionHandler = new Saail({
-    opencode: opencode as never,
+    amil: amil as never,
     rasul: messenger,
     mudirJalasat: sessionManager as never,
   });
 
-  return { config, opencode, telegram, messenger, sessionManager, dispatcher, intentResolver, questionHandler };
+  return { config, amil, telegram, messenger, sessionManager, dispatcher, intentResolver, questionHandler };
 }
 
 
@@ -72,7 +72,7 @@ Deno.test("smoke: /status with no sessions returns empty status", async () => {
 
 Deno.test("smoke: activateForTicketUrl creates session + topic", async () => {
   await withTestRepo(async () => {
-    const { dispatcher, opencode, telegram, sessionManager } = buildContext();
+    const { dispatcher, amil, telegram, sessionManager } = buildContext();
 
     const result = await dispatcher.faaalLiRabitWasfa(
       "TEAM-1000",
@@ -85,8 +85,8 @@ Deno.test("smoke: activateForTicketUrl creates session + topic", async () => {
     assertStringIncludes(result.radd!, "TEAM-1000");
     assertStringIncludes(result.radd!, "Bab Al Shams Portal");
 
-    assertEquals(opencode._calls.khalaqaJalsa.length, 1);
-    assertStringIncludes(opencode._calls.khalaqaJalsa[0].title, "TEAM-1000");
+    assertEquals(amil._calls.khalaqaJalsa.length, 1);
+    assertStringIncludes(amil._calls.khalaqaJalsa[0].title, "TEAM-1000");
 
     /** Session manager should track the session */
     const sessions = sessionManager.wajadaJalasatMurshid();
@@ -98,7 +98,7 @@ Deno.test("smoke: activateForTicketUrl creates session + topic", async () => {
     assertStringIncludes(telegram._calls.createForumTopic[0].name, "TEAM-1000");
 
     /** Init message should have been sent to murshid via sendPromptAsync */
-    const promptCalls = opencode._calls.sendPromptAsync;
+    const promptCalls = amil._calls.sendPromptAsync;
     assertEquals(promptCalls.length >= 1, true);
   });
 });
@@ -106,7 +106,7 @@ Deno.test("smoke: activateForTicketUrl creates session + topic", async () => {
 
 Deno.test("smoke: message routed to active murshid via sendPromptAsync", async () => {
   await withTestRepo(async () => {
-    const { dispatcher, opencode, sessionManager } = buildContext();
+    const { dispatcher, amil, sessionManager } = buildContext();
 
     await dispatcher.faaalLiRabitWasfa(
       "TEAM-2000",
@@ -115,7 +115,7 @@ Deno.test("smoke: message routed to active murshid via sendPromptAsync", async (
     );
 
     /** Clear the init prompt calls so we can track the next one */
-    const initPromptCount = opencode._calls.sendPromptAsync.length;
+    const initPromptCount = amil._calls.sendPromptAsync.length;
 
     /** Step 2: Send a message to the active murshid */
     const session = sessionManager.wajadaJalasatMurshid()[0];
@@ -126,8 +126,8 @@ Deno.test("smoke: message routed to active murshid via sendPromptAsync", async (
 
     assertEquals(success, true);
 
-    assertEquals(opencode._calls.sendPromptAsync.length, initPromptCount + 1);
-    const lastPrompt = opencode._calls.sendPromptAsync[opencode._calls.sendPromptAsync.length - 1];
+    assertEquals(amil._calls.sendPromptAsync.length, initPromptCount + 1);
+    const lastPrompt = amil._calls.sendPromptAsync[amil._calls.sendPromptAsync.length - 1];
     assertEquals(lastPrompt.sessionId, session.id);
     assertStringIncludes(lastPrompt.prompt, "null safety");
   });
@@ -159,7 +159,7 @@ Deno.test("smoke: /status with active session shows identifier", async () => {
 
 Deno.test("smoke: dispatch message uses intent resolver for natural language", async () => {
   await withTestRepo(async () => {
-    const { dispatcher, intentResolver, opencode } = buildContext();
+    const { dispatcher, intentResolver, amil } = buildContext();
 
     intentResolver._nextResult = {
       hala: "muhallala",
@@ -186,14 +186,14 @@ Deno.test("smoke: dispatch message uses intent resolver for natural language", a
     assertEquals(result.tuulija, true);
     assertExists(result.radd);
 
-    assertEquals(opencode._calls.khalaqaJalsa.length, 1);
+    assertEquals(amil._calls.khalaqaJalsa.length, 1);
   });
 });
 
 
 Deno.test("smoke: murshid topic message routes to correct session", async () => {
   await withTestRepo(async () => {
-    const { dispatcher, opencode, sessionManager } = buildContext();
+    const { dispatcher, amil, sessionManager } = buildContext();
 
     await dispatcher.faaalLiRabitWasfa(
       "TEAM-5000",
@@ -214,7 +214,7 @@ Deno.test("smoke: murshid topic message routes to correct session", async () => 
     assertEquals(resolvedMurshid!.huwiyya, "TEAM-5000");
 
     /** Step 4: Route the message */
-    const initPromptCount = opencode._calls.sendPromptAsync.length;
+    const initPromptCount = amil._calls.sendPromptAsync.length;
     const success = await sessionManager.arsalaIlaMurshidById(
       resolvedMurshid!.huwiyya,
       "add the GET /users endpoint",
@@ -223,10 +223,10 @@ Deno.test("smoke: murshid topic message routes to correct session", async () => 
     assertEquals(success, true);
 
     /** Step 5: Verify message reached the correct OpenCode session */
-    const lastPrompt = opencode._calls.sendPromptAsync[opencode._calls.sendPromptAsync.length - 1];
+    const lastPrompt = amil._calls.sendPromptAsync[amil._calls.sendPromptAsync.length - 1];
     assertEquals(lastPrompt.sessionId, session.id);
     assertStringIncludes(lastPrompt.prompt, "GET /users");
-    assertEquals(opencode._calls.sendPromptAsync.length, initPromptCount + 1);
+    assertEquals(amil._calls.sendPromptAsync.length, initPromptCount + 1);
   });
 });
 
@@ -274,7 +274,7 @@ Deno.test("smoke: question event classified and forwarded to murshid topic", asy
 
 Deno.test("smoke: question answered via callback", async () => {
   await withTestRepo(async () => {
-    const { dispatcher, opencode, questionHandler, sessionManager } = buildContext();
+    const { dispatcher, amil, questionHandler, sessionManager } = buildContext();
 
     await dispatcher.faaalLiRabitWasfa(
       "TEAM-7000",
@@ -301,14 +301,14 @@ Deno.test("smoke: question answered via callback", async () => {
     });
 
     /** Clear reply calls from auto-answer attempts */
-    const replyCountBefore = opencode._calls.replyToQuestion.length;
+    const replyCountBefore = amil._calls.replyToQuestion.length;
 
     /** Answer the question */
     const success = await questionHandler.aalajIstijabaZirrSual("q-smoke-002", "Ijtihad");
     assertEquals(success, true);
 
-    assertEquals(opencode._calls.replyToQuestion.length, replyCountBefore + 1);
-    const lastReply = opencode._calls.replyToQuestion[opencode._calls.replyToQuestion.length - 1];
+    assertEquals(amil._calls.replyToQuestion.length, replyCountBefore + 1);
+    const lastReply = amil._calls.replyToQuestion[amil._calls.replyToQuestion.length - 1];
     assertEquals(lastReply.answers[0].selected, ["Ijtihad"]);
 
     assertEquals(questionHandler.wajadaSualMuallaq("q-smoke-002"), undefined);

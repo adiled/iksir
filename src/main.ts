@@ -4,7 +4,7 @@
  * Main entry point for the Iksir daemon.
  * 
  * Architecture:
- * - MudirJalasat: Manages murshid OpenCode sessions
+ * - MudirJalasat: Manages murshid the nest sessions
  * - Munaffidh: Executes PM-MCP tool calls via Linear/GitHub APIs
  * - Rasul: Routes human messages to/from murshid sessions (transport-agnostic)
  * - KeepAlive: Polls for external changes, feeds to murshid
@@ -26,7 +26,9 @@ import {
 } from "./constants.ts";
 
 import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, haddathaHuwiyyatRisalaSual } from "../db/db.ts";
-import { createOpenCodeClient } from "./opencode/client.ts";
+import { createAmilHum } from "./hum/client.ts";
+import { masarThrum } from "./hum/thrum.ts";
+import { MunadiMunMcpServer } from "./mcp/iksir-mcp.ts";
 import { anshaaNtfyAmil } from "./notifications/ntfy.ts";
 import { anshaaTelegramAmil } from "./notifications/telegram.ts";
 import { anshaaTelegramRasul } from "./notifications/messenger.ts";
@@ -43,7 +45,7 @@ import type { TasmimIksir, Rasul, RisalaDakhila, TaaliqMuraja, JalsatMurshid, Ri
 
 interface SiyaqKhadim {
   tasmim: TasmimIksir;
-  opencode: ReturnType<typeof createOpenCodeClient>;
+  amil: ReturnType<typeof createAmilHum>;
   ntfy: ReturnType<typeof anshaaNtfyAmil>;
   rasul: Rasul;
   mutabiWasfa: MutabiWasfa;
@@ -62,13 +64,13 @@ async function tahaqqaqIttisaal(ctx: SiyaqKhadim): Promise<boolean> {
 
   console.log("\nChecking connectivity...\n");
 
-  process.stdout.write("  OpenCode server... ");
-  const opencodeHealthy = await ctx.opencode.isHealthy();
-  if (opencodeHealthy) {
-    const version = await ctx.opencode.getVersion();
-    console.log(`✓ (v${version})`);
+  process.stdout.write("  Nest (thrum)... ");
+  const nestled = await ctx.amil.isHealthy();
+  if (nestled) {
+    const version = await ctx.amil.getVersion();
+    console.log(`✓ (thrum v${version ?? "?"})`);
   } else {
-    console.log("✗ (not reachable)");
+    console.log("✗ (humd not reachable)");
     allGood = false;
   }
 
@@ -135,7 +137,9 @@ async function naffadhFahs(ctx: SiyaqKhadim): Promise<void> {
   console.log(`Config file: ${masarMilafAlTasmim()}`);
 
   console.log("\nConfiguration:");
-  console.log(`  OpenCode server: ${ctx.tasmim.opencode.server}`);
+  console.log(`  Thrum socket: ${masarThrum(ctx.tasmim.hum?.miqbas)}`);
+  console.log(`  Bee hid: ${ctx.amil.huwiyya}`);
+  console.log(`  Model: ${ctx.tasmim.hum?.namudhaj ?? "(the nest decides)"}`);
 
   console.log(`  Quiet hours: ${ctx.tasmim.saatSukun.bidaya} - ${ctx.tasmim.saatSukun.nihaya} (${ctx.tasmim.saatSukun.mintaqaZamaniyya})`);
 
@@ -183,17 +187,17 @@ async function addaIsharat(ctx: SiyaqKhadim): Promise<void> {
 }
 
 /**
- * Subscribe to OpenCode SSE events and route question events to handler.
+ * Subscribe to the nest SSE events and route question events to handler.
  */
 async function ishtarakAhdath(ctx: SiyaqKhadim): Promise<void> {
-  await logger.akhbar("sse", "Starting OpenCode SSE subscription");
+  await logger.akhbar("sse", "Starting the nest SSE subscription");
 
   let backoffMs = INITIAL_BACKOFF_MS;
   
 
   while (!ctx.mutahakkimIlgha.signal.aborted) {
     try {
-      for await (const event of ctx.opencode.subscribeToEvents(ctx.mutahakkimIlgha.signal)) {
+      for await (const event of ctx.amil.subscribeToEvents(ctx.mutahakkimIlgha.signal)) {
         backoffMs = INITIAL_BACKOFF_MS;
 
         if (event.type === "question.asked") {
@@ -225,22 +229,26 @@ async function ishtarakAhdath(ctx: SiyaqKhadim): Promise<void> {
     }
   }
 
-  await logger.akhbar("sse", "OpenCode SSE subscription stopped");
+  await logger.akhbar("sse", "the nest SSE subscription stopped");
 }
 
 async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
   await logger.akhbar("main", `Iksir v${VERSION} starting`);
   await logger.akhbar("main", `Config loaded from ${masarMilafAlTasmim()}`);
 
-  /** Check OpenCode connectivity */
-  const healthy = await ctx.opencode.isHealthy();
-  if (!healthy) {
-    await logger.sajjalKhata("main", "OpenCode server is not reachable, aborting");
+  /** Nestle at the humd. Without this the hello never lands and no ada routes. */
+  try {
+    await ctx.amil.ittasil();
+  } catch (error) {
+    await logger.sajjalKhata("main", "No humd at the thrum socket, aborting", {
+      miqbas: masarThrum(ctx.tasmim.hum?.miqbas),
+      error: String(error),
+    });
     Deno.exit(1);
   }
 
-  const version = await ctx.opencode.getVersion();
-  await logger.akhbar("main", `Connected to OpenCode v${version}`);
+  const version = await ctx.amil.getVersion();
+  await logger.akhbar("main", `Nestled as ${ctx.amil.huwiyya} (thrum v${version ?? "?"})`);
 
   await addaIsharat(ctx);
 
@@ -796,8 +804,35 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
 
   await baddaaQaidatBayanat();
 
-  /** Initialize clients */
-  const opencode = createOpenCodeClient(config);
+  /**
+   * Initialize clients. The amil carries the mun_* adawat into its hello —
+   * humd routes a nida by name to whichever hive's manifest declares it,
+   * so an unannounced ada is an unreachable one.
+   */
+  const munMcp = new MunadiMunMcpServer();
+  const amil = createAmilHum(config, munMcp.sijill.adawat());
+
+  /**
+   * A nida arrives from the nest. The ada bodies are unchanged — they still
+   * inscribe their hadath into the sijill, and Munaffidh still drains that
+   * table on its heartbeat. Only the carriage changed: no MCP server, no
+   * stdio, no polling for the call itself. The journal stays the record;
+   * the thrum is merely the road.
+   */
+  amil.alaNida(async (nida) => {
+    const radd = await munMcp.aalijTalab({
+      jsonrpc: "2.0",
+      id: nida.callId,
+      method: "tools/call",
+      params: { name: nida.name, arguments: nida.args },
+    });
+
+    const natija = radd.error
+      ? `Error: ${radd.error.message}`
+      : (radd.result as { content?: Array<{ text?: string }> })?.content?.[0]?.text ?? "";
+
+    amil.raddNida(nida.sid, nida.callId, natija);
+  });
   const ntfy = anshaaNtfyAmil(config);
   const telegram = anshaaTelegramAmil(config);
   const messenger = anshaaTelegramRasul(telegram);
@@ -806,7 +841,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   const abortController = new AbortController();
 
   /** Initialize session manager and istarjaa persisted state */
-  const sessionManager = istadaaKatib({ tasmim: config, opencode, rasul: messenger });
+  const sessionManager = istadaaKatib({ tasmim: config, amil, rasul: messenger });
   await sessionManager.hammalaHala();
 
   /** Initialize IPC processor and istarjaa persisted state */
@@ -817,12 +852,12 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     rasul: messenger,
     ntfy,
     mudirJalasat: sessionManager,
-    opencode,
+    amil,
   });
   await ipcProcessor.hammalaHala();
 
   /** Initialize intent resolver */
-  const intentResolver = istadaaArraf({ mutabiWasfa: issueTracker, opencode });
+  const intentResolver = istadaaArraf({ mutabiWasfa: issueTracker, amil });
 
   /** Initialize dispatcher */
   const dispatcher = istadaaMunadi({
@@ -838,7 +873,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
 
   /** Initialize question handler (for question tool events from murshids) */
   const questionHandler = istadaaSaail({
-    opencode,
+    amil,
     rasul: messenger,
     mudirJalasat: sessionManager,
   });
@@ -859,7 +894,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
 
   /** Initialize health monitor (session stuck detection + auto-compaction) */
   const healthMonitor = istadaaRaqib({
-    opencode,
+    amil,
     rasul: messenger,
     mudirJalasat: sessionManager,
   });
@@ -867,7 +902,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   /** Create context (partial, keepAlive added after) */
   const ctx: SiyaqKhadim = {
     tasmim: config,
-    opencode,
+    amil,
     ntfy,
     rasul: messenger,
     mutabiWasfa: issueTracker,

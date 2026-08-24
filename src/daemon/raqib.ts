@@ -23,7 +23,7 @@
  */
 
 import { logger } from "../logging/logger.ts";
-import type { OpenCodeClient } from "../opencode/client.ts";
+import type { AmilHum } from "../hum/client.ts";
 import type { RasulKharij } from "../types.ts";
 import type { MudirJalasat } from "./katib.ts";
 
@@ -42,7 +42,7 @@ const FATRA_NAQRA_MS = 60 * 1000;
 
 
 interface RaqibDeps {
-  opencode: OpenCodeClient;
+  amil: AmilHum;
   rasul: RasulKharij;
   mudirJalasat: MudirJalasat;
 }
@@ -59,7 +59,7 @@ interface HalatSihhJalsa {
 
 
 export class Raqib {
-  #opencode: OpenCodeClient;
+  #amil: AmilHum;
   #messenger: RasulKharij;
   #sessionManager: MudirJalasat;
 
@@ -67,7 +67,7 @@ export class Raqib {
   #muwaqqitNaqra: ReturnType<typeof setInterval> | null = null;
 
   constructor(deps: RaqibDeps) {
-    this.#opencode = deps.opencode;
+    this.#amil = deps.amil;
     this.#messenger = deps.rasul;
     this.#sessionManager = deps.mudirJalasat;
   }
@@ -114,7 +114,7 @@ export class Raqib {
   async naqra(): Promise<void> {
     try {
       /** Survey all vessels */
-      const statuses = await this.#opencode.jalabJalsaStatuses();
+      const statuses = await this.#amil.jalabJalsaStatuses();
 
       /** Examine each murshid vessel */
       const murshidun = this.#sessionManager.wajadaJalasatMurshid();
@@ -158,7 +158,7 @@ export class Raqib {
        * never completed, and has been silent longer than HADD_ALIQ — 
        * the Murshid is 'aliq. The thread must be cut.
        */
-      const lastMsg = await this.#opencode.getLastAssistantMessage(sessionId);
+      const lastMsg = await this.#amil.getLastAssistantMessage(sessionId);
 
       const isStuck =
         lastMsg &&
@@ -197,7 +197,7 @@ export class Raqib {
           stuckMinutes,
         });
 
-        const aborted = await this.#opencode.abortSession(sessionId);
+        const aborted = await this.#amil.abortSession(sessionId);
 
         if (aborted) {
           state.ulghiya = true;
@@ -206,7 +206,7 @@ export class Raqib {
             `Auto-aborted stuck session **${identifier}** (stuck ${stuckMinutes}m).`
           );
 
-          await this.#opencode.sendPromptAsync(sessionId,
+          await this.#amil.sendPromptAsync(sessionId,
             `SYSTEM: Your previous operation was auto-aborted because it appeared stuck (${stuckMinutes} minutes with no output). ` +
             `This typically happens when a bash command hangs. ` +
             `Please avoid long-running bash commands. If you need to run tests or builds, use timeouts.`
@@ -238,7 +238,7 @@ export class Raqib {
     }
 
     /** Count the risālāt within */
-    const counts = await this.#opencode.jalabRisalaCount(sessionId);
+    const counts = await this.#amil.jalabRisalaCount(sessionId);
     if (!counts) return;
 
     if (counts.total >= HADD_DAMJ) {
@@ -247,7 +247,7 @@ export class Raqib {
         threshold: HADD_DAMJ,
       });
 
-      const success = await this.#opencode.summarizeSession(sessionId);
+      const success = await this.#amil.summarizeSession(sessionId);
 
       if (success) {
         state.akhirDamjFi = now;
