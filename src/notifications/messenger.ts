@@ -283,7 +283,7 @@ export class TelegramMessenger implements Rasul {
         } else if (topicId === 1) {
           /** General topic — not linked */
           await this.#telegram.arsalaRisala(
-            "Use the **Dispatch** topic to send Linear URLs and spawn murshids.",
+            "Use the **Dispatch** topic to name a waṣfa and light a murshid.",
             { topicId: 1, chatId: this.#telegram.getGroupId(), parseMode: "Markdown" },
           );
         } else {

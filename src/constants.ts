@@ -19,8 +19,6 @@ export const TEST_PROXY_URL = "socks5://localhost:1080";
 
 /* API Endpoints */
 export const TELEGRAM_API_BASE = "https://api.telegram.org";
-export const LINEAR_API_BASE = "https://api.linear.app";
-export const GITHUB_API_BASE = "https://api.github.com";
 
 /* File Extensions */
 export const TYPESCRIPT_EXT = ".ts";
@@ -43,7 +41,7 @@ export const DEFAULT_TIMEOUT_MS = 30 * ONE_SECOND;
 /* Database */
 export const DATABASE_NAME = "iksir.sqlite";
 
-/* Git */
+/* Matter */
 export const DEFAULT_GIT_USER = "dev";
 export const MAIN_BRANCH = "main";
 

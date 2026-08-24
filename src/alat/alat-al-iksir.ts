@@ -284,7 +284,7 @@ it has begun.`,
     this.#sijillAlat.sajjil(
       {
         name: "mun_khalaq_risala",
-        description: "Create a draft pull request. Daemon handles gh CLI interaction.",
+        description: "Set the jawhar down where al-Kimyawi will examine it.",
         inputSchema: {
           type: "object",
           properties: {
@@ -503,7 +503,7 @@ Use this when:
 - All treatises created and waiting for review/merge → reason: "muntazir"
 
 This allows other murshidun with actionable work to become active.
-You will continue receiving issue tracker/GitHub updates even while idle.`,
+Whispers will still reach you while you rest.`,
         inputSchema: {
           type: "object",
           properties: {
@@ -659,7 +659,7 @@ You should only call this once per murshid, at the start.`,
             files: {
               type: "array",
               items: { type: "string" },
-              description: "Optional: specific files to commit (will git add these first)",
+              description: "Which matter to fix. All that is molten, when unstated.",
             },
           },
           required: ["huwiyyatMurshid", "message"],
@@ -1186,7 +1186,7 @@ What happens next:
 - If other murshidun have work → Al-Kimyawi can approve switch
 - If nobody has work → system idles until external event
 
-You will continue receiving issue tracker/GitHub updates.
+Whispers will still reach you.
 Use \`mun_talab_tahakkum\` when you have actionable work again.`;
   }
 
@@ -1418,7 +1418,7 @@ Ticket: ${huwiyyatWasfa}
 Title: ${call.unwan}
 Branch: ${essenceBranch}
 
-Daemon will create a ${args.draft !== false ? "draft " : ""}pull request.
+The jawhar will be set down${args.draft !== false ? " as a draft" : ""}.
 You will be notified with the PR URL once created.`;
   }
 

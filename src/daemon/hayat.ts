@@ -216,8 +216,8 @@ export class DawratHayat {
         path: t.mawdi?.split(":")[0],
         line: t.mawdi?.includes(":") ? Number(t.mawdi.split(":")[1]) : undefined,
         createdAt: new Date(t.qila_fi),
-        isAlKimyawi: t.qail === this.#tasmim.github.ismKimyawi,
-        assessment: mayyazaTaaliq(t.nass, t.qail === this.#tasmim.github.ismKimyawi),
+        isAlKimyawi: t.qail === this.#tasmim.kimyawi.ism,
+        assessment: mayyazaTaaliq(t.nass, t.qail === this.#tasmim.kimyawi.ism),
       }));
       if (newComments.length > 0) {
         await this.aalajTaaliqatJadida(session, raqamRisala, newComments);
@@ -282,7 +282,7 @@ export class DawratHayat {
     raqamRisala: number,
     comments: TaaliqMuraja[]
   ): Promise<void> {
-    const ismKimyawi = this.#tasmim.github.ismKimyawi;
+    const ismKimyawi = this.#tasmim.kimyawi.ism;
     const awamirAlKimyawi: TaaliqMuraja[] = [];
     const taaliqatUkhra: TaaliqMuraja[] = [];
 

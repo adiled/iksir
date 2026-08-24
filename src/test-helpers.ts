@@ -470,7 +470,7 @@ import type { TasmimIksir } from "./types.ts";
 
 /**
  * Create a minimal TasmimIksir for testing.
- * No real Telegram/Linear/the nest connections.
+ * Nothing outward is touched.
  */
 export function makeConfig(overrides?: Partial<TasmimIksir>): TasmimIksir {
   return {

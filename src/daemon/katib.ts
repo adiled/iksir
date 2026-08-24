@@ -132,15 +132,15 @@ export class MudirJalasat {
     await logger.akhbar("session-manager", `Creating new murshid session for ${identifier}`);
 
     const sessionTitle = `[Murshid] ${identifier}: ${title}`;
-    const openCodeSession = await this.#amil.khalaqaJalsa(identifier, sessionTitle);
+    const jalsa = await this.#amil.khalaqaJalsa(identifier, sessionTitle);
 
-    if (!openCodeSession) {
+    if (!jalsa) {
       await logger.sajjalKhata("session-manager", `Failed to create murshid session for ${identifier}`);
       return null;
     }
 
     const session: JalsatMurshid = {
-      id: openCodeSession.id,
+      id: jalsa.id,
       huwiyya: identifier,
       unwan: title,
       naw: type,

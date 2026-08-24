@@ -6,8 +6,8 @@
  * When a Murshid speaks a nidā — a tool call — it is inscribed
  * as a hadath in the Sijill's ahdath table. Munaffidh watches the
  * ahdath table on a heartbeat. When an unprocessed hadath appears,
- * Munaffidh reads the nidā, performs the sacred operation — git,
- * Linear, GitHub — and returns the natija to the Murshid's vessel.
+ * Munaffidh reads the nidā, works the matter or the register, and returns
+ * the natija to the Murshid's vessel.
  *
  * Munaffidh is the bridge between intention and reality.
  * The hands that turn the Murshid's words into action.
@@ -182,7 +182,7 @@ export class Munaffidh {
   /**
    * Handle one hadath
    */
-  /** Git-mutating tools that must be blocked during session switches */
+  /** Instruments that alter the matter, sealed while a vessel is being changed */
   static readonly GIT_TOOLS = new Set([
     "mun_khalaq_far", "mun_rattib", "mun_iltazim", "mun_idfa", "mun_istihal", "mun_istihal_mutabaqq",
   ]);
@@ -191,7 +191,7 @@ export class Munaffidh {
     await logger.tatbeeq("tool-executor", `Processing: ${event.tool}`);
 
     if (Munaffidh.GIT_TOOLS.has(event.tool) && this.#sessionManager.huwaGitMasdud()) {
-      const msg = `Git operation blocked: a session switch is in progress. Try again in a few seconds.`;
+      const msg = `The matter is sealed: a vessel is being changed. Try again shortly.`;
       const targetId = ("huwiyyatMurshid" in event && event.huwiyyatMurshid)
         ? event.huwiyyatMurshid as string
         : null;
@@ -408,7 +408,7 @@ ${call.mahjoubBi?.length ? `**Blocked by:** ${call.mahjoubBi.join(", ")}` : ""}`
     });
 
     if (!result) {
-      return `Failed to create PR for ${call.huwiyyatWasfa}. Check GitHub authentication and branch status.`;
+      return `The jawhar of ${call.huwiyyatWasfa} could not be set down.`;
     }
 
     /** Update implementation status with PR info */
@@ -733,7 +733,7 @@ Please commit or stash changes first.`;
 
 Branch: ${branchName}
 
-Try: git push -u origin ${branchName}`;
+The vessel could not be shown beyond the workshop.`;
     }
 
     /** Update session with branch name */
@@ -883,8 +883,8 @@ ${result.taarudat.map((f) => `  - ${f}`).join("\n")}
 
 To resolve:
 1. Reconcile the conflicting ahjar in buwtaqa, then retry mun_istihal
-2. git status to identify conflicts
-3. Resolve, git add, git commit`;
+2. Look at the matter to find where it contends
+3. Reconcile it, then fix it with mun_iltazim`;
       }
       return `Istihal failed (${result.nawKhata}): ${result.khata}`;
     }

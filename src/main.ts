@@ -5,7 +5,7 @@
  * 
  * Architecture:
  * - MudirJalasat: Manages murshid jalasat at the nest
- * - Munaffidh: Executes mun_* instruments via Linear/GitHub APIs
+ * - Munaffidh: Works the mun_* instruments upon the matter and the register
  * - Rasul: Routes human messages to/from murshid sessions (transport-agnostic)
  * - KeepAlive: Polls for external changes, feeds to murshid
  *
@@ -38,7 +38,6 @@ import { AMAL_FASL, AMAL_HAYULA, AMAL_SAFA, istadaa } from "./hayula/istadaa.ts"
 import type { Hayula } from "./hayula/hayula.ts";
 import type { Fasl } from "./hayula/fasl.ts";
 import type { Safa } from "./hayula/safa.ts";
-import { createGitHubClient } from "./github/gh.ts";
 import { istadaaKatib } from "./daemon/katib.ts";
 import { istadaaMunaffidh } from "./daemon/munaffidh.ts";
 import { istadaaMunadi } from "./daemon/munadi.ts";
@@ -84,7 +83,6 @@ interface SiyaqKhadim {
   ntfy: ReturnType<typeof anshaaNtfyAmil>;
   rasul: Rasul;
   wasfat: SijillWasfat;
-  github: ReturnType<typeof createGitHubClient>;
   hayula: Hayula;
   mudirJalasat: ReturnType<typeof istadaaKatib>;
   munaffidh: ReturnType<typeof istadaaMunaffidh>;
@@ -141,15 +139,9 @@ async function tahaqqaqIttisaal(ctx: SiyaqKhadim): Promise<boolean> {
     console.log("  ntfy server... (disabled)");
   }
 
-  process.stdout.write("  GitHub CLI... ");
-  const ghAuthenticated = await ctx.github.isAuthenticated();
-  if (ghAuthenticated) {
-    const user = await ctx.github.getCurrentUser();
-    console.log(`✓ (${user ?? "unknown"})`);
-  } else {
-    console.log("✗ (run: gh auth login)");
-    allGood = false;
-  }
+  process.stdout.write("  Matter... ");
+  const waqif = await ctx.hayula.waqif();
+  console.log(waqif !== null ? `✓ (${ctx.hayula.naw}, in ${waqif})` : `✓ (${ctx.hayula.naw})`);
 
   console.log("");
   return allGood;
@@ -584,11 +576,11 @@ Re-pushing will fix CI (now that base is on main).`;
 **Branch:** ${pr.far}
 
 This PR has been merged. You can now:
-1. Update ${pr.huwiyyatWasfa} status in Linear to "Done"
+1. Set ${pr.huwiyyatWasfa} to its finished condition with mun_jaddid_wasfa
 2. Check \`blocked_by\` relations to see which tickets are now unblocked for the next PR
 3. Use \`mun_istihal\` to transmute the next jawhar if appropriate${stackedNote}
 
-Query Linear for the ticket's blocking relations to determine next slice.`);
+Read its bindings with mun_iqra_wasfa to find what was waiting on it.`);
 
   if (ctx.rasul.mumakkan()) {
     const stackedMsg = stackedPRs.length > 0
@@ -877,7 +869,6 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   /** The formulae live in the sijill. */
   const wasfat = anshaaSijillWasfat(config.wasfat?.sabiqa);
 
-  const github = createGitHubClient(config);
   const fasl = config.madda.fasl
     ? await istadaa<Fasl>(config.madda.fasl, siyaqMadda, AMAL_FASL)
     : faslSakit();
@@ -951,7 +942,6 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     amil,
     ntfy,
     rasul: messenger,
-    github,
     mudirJalasat: sessionManager,
     munaffidh: ipcProcessor,
     munadi: dispatcher,

@@ -7,7 +7,6 @@
 
 import { join } from "jsr:@std/path";
 import { exists } from "jsr:@std/fs";
-import { execCommand } from "./utils/exec.ts";
 import { masarThrum } from "./hum/thrum.ts";
 
 
@@ -107,13 +106,10 @@ interface InitState {
   telegramBotToken: string;
   telegramChatId: string;
   telegramBotName: string;
-  githubOwner: string;
-  githubRepo: string;
-  githubUsername: string;
+  ismKimyawi: string;
   namudhaj: string;
   skippedTelegram: boolean;
   sabiqaWasfa: string;
-  skippedGithub: boolean;
 }
 
 const TOTAL_STEPS = 5;
@@ -202,50 +198,14 @@ async function stepWasfat(state: InitState): Promise<void> {
   ok(`Waṣfāt will be named ${bold(`${state.sabiqaWasfa}-1`)}, ${state.sabiqaWasfa}-2, …`);
 }
 
-async function stepGithub(state: InitState): Promise<void> {
-  heading(3, TOTAL_STEPS, "GitHub");
+async function stepKimyawi(state: InitState): Promise<void> {
+  heading(3, TOTAL_STEPS, "al-Kimyawī");
   console.log("");
-  console.log(`  Iksir creates PRs and monitors your repository.`);
+  console.log(`  So that your own words are known as yours.`);
   console.log("");
 
-  if (!await confirm("Set up GitHub?")) {
-    state.skippedGithub = true;
-    warn("Skipped. You can configure GitHub later in iksir.json");
-    return;
-  }
-
-  /** Check gh CLI */
-  const ghCheck = await execCommand("gh", ["auth", "status"]);
-  if (!ghCheck.success) {
-    warn("gh CLI not authenticated.");
-    console.log("");
-    console.log(`  ${dim("Run:")} ${bold("gh auth login")}`);
-    console.log("");
-    pause("Press Enter after authenticating...");
-  } else {
-    ok("gh CLI authenticated");
-  }
-
-  console.log("");
-  const ownerRepo = await prompt("Repository (owner/repo)");
-  if (ownerRepo.includes("/")) {
-    const [owner, repo] = ownerRepo.split("/", 2);
-    state.githubOwner = owner;
-    state.githubRepo = repo;
-
-    /** Validate repo access */
-    const check = await execCommand("gh", ["repo", "view", ownerRepo, "--json", "name"]);
-    if (check.success) {
-      ok(`Repository accessible: ${bold(ownerRepo)}`);
-    } else {
-      warn("Could not verify repository access. Check permissions later.");
-    }
-  }
-
-  state.githubUsername = await prompt("Your GitHub username");
-  if (state.githubUsername) {
-    ok(`Username: ${bold(state.githubUsername)}`);
-  }
+  state.ismKimyawi = await prompt("The name you are known by");
+  if (state.ismKimyawi) ok(`You are ${bold(state.ismKimyawi)}`);
 }
 
 async function stepAgent(state: InitState): Promise<void> {
@@ -300,12 +260,8 @@ async function stepFinalize(state: InitState): Promise<void> {
   if (state.sabiqaWasfa && state.sabiqaWasfa !== "W") {
     config.wasfat = { sabiqa: state.sabiqaWasfa };
   }
-  if (state.githubOwner) {
-    config.github = {
-      owner: state.githubOwner,
-      repo: state.githubRepo,
-      ismKimyawi: state.githubUsername,
-    };
+  if (state.ismKimyawi) {
+    config.kimyawi = { ism: state.ismKimyawi };
   }
   if (state.namudhaj) {
     config.hum = { namudhaj: state.namudhaj };
@@ -321,7 +277,7 @@ async function stepFinalize(state: InitState): Promise<void> {
 
   if (await exists(envPath)) {
     const existing = await Deno.readTextFile(envPath);
-    if (existing.includes("TELEGRAM_BOT_TOKEN") || existing.includes("LINEAR_API_KEY")) {
+    if (existing.includes("TELEGRAM_BOT_TOKEN")) {
       if (!await confirm("  .env already has credentials. Overwrite?", false)) {
         warn(".env preserved. New values not written.");
         console.log(`  ${dim("You can edit manually:")} ${envPath}`);
@@ -355,10 +311,8 @@ async function stepFinalize(state: InitState): Promise<void> {
   if (state.sabiqaWasfa) {
     ok(`Waṣfāt: named ${state.sabiqaWasfa}-1, ${state.sabiqaWasfa}-2, …`);
   }
-  if (state.githubOwner) {
-    ok(`GitHub: ${state.githubOwner}/${state.githubRepo}`);
-  } else if (state.skippedGithub) {
-    warn("GitHub: skipped");
+  if (state.ismKimyawi) {
+    ok(`al-Kimyawī: ${state.ismKimyawi}`);
   }
   ok(`Nest: ${masarThrum()}${state.namudhaj ? ` (model ${state.namudhaj})` : ""}`);
 
@@ -376,18 +330,15 @@ export async function runInit(): Promise<void> {
     telegramBotToken: "",
     telegramChatId: "",
     telegramBotName: "",
-    githubOwner: "",
-    githubRepo: "",
-    githubUsername: "",
+    ismKimyawi: "",
     namudhaj: "",
     skippedTelegram: false,
     sabiqaWasfa: "W",
-    skippedGithub: false,
   };
 
   await stepTelegram(state);
   await stepWasfat(state);
-  await stepGithub(state);
+  await stepKimyawi(state);
   await stepAgent(state);
   await stepFinalize(state);
 }

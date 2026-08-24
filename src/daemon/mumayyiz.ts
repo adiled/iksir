@@ -297,8 +297,7 @@ export function _masahaDhakira(): void {
  * Tamyīz of a word said about a decanted jawhar.
  *
  * Whether a thing said is an instruction is Iksīr's judgement, not the
- * forge's. It stayed inside the GitHub adapter for a while, which meant a
- * contrivance was deciding what al-Kimyawi had commanded.
+ * forge's, and it is made here.
  *
  * Deterministic, and deliberately so — no model is spent to learn that a
  * sentence begins with "fix".

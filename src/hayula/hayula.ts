@@ -55,7 +55,7 @@ export interface NatijaIstihala {
 }
 
 export interface Hayula {
-  /** Which kind of matter this is — "git", "nass", whatever comes. */
+  /** Which kind of matter this is. */
   readonly naw: string;
 
   /** Enter a vessel, creating it upon the given foundation if absent. */

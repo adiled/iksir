@@ -80,11 +80,7 @@ function tasmimAsasi(): TasmimIksir {
       },
     },
     wasfat: {},
-    github: {
-      sahib: "",
-      makhzan: "",
-      ismKimyawi: "",
-    },
+    kimyawi: { ism: "" },
     madda: { hayula: "" },
     hum: {},
     hafazat: {},
@@ -135,15 +131,6 @@ function tahaqqaqConfig(config: TasmimIksir): string[] {
   if (config.isharat.ntfy.mufattah) {
     if (!config.isharat.ntfy.topic) {
       errors.push("ntfy.topic is required when ntfy is enabled");
-    }
-  }
-
-  if (config.github.sahib) {
-    if (!config.github.makhzan) {
-      errors.push("github.repo is required when github.owner is set");
-    }
-    if (!config.github.ismKimyawi) {
-      errors.push("github.ismKimyawi is required when github.owner is set");
     }
   }
 

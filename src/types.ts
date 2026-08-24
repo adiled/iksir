@@ -10,7 +10,7 @@ export interface TasmimIksir {
   saatSukun: TasmimSaatSukun;
   isharat: TasmimIsharat;
   wasfat: TasmimWasfat;
-  github: TasmimGitHub;
+  kimyawi: TasmimKimyawi;
   madda: TasmimMadda;
   hum: TasmimHum;
   hafazat: TasmimHaththat;
@@ -65,10 +65,9 @@ export interface TasmimWasfat {
 
 export type NawKiyan = "wasfa" | "malhamat" | "majhul";
 
-export interface TasmimGitHub {
-  sahib: string;
-  makhzan: string;
-  ismKimyawi: string;
+/** Who al-Kimyawī is, so their own words are known as theirs. */
+export interface TasmimKimyawi {
+  ism: string;
 }
 
 /**
@@ -177,7 +176,7 @@ export interface DecisionMudkhalSijill extends MudkhalSijill {
 }
 
 export interface MudkhalTaghyirKhariji extends MudkhalSijill {
-  source: "linear" | "github" | "figma" | "notion";
+  source: string;
   entityType: string;
   entityId: string;
   author: string;
@@ -692,7 +691,7 @@ export type NawMurshid = "epic" | "chore" | "sandbox";
  */
 export interface JalsatMurshid {
   id: string;
-  /** Linear ticket identifier (e.g., TEAM-200, TEAM-300) */
+  /** The waṣfa this belongs to */
   huwiyya: string;
   unwan: string;
   /** Epic = multi-ticket work, Chore = standalone task */
