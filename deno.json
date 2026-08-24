@@ -12,9 +12,10 @@
     "check": "deno run --allow-all --env=.env src/cli.ts check",
     "sync": "deno run --allow-all --env=.env src/cli.ts sync",
     "test": "deno test --allow-all",
-    "typecheck": "deno check src/main.ts src/alat/alat-al-iksir.ts src/cli.ts",
+    "typecheck": "deno check src/main.ts src/alat/alat-al-iksir.ts src/cli.ts hives/wasfa/main.ts",
     "fmt": "deno fmt",
-    "lint": "deno lint"
+    "lint": "deno lint",
+    "wasfa": "deno run --allow-all --env=.env hives/wasfa/main.ts"
   },
   "imports": {
     "@std/": "jsr:@std/",
@@ -38,8 +39,14 @@
   },
   "lint": {
     "rules": {
-      "tags": ["recommended"],
-      "include": ["no-unused-vars", "no-explicit-any", "prefer-const"]
+      "tags": [
+        "recommended"
+      ],
+      "include": [
+        "no-unused-vars",
+        "no-explicit-any",
+        "prefer-const"
+      ]
     }
   }
 }

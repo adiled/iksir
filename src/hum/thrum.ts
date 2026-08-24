@@ -29,8 +29,29 @@ import { huwiyyatNahla } from "./identity.ts";
 /** The protoVersion Iksir targets. Mismatch warns in humd's log, never fatal. */
 export const NUSKHAT_THRUM = "0.7.0";
 
-/** The hive name Iksir registers under. */
+/** The hive the entry bee registers under. Organs name their own. */
 export const ISM_KHALIYYA = "iksir";
+
+/** The chis any Iksir bee speaks. Organs keep a lean subset. */
+const CHIS_MADKHAL = [
+  "hello",
+  "prompt",
+  "cancel",
+  "cleanup",
+  "curate",
+  "release-permit",
+  "tool-call",
+  "tool-result",
+  "chunk",
+  "finish",
+  "error",
+  "session-ready",
+  "permission-ask",
+  "pulse",
+  "echo",
+];
+
+const CHIS_UDW = ["hello", "tool-call", "tool-result", "error", "echo"];
 
 export type Nagham = Record<string, unknown>;
 export type MustamiNagham = (nagham: Nagham) => void;
@@ -45,8 +66,25 @@ export interface TaarifAda {
 export interface TasmimThrum {
   /** Explicit socket path. Overrides all discovery. */
   masarMiqbas?: string;
-  /** The mun_* adawat to advertise in the hello. */
+  /** The adawat to advertise in the hello. */
   adawat?: TaarifAda[];
+  /**
+   * The hive this bee registers under. Defaults to the entry.
+   *
+   * An udw (organ) names its own hive and mints its own hid from its own
+   * seed — that is the whole point of splitting one out. Two bees sharing
+   * a hid would be one bee to humd, and the second hello would evict the
+   * first's manifest.
+   */
+  khaliyya?: string;
+  /** Capability tags. The entry provides "session"; organs usually nothing. */
+  yuqaddim?: string[];
+  /**
+   * Does this bee originate prompts? The entry does; an organ only answers
+   * nida. It narrows the advertised chis, nothing more — humd does not
+   * enforce it.
+   */
+  madkhal?: boolean;
 }
 
 /** humd's rendezvous file — written on bind, naming the socket it actually took. */
@@ -103,6 +141,9 @@ export class Thrum {
   #masar: string;
   #adawat: TaarifAda[];
   #hid: string;
+  #khaliyya: string;
+  #yuqaddim: string[];
+  #madkhal: boolean;
 
   #ittisal: Deno.UnixConn | null = null;
   #mawsul = false;
@@ -118,7 +159,10 @@ export class Thrum {
   constructor(tasmim: TasmimThrum = {}) {
     this.#masar = masarThrum(tasmim.masarMiqbas);
     this.#adawat = tasmim.adawat ?? [];
-    this.#hid = huwiyyatNahla(ISM_KHALIYYA, "fbee");
+    this.#khaliyya = tasmim.khaliyya ?? ISM_KHALIYYA;
+    this.#madkhal = tasmim.madkhal ?? true;
+    this.#yuqaddim = tasmim.yuqaddim ?? (this.#madkhal ? ["session"] : []);
+    this.#hid = huwiyyatNahla(this.#khaliyya, "fbee");
   }
 
   get mawsul(): boolean {
@@ -173,31 +217,15 @@ export class Thrum {
     return {
       chi: "hello",
       rid: ridJadid(),
-      from: ISM_KHALIYYA,
+      from: this.#khaliyya,
       hid: this.#hid,
       bee: ["forager"],
-      hive: ISM_KHALIYYA,
+      hive: this.#khaliyya,
       version: "0.1.0",
       protoVersion: NUSKHAT_THRUM,
-      provides: ["session"],
+      ...(this.#yuqaddim.length > 0 ? { provides: this.#yuqaddim } : {}),
       ...(this.#adawat.length > 0 ? { tools: this.#adawat } : {}),
-      chis: [
-        "hello",
-        "prompt",
-        "cancel",
-        "cleanup",
-        "curate",
-        "release-permit",
-        "tool-result",
-        "chunk",
-        "finish",
-        "error",
-        "session-ready",
-        "tool-call",
-        "permission-ask",
-        "pulse",
-        "echo",
-      ],
+      chis: this.#madkhal ? CHIS_MADKHAL : CHIS_UDW,
       source: "https://github.com/adiled/iksir",
     };
   }

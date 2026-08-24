@@ -32,7 +32,7 @@ import { AlatAlIksir } from "./alat/alat-al-iksir.ts";
 import { anshaaNtfyAmil } from "./notifications/ntfy.ts";
 import { anshaaTelegramAmil } from "./notifications/telegram.ts";
 import { anshaaTelegramRasul } from "./notifications/messenger.ts";
-import { createLinearClient } from "./linear/client.ts";
+import { MutabiWasfaBaid } from "./hum/mutabi-baid.ts";
 import { createGitHubClient } from "./github/gh.ts";
 import { istadaaKatib } from "./daemon/katib.ts";
 import { istadaaMunaffidh } from "./daemon/munaffidh.ts";
@@ -826,7 +826,16 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   const ntfy = anshaaNtfyAmil(config);
   const telegram = anshaaTelegramAmil(config);
   const messenger = anshaaTelegramRasul(telegram);
-  const issueTracker = createLinearClient(config);
+  /**
+   * The tracker is reached, not held. Its key lives in the wasfa organ,
+   * a bee of its own; the entry only knows how to ask. Arraf and Munaffidh
+   * see the same interface they always did.
+   */
+  const issueTracker = new MutabiWasfaBaid(
+    amil,
+    config.mutabiWasfa?.muqaddim,
+    config.mutabiWasfa?.namatWasfa,
+  );
   const github = createGitHubClient(config);
   const abortController = new AbortController();
 

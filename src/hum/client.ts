@@ -27,10 +27,14 @@
 import { join as joinMasar } from "jsr:@std/path";
 import { logger } from "../logging/logger.ts";
 import { type Nagham, nuskhatHumd, ridJadid, type TaarifAda, Thrum } from "./thrum.ts";
+import { ADAWAT_MAHJUBA } from "./hudud.ts";
 import type { HadathHum, JalsatHum, TasmimIksir } from "../types.ts";
 
 /** How long a blocking prompt waits before it is abandoned. */
 const MUHLAT_IFTIRADIYYA_MS = 30_000;
+
+/** How long a nida to another bee waits. Organs answer fast or not at all. */
+const MUHLAT_NIDA_MS = 15_000;
 
 /** What Iksir remembers of a jalsa. Nothing else remembers it. */
 interface HalatJalsa {
@@ -240,6 +244,9 @@ export class AmilHum {
       content: prompt,
       ...(this.#namudhaj ? { modelId: this.#namudhaj } : {}),
       ...(system ? { systemPrompt: system } : {}),
+      // The ḥadd. humd hands every forager's adawat to the worker, organs
+      // included — this names the ones no murshid may hold.
+      disallowedTools: ADAWAT_MAHJUBA,
       // The worker rehydrates its prior context from this handle. Without
       // it every turn starts cold and the murshid forgets its own work.
       ...(h?.nestId ? { resume: h.nestId } : {}),
@@ -441,6 +448,61 @@ export class AmilHum {
   /** Return a natija, un-parking the cell that waits on it. */
   raddNida(sid: string, callId: string, natija: unknown): void {
     this.#thrum.ursil({ chi: "tool-result", rid: ridJadid(), sid, callId, result: natija });
+  }
+
+  /**
+   * Call an ada that belongs to another bee, and wait for its natija.
+   *
+   * humd routes a nida by name to whichever forager's manifest declares it
+   * — and it does this for any sender, not only workers mid-turn. So the
+   * entry can reach its own organs the same way a murshid reaches them.
+   * That is what lets an udw hold a credential the entry no longer needs.
+   */
+  async nadi(
+    name: string,
+    args: Record<string, unknown>,
+    muhlaMs = MUHLAT_NIDA_MS,
+  ): Promise<{ najah: boolean; natija?: string; khata?: string }> {
+    const callId = `nida-${ridJadid()}`;
+    const sid = `iksir-nida-${callId}`;
+
+    return await new Promise((hall) => {
+      let intaha = false;
+      const anhi = (r: { najah: boolean; natija?: string; khata?: string }) => {
+        if (intaha) return;
+        intaha = true;
+        clearTimeout(muaqqit);
+        this.#thrum.azilSid(sid);
+        hall(r);
+      };
+
+      const muaqqit = setTimeout(
+        () => anhi({ najah: false, khata: `nida ${name} timed out after ${muhlaMs}ms` }),
+        muhlaMs,
+      );
+
+      this.#thrum.alaSid(sid, (nagham) => {
+        if (nagham.callId !== callId) return;
+        if (nagham.chi === "tool-result") {
+          const natija = nagham.result;
+          anhi({ najah: true, natija: typeof natija === "string" ? natija : JSON.stringify(natija) });
+          return;
+        }
+        if (nagham.chi === "error") {
+          anhi({ najah: false, khata: String(nagham.message ?? "unknown") });
+        }
+      });
+
+      this.#thrum.ursil({
+        chi: "tool-call",
+        rid: ridJadid(),
+        sid,
+        callId,
+        name,
+        toolName: name,
+        args,
+      });
+    });
   }
 
   // ── Ahdath ──────────────────────────────────────────────────────
