@@ -5,7 +5,7 @@
  * into refined jawhar (essence). Extracts specific ahjar from the buwtaqa
  * branch and arranges them on a clean branch for fasl (decanting/review).
  *
- * Uses the stink-world git tools underneath, but this layer speaks kimiya.
+ * The git procedure itself. It speaks git because git is what it is.
  */
 
 import { logger } from "../../src/logging/logger.ts";

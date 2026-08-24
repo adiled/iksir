@@ -253,7 +253,7 @@ export async function mayyazaSual(
       return { tamyiz: "DHAHAB", reason: "فشل التمييز", rejection: null, autoAnswer: null };
     }
 
-    /** Strip stink world markdown wrapping if present */
+    /** Strip the natn markdown wrapping if present */
     let jsonStr = result.response.trim();
     if (jsonStr.startsWith("```")) {
       jsonStr = jsonStr.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");

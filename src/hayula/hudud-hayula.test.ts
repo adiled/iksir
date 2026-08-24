@@ -10,7 +10,7 @@ const QALB = ["src/daemon", "src/kimiya", "src/alat", "src/hum"];
 /** Contrivances core may no longer name. */
 const KALIMAT_NATINA = [
   "git/operations.ts",
-  "stink/",
+  "natn/",
   "linear/client.ts",
 ];
 
@@ -41,7 +41,7 @@ async function milafatQalb(): Promise<string[]> {
   return milafat;
 }
 
-Deno.test("hudud: the deferred stink has not spread", async () => {
+Deno.test("hudud: the deferred natn has not spread", async () => {
   const wujida: string[] = [];
   for (const masar of await milafatQalb()) {
     const nass = await Deno.readTextFile(masar);
@@ -58,7 +58,7 @@ Deno.test("hudud: the deferred stink has not spread", async () => {
   );
 });
 
-Deno.test("hudud: core imports nothing from the stink world", async () => {
+Deno.test("hudud: core names nothing of the natn", async () => {
   const mukhalafat: string[] = [];
 
   for (const masar of await milafatQalb()) {
@@ -76,20 +76,20 @@ Deno.test("hudud: core imports nothing from the stink world", async () => {
   assertEquals(
     mukhalafat,
     [],
-    `The stink got in. Core speaks kimiya; these reach for a contrivance:\n  ${
+    `The natn got in. Core speaks kimiya; these reach for a contrivance:\n  ${
       mukhalafat.join("\n  ")
     }`,
   );
 });
 
-Deno.test("hudud: the stink world reaches up only for shapes", async () => {
+Deno.test("hudud: the natn reaches up only for shapes", async () => {
   /**
    * An adapter may know Iksīr's interfaces — that is what it conforms to.
    * It may not know Iksīr's organs. Reaching into a daemon would tie this
    * directory to a process it is meant to be able to leave.
    */
   const mukhalafat: string[] = [];
-  for await (const entry of walk(`${JIDHR}stink`, { exts: [".ts"] })) {
+  for await (const entry of walk(`${JIDHR}natn`, { exts: [".ts"] })) {
     if (!entry.isFile) continue;
     const nass = await Deno.readTextFile(entry.path);
     for (const satr of nass.split("\n")) {
@@ -103,7 +103,7 @@ Deno.test("hudud: the stink world reaches up only for shapes", async () => {
 });
 
 Deno.test("hudud: the git adapter satisfies the hayula in full", async () => {
-  const { HayulaGit } = await import("../../stink/hayula-git/mod.ts");
+  const { HayulaGit } = await import("../../natn/hayula-git/mod.ts");
   const hayula = new HayulaGit();
 
   /**

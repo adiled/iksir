@@ -501,9 +501,8 @@ export function makeConfig(overrides?: Partial<TasmimIksir>): TasmimIksir {
 /**
  * A hayūlā of nothing in particular.
  *
- * Core is handed matter and never asks what kind, so a test can hand it
- * matter that is not there at all. That these tests pass without a repo,
- * a remote, or a single git invocation is the abstraction proving itself.
+ * Core is handed matter and never asks what kind, so a test may hand it
+ * matter that is not there at all.
  */
 export function mockHayula(): Hayula & { _amal: string[] } {
   const amal: string[] = [];

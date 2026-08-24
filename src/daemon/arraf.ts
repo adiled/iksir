@@ -321,7 +321,7 @@ export class Arraf {
   /**
    * The oracle's standing incantation — stable across calls, benefits from caching.
    *
-   * The wire format is in the tongue of the stink world — the LLM speaks English.
+   * The wire format is in the tongue of the natn — the LLM speaks English.
    * But the name of this incantation is sacred.
    */
   static readonly TAWJIHAT_NIZAM_NIYYA = `You are a JSON extraction tool for project management. Return ONLY valid JSON, no explanations.
@@ -412,7 +412,7 @@ ${Arraf.TAWJIHAT_NIZAM_NIYYA}`;
         return null;
       }
 
-      /** Translate stink world oracle response into sacred NiyyaMustakhraja */
+      /** Translate the natn tongue of the oracle into a sacred NiyyaMustakhraja */
       const khamm = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
 
       const nawKiyanMap: Record<string, NawKiyan> = {

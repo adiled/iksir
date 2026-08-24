@@ -5,16 +5,13 @@
  * from the Greek hylē and meant by it the stuff beneath every particular
  * thing — that which is shaped, never the shape.
  *
- * Iksīr works upon a hayūlā. It does not know what the hayūlā is made of,
- * and this is not an abstraction for its own sake: a corpus of runūz, a
- * constitution, a lexicon under construction, a body of law — each has
- * vessels, each accumulates molten work, each has a codex that drifts, and
- * each can be inscribed. None of that is software. That it is usually git
- * today is an accident of where the work began.
+ * Iksīr works upon a hayūlā and does not know what it is made of. A corpus
+ * of runūz, a constitution, a lexicon under construction, a body of law —
+ * each has vessels, each accumulates molten work, each has a codex that
+ * drifts, and each can be inscribed.
  *
- * So nothing here names a branch, a commit, a remote, or a repository.
- * Those words belong to one implementation, and that implementation belongs
- * at the edge. Every operation below is stated as what it does to matter:
+ * Nothing here names a branch, a commit, a remote, or a repository. Every
+ * operation is stated as what it does to matter:
  *
  *   dakhala   enter a vessel
  *   waqif     which vessel holds us now
@@ -99,10 +96,8 @@ export interface Hayula {
    * Istiḥāla (استحالة) — draw chosen matter out of the crucible and set it
    * down on a vessel of its own, raised on clean foundation.
    *
-   * Core states the intent and never the procedure. Selecting matter out of
-   * an accumulation and re-founding it is a real operation on any hayūlā,
-   * but *how* differs wildly between kinds of matter, and every way of doing
-   * it is a contrivance. So the whole of the how lives with the adapter.
+   * Selecting matter out of an accumulation and re-founding it is real on
+   * any hayūlā. How it is done is not, and never travels up here.
    *
    * @param jawhar the vessel to raise
    * @param ahjar  which matter to draw across

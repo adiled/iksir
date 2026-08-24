@@ -33,7 +33,7 @@ import { anshaaNtfyAmil } from "./notifications/ntfy.ts";
 import { anshaaTelegramAmil } from "./notifications/telegram.ts";
 import { anshaaTelegramRasul } from "./notifications/messenger.ts";
 import { MutabiWasfaBaid } from "./hum/mutabi-baid.ts";
-import { anshaaHayulaGit } from "../stink/hayula-git/mod.ts";
+import { anshaaHayulaGit } from "../natn/hayula-git/mod.ts";
 import { createGitHubClient } from "./github/gh.ts";
 import { istadaaKatib } from "./daemon/katib.ts";
 import { istadaaMunaffidh } from "./daemon/munaffidh.ts";

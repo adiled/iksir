@@ -1,7 +1,7 @@
 /**
  * Hayūlā Git — git, made to comply
  *
- * git is a stink-world contrivance: content-addressed, remote-bound, full
+ * git is a contrivance of the natn: content-addressed, remote-bound, full
  * of words Iksīr has no use for. It happens to be an excellent hayūlā
  * anyway — it has vessels, it holds molten work, it has a codex that
  * drifts, and it can be inscribed. So it is admitted, on Iksīr's terms.
@@ -13,10 +13,7 @@
  *   sahaba  → fetch + merge  masafa → commits behind
  *   azhara  → push
  *
- * Nothing above this file knows any of those words. This adapter reaches
- * up into `src/hayula/` for the shape it must satisfy and nowhere else —
- * so when `stink/` leaves for a project of its own, it takes this with it
- * and Iksīr does not notice.
+ * Nothing above this file knows any of those words.
  */
 
 import * as git from "../../src/git/operations.ts";
