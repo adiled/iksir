@@ -481,12 +481,17 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
     const yielderId = call.huwiyyatMurshid;
     const activeEpicId = this.#iksir.hawiyyaFaila();
 
-    if (yielderId !== activeEpicId) {
-      await logger.haDHHir("tool-executor", `Non-active murshid ${yielderId} tried to yield (active: ${activeEpicId})`);
-      return `Cannot yield: you (${yielderId}) are not the active murshid. Active: ${activeEpicId ?? "none"}.`;
+    if (!this.#sessionManager.jalabMurshid(yielderId)) {
+      await logger.haDHHir("tool-executor", `Yield from ${yielderId}, which holds no vessel`);
+      return `Cannot yield: you (${yielderId}) hold no vessel.`;
     }
 
-    /** Update session status */
+    /**
+     * A murshid says how its own work ended. That is its own to say, and it
+     * is recorded whether or not the flame is still with it — a murshid that
+     * kept working after control moved on would otherwise finish masdud and
+     * leave the sijill saying whatever the last accepted yield said.
+     */
     const newStatus = call.sabab === "masdud" ? "masdud" : "muntazir";
     await this.#sessionManager.jaddadaḤalatMurshid(yielderId, newStatus, call.tafasil);
 
@@ -494,6 +499,15 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
       details: call.tafasil,
       suggestNext: call.iqtarahTali,
     });
+
+    /**
+     * Passing the flame on is another matter. Only the murshid holding it may
+     * decide where it goes next.
+     */
+    if (yielderId !== activeEpicId) {
+      await logger.akhbar("tool-executor", `${yielderId} yielded without holding the flame (active: ${activeEpicId ?? "none"})`);
+      return `Recorded: you are ${newStatus}. Control was not yours to yield — the active murshid is ${activeEpicId ?? "none"}.`;
+    }
 
     /** Check pending demands first (persisted in SQLite, sorted by awwaliyya then time) */
     const demands = jalabaMatalebMuallaq();

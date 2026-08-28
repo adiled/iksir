@@ -253,7 +253,7 @@ export class MudirJalasat {
       session.illa = undefined;
     }
 
-    await this.hafizaHala();
+    await this.hafizaJalsaWahida(epicId);
     await logger.akhbar("session-manager", `Updated ${epicId} status to ${status}`, {
       blockedReason,
     });
@@ -277,6 +277,7 @@ export class MudirJalasat {
     const success = await this.#amil.sendPromptAsync(session.id, messageWithReminder);
     if (success) {
       session.akhirRisalaFi = new Date().toISOString();
+      await this.hafizaJalsaWahida(session.huwiyya);
     }
     return success;
   }
@@ -296,6 +297,7 @@ export class MudirJalasat {
     const success = await this.#amil.sendPromptAsync(session.id, messageWithReminder);
     if (success) {
       session.akhirRisalaFi = new Date().toISOString();
+      await this.hafizaJalsaWahida(session.huwiyya);
     }
     return success;
   }
@@ -456,35 +458,63 @@ Call pm_read_diary for full decision history with reasoning.
 
 
   /**
+   * Write one vessel to the sijill.
+   *
+   * A vessel is written alone because jaddad_fi is stamped on every write.
+   * Saving all of them to record a change in one gives every other vessel a
+   * fresh timestamp it did not earn, and the sijill can no longer say which
+   * one moved.
+   */
+  #hafizaJalsa(session: JalsatMurshid): void {
+    /** Handle legacy sessions that might have epicTitle instead of title */
+    haddathaAwAdkhalaJalsa({
+      id: session.id,
+      huwiyya: session.huwiyya,
+      unwan: session.unwan || (session as unknown as { epicTitle?: string }).epicTitle || "",
+      naw: session.naw,
+      hala: session.hala,
+      far: session.far || "",
+      illa: session.illa,
+      unshiaFi: session.unshiaFi,
+      akhirRisalaFi: session.akhirRisalaFi,
+      halaMufassala: {
+        /**
+         * The worker's own handle for this vessel. Without it a
+         * restarted murshid resumes nothing and wakes with no memory
+         * of its own work.
+         */
+        nestId: this.#amil.huwiyyatUsh(session.id),
+      },
+    });
+
+    for (const [provider, channelId] of Object.entries(session.channels)) {
+      haddathaAwAdkhalaQanat(session.huwiyya, provider, channelId);
+    }
+  }
+
+  /**
+   * Write a single vessel to the sijill, by the waṣfa it carries.
+   */
+  async hafizaJalsaWahida(epicId: string): Promise<void> {
+    const session = this.#murshidSessions.get(epicId);
+    if (!session) return;
+
+    try {
+      this.#hafizaJalsa(session);
+    } catch (error) {
+      await logger.sajjalKhata("session-manager", `Failed to save session ${epicId}`, {
+        error: String(error),
+      });
+    }
+  }
+
+  /**
    * Save session state to SQLite
    */
   async hafizaHala(): Promise<void> {
     try {
       for (const session of this.#murshidSessions.values()) {
-        /** Handle legacy sessions that might have epicTitle instead of title */
-        haddathaAwAdkhalaJalsa({
-          id: session.id,
-          huwiyya: session.huwiyya,
-          unwan: session.unwan || (session as unknown as { epicTitle?: string }).epicTitle || "",
-          naw: session.naw,
-          hala: session.hala,
-          far: session.far || "",
-          illa: session.illa,
-          unshiaFi: session.unshiaFi,
-          akhirRisalaFi: session.akhirRisalaFi,
-          halaMufassala: {
-            /**
-             * The worker's own handle for this vessel. Without it a
-             * restarted murshid resumes nothing and wakes with no memory
-             * of its own work.
-             */
-            nestId: this.#amil.huwiyyatUsh(session.id),
-          },
-        });
-
-        for (const [provider, channelId] of Object.entries(session.channels)) {
-          haddathaAwAdkhalaQanat(session.huwiyya, provider, channelId);
-        }
+        this.#hafizaJalsa(session);
       }
 
       await logger.akhbar("session-manager", "Saved session state", {

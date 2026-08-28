@@ -312,6 +312,8 @@ interface JalsaSijill {
   far: string | null;
   illa: string | null;
   unshia_fi: string;
+  /** When this vessel last moved. Stamped on every write. */
+  jaddad_fi: string;
   akhir_risala_fi: string | null;
   hala_mufassala: string | null;
 }
@@ -322,7 +324,7 @@ interface JalsaSijill {
 export function jalabaKullJalasat(): JalsaSijill[] {
   const d = jalabSijill();
   return d.prepare(
-    "SELECT id, huwiyya, unwan, naw, hala, far, illa, unshia_fi, akhir_risala_fi, hala_mufassala FROM jalasat"
+    "SELECT id, huwiyya, unwan, naw, hala, far, illa, unshia_fi, jaddad_fi, akhir_risala_fi, hala_mufassala FROM jalasat"
   ).all() as JalsaSijill[];
 }
 
