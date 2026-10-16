@@ -2,14 +2,16 @@
  * Shared Test Helpers
  *
  * Mock factories and utilities for Tier 2+ tests.
- * Provides typed mocks for OpenCodeClient, TelegramClient, RasulKharij,
+ * Provides typed mocks for Wasila, TelegramClient, RasulKharij,
  * and MudirJalasat. Uses real temp DB instances (same pattern as db_test.ts).
  */
 
 import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, haddathaAwAdkhalaJalsa } from "../db/db.ts";
 import { execCommand } from "./utils/exec.ts";
 import type { RasulKharij, QanatRisala, JalsatMurshid, JawabSual } from "./types.ts";
-import { DEFAULT_OPENCODE_SERVER } from "./constants.ts";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 
 
 /**
@@ -17,15 +19,15 @@ import { DEFAULT_OPENCODE_SERVER } from "./constants.ts";
  * Sets IKSIR_STATE_DIR, tahyias DB, runs fn, then cleans up.
  */
 export async function withTestDb(fn: () => Promise<void> | void): Promise<void> {
-  const tempDir = await Deno.makeTempDir({ prefix: "iksir-test-" });
-  Deno.env.set("IKSIR_STATE_DIR", tempDir);
+  const tempDir = mkdtempSync(join(tmpdir(), "iksir-test-"));
+  process.env.IKSIR_STATE_DIR = tempDir;
   try {
     await baddaaQaidatBayanat();
     await fn();
   } finally {
     aghlaaqQaidatBayanat();
-    Deno.env.delete("IKSIR_STATE_DIR");
-    await Deno.remove(tempDir, { recursive: true });
+    delete process.env.IKSIR_STATE_DIR;
+    rmSync(tempDir, { recursive: true, force: true });
   }
 }
 
@@ -38,10 +40,10 @@ export async function withTestDb(fn: () => Promise<void> | void): Promise<void> 
  * (e.g. dispatcher → session-manager → git intaqalaIla).
  */
 export async function withTestRepo(fn: () => Promise<void> | void): Promise<void> {
-  const tempDir = await Deno.makeTempDir({ prefix: "iksir-repo-test-" });
-  const prevRepo = Deno.env.get("IKSIR_REPO_PATH");
-  Deno.env.set("IKSIR_REPO_PATH", tempDir);
-  Deno.env.set("IKSIR_STATE_DIR", tempDir);
+  const tempDir = mkdtempSync(join(tmpdir(), "iksir-repo-test-"));
+  const prevRepo = process.env.IKSIR_REPO_PATH;
+  process.env.IKSIR_REPO_PATH = tempDir;
+  process.env.IKSIR_STATE_DIR = tempDir;
   try {
     await execCommand("git", ["init"], { cwd: tempDir });
     await execCommand("git", ["commit", "--allow-empty", "-m", "init"], { cwd: tempDir });
@@ -49,23 +51,23 @@ export async function withTestRepo(fn: () => Promise<void> | void): Promise<void
     await fn();
   } finally {
     aghlaaqQaidatBayanat();
-    Deno.env.delete("IKSIR_STATE_DIR");
-    if (prevRepo) Deno.env.set("IKSIR_REPO_PATH", prevRepo);
-    else Deno.env.delete("IKSIR_REPO_PATH");
-    await Deno.remove(tempDir, { recursive: true });
+    delete process.env.IKSIR_STATE_DIR;
+    if (prevRepo) process.env.IKSIR_REPO_PATH = prevRepo;
+    else delete process.env.IKSIR_REPO_PATH;
+    rmSync(tempDir, { recursive: true, force: true });
   }
 }
 
 
-/** Minimal session shape returned by OpenCode mock */
-interface MockJalsatOpenCode {
+/** Minimal session shape returned by Wasila mock */
+interface MockJalsatHum {
   id: string;
   title: string;
   createdAt: Date;
   lastMessageAt: Date;
 }
 
-export interface MockOpenCodeClient {
+export interface MockWasila {
   mayyaza(prompt: string): Promise<{ success: boolean; response?: string; error?: string }>;
   replyToQuestion(
     sessionId: string,
@@ -79,8 +81,8 @@ export interface MockOpenCodeClient {
     prompt: string,
     options?: unknown,
   ): Promise<{ success: boolean; response?: string; error?: string }>;
-  khalaqaJalsa(huwiyyatWasfa: string, title: string): Promise<MockJalsatOpenCode | null>;
-  jalabJalsa(sessionId: string): Promise<MockJalsatOpenCode | null>;
+  khalaqaJalsa(huwiyyatWasfa: string, title: string): Promise<MockJalsatHum | null>;
+  jalabJalsa(sessionId: string): Promise<MockJalsatHum | null>;
   listSessions(): Promise<Array<{ id: string; title: string; createdAt: Date; lastMessageAt: Date }>>;
 
   _calls: {
@@ -91,14 +93,14 @@ export interface MockOpenCodeClient {
     sendPrompt: Array<{ sessionId: string; prompt: string }>;
     khalaqaJalsa: Array<{ huwiyyatWasfa: string; title: string }>;
   };
-  _sessions: Map<string, MockJalsatOpenCode>;
+  _sessions: Map<string, MockJalsatHum>;
 }
 
 /**
- * Create a mock OpenCodeClient. Override specific methods via the overrides param.
+ * Create a mock Wasila. Override specific methods via the overrides param.
  * Includes session management (khalaqaJalsa, jalabJalsa) for integration tests.
  */
-export function mockOpenCodeClient(overrides?: {
+export function mockWasila(overrides?: {
   mayyaza?: (prompt: string) => Promise<{ success: boolean; response?: string; error?: string }>;
   replyToQuestion?: (
     sessionId: string,
@@ -108,9 +110,9 @@ export function mockOpenCodeClient(overrides?: {
   rejectQuestion?: (sessionId: string, questionId: string) => Promise<boolean>;
   sendPromptAsync?: (sessionId: string, prompt: string) => Promise<boolean>;
   sendPrompt?: (sessionId: string, prompt: string) => Promise<{ success: boolean; response?: string; error?: string }>;
-  khalaqaJalsa?: (huwiyyatWasfa: string, title: string) => Promise<MockJalsatOpenCode | null>;
-}): MockOpenCodeClient {
-  const calls: MockOpenCodeClient["_calls"] = {
+  khalaqaJalsa?: (huwiyyatWasfa: string, title: string) => Promise<MockJalsatHum | null>;
+}): MockWasila {
+  const calls: MockWasila["_calls"] = {
     mayyaza: [],
     replyToQuestion: [],
     rejectQuestion: [],
@@ -119,7 +121,7 @@ export function mockOpenCodeClient(overrides?: {
     khalaqaJalsa: [],
   };
 
-  const sessions = new Map<string, MockJalsatOpenCode>();
+  const sessions = new Map<string, MockJalsatHum>();
   let sessionCounter = 0;
 
   return {
@@ -160,7 +162,7 @@ export function mockOpenCodeClient(overrides?: {
       calls.khalaqaJalsa.push({ huwiyyatWasfa, title });
       if (overrides?.khalaqaJalsa) return overrides.khalaqaJalsa(huwiyyatWasfa, title);
       sessionCounter++;
-      const session: MockJalsatOpenCode = {
+      const session: MockJalsatHum = {
         id: `mock-session-${sessionCounter}`,
         title,
         createdAt: new Date(),
@@ -404,8 +406,9 @@ export function seedSession(overrides?: Partial<JalsatMurshid>): void {
  * Caller is responsible for cleanup.
  */
 export async function writeTempFile(content: string, prefix = "iksir-fixture-"): Promise<string> {
-  const path = await Deno.makeTempFile({ prefix });
-  await Deno.writeTextFile(path, content);
+  const dir = mkdtempSync(join(tmpdir(), prefix));
+  const path = join(dir, "fixture");
+  writeFileSync(path, content);
   return path;
 }
 
@@ -450,11 +453,11 @@ import type { TasmimIksir } from "./types.ts";
 
 /**
  * Create a minimal TasmimIksir for testing.
- * No real Telegram/Linear/OpenCode connections.
+ * No real Telegram/Linear/thrum connections.
  */
 export function makeConfig(overrides?: Partial<TasmimIksir>): TasmimIksir {
   return {
-    opencode: { server: DEFAULT_OPENCODE_SERVER },
+    hum: {},
     saatSukun: { bidaya: "00:00", nihaya: "06:00", mintaqaZamaniyya: "UTC" },
     mutabiWasfa: { muqaddim: "linear", miftahApi: "", huwiyyatFareeq: "" },
     isharat: {

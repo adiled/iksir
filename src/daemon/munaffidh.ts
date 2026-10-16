@@ -16,7 +16,7 @@
 import { GitHubClient } from "../github/gh.ts";
 import type { RasulKharij, MutabiWasfa, MudkhalTahdithQadiya } from "../types.ts";
 import { NtfyClient } from "../notifications/ntfy.ts";
-import { OpenCodeClient } from "../opencode/client.ts";
+import { Wasila } from "../hum/wasila.ts";
 import { logger } from "../logging/logger.ts";
 import { 
   jalabaAhdathGhairMuaalaja, 
@@ -59,7 +59,7 @@ interface MunaffidhDeps {
   rasul: RasulKharij;
   ntfy: NtfyClient;
   mudirJalasat: MudirJalasat;
-  opencode: OpenCodeClient;
+  wasila: Wasila;
 }
 
 
@@ -71,7 +71,7 @@ export class Munaffidh {
   #messenger: RasulKharij;
   #ntfy: NtfyClient;
   #sessionManager: MudirJalasat;
-  #opencode: OpenCodeClient;
+  #wasila: Wasila;
   #iksir: Munadi | null = null;
 
   #mutahakkimIlgha: AbortController | null = null;
@@ -83,7 +83,7 @@ export class Munaffidh {
     this.#messenger = deps.rasul;
     this.#ntfy = deps.ntfy;
     this.#sessionManager = deps.mudirJalasat;
-    this.#opencode = deps.opencode;
+    this.#wasila = deps.wasila;
   }
 
   /**
@@ -512,7 +512,7 @@ ${comparison.behind > 0 ? "⚠️ Branch is behind - consider rebasing before PR
    */
   async aalajTanbih(call: NidaTabligh): Promise<string> {
     /** Step 1: Mayyiz the tanbih */
-    const tamyiz = await mayyazaTanbih(this.#opencode, call.risala);
+    const tamyiz = await mayyazaTanbih(this.#wasila, call.risala);
 
     if (!tamyiz.dhahab) {
       await logger.akhbar("tool-executor", "Ishara rejected as khabath", {

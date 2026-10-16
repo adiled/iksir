@@ -5,8 +5,8 @@
  * persists as JSON. Incremental: only re-indexes changed files.
  */
 
-import { join } from "jsr:@std/path";
-import { exists, ensureDir } from "jsr:@std/fs";
+import { join } from "node:path";
+import { existsSync, mkdirSync } from "node:fs";
 import { extractTypeScript } from "./extract-ts.ts";
 import { extractPython } from "./extract-py.ts";
 import type { CodeIndex, FileEntry } from "./types.ts";
@@ -75,7 +75,7 @@ export async function buildIndex(repoPath: string): Promise<CodeIndex> {
   const indexPath = getIndexPath();
   let existing: CodeIndex | null = null;
 
-  if (await exists(indexPath)) {
+  if (existsSync(indexPath)) {
     try {
       const content = await Deno.readTextFile(indexPath);
       existing = JSON.parse(content) as CodeIndex;
@@ -107,7 +107,7 @@ export async function buildIndex(repoPath: string): Promise<CodeIndex> {
           const content = await Deno.readTextFile(filePath);
           const data = new TextEncoder().encode(content);
           const hashBuf = await crypto.subtle.digest("SHA-256", data);
-          const { encodeHex } = await import("jsr:@std/encoding/hex");
+          const { encodeHex } = { encodeHex: (b: Uint8Array): string => Buffer.from(b).toString("hex") };
           const hash = encodeHex(new Uint8Array(hashBuf)).slice(0, 12);
           if (prev.hash === hash) {
             index.files[relativePath] = prev;
@@ -126,7 +126,7 @@ export async function buildIndex(repoPath: string): Promise<CodeIndex> {
     }
   }
 
-  await ensureDir(join(indexPath, ".."));
+  mkdirSync(join(indexPath, ".."), { recursive: true });
   await Deno.writeTextFile(indexPath, JSON.stringify(index, null, 2));
 
   await logger.akhbar("code-intel", `Index built: ${indexed} indexed, ${reused} reused, ${Object.keys(index.files).length} total files`);

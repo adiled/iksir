@@ -6,7 +6,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "node --test test/"
+    "test": "node --test src tests"
   },
   "dependencies": {
     "thrum": "file:~/hum/thrum-clients/ts"

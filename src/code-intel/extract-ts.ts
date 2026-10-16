@@ -7,7 +7,7 @@
 
 import type { CodeSymbol, FileEntry } from "./types.ts";
 import { execCommand } from "../utils/exec.ts";
-import { encodeHex } from "jsr:@std/encoding/hex";
+const encodeHex = (b: Uint8Array): string => Buffer.from(b).toString("hex");
 
 async function fileHash(content: string): Promise<string> {
   const data = new TextEncoder().encode(content);

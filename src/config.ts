@@ -5,25 +5,27 @@
  * Schema: iksir.schema.json
  */
 
-import { join } from "jsr:@std/path";
-import { exists } from "jsr:@std/fs";
+import { join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
 import type { TasmimIksir } from "./types.ts";
 import { logger } from "./logging/logger.ts";
-import { DEFAULT_OPENCODE_SERVER, DEFAULT_NTFY_SERVER } from "./constants.ts";
+import { DEFAULT_NTFY_SERVER } from "./constants.ts";
+
+const exists = async (path: string): Promise<boolean> => existsSync(path);
 const DEFAULT_POLL_INTERVAL_MS = 300000;
 const DEFAULT_PR_POLL_INTERVAL_MS = 60000;
 
 const CONFIG_FILENAME = "iksir.json";
 
 function masarAlTasmim(): string {
-  const envDir = Deno.env.get("IKSIR_CONFIG_DIR");
+  const envDir = process.env.IKSIR_CONFIG_DIR;
   if (envDir) return envDir;
 
-  const home = Deno.env.get("HOME") ?? Deno.env.get("USERPROFILE") ?? "/root";
+  const home = process.env.HOME ?? process.env.USERPROFILE ?? "/root";
 
-  if (Deno.build.os === "darwin") {
+  if (process.platform === "darwin") {
     return join(home, ".config", "iksir");
-  } else if (Deno.build.os === "windows") {
+  } else if (process.platform === "win32") {
     return join(home, "AppData", "Local", "iksir");
   }
   return join(home, ".config", "iksir");
@@ -31,7 +33,7 @@ function masarAlTasmim(): string {
 
 function resolveEnvVars(value: string): string {
   return value.replace(/\$\{([^}]+)\}/g, (_, key) => {
-    return Deno.env.get(key) ?? "";
+    return process.env[key] ?? "";
   });
 }
 
@@ -89,9 +91,7 @@ function tasmimAsasi(): TasmimIksir {
       makhzan: "",
       ismKimyawi: "",
     },
-    opencode: {
-      server: DEFAULT_OPENCODE_SERVER,
-    },
+    hum: {},
     hafazat: {},
   };
 }
@@ -124,10 +124,6 @@ function deepMerge(target: TasmimIksir, source: Partial<TasmimIksir>): TasmimIks
 
 function tahaqqaqConfig(config: TasmimIksir): string[] {
   const errors: string[] = [];
-
-  if (!config.opencode.server) {
-    errors.push("opencode.server is required");
-  }
 
   if (config.isharat.telegram.mufattah) {
     if (!config.isharat.telegram.ramzBot) {
@@ -168,7 +164,7 @@ export async function hammalaAlTasmim(): Promise<TasmimIksir> {
 
   if (await exists(configPath)) {
     try {
-      const content = await Deno.readTextFile(configPath);
+      const content = readFileSync(configPath, "utf-8");
       const parsed = JSON.parse(content) as Partial<TasmimIksir>;
       const resolved = resolveEnvVarsDeep(parsed) as Partial<TasmimIksir>;
       config = deepMerge(config, resolved);
@@ -186,72 +182,72 @@ export async function hammalaAlTasmim(): Promise<TasmimIksir> {
   /** Override with environment variables */
   const envOverrides: Partial<TasmimIksir> = {};
 
-  if (Deno.env.get("IKSIR_OPENCODE_SERVER")) {
-    envOverrides.opencode = { server: Deno.env.get("IKSIR_OPENCODE_SERVER")! };
+  if (process.env.HUM_THRUM_SOCK || process.env.HUM_SOCKET) {
+    envOverrides.hum = { socket: process.env.HUM_THRUM_SOCK ?? process.env.HUM_SOCKET! };
   }
-  if (Deno.env.get("LINEAR_API_KEY")) {
-    envOverrides.mutabiWasfa = { ...config.mutabiWasfa, miftahApi: Deno.env.get("LINEAR_API_KEY")! };
+  if (process.env.LINEAR_API_KEY) {
+    envOverrides.mutabiWasfa = { ...config.mutabiWasfa, miftahApi: process.env.LINEAR_API_KEY! };
   }
-  if (Deno.env.get("TELEGRAM_BOT_TOKEN")) {
+  if (process.env.TELEGRAM_BOT_TOKEN) {
     envOverrides.isharat = {
       ...config.isharat,
       telegram: {
         ...config.isharat.telegram,
-        ramzBot: Deno.env.get("TELEGRAM_BOT_TOKEN")!,
+        ramzBot: process.env.TELEGRAM_BOT_TOKEN!,
         mufattah: true,
       },
     };
   }
-  if (Deno.env.get("TELEGRAM_CHAT_ID")) {
+  if (process.env.TELEGRAM_CHAT_ID) {
     envOverrides.isharat = {
       ...config.isharat,
       ...envOverrides.isharat,
       telegram: {
         ...config.isharat.telegram,
         ...envOverrides.isharat?.telegram,
-        huwiyyatMuhadatha: Deno.env.get("TELEGRAM_CHAT_ID")!,
+        huwiyyatMuhadatha: process.env.TELEGRAM_CHAT_ID!,
       },
     };
   }
-  if (Deno.env.get("TELEGRAM_GROUP_ID")) {
+  if (process.env.TELEGRAM_GROUP_ID) {
     envOverrides.isharat = {
       ...config.isharat,
       ...envOverrides.isharat,
       telegram: {
         ...config.isharat.telegram,
         ...envOverrides.isharat?.telegram,
-        huwiyyatMajmuua: Deno.env.get("TELEGRAM_GROUP_ID")!,
+        huwiyyatMajmuua: process.env.TELEGRAM_GROUP_ID!,
       },
     };
   }
-  if (Deno.env.get("TELEGRAM_DISPATCH_TOPIC_ID")) {
+  if (process.env.TELEGRAM_DISPATCH_TOPIC_ID) {
     envOverrides.isharat = {
       ...config.isharat,
       ...envOverrides.isharat,
       telegram: {
         ...config.isharat.telegram,
         ...envOverrides.isharat?.telegram,
-        huwiyyatMawduuIrsal: parseInt(Deno.env.get("TELEGRAM_DISPATCH_TOPIC_ID")!, 10),
+        huwiyyatMawduuIrsal: parseInt(process.env.TELEGRAM_DISPATCH_TOPIC_ID!, 10),
       },
     };
   }
-  if (Deno.env.get("TELEGRAM_PROXY")) {
+  if (process.env.TELEGRAM_PROXY) {
     envOverrides.isharat = {
       ...config.isharat,
       ...envOverrides.isharat,
       telegram: {
         ...config.isharat.telegram,
         ...envOverrides.isharat?.telegram,
-        proxy: Deno.env.get("TELEGRAM_PROXY")!,
+        proxy: process.env.TELEGRAM_PROXY!,
       },
     };
   }
-  if (Deno.env.get("NTFY_TOPIC")) {
+  if (process.env.NTFY_TOPIC) {
     envOverrides.isharat = {
       ...config.isharat,
       ntfy: {
         ...config.isharat.ntfy,
-        topic: Deno.env.get("NTFY_TOPIC")!,
+        topic: process.env.NTFY_TOPIC!,
         mufattah: true,
       },
     };

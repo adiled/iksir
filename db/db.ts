@@ -14,14 +14,15 @@
  *   matalib_muallaq  — المطالب المعلّقة: pending demands
  */
 
-import { Database } from "@db/sqlite";
-import { join } from "jsr:@std/path";
+import { DatabaseSync as Database } from "node:sqlite";
+import { mkdirSync } from "node:fs";
+import { join } from "node:path";
 import { logger } from "../src/logging/logger.ts";
 
 
 function masarHalatSijill(): string {
-  return Deno.env.get("IKSIR_STATE_DIR") ??
-    join(Deno.env.get("XDG_DATA_HOME") ?? join(Deno.env.get("HOME") ?? "/root", ".local", "share"), "iksir");
+  return process.env.IKSIR_STATE_DIR ??
+    join(process.env.XDG_DATA_HOME ?? join(process.env.HOME ?? "/root", ".local", "share"), "iksir");
 }
 
 let db: Database | null = null;
@@ -43,7 +44,7 @@ export async function baddaaQaidatBayanat(): Promise<void> {
   const masarHala = masarHalatSijill();
   const masarSijill = join(masarHala, "iksir.sqlite");
 
-  await Deno.mkdir(masarHala, { recursive: true });
+  mkdirSync(masarHala, { recursive: true });
 
   db = new Database(masarSijill);
 

@@ -17,17 +17,18 @@
  */
 
 import { logger } from "../logging/logger.ts";
-import { join } from "jsr:@std/path";
-import type { OpenCodeClient } from "../opencode/client.ts";
+import { join } from "node:path";
+import { readFileSync } from "node:fs";
+import type { Wasila } from "../hum/wasila.ts";
 import type { MaalumatSual, TasnifSual } from "../types.ts";
 
 function masarWakala(): string {
-  return Deno.env.get("IKSIR_AGENTS_MD_PATH") ??
-    join(Deno.env.get("HOME") ?? ".", ".config", "iksir", "AGENTS.md");
+  return process.env.IKSIR_AGENTS_MD_PATH ??
+    join(process.env.HOME ?? ".", ".config", "iksir", "AGENTS.md");
 }
 
 function masarAlMakhzan(): string {
-  return Deno.env.get("IKSIR_REPO_PATH") ?? ".";
+  return process.env.IKSIR_REPO_PATH ?? ".";
 }
 
 
@@ -42,7 +43,7 @@ let qalibSual: string | null = null;
 async function hammalWakala(): Promise<string | null> {
   if (muhtawaWakala) return muhtawaWakala;
   try {
-    muhtawaWakala = await Deno.readTextFile(masarWakala());
+    muhtawaWakala = readFileSync(masarWakala(), "utf-8");
     return muhtawaWakala;
   } catch {
     await logger.haDHHir("mumayyiz", "التعاليم لم تُقرأ — AGENTS.md unavailable");
@@ -51,7 +52,7 @@ async function hammalWakala(): Promise<string | null> {
 }
 
 function masarQalib(envVar: string, defaultFilename: string): string {
-  return Deno.env.get(envVar) ?? join(masarAlMakhzan(), "prompts", defaultFilename);
+  return process.env[envVar] ?? join(masarAlMakhzan(), "prompts", defaultFilename);
 }
 
 async function hammalQalib(
@@ -63,7 +64,7 @@ async function hammalQalib(
   if (cached) return cached;
   const path = masarQalib(envVar, defaultFilename);
   try {
-    const content = await Deno.readTextFile(path);
+    const content = readFileSync(path, "utf-8");
     await logger.akhbar("mumayyiz", `اللفافة حُمّلت — ${path}`);
     return content;
   } catch {
@@ -168,7 +169,7 @@ interface NatijaTamyizTanbih {
  * or khabath to be returned to the murshid?
  */
 export async function mayyazaTanbih(
-  opencode: OpenCodeClient,
+  wasila: Wasila,
   message: string,
 ): Promise<NatijaTamyizTanbih> {
   const md = await hammalWakala();
@@ -189,7 +190,7 @@ export async function mayyazaTanbih(
   });
 
   try {
-    const result = await opencode.mayyaza(prompt);
+    const result = await wasila.mayyaza(prompt);
     if (!result.success || !result.response) {
       await logger.haDHHir("mumayyiz", "تمييز الإشارة فشل — السماح بالمرور", {
         error: result.error,
@@ -218,7 +219,7 @@ export async function mayyazaTanbih(
  * or can the murshid answer it alone?
  */
 export async function mayyazaSual(
-  opencode: OpenCodeClient,
+  wasila: Wasila,
   question: MaalumatSual,
 ): Promise<TasnifSual> {
   const md = await hammalWakala();
@@ -245,7 +246,7 @@ export async function mayyazaSual(
   });
 
   try {
-    const result = await opencode.mayyaza(prompt);
+    const result = await wasila.mayyaza(prompt);
     if (!result.success || !result.response) {
       await logger.haDHHir("mumayyiz", "تمييز السؤال فشل — السماح بالمرور", {
         error: result.error,

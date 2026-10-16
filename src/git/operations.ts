@@ -9,7 +9,7 @@ import { logger } from "../logging/logger.ts";
 import { execCommand, type ExecResult } from "../utils/exec.ts";
 
 function masarAlMakhzan(): string {
-  return Deno.env.get("IKSIR_REPO_PATH") ?? ".";
+  return process.env.IKSIR_REPO_PATH ?? ".";
 }
 
 /** Cached default branch name (detected once per process) */

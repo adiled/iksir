@@ -5,9 +5,13 @@
  * live, auto-detects what it can, and writes config files.
  */
 
-import { join } from "jsr:@std/path";
-import { exists } from "jsr:@std/fs";
+import { join } from "node:path";
+import { existsSync } from "node:fs";
+import { createConnection } from "node:net";
 import { execCommand } from "./utils/exec.ts";
+import { masar_thrum } from "../hum/bee.ts";
+
+const exists = async (path: string): Promise<boolean> => existsSync(path);
 
 
 const DIM = "\x1b[2m";
@@ -128,7 +132,7 @@ interface InitState {
   githubOwner: string;
   githubRepo: string;
   githubUsername: string;
-  opencodeServer: string;
+  thrumSocket: string;
   skippedTelegram: boolean;
   skippedMutabiWasfa: boolean;
   skippedGithub: boolean;
@@ -323,22 +327,33 @@ async function stepGithub(state: InitState): Promise<void> {
 async function stepAgent(state: InitState): Promise<void> {
   heading(4, TOTAL_STEPS, "Agent Runtime");
   console.log("");
-  console.log(`  Iksir delegates code to an agent runtime (OpenCode).`);
+  console.log(`  Iksir commissions cells from the hum nest over thrum.`);
   console.log("");
 
-  state.opencodeServer = await prompt("Server URL", "http://localhost:5173");
+  state.thrumSocket = await prompt("thrum socket", masar_thrum());
 
-  try {
-    const resp = await fetch(`${state.opencodeServer}/health`, { signal: AbortSignal.timeout(3000) });
-    if (resp.ok) {
-      ok("Agent runtime reachable");
-      return;
-    }
-  } catch {
+  if (await nabduSukhulThrum(state.thrumSocket)) {
+    ok("thrum nest answers");
+    return;
   }
 
-  warn("Agent runtime not reachable (it may not be running yet).");
-  console.log(`  ${dim("It will be started by")} ${bold("iksir start")}${dim(".")}`);
+  warn("thrum nest is silent (humd may not be running yet).");
+  console.log(`  ${dim("It will be served by")} ${bold("humd")}${dim(".")}`);
+}
+
+async function nabduSukhulThrum(masar: string): Promise<boolean> {
+  return new Promise((hal) => {
+    const wasl = createConnection(masar);
+    wasl.on("connect", () => {
+      wasl.destroy();
+      hal(true);
+    });
+    wasl.on("error", () => hal(false));
+    setTimeout(() => {
+      wasl.destroy();
+      hal(false);
+    }, 3000);
+  });
 }
 
 async function stepFinalize(state: InitState): Promise<void> {
@@ -379,8 +394,8 @@ async function stepFinalize(state: InitState): Promise<void> {
       ismKimyawi: state.githubUsername,
     };
   }
-  if (state.opencodeServer !== "http://localhost:5173") {
-    config.opencode = { server: state.opencodeServer };
+  if (state.thrumSocket && state.thrumSocket !== masar_thrum()) {
+    config.hum = { socket: state.thrumSocket };
   }
   if (state.telegramBotToken) {
     config.notifications = {

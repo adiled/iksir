@@ -2,7 +2,7 @@
  * Tests for src/daemon/question-handler.ts
  *
  * Tests Sail with:
- * - Mock OpenCodeClient, RasulKharij, MudirJalasat
+ * - Mock Wasila, RasulKharij, MudirJalasat
  * - Real temp DB (for question persistence)
  *
  * Key behaviors tested:
@@ -13,14 +13,15 @@
  * - loadState: rebuilds in-memory state from DB
  */
 
-import { assertEquals, assertExists } from "@std/assert";
+import { test, assertEquals, assertExists } from "../ikhtibar.ts";
 import {
   withTestDb,
-  mockOpenCodeClient,
+  mockWasila,
   mockMessenger,
   mockMudirJalasat,
   makeSession,
   seedSession,
+  writeTempFile,
 } from "../test-helpers.ts";
 import { Saail } from "./saail.ts";
 import { jalabaAseilaGhairMujaba, adkhalaSual } from "../../db/db.ts";
@@ -28,6 +29,9 @@ import type {
   HadathSualMatlub,
   MaalumatSual,
 } from "../types.ts";
+
+const fixtureAgentsMd = await writeTempFile("# Test AGENTS.md\nGuidelines for testing.", "agents-md-");
+process.env.IKSIR_AGENTS_MD_PATH = fixtureAgentsMd;
 
 
 function makeMaalumatSual(overrides?: Partial<MaalumatSual>): MaalumatSual {
@@ -55,9 +59,9 @@ function makeEvent(overrides?: Partial<HadathSualMatlub["properties"]>): HadathS
 }
 
 
-Deno.test("isQuestionCallback: returns true for q: prefix", () => {
+test("isQuestionCallback: returns true for q: prefix", () => {
   const qh = new Saail({
-    opencode: mockOpenCodeClient() as never,
+    wasila: mockWasila() as never,
     rasul: mockMessenger(),
     mudirJalasat: mockMudirJalasat() as never,
   });
@@ -66,9 +70,9 @@ Deno.test("isQuestionCallback: returns true for q: prefix", () => {
   assertEquals(qh.huwaIstijabaZirrSual("q:12345678:Option A"), true);
 });
 
-Deno.test("isQuestionCallback: returns false for other prefixes", () => {
+test("isQuestionCallback: returns false for other prefixes", () => {
   const qh = new Saail({
-    opencode: mockOpenCodeClient() as never,
+    wasila: mockWasila() as never,
     rasul: mockMessenger(),
     mudirJalasat: mockMudirJalasat() as never,
   });
@@ -79,9 +83,9 @@ Deno.test("isQuestionCallback: returns false for other prefixes", () => {
 });
 
 
-Deno.test("wajadaSualMuallaq: returns undefined for unknown", () => {
+test("wajadaSualMuallaq: returns undefined for unknown", () => {
   const qh = new Saail({
-    opencode: mockOpenCodeClient() as never,
+    wasila: mockWasila() as never,
     rasul: mockMessenger(),
     mudirJalasat: mockMudirJalasat() as never,
   });
@@ -90,9 +94,9 @@ Deno.test("wajadaSualMuallaq: returns undefined for unknown", () => {
 });
 
 
-Deno.test("isAwaitingCustomInput: returns false initially", () => {
+test("isAwaitingCustomInput: returns false initially", () => {
   const qh = new Saail({
-    opencode: mockOpenCodeClient() as never,
+    wasila: mockWasila() as never,
     rasul: mockMessenger(),
     mudirJalasat: mockMudirJalasat() as never,
   });
@@ -101,9 +105,9 @@ Deno.test("isAwaitingCustomInput: returns false initially", () => {
 });
 
 
-Deno.test("buildInlineKeyboard: creates rows for each option + custom", () => {
+test("buildInlineKeyboard: creates rows for each option + custom", () => {
   const qh = new Saail({
-    opencode: mockOpenCodeClient() as never,
+    wasila: mockWasila() as never,
     rasul: mockMessenger(),
     mudirJalasat: mockMudirJalasat() as never,
   });
@@ -120,9 +124,9 @@ Deno.test("buildInlineKeyboard: creates rows for each option + custom", () => {
   assertEquals(keyboard.inline_keyboard[2][0].callback_data.endsWith("__custom__"), true);
 });
 
-Deno.test("buildInlineKeyboard: no custom button when custom=false", () => {
+test("buildInlineKeyboard: no custom button when custom=false", () => {
   const qh = new Saail({
-    opencode: mockOpenCodeClient() as never,
+    wasila: mockWasila() as never,
     rasul: mockMessenger(),
     mudirJalasat: mockMudirJalasat() as never,
   });
@@ -133,9 +137,9 @@ Deno.test("buildInlineKeyboard: no custom button when custom=false", () => {
   assertEquals(keyboard.inline_keyboard.length, 2);
 });
 
-Deno.test("parseQuestionCallback: resolves registered short IDs", () => {
+test("parseQuestionCallback: resolves registered short IDs", () => {
   const qh = new Saail({
-    opencode: mockOpenCodeClient() as never,
+    wasila: mockWasila() as never,
     rasul: mockMessenger(),
     mudirJalasat: mockMudirJalasat() as never,
   });
@@ -151,9 +155,9 @@ Deno.test("parseQuestionCallback: resolves registered short IDs", () => {
   assertEquals(parsed.selectedLabel.startsWith("Pattern A"), true);
 });
 
-Deno.test("parseQuestionCallback: returns null for unknown short IDs", () => {
+test("parseQuestionCallback: returns null for unknown short IDs", () => {
   const qh = new Saail({
-    opencode: mockOpenCodeClient() as never,
+    wasila: mockWasila() as never,
     rasul: mockMessenger(),
     mudirJalasat: mockMudirJalasat() as never,
   });
@@ -162,9 +166,9 @@ Deno.test("parseQuestionCallback: returns null for unknown short IDs", () => {
   assertEquals(result, null);
 });
 
-Deno.test("parseQuestionCallback: handles labels with colons", () => {
+test("parseQuestionCallback: handles labels with colons", () => {
   const qh = new Saail({
-    opencode: mockOpenCodeClient() as never,
+    wasila: mockWasila() as never,
     rasul: mockMessenger(),
     mudirJalasat: mockMudirJalasat() as never,
   });
@@ -182,11 +186,11 @@ Deno.test("parseQuestionCallback: handles labels with colons", () => {
 });
 
 
-Deno.test("handleQuestionAsked: unknown session -> rejects", async () => {
+test("handleQuestionAsked: unknown session -> rejects", async () => {
   await withTestDb(async () => {
-    const oc = mockOpenCodeClient();
+    const oc = mockWasila();
     const qh = new Saail({
-      opencode: oc as never,
+      wasila: oc as never,
       rasul: mockMessenger(),
       mudirJalasat: mockMudirJalasat([]) as never,
     });
@@ -198,12 +202,12 @@ Deno.test("handleQuestionAsked: unknown session -> rejects", async () => {
   });
 });
 
-Deno.test("handleQuestionAsked: empty questions -> rejects", async () => {
+test("handleQuestionAsked: empty questions -> rejects", async () => {
   await withTestDb(async () => {
-    const oc = mockOpenCodeClient();
+    const oc = mockWasila();
     const session = makeSession();
     const qh = new Saail({
-      opencode: oc as never,
+      wasila: oc as never,
       rasul: mockMessenger(),
       mudirJalasat: mockMudirJalasat([session]) as never,
     });
@@ -214,9 +218,9 @@ Deno.test("handleQuestionAsked: empty questions -> rejects", async () => {
   });
 });
 
-Deno.test("handleQuestionAsked: KHABATH -> auto-answers + injects guidance", async () => {
+test("handleQuestionAsked: KHABATH -> auto-answers + injects guidance", async () => {
   await withTestDb(async () => {
-    const oc = mockOpenCodeClient({
+    const oc = mockWasila({
       mayyaza: async () => ({
         success: true,
         response: '{"tamyiz":"KHABATH","reason":"obvious","rejection":"Check docs.","autoAnswer":"Pattern B"}',
@@ -224,9 +228,10 @@ Deno.test("handleQuestionAsked: KHABATH -> auto-answers + injects guidance", asy
     });
 
     const session = makeSession();
+    seedSession();
     const messenger = mockMessenger();
     const qh = new Saail({
-      opencode: oc as never,
+      wasila: oc as never,
       rasul: messenger,
       mudirJalasat: mockMudirJalasat([session]) as never,
     });
@@ -243,9 +248,9 @@ Deno.test("handleQuestionAsked: KHABATH -> auto-answers + injects guidance", asy
   });
 });
 
-Deno.test("handleQuestionAsked: DHAHAB -> forwards to al-Kimyawi", async () => {
+test("handleQuestionAsked: DHAHAB -> forwards to al-Kimyawi", async () => {
   await withTestDb(async () => {
-    const oc = mockOpenCodeClient({
+    const oc = mockWasila({
       mayyaza: async () => ({
         success: true,
         response: '{"tamyiz":"DHAHAB","reason":"architecture","rejection":null,"autoAnswer":null}',
@@ -258,7 +263,7 @@ Deno.test("handleQuestionAsked: DHAHAB -> forwards to al-Kimyawi", async () => {
     let forwardedCount = 0;
 
     const qh = new Saail({
-      opencode: oc as never,
+      wasila: oc as never,
       rasul: messenger,
       mudirJalasat: mockMudirJalasat([session]) as never,
     });
@@ -290,9 +295,9 @@ Deno.test("handleQuestionAsked: DHAHAB -> forwards to al-Kimyawi", async () => {
 });
 
 
-Deno.test("handleQuestionCallback: answers question + marks in DB", async () => {
+test("handleQuestionCallback: answers question + marks in DB", async () => {
   await withTestDb(async () => {
-    const oc = mockOpenCodeClient({
+    const oc = mockWasila({
       mayyaza: async () => ({
         success: true,
         response: '{"tamyiz":"DHAHAB","reason":"test","rejection":null,"autoAnswer":null}',
@@ -302,7 +307,7 @@ Deno.test("handleQuestionCallback: answers question + marks in DB", async () => 
     const session = makeSession();
     seedSession();
     const qh = new Saail({
-      opencode: oc as never,
+      wasila: oc as never,
       rasul: mockMessenger(),
       mudirJalasat: mockMudirJalasat([session]) as never,
     });
@@ -322,11 +327,11 @@ Deno.test("handleQuestionCallback: answers question + marks in DB", async () => 
   });
 });
 
-Deno.test("handleQuestionCallback: unknown question -> returns false", async () => {
+test("handleQuestionCallback: unknown question -> returns false", async () => {
   await withTestDb(async () => {
-    const oc = mockOpenCodeClient();
+    const oc = mockWasila();
     const qh = new Saail({
-      opencode: oc as never,
+      wasila: oc as never,
       rasul: mockMessenger(),
       mudirJalasat: mockMudirJalasat() as never,
     });
@@ -338,9 +343,9 @@ Deno.test("handleQuestionCallback: unknown question -> returns false", async () 
 });
 
 
-Deno.test("markAwaitingCustomInput + handlePotentialCustomAnswer: end-to-end", async () => {
+test("markAwaitingCustomInput + handlePotentialCustomAnswer: end-to-end", async () => {
   await withTestDb(async () => {
-    const oc = mockOpenCodeClient({
+    const oc = mockWasila({
       mayyaza: async () => ({
         success: true,
         response: '{"tamyiz":"DHAHAB","reason":"test","rejection":null,"autoAnswer":null}',
@@ -350,7 +355,7 @@ Deno.test("markAwaitingCustomInput + handlePotentialCustomAnswer: end-to-end", a
     const session = makeSession();
     seedSession();
     const qh = new Saail({
-      opencode: oc as never,
+      wasila: oc as never,
       rasul: mockMessenger(),
       mudirJalasat: mockMudirJalasat([session]) as never,
     });
@@ -371,10 +376,10 @@ Deno.test("markAwaitingCustomInput + handlePotentialCustomAnswer: end-to-end", a
   });
 });
 
-Deno.test("handlePotentialCustomAnswer: returns false when not awaiting", async () => {
+test("handlePotentialCustomAnswer: returns false when not awaiting", async () => {
   await withTestDb(async () => {
     const qh = new Saail({
-      opencode: mockOpenCodeClient() as never,
+      wasila: mockWasila() as never,
       rasul: mockMessenger(),
       mudirJalasat: mockMudirJalasat() as never,
     });
@@ -385,14 +390,14 @@ Deno.test("handlePotentialCustomAnswer: returns false when not awaiting", async 
 });
 
 
-Deno.test("loadState: rebuilds pendingQuestions from DB", async () => {
+test("loadState: rebuilds pendingQuestions from DB", async () => {
   await withTestDb(async () => {
     const session = makeSession({ id: "sess-abc", huwiyya: "TEAM-900" });
     seedSession({ id: "sess-abc", huwiyya: "TEAM-900" });
-    const oc = mockOpenCodeClient();
+    const oc = mockWasila();
 
     const qh = new Saail({
-      opencode: oc as never,
+      wasila: oc as never,
       rasul: mockMessenger(),
       mudirJalasat: mockMudirJalasat([session]) as never,
     });
@@ -416,14 +421,14 @@ Deno.test("loadState: rebuilds pendingQuestions from DB", async () => {
   });
 });
 
-Deno.test("loadState: rebuilds callbackIdMap (parseQuestionCallback works after load)", async () => {
+test("loadState: rebuilds callbackIdMap (parseQuestionCallback works after load)", async () => {
   await withTestDb(async () => {
     const session = makeSession({ id: "sess-xyz", huwiyya: "TEAM-950" });
     seedSession({ id: "sess-xyz", huwiyya: "TEAM-950" });
-    const oc = mockOpenCodeClient();
+    const oc = mockWasila();
 
     const qh = new Saail({
-      opencode: oc as never,
+      wasila: oc as never,
       rasul: mockMessenger(),
       mudirJalasat: mockMudirJalasat([session]) as never,
     });
@@ -452,10 +457,10 @@ Deno.test("loadState: rebuilds callbackIdMap (parseQuestionCallback works after 
   });
 });
 
-Deno.test("loadState: no questions -> no-op", async () => {
+test("loadState: no questions -> no-op", async () => {
   await withTestDb(async () => {
     const qh = new Saail({
-      opencode: mockOpenCodeClient() as never,
+      wasila: mockWasila() as never,
       rasul: mockMessenger(),
       mudirJalasat: mockMudirJalasat() as never,
     });
@@ -465,12 +470,12 @@ Deno.test("loadState: no questions -> no-op", async () => {
   });
 });
 
-Deno.test("loadState: unknown session -> uses sessionId as huwiyyatMurshid fallback", async () => {
+test("loadState: unknown session -> uses sessionId as huwiyyatMurshid fallback", async () => {
   await withTestDb(async () => {
     seedSession({ id: "sess-unknown", huwiyya: "ORPHAN" });
 
     const qh = new Saail({
-      opencode: mockOpenCodeClient() as never,
+      wasila: mockWasila() as never,
       rasul: mockMessenger(),
       mudirJalasat: mockMudirJalasat([]) as never,
     });

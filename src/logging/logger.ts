@@ -5,13 +5,12 @@
  * Cross-platform compatible (Linux, macOS).
  */
 
-import { ensureDir } from "jsr:@std/fs";
-import { join } from "jsr:@std/path";
-import type { DecisionMudkhalSijill, MudkhalTaghyirKhariji, MudkhalSijill, MustawaSijill } from "../types.ts";
+import { mkdirSync, appendFileSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
 function masarSijillAhdaq(): string {
-  return Deno.env.get("IKSIR_LOG_DIR") ??
-    join(Deno.env.get("XDG_STATE_HOME") ?? join(Deno.env.get("HOME") ?? "/root", ".local", "state"), "iksir");
+  return process.env.IKSIR_LOG_DIR ??
+    join(process.env.XDG_STATE_HOME ?? join(process.env.HOME ?? "/root", ".local", "state"), "iksir");
 }
 
 const LOG_FILES = {
@@ -36,10 +35,10 @@ class Musjil {
 
   async baddaa(): Promise<void> {
     if (this.tahyiad) return;
-    await ensureDir(masarSijillAhdaq());
+    mkdirSync(masarSijillAhdaq(), { recursive: true });
     this.tahyiad = true;
 
-    const level = Deno.env.get("IKSIR_LOG_LEVEL") as MustawaSijill | undefined;
+    const level = process.env.IKSIR_LOG_LEVEL as MustawaSijill | undefined;
     if (level && this.levelPriority[level] !== undefined) {
       this.logLevel = level;
     }
@@ -83,7 +82,7 @@ class Musjil {
   private async adhifIlaMilaf(file: MilafSijill, content: string): Promise<void> {
     if (!this.tahyiad) await this.baddaa();
     const path = join(masarSijillAhdaq(), LOG_FILES[file]);
-    await Deno.writeTextFile(path, content + "\n", { append: true });
+    appendFileSync(path, content + "\n");
   }
 
   private async uktubQayd(file: MilafSijill, entry: MudkhalSijill): Promise<void> {
@@ -207,7 +206,7 @@ class Musjil {
     const path = join(masarSijillAhdaq(), LOG_FILES[file]);
 
     try {
-      const content = await Deno.readTextFile(path);
+      const content = readFileSync(path, "utf-8");
       const allLines = content.trim().split("\n").filter(Boolean);
       const recentLines = allLines.slice(-lines);
 
@@ -224,7 +223,7 @@ class Musjil {
         }
       });
     } catch (sajjalKhata) {
-      if (sajjalKhata instanceof Deno.errors.NotFound) {
+      if ((sajjalKhata as NodeJS.ErrnoException)?.code === "ENOENT") {
         return [];
       }
       throw sajjalKhata;

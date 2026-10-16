@@ -21,7 +21,7 @@
  */
 
 import { logger } from "../logging/logger.ts";
-import type { OpenCodeClient } from "../opencode/client.ts";
+import type { Wasila } from "../hum/wasila.ts";
 import type { SiyaqMuhadatha } from "./munadi.ts";
 import type { MutabiWasfa, NawKiyan, WasfaMutaba } from "../types.ts";
 
@@ -114,12 +114,12 @@ const KALIMAT_NAW: Record<NawKiyan, string[]> = {
 
 export class Arraf {
   #mutabiWasfa: MutabiWasfa;
-  #opencode: OpenCodeClient;
+  #wasila: Wasila;
   #huwiyyatJalsatNiyya: string | null = null;
 
-  constructor(deps: { mutabiWasfa: MutabiWasfa; opencode: OpenCodeClient }) {
+  constructor(deps: { mutabiWasfa: MutabiWasfa; wasila: Wasila }) {
     this.#mutabiWasfa = deps.mutabiWasfa;
-    this.#opencode = deps.opencode;
+    this.#wasila = deps.wasila;
   }
 
   /**
@@ -392,7 +392,7 @@ MESSAGE: "${nassKham}"${siyaqNass}
 
 ${Arraf.TAWJIHAT_NIZAM_NIYYA}`;
 
-    const radd = await this.#opencode.sendPrompt(jalsaId, talabOracle, {
+    const radd = await this.#wasila.sendPrompt(jalsaId, talabOracle, {
       system: Arraf.TAWJIHAT_NIZAM_NIYYA,
       model: { providerID: "anthropic", modelID: "claude-sonnet-4-20250514" },
       timeoutMs: 15_000,
@@ -453,12 +453,12 @@ ${Arraf.TAWJIHAT_NIZAM_NIYYA}`;
    */
   async wajadaJalsatNiyya(): Promise<string | null> {
     if (this.#huwiyyatJalsatNiyya) {
-      const jalsa = await this.#opencode.jalabJalsa(this.#huwiyyatJalsatNiyya);
+      const jalsa = await this.#wasila.jalabJalsa(this.#huwiyyatJalsatNiyya);
       if (jalsa) return this.#huwiyyatJalsatNiyya;
       this.#huwiyyatJalsatNiyya = null;
     }
 
-    const jalsa = await this.#opencode.khalaqaJalsa(
+    const jalsa = await this.#wasila.khalaqaJalsa(
       "iksir-arraf",
       "Arraf — vessel for divination (reusable)",
     );
@@ -667,7 +667,7 @@ ${Arraf.TAWJIHAT_NIZAM_NIYYA}`;
  */
 export function istadaaArraf(deps: {
   mutabiWasfa: MutabiWasfa;
-  opencode: OpenCodeClient;
+  wasila: Wasila;
 }): Arraf {
   return new Arraf(deps);
 }

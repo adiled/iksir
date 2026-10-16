@@ -1,8 +1,8 @@
-import { assertEquals } from "@std/assert";
+import { test, assertEquals } from "../ikhtibar.ts";
 import { nowInTz, todayInTz, fiNitaqAlWaqt, minutesUntil } from "./time.ts";
 
 
-Deno.test("nowInTz: returns hours and minutes as numbers", () => {
+test("nowInTz: returns hours and minutes as numbers", () => {
   const result = nowInTz("UTC");
   assertEquals(typeof result.hours, "number");
   assertEquals(typeof result.minutes, "number");
@@ -10,19 +10,19 @@ Deno.test("nowInTz: returns hours and minutes as numbers", () => {
   assertEquals(result.minutes >= 0 && result.minutes <= 59, true);
 });
 
-Deno.test("nowInTz: works with Asia/Karachi timezone", () => {
+test("nowInTz: works with Asia/Karachi timezone", () => {
   const result = nowInTz("Asia/Karachi");
   assertEquals(typeof result.hours, "number");
   assertEquals(result.hours >= 0 && result.hours <= 23, true);
 });
 
 
-Deno.test("todayInTz: returns YYYY-MM-DD format", () => {
+test("todayInTz: returns YYYY-MM-DD format", () => {
   const result = todayInTz("UTC");
   assertEquals(/^\d{4}-\d{2}-\d{2}$/.test(result), true);
 });
 
-Deno.test("todayInTz: produces valid date parts", () => {
+test("todayInTz: produces valid date parts", () => {
   const result = todayInTz("UTC");
   const [year, month, day] = result.split("-").map(Number);
   assertEquals(year >= 2025 && year <= 2030, true);
@@ -31,7 +31,7 @@ Deno.test("todayInTz: produces valid date parts", () => {
 });
 
 
-Deno.test("fiNitaqAlWaqt: normal range — inside", () => {
+test("fiNitaqAlWaqt: normal range — inside", () => {
   /**
    * We can't control wall clock, so we test the logic by comparing
    * with nowInTz and constructing ranges around the current time
@@ -46,7 +46,7 @@ Deno.test("fiNitaqAlWaqt: normal range — inside", () => {
   }
 });
 
-Deno.test("fiNitaqAlWaqt: normal range — outside", () => {
+test("fiNitaqAlWaqt: normal range — outside", () => {
   const { hours } = nowInTz("UTC");
   /** Create a range that definitely excludes current time */
   const rangeStart = (hours + 2) % 24;
@@ -59,7 +59,7 @@ Deno.test("fiNitaqAlWaqt: normal range — outside", () => {
   }
 });
 
-Deno.test("fiNitaqAlWaqt: overnight range — 22:00-07:00 logic", () => {
+test("fiNitaqAlWaqt: overnight range — 22:00-07:00 logic", () => {
   /**
    * Test the overnight wrap by checking consistent behavior:
    * If we're at, say, 23:00 UTC, we should be in 22:00-07:00
@@ -75,19 +75,19 @@ Deno.test("fiNitaqAlWaqt: overnight range — 22:00-07:00 logic", () => {
   }
 });
 
-Deno.test("fiNitaqAlWaqt: same start and end — empty range", () => {
+test("fiNitaqAlWaqt: same start and end — empty range", () => {
   assertEquals(fiNitaqAlWaqt("UTC", "12:00", "12:00"), false);
 });
 
 
-Deno.test("minutesUntil: returns non-negative number", () => {
+test("minutesUntil: returns non-negative number", () => {
   const result = minutesUntil("UTC", "23:59");
   assertEquals(typeof result, "number");
   assertEquals(result >= 0, true);
   assertEquals(result <= 1440, true);
 });
 
-Deno.test("minutesUntil: wraps past midnight", () => {
+test("minutesUntil: wraps past midnight", () => {
   const { hours, minutes } = nowInTz("UTC");
   /** Target 1 minute ago should give ~1439 minutes (next day) */
   const targetH = hours;
@@ -99,7 +99,7 @@ Deno.test("minutesUntil: wraps past midnight", () => {
   assertEquals(result >= 1437 && result <= 1440, true);
 });
 
-Deno.test("minutesUntil: target is current time — 0 or 1440", () => {
+test("minutesUntil: target is current time — 0 or 1440", () => {
   const { hours, minutes } = nowInTz("UTC");
   const target = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
   const result = minutesUntil("UTC", target);

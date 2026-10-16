@@ -4,7 +4,7 @@
  * Main entry point for the Iksir daemon.
  * 
  * Architecture:
- * - MudirJalasat: Manages murshid OpenCode sessions
+ * - MudirJalasat: Manages murshid thrum cells
  * - Munaffidh: Executes PM-MCP tool calls via Linear/GitHub APIs
  * - Telegram: Routes human messages to murshid session
  * - KeepAlive: Polls for external changes, feeds to murshid
@@ -26,7 +26,7 @@ import {
 } from "./constants.ts";
 
 import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, haddathaHuwiyyatRisalaSual } from "../db/db.ts";
-import { createOpenCodeClient } from "./opencode/client.ts";
+import { Wasila } from "./hum/wasila.ts";
 import { anshaaNtfyAmil } from "./notifications/ntfy.ts";
 import { anshaaTelegramAmil } from "./notifications/telegram.ts";
 import { anshaaTelegramRasul, type TelegramMessenger } from "./notifications/messenger.ts";
@@ -43,7 +43,7 @@ import type { TasmimIksir, TaaliqMuraja, JalsatMurshid, RisalaMutaba, HadathSual
 
 interface SiyaqKhadim {
   tasmim: TasmimIksir;
-  opencode: ReturnType<typeof createOpenCodeClient>;
+  wasila: Wasila;
   ntfy: ReturnType<typeof anshaaNtfyAmil>;
   telegram: ReturnType<typeof anshaaTelegramAmil>;
   rasul: TelegramMessenger;
@@ -63,10 +63,10 @@ async function tahaqqaqIttisaal(ctx: SiyaqKhadim): Promise<boolean> {
 
   console.log("\nChecking connectivity...\n");
 
-  process.stdout.write("  OpenCode server... ");
-  const opencodeHealthy = await ctx.opencode.isHealthy();
-  if (opencodeHealthy) {
-    const version = await ctx.opencode.getVersion();
+  process.stdout.write("  thrum nest... ");
+  const nestHealthy = await ctx.wasila.isHealthy();
+  if (nestHealthy) {
+    const version = await ctx.wasila.getVersion();
     console.log(`✓ (v${version})`);
   } else {
     console.log("✗ (not reachable)");
@@ -136,7 +136,7 @@ async function naffadhFahs(ctx: SiyaqKhadim): Promise<void> {
   console.log(`Config file: ${masarMilafAlTasmim()}`);
 
   console.log("\nConfiguration:");
-  console.log(`  OpenCode server: ${ctx.tasmim.opencode.server}`);
+  console.log(`  thrum socket: ${ctx.tasmim.hum.socket ?? "(hum default)"}`);
 
   console.log(`  Quiet hours: ${ctx.tasmim.saatSukun.bidaya} - ${ctx.tasmim.saatSukun.nihaya} (${ctx.tasmim.saatSukun.mintaqaZamaniyya})`);
 
@@ -184,34 +184,44 @@ async function addaIsharat(ctx: SiyaqKhadim): Promise<void> {
 }
 
 /**
- * Subscribe to OpenCode SSE events and route question events to handler.
+ * Receive permission-ask tones from the nest and route questions to handler.
  */
 async function ishtarakAhdath(ctx: SiyaqKhadim): Promise<void> {
-  await logger.akhbar("sse", "Starting OpenCode SSE subscription");
+  await logger.akhbar("thrum", "Starting thrum tone subscription");
 
   let backoffMs = INITIAL_BACKOFF_MS;
-  
+
 
   while (!ctx.mutahakkimIlgha.signal.aborted) {
     try {
-      for await (const event of ctx.opencode.subscribeToEvents(ctx.mutahakkimIlgha.signal)) {
+      for await (const hadath of ctx.wasila.subscribeToEvents(ctx.mutahakkimIlgha.signal)) {
         backoffMs = INITIAL_BACKOFF_MS;
 
-        if (event.type === "question.asked") {
-          const questionEvent = event as unknown as HadathSualMatlub;
-          await ctx.sail.aalajSualMatlub(questionEvent);
-        }
-
-        if (event.type === "session.compacted") {
-          const sessionId = (event.properties as { sessionID?: string })?.sessionID;
-          if (sessionId) {
-            ctx.mudirJalasat.aalajaDamj(sessionId).catch(async (e) =>
-              await logger.sajjalKhata("sse", "Failed to handle compaction event", {
-                sessionId,
-                error: String(e),
-              })
-            );
-          }
+        if (hadath.type === "permission-ask") {
+          const p = hadath.properties as {
+            callId?: string;
+            sid?: string;
+            toolName?: string;
+            message?: string;
+            arg?: { questions?: MaalumatSual[] };
+          };
+          const sualEvent = {
+            type: "question.asked",
+            properties: {
+              id: p.callId ?? "",
+              sessionID: p.sid ?? "",
+              questions: p.arg?.questions ?? [{
+                header: p.toolName ?? "permission",
+                question: p.message ?? "",
+                options: [],
+                multiple: false,
+                custom: false,
+              }],
+              tool: { messageID: "", callID: p.callId ?? "" },
+            },
+            timestamp: hadath.timestamp,
+          } as unknown as HadathSualMatlub;
+          await ctx.sail.aalajSualMatlub(sualEvent);
         }
       }
     } catch (error) {
@@ -226,22 +236,21 @@ async function ishtarakAhdath(ctx: SiyaqKhadim): Promise<void> {
     }
   }
 
-  await logger.akhbar("sse", "OpenCode SSE subscription stopped");
+  await logger.akhbar("thrum", "thrum tone subscription stopped");
 }
 
 async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
   await logger.akhbar("main", `Iksir v${VERSION} starting`);
   await logger.akhbar("main", `Config loaded from ${masarMilafAlTasmim()}`);
 
-  /** Check OpenCode connectivity */
-  const healthy = await ctx.opencode.isHealthy();
+  const healthy = await ctx.wasila.isHealthy();
   if (!healthy) {
-    await logger.sajjalKhata("main", "OpenCode server is not reachable, aborting");
+    await logger.sajjalKhata("main", "thrum nest is not reachable, aborting");
     Deno.exit(1);
   }
 
-  const version = await ctx.opencode.getVersion();
-  await logger.akhbar("main", `Connected to OpenCode v${version}`);
+  const version = await ctx.wasila.getVersion();
+  await logger.akhbar("main", `Breathed by the nest at thrum ${version ?? "unknown"}`);
 
   await addaIsharat(ctx);
 
@@ -903,7 +912,8 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   await baddaaQaidatBayanat();
 
   /** Initialize clients */
-  const opencode = createOpenCodeClient(config);
+  const wasila = new Wasila(config.hum);
+  await wasila.ishgal();
   const ntfy = anshaaNtfyAmil(config);
   const telegram = anshaaTelegramAmil(config);
   const messenger = anshaaTelegramRasul(telegram);
@@ -923,12 +933,12 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     rasul: messenger,
     ntfy,
     mudirJalasat: sessionManager,
-    opencode,
+    wasila,
   });
   await ipcProcessor.hammalaHala();
 
   /** Initialize intent resolver */
-  const intentResolver = istadaaArraf({ mutabiWasfa: issueTracker, opencode });
+  const intentResolver = istadaaArraf({ mutabiWasfa: issueTracker, wasila });
 
   /** Initialize dispatcher */
   const dispatcher = istadaaMunadi({
@@ -944,7 +954,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
 
   /** Initialize question handler (for question tool events from murshids) */
   const questionHandler = istadaaSaail({
-    opencode,
+    wasila,
     rasul: messenger,
     mudirJalasat: sessionManager,
   });
@@ -966,7 +976,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
 
   /** Initialize health monitor (session stuck detection + auto-compaction) */
   const healthMonitor = istadaaRaqib({
-    opencode,
+    wasila,
     rasul: messenger,
     mudirJalasat: sessionManager,
   });
@@ -974,7 +984,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   /** Create context (partial, keepAlive added after) */
   const ctx: SiyaqKhadim = {
     tasmim: config,
-    opencode,
+    wasila,
     ntfy,
     telegram,
     rasul: messenger,

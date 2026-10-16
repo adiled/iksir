@@ -11,7 +11,7 @@ export interface TasmimIksir {
   isharat: TasmimIsharat;
   mutabiWasfa: TasmimMutabiWasfa;
   github: TasmimGitHub;
-  opencode: TasmimOpenCode;
+  hum: TasmimHum;
   hafazat: TasmimHaththat;
 }
 
@@ -151,8 +151,8 @@ export interface TasmimGitHub {
   ismKimyawi: string;
 }
 
-export interface TasmimOpenCode {
-  server: string;
+export interface TasmimHum {
+  socket?: string;
 }
 
 export interface TasmimHaththat {
@@ -240,20 +240,29 @@ export interface MudkhalTaghyirKhariji extends MudkhalSijill {
 }
 
 
-export interface JalsatOpenCode {
+export interface JalsatHum {
   id: string;
   projectId: string;
   huwiyyatWasfa: string;
   title: string;
-  status: "fail" | "sakin" | "error";
+  status: "fail" | "sakin" | "hayy" | "muntasih" | "error";
   createdAt: Date;
   lastMessageAt: Date;
 }
 
-export interface HadathOpenCode {
+export interface HadathThrum {
   type: string;
   properties: Record<string, unknown>;
   timestamp: Date;
+}
+
+export interface RisalaMurshid {
+  id: string;
+  createdAt: number;
+  completedAt?: number;
+  tokensOutput: number;
+  cost: number;
+  error?: string;
 }
 
 
