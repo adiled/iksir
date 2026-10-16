@@ -1,7 +1,7 @@
 import { Chi, rid, sigil } from "thrum";
 import type { Tone } from "thrum";
 import { Nahla, masar_thrum } from "../../hum/bee.ts";
-import type { JalsatHum, HadathThrum, RisalaMurshid, SijillAlat } from "../types.ts";
+import type { JalsatHum, HadathThrum, HadathThehum, RisalaMurshid, SijillAlat } from "../types.ts";
 import { DEFAULT_TIMEOUT_MS } from "../constants.ts";
 import { logger } from "../logging/logger.ts";
 
@@ -27,6 +27,7 @@ export class Wasila {
   #muntazir: Array<(h: HadathThrum) => void> = [];
   #hawadith: HadathThrum[] = [];
   #sijill: SijillAlat | null = null;
+  #mirata: Array<(h: HadathThehum) => void> = [];
 
   constructor(tasmim?: { socket?: string; sijill?: SijillAlat }) {
     this.#masarThrum = tasmim?.socket ?? masar_thrum();
@@ -61,6 +62,17 @@ export class Wasila {
     this.#nahla.on(Chi.pulse, (t) => this.nasharHadath("pulse", t as unknown as Record<string, unknown>));
     this.#nahla.on(Chi.permissionAsk, (t) => this.nasharHadath("permission-ask", t as unknown as Record<string, unknown>));
     this.#nahla.on(Chi.toolCall, (t) => void this.#ajabaNida(t));
+    this.#nahla.on("backfill-event", (t) => {
+      const hadath = (t.event ?? t) as unknown as HadathThehum;
+      for (const fn of this.#mirata) {
+        try {
+          fn(hadath);
+        } catch (err) {
+          void logger.sajjalKhata("wasila", "mirror failed", { error: String(err) });
+        }
+      }
+      this.nasharHadath("backfill-event", t as unknown as Record<string, unknown>);
+    });
   }
 
   get muttasil(): boolean {
@@ -240,6 +252,22 @@ export class Wasila {
 
   async summarizeSession(sid: string): Promise<boolean> {
     return this.#nahla.emit(Chi.curate, { sid });
+  }
+
+  bassaLog(mustawa: string, risala: string, huyul?: Record<string, unknown>): boolean {
+    return this.#nahla.emit(Chi.log, {
+      level: mustawa,
+      message: risala,
+      ...(huyul ? { fields: huyul } : {}),
+    });
+  }
+
+  wadaaMirata(fn: (h: HadathThehum) => void): void {
+    this.#mirata.push(fn);
+  }
+
+  atlubBackfill(author: string, from: number): boolean {
+    return this.#nahla.emit(Chi.backfill, { author, from });
   }
 
   async mayyaza(prompt: string): Promise<{ success: boolean; response?: string; error?: string }> {

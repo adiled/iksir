@@ -82,6 +82,9 @@ export interface MockWasila {
     options?: unknown,
   ): Promise<{ success: boolean; response?: string; error?: string }>;
   khalaqaJalsa(huwiyyatWasfa: string, title: string): Promise<MockJalsatHum | null>;
+  bassaLog(mustawa: string, risala: string, huyul?: Record<string, unknown>): boolean;
+  atlubBackfill(author: string, from: number): boolean;
+  wadaaMirata(fn: (h: unknown) => void): void;
   jalabJalsa(sessionId: string): Promise<MockJalsatHum | null>;
   listSessions(): Promise<Array<{ id: string; title: string; createdAt: Date; lastMessageAt: Date }>>;
 
@@ -156,6 +159,17 @@ export function mockWasila(overrides?: {
       calls.sendPrompt.push({ sessionId, prompt });
       if (overrides?.sendPrompt) return overrides.sendPrompt(sessionId, prompt);
       return { success: true, response: "ok" };
+    },
+
+    async bassaLog(_mustawa: string, _risala: string, _huyul?: Record<string, unknown>) {
+      return true;
+    },
+
+    atlubBackfill(_author: string, _from: number) {
+      return true;
+    },
+
+    wadaaMirata(_fn: (h: unknown) => void) {
     },
 
     async khalaqaJalsa(huwiyyatWasfa, title) {

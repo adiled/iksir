@@ -165,21 +165,23 @@ export class MudirJalasat {
 
       await this.takkadMinQanat(session);
 
+      this.#ushhidaJalsa("istirjaa", session);
+
       return { session, jadida: false, mustarjaa: true, faailSabiq };
     }
 
     await logger.akhbar("session-manager", `Creating new murshid session for ${identifier}`);
 
     const sessionTitle = `[Murshid] ${identifier}: ${title}`;
-    const openCodeSession = await this.#wasila.khalaqaJalsa(identifier, sessionTitle);
+    const jalsatNest = await this.#wasila.khalaqaJalsa(identifier, sessionTitle);
 
-    if (!openCodeSession) {
+    if (!jalsatNest) {
       await logger.sajjalKhata("session-manager", `Failed to create murshid session for ${identifier}`);
       return null;
     }
 
     session = {
-      id: openCodeSession.id,
+      id: jalsatNest.id,
       huwiyya: identifier,
       unwan: title,
       naw: type,
@@ -195,6 +197,8 @@ export class MudirJalasat {
     this.#murshidFaailId = identifier;
 
     await this.hafizaHala();
+
+    this.#ushhidaJalsa("khalaqa", session);
 
     await this.takkadMinQanat(session);
 
@@ -337,6 +341,8 @@ export class MudirJalasat {
     await logger.akhbar("session-manager", `Updated ${epicId} status to ${status}`, {
       blockedReason,
     });
+
+    this.#ushhidaJalsa("hala", session);
 
     return true;
   }
@@ -654,6 +660,19 @@ Call pm_read_diary for full decision history with reasoning.
     }
   }
 
+
+  #ushhidaJalsa(hadath: string, session: JalsatMurshid): void {
+    this.#wasila.bassaLog("info", `jalsa ${hadath} ${session.huwiyya}`, {
+      naw: "jalsa",
+      hadath,
+      huwiyya: session.huwiyya,
+      unwan: session.unwan,
+      nawJalsa: session.naw,
+      hala: session.hala,
+      far: session.far,
+      sidJalsa: session.id,
+    });
+  }
 
   /**
    * Save session state to SQLite

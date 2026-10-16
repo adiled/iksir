@@ -125,7 +125,7 @@ export class Nahla {
         } catch {
           return;
         }
-        if (!isKnownTone(t) || isDusk(t)) return;
+        if ((!isKnownTone(t) && t.chi !== "backfill-event") || isDusk(t)) return;
         for (const fn of this.#handlers.get(t.chi as string) ?? []) {
           try {
             fn(t);

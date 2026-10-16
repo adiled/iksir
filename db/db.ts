@@ -167,6 +167,14 @@ function tatbiqSchema(d: Database): void {
   d.exec("CREATE INDEX IF NOT EXISTS idx_qararat_murshid ON qararat(huwiyat_murshid)");
   d.exec("CREATE INDEX IF NOT EXISTS idx_qanawat_bahth ON qanawat(muqaddim, huwiyat_qanat)");
 
+  d.exec(`
+    CREATE TABLE IF NOT EXISTS thehum_watermark (
+      author TEXT PRIMARY KEY,
+      seq INTEGER NOT NULL,
+      raay_fi TEXT NOT NULL
+    )
+  `);
+
   d.prepare("INSERT OR IGNORE INTO schema_version VALUES (?, ?)").run(
     3,
     new Date().toISOString(),
@@ -632,4 +640,35 @@ export function jalabaMatalebMuallaq(): MatlabMuallaq[] {
        CASE awwaliyya WHEN 'urgent' THEN 0 ELSE 1 END,
        tulib_fi ASC`
   ).all() as MatlabMuallaq[];
+}
+
+export function jalabaWatermark(author: string): number {
+  const d = jalabSijill();
+  const row = d.prepare("SELECT seq FROM thehum_watermark WHERE author = ?").get(author) as
+    | { seq: number }
+    | undefined;
+  return row?.seq ?? 0;
+}
+
+export function haddathaWatermark(author: string, seq: number): void {
+  const d = jalabSijill();
+  d.prepare(`
+    INSERT INTO thehum_watermark (author, seq, raay_fi) VALUES (?, ?, ?)
+    ON CONFLICT(author) DO UPDATE SET seq = excluded.seq, raay_fi = excluded.raay_fi
+  `).run(author, seq, new Date().toISOString());
+}
+
+export function adkhalaHadathMirror(args: {
+  id: string;
+  naw: string;
+  ada: string;
+  humulat: Record<string, unknown>;
+  huwiyyatMurshid?: string;
+  unshiaFi: string;
+}): void {
+  const d = jalabSijill();
+  d.prepare(`
+    INSERT OR IGNORE INTO ahdath (id, naw, ada, humulat, huwiyat_murshid, muaalaj, unshia_fi)
+    VALUES (?, ?, ?, ?, ?, 0, ?)
+  `).run(args.id, args.naw, args.ada, JSON.stringify(args.humulat), args.huwiyyatMurshid ?? null, args.unshiaFi);
 }

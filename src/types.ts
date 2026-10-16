@@ -265,6 +265,16 @@ export interface RisalaMurshid {
   error?: string;
 }
 
+export interface HadathThehum {
+  chi: string;
+  sid?: string;
+  rid?: string;
+  body?: unknown;
+  author: string;
+  seq: number;
+  ts_ms?: number;
+}
+
 
 /** A single question option */
 export interface KhiyarSual {

@@ -28,6 +28,7 @@ import {
 import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, haddathaHuwiyyatRisalaSual } from "../db/db.ts";
 import { Wasila } from "./hum/wasila.ts";
 import { MunadiMunMcpServer } from "./mcp/iksir-mcp.ts";
+import { istarjaaMirata } from "./daemon/mirata.ts";
 import { anshaaNtfyAmil } from "./notifications/ntfy.ts";
 import { anshaaTelegramAmil } from "./notifications/telegram.ts";
 import { anshaaTelegramRasul, type TelegramMessenger } from "./notifications/messenger.ts";
@@ -916,6 +917,10 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   const pmServer = new MunadiMunMcpServer();
   const wasila = new Wasila({ ...config.hum, sijill: pmServer.sijill });
   await wasila.ishgal();
+
+  istarjaaMirata(wasila).catch(async (error) => {
+    await logger.sajjalKhata("mirata", "mirror backfill failed", { error: String(error) });
+  });
   const ntfy = anshaaNtfyAmil(config);
   const telegram = anshaaTelegramAmil(config);
   const messenger = anshaaTelegramRasul(telegram);
