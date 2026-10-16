@@ -8,6 +8,9 @@ import {
   haddathaWatermark,
   haddathaAwAdkhalaJalsa,
   adkhalaHadathMirror,
+  adkhalaSual,
+  allamaJawabSual,
+  jalabaKullJalasat,
 } from "../../db/db.ts";
 import { logger } from "../logging/logger.ts";
 
@@ -39,7 +42,7 @@ export function tamyiAuthorKhatm(dir?: string): { author: string; seq: number } 
   }
 }
 
-export function tabbiqHadathMirata(h: HadathThehum): boolean {
+export async function tabbiqHadathMirata(h: HadathThehum): Promise<boolean> {
   if (h.chi === "log") {
     const huyul = (h.body as { fields?: Record<string, unknown> } | undefined)?.fields
       ?? ((h as unknown as { fields?: Record<string, unknown> }).fields ?? {});
@@ -73,6 +76,46 @@ export function tabbiqHadathMirata(h: HadathThehum): boolean {
       humulat: { ...(body.args ?? {}), sid: body.sid },
       unshiaFi: alan,
     });
+    haddathaWatermark(h.author, Math.max(jalabaWatermark(h.author), h.seq));
+    return true;
+  }
+  if (h.chi === "permission-ask") {
+    const body = (h.body ?? {}) as {
+      callId?: string;
+      sid?: string;
+      toolName?: string;
+      message?: string;
+      arg?: { questions?: Array<{ question?: string; options?: Array<{ label?: string }> }> };
+    };
+    if (!body.callId || !body.sid) return false;
+    const jalsa = jalabaKullJalasat().find((j) => j.id === body.sid);
+    if (!jalsa) {
+      await logger.haDHHir("mirata", "sual without mirrored jalsa, kept in thehum", { sid: body.sid });
+      haddathaWatermark(h.author, Math.max(jalabaWatermark(h.author), h.seq));
+      return false;
+    }
+    const sual = body.arg?.questions?.[0];
+    adkhalaSual({
+      id: body.callId,
+      sessionId: body.sid,
+      question: sual?.question ?? body.message ?? body.toolName ?? "istijaba",
+      options: sual?.options?.map((o) => o.label ?? "") ?? [],
+    });
+    haddathaWatermark(h.author, Math.max(jalabaWatermark(h.author), h.seq));
+    return true;
+  }
+  if (h.chi === "release-permit") {
+    const body = (h.body ?? {}) as {
+      callId?: string;
+      ok?: boolean;
+      ext?: { "iksir-wasila"?: { answers?: Array<{ selected?: string[] }> } };
+    };
+    if (!body.callId || body.ok !== true) {
+      haddathaWatermark(h.author, Math.max(jalabaWatermark(h.author), h.seq));
+      return false;
+    }
+    const muntakhab = body.ext?.["iksir-wasila"]?.answers?.[0]?.selected?.join(", ");
+    allamaJawabSual(body.callId, muntakhab ?? "ujiba abra al-nest");
     haddathaWatermark(h.author, Math.max(jalabaWatermark(h.author), h.seq));
     return true;
   }
@@ -110,7 +153,7 @@ export async function istarjaaMirata(wasila: Wasila, dir?: string): Promise<numb
   let tabaqa = 0;
   for (const h of mujammaa) {
     try {
-      if (tabbiqHadathMirata(h)) tabaqa++;
+      if (await tabbiqHadathMirata(h)) tabaqa++;
     } catch (err) {
       await logger.sajjalKhata("mirata", "mirror apply failed", { error: String(err) });
     }

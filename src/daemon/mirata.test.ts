@@ -54,7 +54,7 @@ test("mirata: log jalsa event upserts roster and watermark", async () => {
         },
       },
     };
-    assertEquals(tabbiqHadathMirata(h), true);
+    assertEquals(await tabbiqHadathMirata(h), true);
     const jalasat = jalabaKullJalasat();
     assertEquals(jalasat.length, 1);
     assertEquals(jalasat[0].huwiyya, "TEAM-9000");
@@ -72,8 +72,8 @@ test("mirata: tool-call event lands in pm ledger with stable id", async () => {
       ts_ms: Date.now(),
       body: { toolName: "mun_naqsh", args: { huwiyyatWasfa: "W-1" }, sid: "s-1" },
     };
-    assertEquals(tabbiqHadathMirata(h), true);
-    assertEquals(tabbiqHadathMirata(h), true);
+    assertEquals(await tabbiqHadathMirata(h), true);
+    assertEquals(await tabbiqHadathMirata(h), true);
     const ahdath = jalabaAhdathGhairMuaalaja("pm");
     assertEquals(ahdath.length, 1);
     assertEquals(jalabaWatermark("h-bee-1"), 8);
@@ -82,7 +82,80 @@ test("mirata: tool-call event lands in pm ledger with stable id", async () => {
 
 test("mirata: foreign chi is ignored", async () => {
   await withTestDb(async () => {
-    assertEquals(tabbiqHadathMirata({ chi: "chunk", author: "h", seq: 1, body: {} }), false);
+    assertEquals(await tabbiqHadathMirata({ chi: "chunk", author: "h", seq: 1, body: {} }), false);
+  });
+});
+
+test("mirata: permission-ask becomes sual under mirrored jalsa", async () => {
+  await withTestDb(async () => {
+    assertEquals(await tabbiqHadathMirata({
+      chi: "log",
+      author: "h-bee-1",
+      seq: 9,
+      ts_ms: Date.now(),
+      body: {
+        fields: {
+          naw: "jalsa",
+          hadath: "khalaqa",
+          huwiyya: "TEAM-9100",
+          unwan: "Ask Hall",
+          nawJalsa: "epic",
+          hala: "fail",
+          far: "epic/team-9100",
+          sidJalsa: "nest-sid-9100",
+        },
+      },
+    }), true);
+    assertEquals(await tabbiqHadathMirata({
+      chi: "permission-ask",
+      author: "h-bee-1",
+      seq: 10,
+      ts_ms: Date.now(),
+      body: {
+        callId: "q-mirror-1",
+        sid: "nest-sid-9100",
+        toolName: "ask",
+        message: "Should we proceed?",
+      },
+    }), true);
+    const { jalabaAseilaGhairMujaba } = await import("../../db/db.ts");
+    const aseila = jalabaAseilaGhairMujaba();
+    assertEquals(aseila.length, 1);
+    assertEquals(aseila[0].id, "q-mirror-1");
+  });
+});
+
+test("mirata: release-permit marks jawab", async () => {
+  await withTestDb(async () => {
+    const { adkhalaSual, jalabaAseilaGhairMujaba } = await import("../../db/db.ts");
+    const { seedSession } = await import("../test-helpers.ts");
+    seedSession();
+    adkhalaSual({ id: "q-mirror-2", sessionId: "session-001", question: "Go?", options: [] });
+    assertEquals(await tabbiqHadathMirata({
+      chi: "release-permit",
+      author: "h-bee-1",
+      seq: 11,
+      ts_ms: Date.now(),
+      body: {
+        callId: "q-mirror-2",
+        ok: true,
+        ext: { "iksir-wasila": { answers: [{ selected: ["Naam"] }] } },
+      },
+    }), true);
+    assertEquals(jalabaAseilaGhairMujaba().length, 0);
+  });
+});
+
+test("mirata: permission-ask without jalsa is kept in thehum", async () => {
+  await withTestDb(async () => {
+    assertEquals(await tabbiqHadathMirata({
+      chi: "permission-ask",
+      author: "h-bee-1",
+      seq: 12,
+      ts_ms: Date.now(),
+      body: { callId: "q-orphan", sid: "sid-ghayr-mawjud", message: "Lost?" },
+    }), false);
+    assertEquals(jalabaWatermark("h-bee-1"), 12);
   });
 });
 
