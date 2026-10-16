@@ -209,6 +209,41 @@ export function mockWasila(overrides?: {
       if (nestId) nestIds.set(jalsa.id, nestId);
     },
 
+    async mahaqaJalsa(sessionId) {
+      return sessions.delete(sessionId);
+    },
+
+    async abortSession(_sessionId) {
+      return true;
+    },
+
+    async summarizeSession(_sessionId) {
+      return true;
+    },
+
+    async jalabJalsaStatuses() {
+      const natija: Record<string, string> = {};
+      for (const id of sessions.keys()) natija[id] = "sakin";
+      return natija;
+    },
+
+    async jalabRisalaCount(sessionId) {
+      if (!sessions.has(sessionId)) return null;
+      return { total: 0, assistant: 0, user: 0 };
+    },
+
+    async getLastAssistantMessage(_sessionId) {
+      return null;
+    },
+
+    async isHealthy() {
+      return true;
+    },
+
+    async getVersion() {
+      return "0.7.0";
+    },
+
     huwiyyatUsh(sessionId) {
       return nestIds.get(sessionId);
     },

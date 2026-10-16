@@ -27,6 +27,7 @@ import {
   type NawKiyan,
 } from "./arraf.ts";
 import type { Hayula } from "../hayula/hayula.ts";
+import type { Wasila } from "../hum/wasila.ts";
 import type { JalsatMurshid, RasulKharij } from "../types.ts";
 
 
@@ -110,6 +111,7 @@ interface MunadiDeps {
   mudirJalasat: MudirJalasat;
   arraf: Arraf;
   rasul: RasulKharij;
+  amil: Wasila;
   /** The matter worked upon, for the intiqāl between vessels. */
   hayula: Hayula;
   namatWasfa?: string;
@@ -285,6 +287,7 @@ export class Munadi {
   mudirJalasat: MudirJalasat;
   arraf: Arraf;
   rasul: RasulKharij;
+  amil: Wasila;
   namatWasfa: RegExp;
 
   huwiyyaFaaila: string | null = null;
@@ -312,6 +315,7 @@ export class Munadi {
     this.mudirJalasat = deps.mudirJalasat;
     this.arraf = deps.arraf;
     this.rasul = deps.rasul;
+    this.amil = deps.amil;
     this.#hayula = deps.hayula;
     this.namatWasfa = banaNamatWasfa(deps.namatWasfa);
   }
@@ -553,10 +557,7 @@ export class Munadi {
         return this.badaaTamyiz(msg, resolved);
 
       case "lam_tujad":
-        return {
-          tuulija: true,
-          radd: resolved.khata ?? "Could not find the entity you're referring to.",
-        };
+        return this.aalajSualMubashir(msg, resolved);
 
       case "khata":
         return {
@@ -1105,6 +1106,30 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
       type: "sandbox",
       initMessage,
     });
+  }
+
+  /**
+   * Handle a direct question — no entity, no ticket, just words for the nest.
+   * A scholar's sid is minted, asked, and dismissed; nothing is inscribed.
+   */
+  async aalajSualMubashir(msg: RisalaWarida, resolved: NiyyaMuhallala): Promise<NatijaIrsal> {
+    const nass = msg.text.trim();
+    if (!nass) {
+      return { tuulija: true, radd: resolved.khata ?? "Could not find the entity you're referring to." };
+    }
+    const jalsa = await this.amil.khalaqaJalsa("iksir-munadi", "Iksir Sual");
+    if (!jalsa) {
+      return { tuulija: true, khata: "The nest did not answer." };
+    }
+    try {
+      const jawab = await this.amil.sendPrompt(jalsa.id, nass, { timeoutMs: 120_000 });
+      if (jawab.success && jawab.response) {
+        return { tuulija: true, radd: jawab.response };
+      }
+      return { tuulija: true, radd: resolved.khata ?? "Could not find the entity you're referring to." };
+    } finally {
+      await this.amil.mahaqaJalsa(jalsa.id);
+    }
   }
 
   /**

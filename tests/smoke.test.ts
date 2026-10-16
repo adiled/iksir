@@ -43,6 +43,7 @@ function buildContext() {
     mudirJalasat: sessionManager,
     arraf: intentResolver as never,
     rasul: messenger,
+    amil: amil as never,
     hayula,
     namatWasfa: config.wasfat?.namatWasfa,
   });
@@ -356,5 +357,27 @@ test("smoke: vessels survive a restart, carrying their nestId", async () => {
 
     /** The amil must be able to resume, or the murshid wakes with no memory. */
     assertEquals(second.amil.huwiyyatUsh(lit!.id), "nest-handle-9001");
+  });
+});
+
+test("smoke: ticketless question is answered by the nest directly", async () => {
+  await withTestRepo(async () => {
+    const { dispatcher, intentResolver, amil } = buildContext();
+
+    intentResolver._nextResult = {
+      hala: "lam_tujad",
+      tariqa: "bahth_fikri",
+      nassKham: "say meow",
+    } as never;
+
+    const result = await dispatcher.aalajRisalaIrsal({
+      source: "telegram",
+      text: "say meow",
+    });
+
+    assertEquals(result.tuulija, true);
+    assertExists(result.radd);
+    assertEquals(amil._calls.sendPrompt.length, 1);
+    assertStringIncludes(amil._calls.sendPrompt[0].prompt, "say meow");
   });
 });

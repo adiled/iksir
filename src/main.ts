@@ -835,6 +835,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     mudirJalasat: sessionManager,
     arraf: intentResolver,
     rasul: messenger,
+    amil,
     hayula,
     namatWasfa: config.wasfat?.namatWasfa,
   });
