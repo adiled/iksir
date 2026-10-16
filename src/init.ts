@@ -8,7 +8,7 @@
 import { join } from "node:path";
 import { existsSync } from "node:fs";
 const exists = async (path: string): Promise<boolean> => existsSync(path);
-import { masarThrum } from "./hum/thrum.ts";
+import { masar_thrum } from "../hum/bee.ts";
 
 
 const DIM = "\x1b[2m";
@@ -209,6 +209,22 @@ async function stepKimyawi(state: InitState): Promise<void> {
   if (state.ismKimyawi) ok(`You are ${bold(state.ismKimyawi)}`);
 }
 
+async function nabduSukhulThrum(masar: string): Promise<boolean> {
+  const net = await import("node:net");
+  return new Promise((hal) => {
+    const wasl = net.createConnection(masar);
+    wasl.on("connect", () => {
+      wasl.destroy();
+      hal(true);
+    });
+    wasl.on("error", () => hal(false));
+    setTimeout(() => {
+      wasl.destroy();
+      hal(false);
+    }, 3000);
+  });
+}
+
 async function stepAgent(state: InitState): Promise<void> {
   heading(4, TOTAL_STEPS, "The Nest");
   console.log("");
@@ -222,15 +238,13 @@ async function stepAgent(state: InitState): Promise<void> {
 
   state.namudhaj = await prompt("Model to name on each prompt (blank = let the nest decide)", "");
 
-  const miqbas = masarThrum();
-  try {
-    const ittisal = await Deno.connect({ path: miqbas, transport: "unix" });
-    ittisal.close();
-    ok(`humd reachable at ${miqbas}`);
-  } catch {
-    warn(`No humd at ${miqbas}`);
-    console.log(`  ${dim("Kindle one, then a worker hive:")} ${bold("hum hive <name> install")}`);
-  }
+  const miqbas = masar_thrum();
+  nabduSukhulThrum(miqbas).then((hayy) => {    if (hayy) ok(`humd reachable at ${miqbas}`);
+    else {
+      warn(`No humd at ${miqbas}`);
+      console.log(`  ${dim("Kindle one, then a worker hive:")} ${bold("hum hive <name> install")}`);
+    }
+  });
 }
 
 async function stepFinalize(state: InitState): Promise<void> {
@@ -315,7 +329,7 @@ async function stepFinalize(state: InitState): Promise<void> {
   if (state.ismKimyawi) {
     ok(`al-Kimyawī: ${state.ismKimyawi}`);
   }
-  ok(`Nest: ${masarThrum()}${state.namudhaj ? ` (model ${state.namudhaj})` : ""}`);
+  ok(`Nest: ${masar_thrum()}${state.namudhaj ? ` (model ${state.namudhaj})` : ""}`);
 
   console.log("");
   console.log(`  ${bold("Ready.")} Run ${cyan("iksir start")} to begin.`);
