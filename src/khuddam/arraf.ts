@@ -332,7 +332,7 @@ ${Arraf.TAWJIHAT_NIZAM_NIYYA}`;
 
     const radd = await this.#amil.sendPrompt(jalsaId, talabOracle, {
       system: Arraf.TAWJIHAT_NIZAM_NIYYA,
-      timeoutMs: 15_000,
+      timeoutMs: 90_000,
     });
 
     if (!radd.success || !radd.response) {
