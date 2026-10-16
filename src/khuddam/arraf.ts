@@ -332,7 +332,6 @@ ${Arraf.TAWJIHAT_NIZAM_NIYYA}`;
 
     const radd = await this.#amil.sendPrompt(jalsaId, talabOracle, {
       system: Arraf.TAWJIHAT_NIZAM_NIYYA,
-      model: { providerID: "anthropic", modelID: "claude-sonnet-4-20250514" },
       timeoutMs: 15_000,
     });
 
