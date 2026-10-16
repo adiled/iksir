@@ -23,7 +23,7 @@
  */
 
 import { logger } from "../logging/logger.ts";
-import type { AmilHum } from "../hum/client.ts";
+import type { Wasila } from "../hum/wasila.ts";
 import type { RasulKharij } from "../types.ts";
 import type { MudirJalasat } from "./katib.ts";
 
@@ -42,7 +42,7 @@ const FATRA_NAQRA_MS = 60 * 1000;
 
 
 interface RaqibDeps {
-  amil: AmilHum;
+  amil: Wasila;
   rasul: RasulKharij;
   mudirJalasat: MudirJalasat;
 }
@@ -63,7 +63,7 @@ interface HalatSihhJalsa {
 
 
 export class Raqib {
-  #amil: AmilHum;
+  #amil: Wasila;
   #messenger: RasulKharij;
   #sessionManager: MudirJalasat;
 

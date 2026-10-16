@@ -18,7 +18,7 @@ import type { Safa } from "../hayula/safa.ts";
 import type { RasulKharij } from "../types.ts";
 import type { SijillWasfat, Wasfa } from "../wasfa/sijill-wasfat.ts";
 import { NtfyClient } from "../rasul/ntfy.ts";
-import { AmilHum } from "../hum/client.ts";
+import { Wasila } from "../hum/wasila.ts";
 import { logger } from "../logging/logger.ts";
 import { 
   jalabaAhdathGhairMuaalaja, 
@@ -60,7 +60,7 @@ interface MunaffidhDeps {
   rasul: RasulKharij;
   ntfy: NtfyClient;
   mudirJalasat: MudirJalasat;
-  amil: AmilHum;
+  amil: Wasila;
   /** The matter worked upon. Iksīr never asks what kind. */
   hayula: Hayula;
   /** The fire a waṣfa declares for itself. */
@@ -76,7 +76,7 @@ export class Munaffidh {
   #messenger: RasulKharij;
   #ntfy: NtfyClient;
   #sessionManager: MudirJalasat;
-  #amil: AmilHum;
+  #amil: Wasila;
   #hayula: Hayula;
   #safa: Safa;
   #iksir: Munadi | null = null;
@@ -133,7 +133,7 @@ export class Munaffidh {
       try {
         await this.aalajAhdath();
       } catch (error) {
-        if (!(error instanceof Deno.errors.NotFound)) {
+        if ((error as NodeJS.ErrnoException)?.code !== "ENOENT") {
           await logger.sajjalKhata("tool-executor", "Event processing error", {
             error: String(error),
           });

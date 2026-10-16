@@ -1,6 +1,6 @@
-import { assertEquals } from "@std/assert";
-import { walk } from "jsr:@std/fs";
-import { relative } from "jsr:@std/path";
+import { test, assertEquals } from "../ikhtibar.ts";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join, relative } from "node:path";
 
 const JIDHR = new URL("../..", import.meta.url).pathname;
 
@@ -15,25 +15,44 @@ const KALIMAT_NATINA = [
   "natn",
 ];
 
-async function milafatQalb(): Promise<string[]> {
+function jamaaMilafat(dalil: string): string[] {
   const milafat: string[] = [];
-  for (const dalil of QALB) {
+  let madkhulat: string[];
+  try {
+    madkhulat = readdirSync(dalil, { withFileTypes: true }).map((e) => e.name);
+  } catch {
+    return milafat;
+  }
+  for (const ism of madkhulat) {
+    const masar = join(dalil, ism);
+    let huwaDalil = false;
     try {
-      for await (const entry of walk(`${JIDHR}${dalil}`, { exts: [".ts"] })) {
-        if (entry.isFile && !entry.path.endsWith(".test.ts")) milafat.push(entry.path);
-      }
+      huwaDalil = statSync(masar).isDirectory();
     } catch {
-      // A core directory that does not exist yet is not a violation.
+      continue;
+    }
+    if (huwaDalil) {
+      milafat.push(...jamaaMilafat(masar));
+    } else if (ism.endsWith(".ts") && !ism.endsWith(".test.ts")) {
+      milafat.push(masar);
     }
   }
   return milafat;
 }
 
-Deno.test("hudud: core names nothing of the natn", async () => {
+async function milafatQalb(): Promise<string[]> {
+  const milafat: string[] = [];
+  for (const dalil of QALB) {
+    milafat.push(...jamaaMilafat(`${JIDHR}${dalil}`));
+  }
+  return milafat;
+}
+
+test("hudud: core names nothing of the natn", async () => {
   const mukhalafat: string[] = [];
 
   for (const masar of await milafatQalb()) {
-    const nass = await Deno.readTextFile(masar);
+    const nass = readFileSync(masar, "utf-8");
     for (const satr of nass.split("\n")) {
       if (!satr.includes("import") && !satr.includes("from \"")) continue;
       for (const kalima of KALIMAT_NATINA) {
@@ -53,15 +72,15 @@ Deno.test("hudud: core names nothing of the natn", async () => {
   );
 });
 
-Deno.test("hudud: Iksir names no contrivance anywhere", async () => {
+test("hudud: Iksir names no contrivance anywhere", async () => {
   /**
    * Not core alone. The whole repository. There is no adapter left in it to
    * import, and nothing here should reach for one by path either.
    */
   const mukhalafat: string[] = [];
-  for await (const entry of walk(JIDHR, { exts: [".ts"], skip: [/\.git/, /node_modules/] })) {
-    if (!entry.isFile) continue;
-    const nass = await Deno.readTextFile(entry.path);
+  for (const masar of jamaaMilafat(JIDHR).filter((m) => !m.includes(".git") && !m.includes("node_modules"))) {
+    const entry = { path: masar };
+    const nass = readFileSync(entry.path, "utf-8");
     for (const satr of nass.split("\n")) {
       if (!satr.includes("from \"")) continue;
       if (/natn|hayula-git|fasl-github|safa-amr|hayula-nass/.test(satr)) {

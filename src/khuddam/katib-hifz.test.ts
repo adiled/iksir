@@ -1,9 +1,9 @@
-import { assertEquals, assertNotEquals } from "@std/assert";
+import { test, assertEquals, assertNotEquals } from "../ikhtibar.ts";
 import { MudirJalasat } from "./katib.ts";
 import { jalabaKullJalasat } from "../../db/db.ts";
 import {
   makeConfig,
-  mockAmilHum,
+  mockWasila,
   mockMessenger,
   withTestDb,
 } from "../test-helpers.ts";
@@ -12,7 +12,7 @@ import type { JalsatMurshid } from "../types.ts";
 function katib() {
   return new MudirJalasat({
     tasmim: makeConfig(),
-    amil: mockAmilHum() as never,
+    amil: mockWasila() as never,
     rasul: mockMessenger(),
   });
 }
@@ -41,7 +41,7 @@ function minSijill(huwiyya: string) {
  * memory until some unrelated event saves, a daemon killed between those events
  * wakes believing it last spoke hours before it did.
  */
-Deno.test("a sent message reaches the sijill without waiting for another event", async () => {
+test("a sent message reaches the sijill without waiting for another event", async () => {
   await withTestDb(async () => {
     const k = katib();
     k.istawradaHala({ murshidun: [jalsa()] });
@@ -63,7 +63,7 @@ Deno.test("a sent message reaches the sijill without waiting for another event",
  * in one gives the others a timestamp they did not earn, and the sijill can no
  * longer say which one moved.
  */
-Deno.test("recording one vessel does not restamp the others", async () => {
+test("recording one vessel does not restamp the others", async () => {
   await withTestDb(async () => {
     const k = katib();
     k.istawradaHala({

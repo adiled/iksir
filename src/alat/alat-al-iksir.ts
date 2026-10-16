@@ -64,6 +64,18 @@ class MunadiSijillAlat implements SijillAlat {
     return this.#khazana.get(name)?.muaalij;
   }
 
+  async naffidh(ism: string, hujaj: Record<string, unknown>): Promise<string> {
+    const tarif = this.#khazana.get(ism);
+    if (!tarif) throw new Error(`Unknown tool: ${ism}`);
+    const missing = (tarif.tarif.inputSchema.required ?? []).filter(
+      (field) => hujaj[field] === undefined || hujaj[field] === null,
+    );
+    if (missing.length > 0) {
+      throw new Error(`Missing required argument(s) for ${ism}: ${missing.join(", ")}`);
+    }
+    return tarif.muaalij(hujaj);
+  }
+
   yujad(name: string): boolean {
     return this.#khazana.has(name);
   }

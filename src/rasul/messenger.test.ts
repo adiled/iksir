@@ -11,13 +11,13 @@
  * - Reverse lookup via hallJalsaBilQanat
  */
 
-import { assertEquals } from "@std/assert";
+import { test, assertEquals } from "../ikhtibar.ts";
 import { withTestDb, mockTelegramClient } from "../test-helpers.ts";
 import { TelegramMessenger } from "./messenger.ts";
 import { haddathaAwAdkhalaQanat } from "../../db/db.ts";
 
 
-Deno.test("send: dispatch channel -> sendToDispatch", async () => {
+test("send: dispatch channel -> sendToDispatch", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
@@ -30,7 +30,7 @@ Deno.test("send: dispatch channel -> sendToDispatch", async () => {
   });
 });
 
-Deno.test("send: kimyawi channel -> arsalaRisala", async () => {
+test("send: kimyawi channel -> arsalaRisala", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
@@ -43,7 +43,7 @@ Deno.test("send: kimyawi channel -> arsalaRisala", async () => {
   });
 });
 
-Deno.test("send: murshid with known topic -> arsalaIlaMurshidTopic", async () => {
+test("send: murshid with known topic -> arsalaIlaMurshidTopic", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
@@ -58,7 +58,7 @@ Deno.test("send: murshid with known topic -> arsalaIlaMurshidTopic", async () =>
   });
 });
 
-Deno.test("send: murshid with no topic -> fallback to dispatch with prefix", async () => {
+test("send: murshid with no topic -> fallback to dispatch with prefix", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
@@ -70,7 +70,7 @@ Deno.test("send: murshid with no topic -> fallback to dispatch with prefix", asy
   });
 });
 
-Deno.test("send: disabled messenger -> no calls", async () => {
+test("send: disabled messenger -> no calls", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient({ mumakkan: false });
     const m = new TelegramMessenger(tc as never);
@@ -86,7 +86,7 @@ Deno.test("send: disabled messenger -> no calls", async () => {
 });
 
 
-Deno.test("arsalaMunassaq: dispatch -> sendToDispatch with Markdown", async () => {
+test("arsalaMunassaq: dispatch -> sendToDispatch with Markdown", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
@@ -98,7 +98,7 @@ Deno.test("arsalaMunassaq: dispatch -> sendToDispatch with Markdown", async () =
   });
 });
 
-Deno.test("arsalaMunassaq: al-Kimyawi -> arsalaRisala with Markdown", async () => {
+test("arsalaMunassaq: al-Kimyawi -> arsalaRisala with Markdown", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
@@ -110,7 +110,7 @@ Deno.test("arsalaMunassaq: al-Kimyawi -> arsalaRisala with Markdown", async () =
   });
 });
 
-Deno.test("arsalaMunassaq: murshid with topic -> Markdown", async () => {
+test("arsalaMunassaq: murshid with topic -> Markdown", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
@@ -124,7 +124,7 @@ Deno.test("arsalaMunassaq: murshid with topic -> Markdown", async () => {
   });
 });
 
-Deno.test("arsalaMunassaq: murshid fallback -> dispatch with prefix + Markdown", async () => {
+test("arsalaMunassaq: murshid fallback -> dispatch with prefix + Markdown", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
@@ -138,7 +138,7 @@ Deno.test("arsalaMunassaq: murshid fallback -> dispatch with prefix + Markdown",
 });
 
 
-Deno.test("mumakkan: delegates to TelegramClient", async () => {
+test("mumakkan: delegates to TelegramClient", async () => {
   const tcEnabled = mockTelegramClient({ mumakkan: true });
   const mEnabled = new TelegramMessenger(tcEnabled as never);
   assertEquals(mEnabled.mumakkan(), true);
@@ -149,7 +149,7 @@ Deno.test("mumakkan: delegates to TelegramClient", async () => {
 });
 
 
-Deno.test("khalaqaQanatMurshid: creates topic, persists to DB, returns channelId", async () => {
+test("khalaqaQanatMurshid: creates topic, persists to DB, returns channelId", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient({
       createForumTopic: async () => ({ message_thread_id: 77, name: "test" }),
@@ -166,7 +166,7 @@ Deno.test("khalaqaQanatMurshid: creates topic, persists to DB, returns channelId
   });
 });
 
-Deno.test("khalaqaQanatMurshid: returns null when not in group mode", async () => {
+test("khalaqaQanatMurshid: returns null when not in group mode", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient({ isGroupMode: false });
     const m = new TelegramMessenger(tc as never);
@@ -178,7 +178,7 @@ Deno.test("khalaqaQanatMurshid: returns null when not in group mode", async () =
   });
 });
 
-Deno.test("khalaqaQanatMurshid: returns null when createForumTopic fails", async () => {
+test("khalaqaQanatMurshid: returns null when createForumTopic fails", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient({
       createForumTopic: async () => null,
@@ -192,7 +192,7 @@ Deno.test("khalaqaQanatMurshid: returns null when createForumTopic fails", async
 });
 
 
-Deno.test("yamlikQanatMurshid: cache hit returns true", async () => {
+test("yamlikQanatMurshid: cache hit returns true", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
@@ -204,7 +204,7 @@ Deno.test("yamlikQanatMurshid: cache hit returns true", async () => {
   });
 });
 
-Deno.test("yamlikQanatMurshid: cache miss, DB hit returns true", async () => {
+test("yamlikQanatMurshid: cache miss, DB hit returns true", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
@@ -215,7 +215,7 @@ Deno.test("yamlikQanatMurshid: cache miss, DB hit returns true", async () => {
   });
 });
 
-Deno.test("yamlikQanatMurshid: full miss returns false", async () => {
+test("yamlikQanatMurshid: full miss returns false", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
@@ -225,7 +225,7 @@ Deno.test("yamlikQanatMurshid: full miss returns false", async () => {
 });
 
 
-Deno.test("hammalQanawatLilJalsa: returns channels from DB and caches", async () => {
+test("hammalQanawatLilJalsa: returns channels from DB and caches", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
@@ -243,7 +243,7 @@ Deno.test("hammalQanawatLilJalsa: returns channels from DB and caches", async ()
 });
 
 
-Deno.test("hallJalsaBilQanat: DB hit returns identifier and caches", async () => {
+test("hallJalsaBilQanat: DB hit returns identifier and caches", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);
@@ -263,7 +263,7 @@ Deno.test("hallJalsaBilQanat: DB hit returns identifier and caches", async () =>
   });
 });
 
-Deno.test("hallJalsaBilQanat: miss returns null", async () => {
+test("hallJalsaBilQanat: miss returns null", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
     const m = new TelegramMessenger(tc as never);

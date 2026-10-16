@@ -1,4 +1,7 @@
-import { assertEquals } from "@std/assert";
+import { test, assertEquals } from "../src/ikhtibar.ts";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { mkdtempSync, rmSync } from "node:fs";
 import {
   baddaaQaidatBayanat,
   aghlaaqQaidatBayanat,
@@ -20,24 +23,24 @@ import {
   haddathaAwAdkhalaMatlabMuallaq,
   jalabaMatalebMuallaq,
   mahaqaMatlabMuallaq,
-} from "./db.ts";
+} from "../db/db.ts";
 
 
 async function withTestDb(fn: () => Promise<void> | void): Promise<void> {
-  const tempDir = await Deno.makeTempDir({ prefix: "iksir-test-" });
-  Deno.env.set("IKSIR_STATE_DIR", tempDir);
+  const tempDir = mkdtempSync(join(tmpdir(), "iksir-test-"));
+  process.env.IKSIR_STATE_DIR = tempDir;
   try {
     await baddaaQaidatBayanat();
     await fn();
   } finally {
     aghlaaqQaidatBayanat();
-    Deno.env.delete("IKSIR_STATE_DIR");
-    await Deno.remove(tempDir, { recursive: true });
+    delete process.env.IKSIR_STATE_DIR;
+    rmSync(tempDir, { recursive: true, force: true });
   }
 }
 
 
-Deno.test("sessions: upsert and retrieve", async () => {
+test("sessions: upsert and retrieve", async () => {
   await withTestDb(() => {
     haddathaAwAdkhalaJalsa({
       id: "sess-1",
@@ -60,7 +63,7 @@ Deno.test("sessions: upsert and retrieve", async () => {
   });
 });
 
-Deno.test("sessions: upsert updates existing", async () => {
+test("sessions: upsert updates existing", async () => {
   await withTestDb(() => {
     haddathaAwAdkhalaJalsa({
       id: "sess-1",
@@ -96,7 +99,7 @@ Deno.test("sessions: upsert updates existing", async () => {
 });
 
 
-Deno.test("channels: upsert and get", async () => {
+test("channels: upsert and get", async () => {
   await withTestDb(() => {
     haddathaAwAdkhalaQanat("TEAM-200", "telegram", "12345");
     const channelId = jalabaQanat("TEAM-200", "telegram");
@@ -104,14 +107,14 @@ Deno.test("channels: upsert and get", async () => {
   });
 });
 
-Deno.test("channels: get returns null for missing", async () => {
+test("channels: get returns null for missing", async () => {
   await withTestDb(() => {
     const channelId = jalabaQanat("NONEXISTENT", "telegram");
     assertEquals(channelId, null);
   });
 });
 
-Deno.test("channels: upsert updates existing", async () => {
+test("channels: upsert updates existing", async () => {
   await withTestDb(() => {
     haddathaAwAdkhalaQanat("TEAM-200", "telegram", "12345");
     haddathaAwAdkhalaQanat("TEAM-200", "telegram", "67890");
@@ -119,7 +122,7 @@ Deno.test("channels: upsert updates existing", async () => {
   });
 });
 
-Deno.test("channels: jalabaQanatsForSession returns all providers", async () => {
+test("channels: jalabaQanatsForSession returns all providers", async () => {
   await withTestDb(() => {
     haddathaAwAdkhalaQanat("TEAM-200", "telegram", "12345");
     haddathaAwAdkhalaQanat("TEAM-200", "slack", "C07ABC");
@@ -129,14 +132,14 @@ Deno.test("channels: jalabaQanatsForSession returns all providers", async () => 
   });
 });
 
-Deno.test("channels: jalabaQanatsForSession returns empty for unknown", async () => {
+test("channels: jalabaQanatsForSession returns empty for unknown", async () => {
   await withTestDb(() => {
     const channels = jalabaQanatsForSession("NONEXISTENT");
     assertEquals(channels, {});
   });
 });
 
-Deno.test("channels: jalabJalsaByChannel reverse lookup", async () => {
+test("channels: jalabJalsaByChannel reverse lookup", async () => {
   await withTestDb(() => {
     haddathaAwAdkhalaQanat("TEAM-200", "telegram", "12345");
     haddathaAwAdkhalaQanat("TEAM-300", "telegram", "67890");
@@ -147,7 +150,7 @@ Deno.test("channels: jalabJalsaByChannel reverse lookup", async () => {
   });
 });
 
-Deno.test("channels: mahaqaQanat", async () => {
+test("channels: mahaqaQanat", async () => {
   await withTestDb(() => {
     haddathaAwAdkhalaQanat("TEAM-200", "telegram", "12345");
     assertEquals(jalabaQanat("TEAM-200", "telegram"), "12345");
@@ -157,7 +160,7 @@ Deno.test("channels: mahaqaQanat", async () => {
   });
 });
 
-Deno.test("channels: uniqueness per session+provider", async () => {
+test("channels: uniqueness per session+provider", async () => {
   await withTestDb(() => {
     haddathaAwAdkhalaQanat("TEAM-200", "telegram", "111");
     haddathaAwAdkhalaQanat("TEAM-200", "slack", "222");
@@ -171,7 +174,7 @@ Deno.test("channels: uniqueness per session+provider", async () => {
 });
 
 
-Deno.test("events: insert and retrieve unprocessed", async () => {
+test("events: insert and retrieve unprocessed", async () => {
   await withTestDb(() => {
     adkhalaHadath("pm", "mun_create_branch", { branch: "epic/test" }, "orch-1");
 
@@ -183,7 +186,23 @@ Deno.test("events: insert and retrieve unprocessed", async () => {
   });
 });
 
-Deno.test("events: allamaHadathMuaalaj removes from unprocessed", async () => {
+test("events: telegram wire events round trip", async () => {
+  await withTestDb(() => {
+    adkhalaHadath("telegram", "message", { update: { message: { message_id: 7, text: "salam" } } });
+    adkhalaHadath("telegram", "callback", { update: { id: "cb-1", data: "q:abc" } });
+
+    const events = jalabaAhdathGhairMuaalaja("telegram");
+    assertEquals(events.length, 2);
+
+    const first = JSON.parse(events[0].payload);
+    assertEquals(first.update.message.text, "salam");
+
+    allamaHadathMuaalaj(events[0].id);
+    assertEquals(jalabaAhdathGhairMuaalaja("telegram").length, 1);
+  });
+});
+
+test("events: allamaHadathMuaalaj removes from unprocessed", async () => {
   await withTestDb(() => {
     adkhalaHadath("pm", "mun_commit", { message: "test" });
 
@@ -197,7 +216,7 @@ Deno.test("events: allamaHadathMuaalaj removes from unprocessed", async () => {
   });
 });
 
-Deno.test("events: ordering is by creation time", async () => {
+test("events: ordering is by creation time", async () => {
   await withTestDb(() => {
     adkhalaHadath("pm", "tool_a", { order: 1 });
     adkhalaHadath("pm", "tool_b", { order: 2 });
@@ -211,7 +230,7 @@ Deno.test("events: ordering is by creation time", async () => {
 });
 
 
-Deno.test("questions: insert and retrieve unanswered", async () => {
+test("questions: insert and retrieve unanswered", async () => {
   await withTestDb(() => {
     haddathaAwAdkhalaJalsa({
       id: "sess-1",
@@ -239,7 +258,7 @@ Deno.test("questions: insert and retrieve unanswered", async () => {
   });
 });
 
-Deno.test("questions: allamaJawabSual removes from unanswered", async () => {
+test("questions: allamaJawabSual removes from unanswered", async () => {
   await withTestDb(() => {
     haddathaAwAdkhalaJalsa({
       id: "sess-1",
@@ -268,7 +287,7 @@ Deno.test("questions: allamaJawabSual removes from unanswered", async () => {
 });
 
 
-Deno.test("diary: add and query decisions", async () => {
+test("diary: add and query decisions", async () => {
   await withTestDb(() => {
     adhafaQararSijill({
       huwiyyatMurshid: "TEAM-200",
@@ -292,7 +311,7 @@ Deno.test("diary: add and query decisions", async () => {
   });
 });
 
-Deno.test("diary: filter by type", async () => {
+test("diary: filter by type", async () => {
   await withTestDb(() => {
     adhafaQararSijill({
       huwiyyatMurshid: "TEAM-200",
@@ -313,7 +332,7 @@ Deno.test("diary: filter by type", async () => {
   });
 });
 
-Deno.test("diary: search in decision and reasoning", async () => {
+test("diary: search in decision and reasoning", async () => {
   await withTestDb(() => {
     adhafaQararSijill({
       huwiyyatMurshid: "TEAM-200",
@@ -334,7 +353,7 @@ Deno.test("diary: search in decision and reasoning", async () => {
   });
 });
 
-Deno.test("diary: limit parameter", async () => {
+test("diary: limit parameter", async () => {
   await withTestDb(() => {
     for (let i = 0; i < 5; i++) {
       adhafaQararSijill({
@@ -350,7 +369,7 @@ Deno.test("diary: limit parameter", async () => {
   });
 });
 
-Deno.test("diary: collective query (no huwiyyatMurshid filter)", async () => {
+test("diary: collective query (no huwiyyatMurshid filter)", async () => {
   await withTestDb(() => {
     adhafaQararSijill({
       huwiyyatMurshid: "TEAM-200",
@@ -371,7 +390,7 @@ Deno.test("diary: collective query (no huwiyyatMurshid filter)", async () => {
 });
 
 
-Deno.test("demands: upsert and retrieve", async () => {
+test("demands: upsert and retrieve", async () => {
   await withTestDb(() => {
     haddathaAwAdkhalaMatlabMuallaq("TEAM-200", "Need control for PR", "normal");
 
@@ -383,7 +402,7 @@ Deno.test("demands: upsert and retrieve", async () => {
   });
 });
 
-Deno.test("demands: urgent sorted before normal", async () => {
+test("demands: urgent sorted before normal", async () => {
   await withTestDb(() => {
     haddathaAwAdkhalaMatlabMuallaq("TEAM-300", "Less important", "normal");
     haddathaAwAdkhalaMatlabMuallaq("TEAM-200", "Critical blocker", "urgent");
@@ -395,7 +414,7 @@ Deno.test("demands: urgent sorted before normal", async () => {
   });
 });
 
-Deno.test("demands: upsert replaces existing for same murshid", async () => {
+test("demands: upsert replaces existing for same murshid", async () => {
   await withTestDb(() => {
     haddathaAwAdkhalaMatlabMuallaq("TEAM-200", "Original reason", "normal");
     haddathaAwAdkhalaMatlabMuallaq("TEAM-200", "Updated reason", "urgent");
@@ -407,7 +426,7 @@ Deno.test("demands: upsert replaces existing for same murshid", async () => {
   });
 });
 
-Deno.test("demands: mahaqaMatlabMuallaq", async () => {
+test("demands: mahaqaMatlabMuallaq", async () => {
   await withTestDb(() => {
     haddathaAwAdkhalaMatlabMuallaq("TEAM-200", "test", "normal");
     assertEquals(jalabaMatalebMuallaq().length, 1);
@@ -418,7 +437,7 @@ Deno.test("demands: mahaqaMatlabMuallaq", async () => {
 });
 
 
-Deno.test("baddaaQaidatBayanat: idempotent — safe to call twice", async () => {
+test("baddaaQaidatBayanat: idempotent — safe to call twice", async () => {
   await withTestDb(async () => {
     await baddaaQaidatBayanat();
     haddathaAwAdkhalaQanat("test", "telegram", "123");

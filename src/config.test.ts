@@ -1,6 +1,8 @@
-import { assertEquals } from "@std/assert";
+import { test, assertEquals } from "./ikhtibar.ts";
+import { tmpdir } from "node:os";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { hammalaAlTasmim } from "./config.ts";
-import { join } from "jsr:@std/path";
+import { join } from "node:path";
 import { 
   TEST_HUM_MODEL, 
   TEST_HUM_MODEL_ALT, 
@@ -12,6 +14,8 @@ import {
 const ENV_KEYS = [
   "IKSIR_CONFIG_DIR",
   "IKSIR_HUM_MODEL",
+  "HUM_THRUM_SOCK",
+  "HUM_SOCKET",
   "TELEGRAM_BOT_TOKEN",
   "TELEGRAM_CHAT_ID",
   "TELEGRAM_GROUP_ID",
@@ -25,23 +29,23 @@ async function withTestConfig(
   envOverrides: Record<string, string>,
   fn: (config: Awaited<ReturnType<typeof hammalaAlTasmim>>) => void | Promise<void>,
 ): Promise<void> {
-  const tempDir = await Deno.makeTempDir({ prefix: "iksir-config-test-" });
+  const tempDir = mkdtempSync(join(tmpdir(), "iksir-config-test-"));
 
   /** Save existing env vars */
   const saved: Record<string, string | undefined> = {};
   for (const key of ENV_KEYS) {
-    saved[key] = Deno.env.get(key);
+    saved[key] = process.env[key];
   }
 
   try {
-    Deno.env.set("IKSIR_CONFIG_DIR", tempDir);
+    process.env.IKSIR_CONFIG_DIR = tempDir;
 
     if (jsonContent !== null) {
-      await Deno.writeTextFile(join(tempDir, "iksir.json"), jsonContent);
+      writeFileSync(join(tempDir, "iksir.json"), jsonContent);
     }
 
     for (const [key, value] of Object.entries(envOverrides)) {
-      Deno.env.set(key, value);
+      process.env[key] = value;
     }
 
     const config = await hammalaAlTasmim();
@@ -49,17 +53,17 @@ async function withTestConfig(
   } finally {
     for (const key of ENV_KEYS) {
       if (saved[key] !== undefined) {
-        Deno.env.set(key, saved[key]!);
+        process.env[key] = saved[key]!;
       } else {
-        Deno.env.delete(key);
+        delete process.env[key];
       }
     }
-    await Deno.remove(tempDir, { recursive: true });
+    rmSync(tempDir, { recursive: true, force: true });
   }
 }
 
 
-Deno.test("config: defaults when no config file exists", async () => {
+test("config: defaults when no config file exists", async () => {
   await withTestConfig(null, {}, (config) => {
     assertEquals(config.hum.namudhaj, undefined);
     assertEquals(config.istiftaa.fajwatZamaniyya, 300000);
@@ -75,7 +79,7 @@ Deno.test("config: defaults when no config file exists", async () => {
 });
 
 
-Deno.test("config: loads values from JSON", async () => {
+test("config: loads values from JSON", async () => {
   const json = JSON.stringify({
     saatSukun: {
       mintaqaZamaniyya: "Asia/Karachi",
@@ -96,13 +100,13 @@ Deno.test("config: loads values from JSON", async () => {
 });
 
 
-Deno.test("config: IKSIR_HUM_MODEL env override", async () => {
+test("config: IKSIR_HUM_MODEL env override", async () => {
   await withTestConfig(null, { IKSIR_HUM_MODEL: TEST_HUM_MODEL }, (config) => {
     assertEquals(config.hum.namudhaj, TEST_HUM_MODEL);
   });
 });
 
-Deno.test("config: TELEGRAM_BOT_TOKEN enables telegram", async () => {
+test("config: TELEGRAM_BOT_TOKEN enables telegram", async () => {
   await withTestConfig(null, {
     TELEGRAM_BOT_TOKEN: "test-token-123",
     TELEGRAM_CHAT_ID: "12345",
@@ -113,7 +117,7 @@ Deno.test("config: TELEGRAM_BOT_TOKEN enables telegram", async () => {
   });
 });
 
-Deno.test("config: TELEGRAM_PROXY env override", async () => {
+test("config: TELEGRAM_PROXY env override", async () => {
   await withTestConfig(null, {
     TELEGRAM_PROXY: TEST_PROXY_URL
   }, (config) => {
@@ -121,14 +125,14 @@ Deno.test("config: TELEGRAM_PROXY env override", async () => {
   });
 });
 
-Deno.test("config: NTFY_TOPIC enables ntfy", async () => {
+test("config: NTFY_TOPIC enables ntfy", async () => {
   await withTestConfig(null, { NTFY_TOPIC: "my-topic" }, (config) => {
     assertEquals(config.isharat.ntfy.mufattah, true);
     assertEquals(config.isharat.ntfy.topic, "my-topic");
   });
 });
 
-Deno.test("config: env overrides take precedence over JSON", async () => {
+test("config: env overrides take precedence over JSON", async () => {
   const json = JSON.stringify({
     hum: { namudhaj: TEST_HUM_MODEL }
   });
@@ -138,7 +142,7 @@ Deno.test("config: env overrides take precedence over JSON", async () => {
 });
 
 
-Deno.test("config: deep merge preserves nested defaults", async () => {
+test("config: deep merge preserves nested defaults", async () => {
   const json = JSON.stringify({
     saatSukun: { mintaqaZamaniyya: "Asia/Karachi" },
   });

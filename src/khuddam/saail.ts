@@ -15,7 +15,7 @@
  */
 
 import { logger } from "../logging/logger.ts";
-import { AmilHum } from "../hum/client.ts";
+import { Wasila } from "../hum/wasila.ts";
 import {
   adkhalaSual as dbInsertQuestion,
   jalabaAseilaGhairMujaba,
@@ -36,13 +36,13 @@ import type {
 
 
 interface SailDeps {
-  amil: AmilHum;
+  amil: Wasila;
   rasul: RasulKharij;
   mudirJalasat: MudirJalasat;
 }
 
 export class Saail {
-  #amil: AmilHum;
+  #amil: Wasila;
   #messenger: RasulKharij;
   #sessionManager: MudirJalasat;
 

@@ -32,7 +32,7 @@ export async function istadaa<T>(
   let wahda: Record<string, unknown>;
   try {
     wahda = await import(masar.startsWith(".") || masar.startsWith("/")
-      ? `file://${masar.startsWith("/") ? masar : `${Deno.cwd()}/${masar.slice(2)}`}`
+      ? `file://${masar.startsWith("/") ? masar : `${process.cwd()}/${masar.slice(2)}`}`
       : masar);
   } catch (khata) {
     throw new Error(`Nothing answers at ${masar}: ${String(khata)}`);

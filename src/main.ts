@@ -25,13 +25,14 @@ import {
   MAX_BACKOFF_MS
 } from "./constants.ts";
 
-import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, haddathaHuwiyyatRisalaSual } from "../db/db.ts";
-import { createAmilHum } from "./hum/client.ts";
-import { masarThrum } from "./hum/thrum.ts";
+import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, jalabaAhdathGhairMuaalaja, allamaHadathMuaalaj, haddathaHuwiyyatRisalaSual } from "../db/db.ts";
+import { Wasila } from "./hum/wasila.ts";
+import { istarjaaMirata } from "./khuddam/mirata.ts";
+import { masar_thrum } from "../hum/bee.ts";
 import { AlatAlIksir } from "./alat/alat-al-iksir.ts";
 import { anshaaNtfyAmil } from "./rasul/ntfy.ts";
-import { anshaaTelegramAmil } from "./rasul/telegram.ts";
-import { anshaaTelegramRasul } from "./rasul/messenger.ts";
+import { anshaaTelegramAmil, type TelegramMessage, type TelegramCallbackQuery } from "./rasul/telegram.ts";
+import { anshaaTelegramRasul, TelegramMessenger } from "./rasul/messenger.ts";
 import { anshaaRasulUnbub } from "./rasul/rasul-anbub.ts";
 import { anshaaSijillWasfat } from "./wasfa/sijill.ts";
 import { AMAL_FASL, AMAL_HAYULA, AMAL_SAFA, istadaa } from "./hayula/istadaa.ts";
@@ -65,6 +66,22 @@ function safaSakita(): Safa {
   };
 }
 
+/** No matter named. It says so rather than pretending. */
+function hayulaSakita(): Hayula {
+  const la = () => Promise.resolve(false);
+  return {
+    naw: "sakita",
+    dakhala: () => Promise.resolve(false),
+    waqif: () => Promise.resolve(null),
+    asas: () => Promise.resolve(""),
+    mudtarib: () => Promise.resolve(false),
+    jammada: () => Promise.resolve(false),
+    thabbata: () => Promise.resolve(false),
+    sahaba: () => Promise.resolve({ najah: false }),
+    masafa: () => Promise.resolve(0),
+  };
+}
+
 /** Nowhere to set a jawhar down. It says so rather than pretending. */
 function faslSakit(): Fasl {
   return {
@@ -79,7 +96,7 @@ function faslSakit(): Fasl {
 
 interface SiyaqKhadim {
   tasmim: TasmimIksir;
-  amil: ReturnType<typeof createAmilHum>;
+  amil: Wasila;
   ntfy: ReturnType<typeof anshaaNtfyAmil>;
   rasul: Rasul;
   wasfat: SijillWasfat;
@@ -152,7 +169,7 @@ async function naffadhFahs(ctx: SiyaqKhadim): Promise<void> {
   console.log(`Config file: ${masarMilafAlTasmim()}`);
 
   console.log("\nConfiguration:");
-  console.log(`  Thrum socket: ${masarThrum(ctx.tasmim.hum?.miqbas)}`);
+  console.log(`  Thrum socket: ${masar_thrum(ctx.tasmim.hum?.miqbas)}`);
   console.log(`  Bee hid: ${ctx.amil.huwiyya}`);
   console.log(`  Model: ${ctx.tasmim.hum?.namudhaj ?? "(the nest decides)"}`);
 
@@ -164,7 +181,7 @@ async function naffadhFahs(ctx: SiyaqKhadim): Promise<void> {
     console.log("All checks passed! ✓\n");
   } else {
     console.log("Some checks failed. Review the configuration.\n");
-    Deno.exit(1);
+    process.exit(1);
   }
 }
 
@@ -187,18 +204,18 @@ async function addaIsharat(ctx: SiyaqKhadim): Promise<void> {
     aghlaaqQaidatBayanat();
 
     await logger.akhbar("main", "Shutdown complete");
-    Deno.exit(0);
+    process.exit(0);
   };
 
   const handleSignal = (signal: string) => {
     ighlaaq(signal).catch((error) => {
       console.error(`Shutdown error: ${error}`);
-      Deno.exit(1);
+      process.exit(1);
     });
   };
 
-  Deno.addSignalListener("SIGINT", () => handleSignal("SIGINT"));
-  Deno.addSignalListener("SIGTERM", () => handleSignal("SIGTERM"));
+  process.on("SIGINT", () => handleSignal("SIGINT"));
+  process.on("SIGTERM", () => handleSignal("SIGTERM"));
 }
 
 /**
@@ -257,10 +274,10 @@ async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
     await ctx.amil.ittasil();
   } catch (error) {
     await logger.sajjalKhata("main", "No humd at the thrum socket, aborting", {
-      miqbas: masarThrum(ctx.tasmim.hum?.miqbas),
+      miqbas: masar_thrum(ctx.tasmim.hum?.miqbas),
       error: String(error),
     });
-    Deno.exit(1);
+    process.exit(1);
   }
 
   const version = await ctx.amil.getVersion();
@@ -270,9 +287,15 @@ async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
 
   /** Wire inbound message routing and start the messenger */
   rabatRisalaDakhila(ctx);
-  await ctx.rasul.baddaa().catch(async (error) => {
-    await logger.sajjalKhata("messenger", "Inbound start error", { error: String(error) });
-  });
+  if (ctx.rasul instanceof TelegramMessenger) {
+    istahlakTelegram(ctx, ctx.mutahakkimIlgha.signal).catch(async (error) => {
+      await logger.sajjalKhata("messenger", "Sijill drain error", { error: String(error) });
+    });
+  } else {
+    await ctx.rasul.baddaa().catch(async (error) => {
+      await logger.sajjalKhata("messenger", "Inbound start error", { error: String(error) });
+    });
+  }
 
   ctx.munaffidh.badaaMuaalaja(ctx.mutahakkimIlgha.signal).catch(async (error) => {
     await logger.sajjalKhata("tool-executor", "Processing error", { error: String(error) });
@@ -302,6 +325,39 @@ async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
  * The Rasul adapter (messenger.ts) handles transport-specific parsing and
  * emits normalized RisalaDakhila events.
  */
+/**
+ * Drain the telegram wire rows the saail hive writes.
+ * Each row is read aloud through the messenger's own tongue —
+ * one normalization, two doors — then marked.
+ */
+async function istahlakTelegram(ctx: SiyaqKhadim, signal: AbortSignal): Promise<void> {
+  const rasul = ctx.rasul;
+  if (!(rasul instanceof TelegramMessenger)) return;
+  await logger.akhbar("telegram", "Draining wire rows from Sijill");
+  while (!signal.aborted) {
+    try {
+      const ahdath = jalabaAhdathGhairMuaalaja("telegram");
+      for (const hadath of ahdath) {
+        try {
+          const humula = JSON.parse(hadath.payload) as { ada?: string; update?: unknown };
+          if (humula.ada === "callback" && humula.update) {
+            await rasul.iqraIstijaba(humula.update as TelegramCallbackQuery);
+          } else if (humula.update) {
+            const tahdith = humula.update as { message?: TelegramMessage };
+            if (tahdith.message) await rasul.iqraRisala(tahdith.message);
+          }
+        } catch (error) {
+          await logger.sajjalKhata("telegram", "Wire row failed", { error: String(error) });
+        }
+        allamaHadathMuaalaj(hadath.id);
+      }
+    } catch (error) {
+      await logger.sajjalKhata("telegram", "Wire drain failed", { error: String(error) });
+    }
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+}
+
 function rabatRisalaDakhila(ctx: SiyaqKhadim): void {
   ctx.rasul.indaRisala(async (risala: RisalaDakhila) => {
     switch (risala.naw) {
@@ -716,19 +772,13 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
    */
   const siyaqMadda = {
     tasmim: config,
-    warsha: Deno.env.get("IKSIR_REPO_PATH"),
+    warsha: process.env.IKSIR_REPO_PATH,
     masar: config.madda.masar,
   };
 
-  if (!config.madda?.hayula) {
-    await logger.sajjalKhata(
-      "main",
-      "No hayula named. Iksir works upon matter, and must be handed some: set madda.hayula.",
-    );
-    Deno.exit(1);
-  }
-
-  const hayula = await istadaa<Hayula>(config.madda.hayula, siyaqMadda, AMAL_HAYULA);
+  const hayula = config.madda?.hayula
+    ? await istadaa<Hayula>(config.madda.hayula, siyaqMadda, AMAL_HAYULA)
+    : hayulaSakita();
   const safa = config.madda.safa
     ? await istadaa<Safa>(config.madda.safa, siyaqMadda, AMAL_SAFA)
     : safaSakita();
@@ -738,17 +788,11 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
 
   const alat = new AlatAlIksir(wasfat);
 
-  const amil = createAmilHum(config, alat.adawat());
+  const amil = new Wasila({ miqbas: config.hum.miqbas, namudhaj: config.hum.namudhaj, sijill: alat.sijill });
+  await amil.ittasil();
 
-  /**
-   * A nida arrives from the nest, is worked, and its natija returns on the
-   * same strand — the cell stays parked until it does. Each instrument
-   * inscribes its own hadath as it goes, which Munaffidh drains on its
-   * heartbeat. The sijill is the record; the thrum is merely the road.
-   */
-  amil.alaNida(async (nida) => {
-    const natija = await alat.naffidh(nida.name, nida.args);
-    amil.raddNida(nida.sid, nida.callId, natija);
+  istarjaaMirata(amil).catch(async (error) => {
+    await logger.sajjalKhata("mirata", "mirror backfill failed", { error: String(error) });
   });
   const ntfy = anshaaNtfyAmil(config);
   /**
@@ -791,6 +835,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     mudirJalasat: sessionManager,
     arraf: intentResolver,
     rasul: messenger,
+    amil,
     hayula,
     namatWasfa: config.wasfat?.namatWasfa,
   });
@@ -880,17 +925,19 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
 
   if (opts.check) {
     await naffadhFahs(ctx);
-    return;
+    amil.qaf();
+    aghlaaqQaidatBayanat();
+    process.exit(0);
   }
 
   await awqadKhadim(ctx);
 }
 
 if (import.meta.main) {
-  const check = Deno.args.includes("--check");
+  const check = process.argv.slice(2).includes("--check");
   abda({ check }).catch(async (error) => {
     await logger.sajjalKhata("main", "Fatal error", { error: String(error) });
     console.error("Fatal error:", error);
-    Deno.exit(1);
+    process.exit(1);
   });
 }

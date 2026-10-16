@@ -16,18 +16,20 @@
  * in case the scrolls are absent.
  */
 
+import { nazzifJson } from "../utils/strings.ts";
 import { logger } from "../logging/logger.ts";
-import { join } from "jsr:@std/path";
-import type { AmilHum } from "../hum/client.ts";
+import { join } from "node:path";
+import { readFileSync } from "node:fs";
+import type { Wasila } from "../hum/wasila.ts";
 import type { MaalumatSual, TasnifSual, TaqyimTaaliq } from "../types.ts";
 
 function masarWakala(): string {
-  return Deno.env.get("IKSIR_AGENTS_MD_PATH") ??
-    join(Deno.env.get("HOME") ?? ".", ".config", "iksir", "AGENTS.md");
+  return process.env.IKSIR_AGENTS_MD_PATH ??
+    join(process.env.HOME ?? ".", ".config", "iksir", "AGENTS.md");
 }
 
 function masarAlMakhzan(): string {
-  return Deno.env.get("IKSIR_REPO_PATH") ?? ".";
+  return process.env.IKSIR_REPO_PATH ?? ".";
 }
 
 
@@ -42,7 +44,7 @@ let qalibSual: string | null = null;
 async function hammalWakala(): Promise<string | null> {
   if (muhtawaWakala) return muhtawaWakala;
   try {
-    muhtawaWakala = await Deno.readTextFile(masarWakala());
+    muhtawaWakala = readFileSync(masarWakala(), "utf-8");
     return muhtawaWakala;
   } catch {
     await logger.haDHHir("mumayyiz", "التعاليم لم تُقرأ — AGENTS.md unavailable");
@@ -51,7 +53,7 @@ async function hammalWakala(): Promise<string | null> {
 }
 
 function masarQalib(envVar: string, defaultFilename: string): string {
-  return Deno.env.get(envVar) ?? join(masarAlMakhzan(), "prompts", defaultFilename);
+  return process.env[envVar] ?? join(masarAlMakhzan(), "prompts", defaultFilename);
 }
 
 async function hammalQalib(
@@ -63,7 +65,7 @@ async function hammalQalib(
   if (cached) return cached;
   const path = masarQalib(envVar, defaultFilename);
   try {
-    const content = await Deno.readTextFile(path);
+    const content = readFileSync(path, "utf-8");
     await logger.akhbar("mumayyiz", `اللفافة حُمّلت — ${path}`);
     return content;
   } catch {
@@ -168,7 +170,7 @@ interface NatijaTamyizTanbih {
  * or khabath to be returned to the murshid?
  */
 export async function mayyazaTanbih(
-  amil: AmilHum,
+  amil: Wasila,
   message: string,
 ): Promise<NatijaTamyizTanbih> {
   const md = await hammalWakala();
@@ -197,7 +199,7 @@ export async function mayyazaTanbih(
       return { dhahab: true, sabab: "فشل التمييز", radd: null };
     }
 
-    const parsed = JSON.parse(result.response.trim());
+    const parsed = JSON.parse(nazzifJson(result.response));
     const isDhahab = parsed.tamyiz === "DHAHAB";
     return {
       dhahab: isDhahab,
@@ -218,7 +220,7 @@ export async function mayyazaTanbih(
  * or can the murshid answer it alone?
  */
 export async function mayyazaSual(
-  amil: AmilHum,
+  amil: Wasila,
   question: MaalumatSual,
 ): Promise<TasnifSual> {
   const md = await hammalWakala();
@@ -258,7 +260,7 @@ export async function mayyazaSual(
     if (jsonStr.startsWith("```")) {
       jsonStr = jsonStr.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
     }
-    const parsed = JSON.parse(jsonStr);
+    const parsed = JSON.parse(nazzifJson(jsonStr));
 
     /** Resolve shorthand auto-answers to actual option labels */
     let autoAnswer = parsed.autoAnswer;

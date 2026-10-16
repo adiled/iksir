@@ -5,13 +5,13 @@
  * MudirJalasat, Sail, and TelegramMessenger — mocking only
  * the outward boundaries — the nest, the register, the messenger.
  *
- * Run: deno test --allow-all tests/smoke_test.ts
+ * Run: npm test
  */
 
-import { assertEquals, assertExists, assertStringIncludes } from "@std/assert";
+import { test, assertEquals, assertExists, assertStringIncludes } from "../src/ikhtibar.ts";
 import {
   withTestRepo,
-  mockAmilHum,
+  mockWasila,
   mockHayula,
   mockTelegramClient,
   mockArraf,
@@ -27,7 +27,7 @@ import { jalabaAseilaGhairMujaba } from "../db/db.ts";
 
 function buildContext() {
   const config = makeConfig();
-  const amil = mockAmilHum();
+  const amil = mockWasila();
   const telegram = mockTelegramClient();
   const messenger = new TelegramMessenger(telegram as never);
   const intentResolver = mockArraf();
@@ -43,6 +43,7 @@ function buildContext() {
     mudirJalasat: sessionManager,
     arraf: intentResolver as never,
     rasul: messenger,
+    amil: amil as never,
     hayula,
     namatWasfa: config.wasfat?.namatWasfa,
   });
@@ -57,7 +58,7 @@ function buildContext() {
 }
 
 
-Deno.test("smoke: /status with no sessions returns empty status", async () => {
+test("smoke: /status with no sessions returns empty status", async () => {
   await withTestRepo(async () => {
     const { dispatcher } = buildContext();
 
@@ -73,7 +74,7 @@ Deno.test("smoke: /status with no sessions returns empty status", async () => {
 });
 
 
-Deno.test("smoke: activateForTicketUrl creates session + topic", async () => {
+test("smoke: activateForTicketUrl creates session + topic", async () => {
   await withTestRepo(async () => {
     const { dispatcher, amil, telegram, sessionManager } = buildContext();
 
@@ -106,7 +107,7 @@ Deno.test("smoke: activateForTicketUrl creates session + topic", async () => {
 });
 
 
-Deno.test("smoke: message routed to active murshid via sendPromptAsync", async () => {
+test("smoke: message routed to active murshid via sendPromptAsync", async () => {
   await withTestRepo(async () => {
     const { dispatcher, amil, sessionManager } = buildContext();
 
@@ -135,7 +136,7 @@ Deno.test("smoke: message routed to active murshid via sendPromptAsync", async (
 });
 
 
-Deno.test("smoke: /status with active session shows identifier", async () => {
+test("smoke: /status with active session shows identifier", async () => {
   await withTestRepo(async () => {
     const { dispatcher } = buildContext();
 
@@ -157,7 +158,7 @@ Deno.test("smoke: /status with active session shows identifier", async () => {
 });
 
 
-Deno.test("smoke: dispatch message uses intent resolver for natural language", async () => {
+test("smoke: dispatch message uses intent resolver for natural language", async () => {
   await withTestRepo(async () => {
     const { dispatcher, intentResolver, amil } = buildContext();
 
@@ -190,7 +191,7 @@ Deno.test("smoke: dispatch message uses intent resolver for natural language", a
 });
 
 
-Deno.test("smoke: murshid topic message routes to correct session", async () => {
+test("smoke: murshid topic message routes to correct session", async () => {
   await withTestRepo(async () => {
     const { dispatcher, amil, sessionManager } = buildContext();
 
@@ -229,7 +230,7 @@ Deno.test("smoke: murshid topic message routes to correct session", async () => 
 });
 
 
-Deno.test("smoke: question event classified and forwarded to murshid topic", async () => {
+test("smoke: question event classified and forwarded to murshid topic", async () => {
   await withTestRepo(async () => {
     const { dispatcher, questionHandler, sessionManager } = buildContext();
 
@@ -269,7 +270,7 @@ Deno.test("smoke: question event classified and forwarded to murshid topic", asy
 });
 
 
-Deno.test("smoke: question answered via callback", async () => {
+test("smoke: question answered via callback", async () => {
   await withTestRepo(async () => {
     const { dispatcher, amil, questionHandler, sessionManager } = buildContext();
 
@@ -314,7 +315,7 @@ Deno.test("smoke: question answered via callback", async () => {
 });
 
 
-Deno.test("smoke: second murshid activation switches active session", async () => {
+test("smoke: second murshid activation switches active session", async () => {
   await withTestRepo(async () => {
     const { dispatcher, sessionManager } = buildContext();
 
@@ -329,7 +330,7 @@ Deno.test("smoke: second murshid activation switches active session", async () =
 });
 
 
-Deno.test("smoke: vessels survive a restart, carrying their nestId", async () => {
+test("smoke: vessels survive a restart, carrying their nestId", async () => {
   await withTestRepo(async () => {
     /** First life — light a vessel and let the worker name its handle. */
     const first = buildContext();
@@ -356,5 +357,27 @@ Deno.test("smoke: vessels survive a restart, carrying their nestId", async () =>
 
     /** The amil must be able to resume, or the murshid wakes with no memory. */
     assertEquals(second.amil.huwiyyatUsh(lit!.id), "nest-handle-9001");
+  });
+});
+
+test("smoke: ticketless question is answered by the nest directly", async () => {
+  await withTestRepo(async () => {
+    const { dispatcher, intentResolver, amil } = buildContext();
+
+    intentResolver._nextResult = {
+      hala: "lam_tujad",
+      tariqa: "bahth_fikri",
+      nassKham: "say meow",
+    } as never;
+
+    const result = await dispatcher.aalajRisalaIrsal({
+      source: "telegram",
+      text: "say meow",
+    });
+
+    assertEquals(result.tuulija, true);
+    assertExists(result.radd);
+    assertEquals(amil._calls.sendPrompt.length, 1);
+    assertStringIncludes(amil._calls.sendPrompt[0].prompt, "say meow");
   });
 });

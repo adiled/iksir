@@ -19,7 +19,7 @@ import { hammalaAlTasmim, masarMilafAlTasmim } from "./config.ts";
 import { runInit } from "./init.ts";
 import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, jalabaKullJalasat, jalabaAseilaGhairMujaba } from "../db/db.ts";
 import { execCommand } from "./utils/exec.ts";
-import { join } from "jsr:@std/path";
+import { join } from "node:path";
 
 /**
  * One service. The nest is al-Kimyawi's to supervise, and the instruments
@@ -55,7 +55,8 @@ Run './install' for first-time setup.
 
 /** Returns ["--user"] for non-root, [] for root. */
 function systemctlMode(): string[] {
-  return Deno.uid() === 0 ? [] : ["--user"];
+  const uid = typeof process.getuid === "function" ? process.getuid() : 1000;
+  return uid === 0 ? [] : ["--user"];
 }
 
 async function systemctl(action: string, targets: string[]): Promise<void> {
@@ -115,7 +116,7 @@ async function cmdStatus(): Promise<void> {
 
 
 async function cmdCheck(): Promise<void> {
-  const repoPath = Deno.env.get("IKSIR_REPO_PATH") ?? ".";
+  const repoPath = process.env.IKSIR_REPO_PATH ?? ".";
   let failures = 0;
 
   console.log("Checking config...");
@@ -129,24 +130,11 @@ async function cmdCheck(): Promise<void> {
     failures++;
   }
 
-  console.log("\nType checking...");
-  const entries = ["src/main.ts", "src/alat/alat-al-iksir.ts", "src/cli.ts"];
-  for (const entry of entries) {
-    const result = await execCommand("deno", ["check", entry], { cwd: repoPath });
-    if (result.success) {
-      console.log(`  \x1b[32m✓\x1b[0m ${entry}`);
-    } else {
-      console.log(`  \x1b[31m✗\x1b[0m ${entry}`);
-      console.log(`    ${result.stderr.split("\n")[0]}`);
-      failures++;
-    }
-  }
-
   console.log("\nRunning tests...");
-  const testResult = await execCommand("deno", ["test", "--allow-all"], { cwd: repoPath });
+  const testResult = await execCommand("npm", ["test"], { cwd: repoPath });
   if (testResult.success) {
-    const lines = testResult.stderr.split("\n");
-    const summary = lines.find((l) => l.includes("passed")) ?? "passed";
+    const lines = testResult.stdout.split("\n");
+    const summary = lines.find((l) => l.includes("# pass")) ?? "passed";
     console.log(`  \x1b[32m✓\x1b[0m ${summary.trim()}`);
   } else {
     console.log(`  \x1b[31m✗\x1b[0m Tests failed`);
@@ -154,23 +142,23 @@ async function cmdCheck(): Promise<void> {
   }
 
   console.log(failures === 0 ? "\n\x1b[32mAll checks passed.\x1b[0m" : `\n\x1b[31m${failures} check(s) failed.\x1b[0m`);
-  if (failures > 0) Deno.exit(1);
+  if (failures > 0) process.exit(1);
 }
 
 
 async function cmdSync(): Promise<void> {
-  const repoPath = Deno.env.get("IKSIR_REPO_PATH") ?? Deno.cwd();
-  const home = Deno.env.get("HOME") ?? ".";
+  const repoPath = process.env.IKSIR_REPO_PATH ?? process.cwd();
+  const home = process.env.HOME ?? ".";
   const agentDir = join(home, ".config", "iksir", "prompts");
 
-  await Deno.mkdir(agentDir, { recursive: true });
+  mkdirSync(agentDir, { recursive: true });
 
   let synced = 0;
   const promptsDir = join(repoPath, "prompts");
   try {
-    for await (const entry of Deno.readDir(promptsDir)) {
-      if (entry.isFile && entry.name.startsWith("iksir-") && entry.name.endsWith(".md")) {
-        await Deno.copyFile(join(promptsDir, entry.name), join(agentDir, entry.name));
+    for (const entry of readdirSync(promptsDir, { withFileTypes: true })) {
+      if (entry.isFile() && entry.name.startsWith("iksir-") && entry.name.endsWith(".md")) {
+        copyFileSync(join(promptsDir, entry.name), join(agentDir, entry.name));
         console.log(`  synced prompt: ${entry.name}`);
         synced++;
       }
@@ -184,13 +172,13 @@ async function cmdSync(): Promise<void> {
 
 
 async function cmdUpdate(): Promise<void> {
-  const repoPath = Deno.env.get("IKSIR_REPO_PATH") ?? Deno.cwd();
+  const repoPath = process.env.IKSIR_REPO_PATH ?? process.cwd();
 
   console.log("Pulling latest...");
   const pull = await execCommand("git", ["pull"], { cwd: repoPath });
   if (!pull.success) {
     console.error(`  git pull failed: ${pull.stderr.trim()}`);
-    Deno.exit(1);
+    process.exit(1);
   }
   const summary = pull.stdout.trim();
   console.log(`  ${summary.includes("Already up to date") ? "Already up to date." : summary.split("\n")[0]}`);
@@ -216,7 +204,7 @@ async function cmdUpdate(): Promise<void> {
 
 async function cmdConfig(): Promise<void> {
   const config = await hammalaAlTasmim();
-  if (Deno.args.includes("--path")) {
+  if (process.argv.slice(2).includes("--path")) {
     console.log(masarMilafAlTasmim());
     return;
   }
@@ -224,7 +212,7 @@ async function cmdConfig(): Promise<void> {
 }
 
 
-const command = Deno.args[0] ?? "help";
+const command = process.argv.slice(2)[0] ?? "help";
 
 switch (command) {
   case "init":
@@ -263,5 +251,5 @@ switch (command) {
   default:
     console.error(`Unknown command: ${command}`);
     console.log(HELP);
-    Deno.exit(1);
+    process.exit(1);
 }

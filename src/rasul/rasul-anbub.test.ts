@@ -1,11 +1,15 @@
-import { assertEquals, assertStringIncludes } from "@std/assert";
+import { test, assertEquals, assertStringIncludes } from "../ikhtibar.ts";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { mkdtempSync, rmSync, readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { RasulUnbub } from "./rasul-anbub.ts";
 import type { RisalaDakhila } from "../types.ts";
 
 async function biWarsha(
   fn: (rasul: RasulUnbub, samia: RisalaDakhila[]) => Promise<void>,
 ): Promise<void> {
-  const dalil = await Deno.makeTempDir({ prefix: "iksir-unbub-" });
+  const dalil = mkdtempSync(join(tmpdir(), "iksir-unbub-"));
   const rasul = new RasulUnbub(dalil);
   const samia: RisalaDakhila[] = [];
   rasul.indaRisala((r) => {
@@ -18,7 +22,7 @@ async function biWarsha(
     rasul.awqaf();
     /** Closing the ear ends the pending read; give it a tick to unwind. */
     await new Promise((r) => setTimeout(r, 50));
-    await Deno.remove(dalil, { recursive: true }).catch(() => {});
+    try { rmSync(dalil, { recursive: true, force: true }); } catch { /* ignore */ }
   }
 }
 
@@ -33,13 +37,10 @@ async function hatta(shart: () => boolean, muhla = 3000): Promise<void> {
 
 /** Speak into the ear the way al-Kimyawi would, from a shell. */
 async function qala(rasul: RasulUnbub, satr: string): Promise<void> {
-  const sh = new Deno.Command("sh", {
-    args: ["-c", `printf '%s\\n' ${JSON.stringify(satr)} > ${JSON.stringify(rasul.masarUdhn)}`],
-  });
-  await sh.output();
+  execFileSync("sh", ["-c", `printf '%s\\n' ${JSON.stringify(satr)} > ${JSON.stringify(rasul.masarUdhn)}`]);
 }
 
-Deno.test("unbub: a line spoken into the ear is heard", async () => {
+test("unbub: a line spoken into the ear is heard", async () => {
   await biWarsha(async (rasul, samia) => {
     await rasul.baddaa();
     await qala(rasul, "the vowel should carry length");
@@ -48,7 +49,7 @@ Deno.test("unbub: a line spoken into the ear is heard", async () => {
   });
 });
 
-Deno.test("unbub: the tongue routes each shape", async () => {
+test("unbub: the tongue routes each shape", async () => {
   await biWarsha(async (rasul, samia) => {
     await rasul.baddaa();
 
@@ -66,7 +67,7 @@ Deno.test("unbub: the tongue routes each shape", async () => {
   });
 });
 
-Deno.test("unbub: the ear reopens after a speaker departs", async () => {
+test("unbub: the ear reopens after a speaker departs", async () => {
   await biWarsha(async (rasul, samia) => {
     await rasul.baddaa();
 
@@ -85,7 +86,7 @@ Deno.test("unbub: the ear reopens after a speaker departs", async () => {
   });
 });
 
-Deno.test("unbub: speaking into an empty room does not block", async () => {
+test("unbub: speaking into an empty room does not block", async () => {
   await biWarsha(async (rasul) => {
     await rasul.baddaa();
 
@@ -100,7 +101,7 @@ Deno.test("unbub: speaking into an empty room does not block", async () => {
 
     assertEquals(mudda < 1000, true, `speaking took ${mudda}ms`);
 
-    const maktub = await Deno.readTextFile(`${rasul.masarFam}/dispatch`);
+    const maktub = readFileSync(`${rasul.masarFam}/dispatch`, "utf-8");
     assertStringIncludes(maktub, "is anyone there");
   });
 });

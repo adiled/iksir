@@ -1,0 +1,9 @@
+SERVICE saail
+RUN node ${HOME}/iksir/hives/saail/saail.ts
+# Secrets ride an overlay, never this file:
+#   orchd --overlay ~/.config/hum/overlays/saail.orch grow saail
+ENV TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+ENV TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+ENV TELEGRAM_GROUP_ID=${TELEGRAM_GROUP_ID:-}
+ENV IKSIR_STATE_DIR=${IKSIR_STATE_DIR:-${HOME}/.local/share/iksir}
+RESTART always

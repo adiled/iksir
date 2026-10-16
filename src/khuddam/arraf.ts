@@ -20,8 +20,9 @@
  * Arraf does not execute. Arraf does not inscribe. Arraf only sees.
  */
 
+import { nazzifJson } from "../utils/strings.ts";
 import { logger } from "../logging/logger.ts";
-import type { AmilHum } from "../hum/client.ts";
+import type { Wasila } from "../hum/wasila.ts";
 import type { SiyaqMuhadatha } from "./munadi.ts";
 import type { NawKiyan } from "../types.ts";
 import type { SijillWasfat, Wasfa } from "../wasfa/sijill-wasfat.ts";
@@ -107,10 +108,10 @@ const KALIMAT_NAW: Record<NawKiyan, string[]> = {
 
 export class Arraf {
   #wasfat: SijillWasfat;
-  #amil: AmilHum;
+  #amil: Wasila;
   #huwiyyatJalsatNiyya: string | null = null;
 
-  constructor(deps: { wasfat: SijillWasfat; amil: AmilHum }) {
+  constructor(deps: { wasfat: SijillWasfat; amil: Wasila }) {
     this.#wasfat = deps.wasfat;
     this.#amil = deps.amil;
   }
@@ -332,8 +333,7 @@ ${Arraf.TAWJIHAT_NIZAM_NIYYA}`;
 
     const radd = await this.#amil.sendPrompt(jalsaId, talabOracle, {
       system: Arraf.TAWJIHAT_NIZAM_NIYYA,
-      model: { providerID: "anthropic", modelID: "claude-sonnet-4-20250514" },
-      timeoutMs: 15_000,
+      timeoutMs: 90_000,
     });
 
     if (!radd.success || !radd.response) {
@@ -351,7 +351,7 @@ ${Arraf.TAWJIHAT_NIZAM_NIYYA}`;
       }
 
       /** Translate the natn tongue of the oracle into a sacred NiyyaMustakhraja */
-      const khamm = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+      const khamm = JSON.parse(nazzifJson(jsonMatch[0])) as Record<string, unknown>;
 
       const nawKiyanMap: Record<string, NawKiyan> = {
         ticket: "wasfa", wasfa: "wasfa", epic: "malhamat", unknown: "majhul",
@@ -540,7 +540,7 @@ ${Arraf.TAWJIHAT_NIZAM_NIYYA}`;
  */
 export function istadaaArraf(deps: {
   wasfat: SijillWasfat;
-  amil: AmilHum;
+  amil: Wasila;
 }): Arraf {
   return new Arraf(deps);
 }

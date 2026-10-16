@@ -7,6 +7,9 @@
  */
 
 import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, haddathaAwAdkhalaJalsa } from "../db/db.ts";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { execCommand } from "./utils/exec.ts";
 import type { RasulKharij, QanatRisala, JalsatMurshid, JawabSual } from "./types.ts";
 import type { Hayula } from "./hayula/hayula.ts";
@@ -18,15 +21,15 @@ import type { Hayula } from "./hayula/hayula.ts";
  * Sets IKSIR_STATE_DIR, tahyias DB, runs fn, then cleans up.
  */
 export async function withTestDb(fn: () => Promise<void> | void): Promise<void> {
-  const tempDir = await Deno.makeTempDir({ prefix: "iksir-test-" });
-  Deno.env.set("IKSIR_STATE_DIR", tempDir);
+  const tempDir = mkdtempSync(join(tmpdir(), "iksir-test-"));
+  process.env.IKSIR_STATE_DIR = tempDir;
   try {
     await baddaaQaidatBayanat();
     await fn();
   } finally {
     aghlaaqQaidatBayanat();
-    Deno.env.delete("IKSIR_STATE_DIR");
-    await Deno.remove(tempDir, { recursive: true });
+    delete process.env.IKSIR_STATE_DIR;
+    rmSync(tempDir, { recursive: true, force: true });
   }
 }
 
@@ -39,10 +42,10 @@ export async function withTestDb(fn: () => Promise<void> | void): Promise<void> 
  * (e.g. dispatcher → session-manager → git intaqalaIla).
  */
 export async function withTestRepo(fn: () => Promise<void> | void): Promise<void> {
-  const tempDir = await Deno.makeTempDir({ prefix: "iksir-repo-test-" });
-  const prevRepo = Deno.env.get("IKSIR_REPO_PATH");
-  Deno.env.set("IKSIR_REPO_PATH", tempDir);
-  Deno.env.set("IKSIR_STATE_DIR", tempDir);
+  const tempDir = mkdtempSync(join(tmpdir(), "iksir-repo-test-"));
+  const prevRepo = process.env.IKSIR_REPO_PATH;
+  process.env.IKSIR_REPO_PATH = tempDir;
+  process.env.IKSIR_STATE_DIR = tempDir;
   try {
     await execCommand("git", ["init"], { cwd: tempDir });
     await execCommand("git", ["commit", "--allow-empty", "-m", "init"], { cwd: tempDir });
@@ -50,10 +53,10 @@ export async function withTestRepo(fn: () => Promise<void> | void): Promise<void
     await fn();
   } finally {
     aghlaaqQaidatBayanat();
-    Deno.env.delete("IKSIR_STATE_DIR");
-    if (prevRepo) Deno.env.set("IKSIR_REPO_PATH", prevRepo);
-    else Deno.env.delete("IKSIR_REPO_PATH");
-    await Deno.remove(tempDir, { recursive: true });
+    delete process.env.IKSIR_STATE_DIR;
+    if (prevRepo) process.env.IKSIR_REPO_PATH = prevRepo;
+    else delete process.env.IKSIR_REPO_PATH;
+    rmSync(tempDir, { recursive: true, force: true });
   }
 }
 
@@ -66,7 +69,7 @@ interface MockJalsatHum {
   lastMessageAt: Date;
 }
 
-export interface MockAmilHum {
+export interface MockWasila {
   mayyaza(prompt: string): Promise<{ success: boolean; response?: string; error?: string }>;
   replyToQuestion(
     sessionId: string,
@@ -103,7 +106,7 @@ export interface MockAmilHum {
  * Create a mock AmilHum. Override specific methods via the overrides param.
  * Includes session management (khalaqaJalsa, jalabJalsa) for integration tests.
  */
-export function mockAmilHum(overrides?: {
+export function mockWasila(overrides?: {
   mayyaza?: (prompt: string) => Promise<{ success: boolean; response?: string; error?: string }>;
   replyToQuestion?: (
     sessionId: string,
@@ -114,8 +117,8 @@ export function mockAmilHum(overrides?: {
   sendPromptAsync?: (sessionId: string, prompt: string) => Promise<boolean>;
   sendPrompt?: (sessionId: string, prompt: string) => Promise<{ success: boolean; response?: string; error?: string }>;
   khalaqaJalsa?: (huwiyyatWasfa: string, title: string) => Promise<MockJalsatHum | null>;
-}): MockAmilHum {
-  const calls: MockAmilHum["_calls"] = {
+}): MockWasila {
+  const calls: MockWasila["_calls"] = {
     mayyaza: [],
     replyToQuestion: [],
     rejectQuestion: [],
@@ -162,6 +165,17 @@ export function mockAmilHum(overrides?: {
       return { success: true, response: "ok" };
     },
 
+    async bassaLog(_mustawa: string, _risala: string, _huyul?: Record<string, unknown>) {
+      return true;
+    },
+
+    atlubBackfill(_author: string, _from: number) {
+      return true;
+    },
+
+    wadaaMirata(_fn: (h: unknown) => void) {
+    },
+
     async khalaqaJalsa(huwiyyatWasfa, title) {
       calls.khalaqaJalsa.push({ huwiyyatWasfa, title });
       if (overrides?.khalaqaJalsa) return overrides.khalaqaJalsa(huwiyyatWasfa, title);
@@ -193,6 +207,41 @@ export function mockAmilHum(overrides?: {
       if (sessions.has(jalsa.id)) return;
       sessions.set(jalsa.id, jalsa);
       if (nestId) nestIds.set(jalsa.id, nestId);
+    },
+
+    async mahaqaJalsa(sessionId) {
+      return sessions.delete(sessionId);
+    },
+
+    async abortSession(_sessionId) {
+      return true;
+    },
+
+    async summarizeSession(_sessionId) {
+      return true;
+    },
+
+    async jalabJalsaStatuses() {
+      const natija: Record<string, string> = {};
+      for (const id of sessions.keys()) natija[id] = "sakin";
+      return natija;
+    },
+
+    async jalabRisalaCount(sessionId) {
+      if (!sessions.has(sessionId)) return null;
+      return { total: 0, assistant: 0, user: 0 };
+    },
+
+    async getLastAssistantMessage(_sessionId) {
+      return null;
+    },
+
+    async isHealthy() {
+      return true;
+    },
+
+    async getVersion() {
+      return "0.7.0";
     },
 
     huwiyyatUsh(sessionId) {
@@ -423,8 +472,9 @@ export function seedSession(overrides?: Partial<JalsatMurshid>): void {
  * Caller is responsible for cleanup.
  */
 export async function writeTempFile(content: string, prefix = "iksir-fixture-"): Promise<string> {
-  const path = await Deno.makeTempFile({ prefix });
-  await Deno.writeTextFile(path, content);
+  const tdir = mkdtempSync(join(tmpdir(), prefix));
+  const path = join(tdir, "fixture");
+  writeFileSync(path, content);
   return path;
 }
 

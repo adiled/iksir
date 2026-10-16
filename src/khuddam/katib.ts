@@ -17,7 +17,8 @@
  * No state persists that Katib has not recorded.
  */
 
-import { AmilHum } from "../hum/client.ts";
+import { Wasila } from "../hum/wasila.ts";
+import { ADAWAT_MAHJUBA } from "../hum/hudud.ts";
 import { logger } from "../logging/logger.ts";
 import { 
   haddathaAwAdkhalaJalsa,
@@ -34,7 +35,7 @@ import type {
 
 /** The name of the inscriber — for chore branch naming */
 function ismMustakhdimGit(): string {
-  return Deno.env.get("IKSIR_GIT_USER") ?? "dev";
+  return process.env.IKSIR_GIT_USER ?? "dev";
 }
 
 /**
@@ -68,13 +69,13 @@ export function wallidIsmFar(
 
 interface TasmimMudirJalasat {
   tasmim: TasmimIksir;
-  amil: AmilHum;
+  amil: Wasila;
   rasul: RasulKharij;
 }
 
 export class MudirJalasat {
   #config: TasmimIksir;
-  #amil: AmilHum;
+  #amil: Wasila;
   #messenger: RasulKharij;
 
   #murshidSessions: Map<string, JalsatMurshid> = new Map();
@@ -124,6 +125,7 @@ export class MudirJalasat {
       });
       this.#murshidFaailId = identifier;
       await this.takkadMinQanat(mawjuda);
+      this.#ushhidaJalsa("istirjaa", mawjuda);
       return { session: mawjuda, jadida: false, mustarjaa: true, faailSabiq };
     }
 
@@ -158,6 +160,7 @@ export class MudirJalasat {
 
     await this.#arsalaTasisMurshid(session);
 
+    this.#ushhidaJalsa("khalaqa", session);
     return { session, jadida: true, mustarjaa: false, faailSabiq };
   }
 
@@ -258,6 +261,8 @@ export class MudirJalasat {
       blockedReason,
     });
 
+    this.#ushhidaJalsa("hala", session);
+
     return true;
   }
 
@@ -274,7 +279,9 @@ export class MudirJalasat {
     }
 
     const messageWithReminder = this.maaTadhkirNizam(session, message);
-    const success = await this.#amil.sendPromptAsync(session.id, messageWithReminder);
+    const success = await this.#amil.sendPromptAsync(session.id, messageWithReminder, {
+      disallowedTools: [...ADAWAT_MAHJUBA],
+    });
     if (success) {
       session.akhirRisalaFi = new Date().toISOString();
       await this.hafizaJalsaWahida(session.huwiyya);
@@ -294,7 +301,9 @@ export class MudirJalasat {
     }
 
     const messageWithReminder = this.maaTadhkirNizam(session, message);
-    const success = await this.#amil.sendPromptAsync(session.id, messageWithReminder);
+    const success = await this.#amil.sendPromptAsync(session.id, messageWithReminder, {
+      disallowedTools: [...ADAWAT_MAHJUBA],
+    });
     if (success) {
       session.akhirRisalaFi = new Date().toISOString();
       await this.hafizaJalsaWahida(session.huwiyya);
@@ -506,6 +515,19 @@ Call pm_read_diary for full decision history with reasoning.
         error: String(error),
       });
     }
+  }
+
+  #ushhidaJalsa(hadath: string, session: JalsatMurshid): void {
+    this.#amil.bassaLog("info", `jalsa ${hadath} ${session.huwiyya}`, {
+      naw: "jalsa",
+      hadath,
+      huwiyya: session.huwiyya,
+      unwan: session.unwan,
+      nawJalsa: session.naw,
+      hala: session.hala,
+      far: session.far,
+      sidJalsa: session.id,
+    });
   }
 
   /**

@@ -16,7 +16,7 @@
  */
 
 import { logger } from "../logging/logger.ts";
-import { TelegramClient, TOPIC_COLORS } from "./telegram.ts";
+import { TelegramClient, TOPIC_COLORS, type TelegramMessage, type TelegramCallbackQuery } from "./telegram.ts";
 import {
   haddathaAwAdkhalaQanat,
   jalabaQanat,
@@ -238,6 +238,20 @@ export class TelegramMessenger implements Rasul {
    */
   #rabatMualijat(): void {
     this.#telegram.onMessage(async (message) => {
+      await this.iqraRisala(message);
+    });
+
+    this.#telegram.onCallback(async (query) => {
+      await this.iqraIstijaba(query);
+    });
+  }
+
+  /**
+   * Read one wire message aloud as normalized events.
+   * Public so the saail hive's Sijill rows drain through the same tongue
+   * the live wire speaks — one normalization, two doors.
+   */
+  async iqraRisala(message: TelegramMessage): Promise<void> {
       if (!message.text || !this.#mualij) return;
 
       const text = message.text.trim();
@@ -274,18 +288,11 @@ export class TelegramMessenger implements Rasul {
         }
         return;
       }
-
-      /** Murshid topic → murshid message */
-      if (topicId) {
+      /** Murshid topic → murshid message; General (no thread, or thread 1) → nudge */
+      if (topicId && topicId !== 1) {
         const huwiyya = this.hallJalsaBilQanat(MUQADDIM, String(topicId));
         if (huwiyya) {
           await this.#mualij({ naw: "murshid", huwiyya, nass: text });
-        } else if (topicId === 1) {
-          /** General topic — not linked */
-          await this.#telegram.arsalaRisala(
-            "Use the **Dispatch** topic to name a waṣfa and light a murshid.",
-            { topicId: 1, chatId: this.#telegram.getGroupId(), parseMode: "Markdown" },
-          );
         } else {
           await this.#telegram.arsalaRisala(
             "This topic is not linked to an active murshid.",
@@ -295,10 +302,23 @@ export class TelegramMessenger implements Rasul {
         return;
       }
 
-      await logger.haDHHir("messenger", "Group message without topic ID");
-    });
+      if (isGroupMessage) {
+        await this.#telegram.arsalaRisala(
+          "Use the **Dispatch** topic to name a waṣfa and light a murshid.",
+          { topicId: 1, chatId: this.#telegram.getGroupId(), parseMode: "Markdown" },
+        );
+        return;
+      }
 
-    this.#telegram.onCallback(async (query) => {
+      await logger.haDHHir("messenger", "Group message without topic ID");
+  }
+
+  /**
+   * Read one wire callback aloud as normalized events.
+   * Public twin of iqraRisala — same tongue, Sijill rows.
+   */
+  async iqraIstijaba(query: TelegramCallbackQuery): Promise<void> {
+    if (!this.#mualij) return;
       if (!query.data) {
         await this.#telegram.answerCallback(query.id, "Received!");
         return;
@@ -357,7 +377,6 @@ export class TelegramMessenger implements Rasul {
       }
 
       await this.#telegram.answerCallback(query.id, "Received!");
-    });
   }
 
   // ─── Private helpers ───────────────────────────────────────────────────────

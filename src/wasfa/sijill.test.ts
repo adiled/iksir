@@ -1,8 +1,8 @@
-import { assert, assertEquals } from "@std/assert";
+import { test, assert, assertEquals } from "../ikhtibar.ts";
 import { withTestRepo } from "../test-helpers.ts";
 import { anshaaSijillWasfat } from "./sijill.ts";
 
-Deno.test("wasfat: a formula is inscribed and read back", async () => {
+test("wasfat: a formula is inscribed and read back", async () => {
   await withTestRepo(async () => {
     const sijill = anshaaSijillWasfat();
     const wasfa = await sijill.khalaq({
@@ -19,7 +19,7 @@ Deno.test("wasfat: a formula is inscribed and read back", async () => {
   });
 });
 
-Deno.test("wasfat: a workshop names its own formulae", async () => {
+test("wasfat: a workshop names its own formulae", async () => {
   await withTestRepo(async () => {
     const sijill = anshaaSijillWasfat("LUGHA");
     const awwal = await sijill.khalaq({ unwan: "first" });
@@ -29,7 +29,7 @@ Deno.test("wasfat: a workshop names its own formulae", async () => {
   });
 });
 
-Deno.test("wasfat: a condition is words", async () => {
+test("wasfat: a condition is words", async () => {
   await withTestRepo(async () => {
     const sijill = anshaaSijillWasfat();
     await sijill.khalaq({ unwan: "sounds", hala: "under the flame" });
@@ -41,7 +41,7 @@ Deno.test("wasfat: a condition is words", async () => {
   });
 });
 
-Deno.test("wasfat: search reaches name and statement alike", async () => {
+test("wasfat: search reaches name and statement alike", async () => {
   await withTestRepo(async () => {
     const sijill = anshaaSijillWasfat();
     await sijill.khalaq({ unwan: "phonotactics", matn: "what may follow what" });
@@ -53,7 +53,7 @@ Deno.test("wasfat: search reaches name and statement alike", async () => {
   });
 });
 
-Deno.test("wasfat: altering keeps what was not named", async () => {
+test("wasfat: altering keeps what was not named", async () => {
   await withTestRepo(async () => {
     const sijill = anshaaSijillWasfat();
     await sijill.khalaq({ unwan: "sounds", matn: "two of them", qadr: 3 });
@@ -65,7 +65,7 @@ Deno.test("wasfat: altering keeps what was not named", async () => {
   });
 });
 
-Deno.test("wasfat: a binding is seen from both ends", async () => {
+test("wasfat: a binding is seen from both ends", async () => {
   await withTestRepo(async () => {
     const sijill = anshaaSijillWasfat();
     await sijill.khalaq({ unwan: "sounds" });
