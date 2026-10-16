@@ -43,8 +43,7 @@ export function sutur(): (chunk: string, onLine: (line: string) => void) => void
   };
 }
 
-// hum-paths::thrum_sock is the source of truth here (not older wire-prose):
-// HUM_THRUM_SOCK -> HUM_SOCKET -> $XDG_STATE_HOME/hum/thrum.sock.
+
 export function masar_thrum(): string {
   if (process.env.HUM_THRUM_SOCK) return process.env.HUM_THRUM_SOCK;
   if (process.env.HUM_SOCKET) return process.env.HUM_SOCKET;
