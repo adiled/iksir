@@ -66,6 +66,22 @@ function safaSakita(): Safa {
   };
 }
 
+/** No matter named. It says so rather than pretending. */
+function hayulaSakita(): Hayula {
+  const la = () => Promise.resolve(false);
+  return {
+    naw: "sakita",
+    dakhala: () => Promise.resolve(false),
+    waqif: () => Promise.resolve(null),
+    asas: () => Promise.resolve(""),
+    mudtarib: () => Promise.resolve(false),
+    jammada: () => Promise.resolve(false),
+    thabbata: () => Promise.resolve(false),
+    sahaba: () => Promise.resolve({ najah: false }),
+    masafa: () => Promise.resolve(0),
+  };
+}
+
 /** Nowhere to set a jawhar down. It says so rather than pretending. */
 function faslSakit(): Fasl {
   return {
@@ -760,15 +776,9 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     masar: config.madda.masar,
   };
 
-  if (!config.madda?.hayula) {
-    await logger.sajjalKhata(
-      "main",
-      "No hayula named. Iksir works upon matter, and must be handed some: set madda.hayula.",
-    );
-    process.exit(1);
-  }
-
-  const hayula = await istadaa<Hayula>(config.madda.hayula, siyaqMadda, AMAL_HAYULA);
+  const hayula = config.madda?.hayula
+    ? await istadaa<Hayula>(config.madda.hayula, siyaqMadda, AMAL_HAYULA)
+    : hayulaSakita();
   const safa = config.madda.safa
     ? await istadaa<Safa>(config.madda.safa, siyaqMadda, AMAL_SAFA)
     : safaSakita();

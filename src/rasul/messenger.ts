@@ -288,24 +288,25 @@ export class TelegramMessenger implements Rasul {
         }
         return;
       }
-
-      /** Murshid topic → murshid message */
-      if (topicId) {
+      /** Murshid topic → murshid message; General (no thread, or thread 1) → nudge */
+      if (topicId && topicId !== 1) {
         const huwiyya = this.hallJalsaBilQanat(MUQADDIM, String(topicId));
         if (huwiyya) {
           await this.#mualij({ naw: "murshid", huwiyya, nass: text });
-        } else if (topicId === 1) {
-          /** General topic — not linked */
-          await this.#telegram.arsalaRisala(
-            "Use the **Dispatch** topic to name a waṣfa and light a murshid.",
-            { topicId: 1, chatId: this.#telegram.getGroupId(), parseMode: "Markdown" },
-          );
         } else {
           await this.#telegram.arsalaRisala(
             "This topic is not linked to an active murshid.",
             { topicId, chatId: this.#telegram.getGroupId() },
           );
         }
+        return;
+      }
+
+      if (isGroupMessage) {
+        await this.#telegram.arsalaRisala(
+          "Use the **Dispatch** topic to name a waṣfa and light a murshid.",
+          { topicId: 1, chatId: this.#telegram.getGroupId(), parseMode: "Markdown" },
+        );
         return;
       }
 
