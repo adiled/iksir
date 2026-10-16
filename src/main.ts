@@ -1051,7 +1051,9 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
 
   if (opts.check) {
     await naffadhFahs(ctx);
-    return;
+    wasila.qaf();
+    aghlaaqQaidatBayanat();
+    process.exit(0);
   }
 
   await awqadKhadim(ctx);
