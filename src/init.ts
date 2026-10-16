@@ -457,7 +457,7 @@ async function stepFinalize(state: InitState): Promise<void> {
   } else if (state.skippedGithub) {
     warn("GitHub: skipped");
   }
-  ok(`Agent: ${state.opencodeServer}`);
+  ok(`thrum: ${state.thrumSocket}`);
 
   console.log("");
   console.log(`  ${bold("Ready.")} Run ${cyan("iksir start")} to begin.`);
@@ -479,7 +479,7 @@ export async function runInit(): Promise<void> {
     githubOwner: "",
     githubRepo: "",
     githubUsername: "",
-    opencodeServer: "http://localhost:5173",
+    thrumSocket: masar_thrum(),
     skippedTelegram: false,
     skippedMutabiWasfa: false,
     skippedGithub: false,

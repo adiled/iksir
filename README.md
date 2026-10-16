@@ -18,14 +18,13 @@ The modern world has forgotten the scent of real alchemy - the sharp bite of sul
 curl -fsSL https://raw.githubusercontent.com/adiled/iksir/main/install | bash
 ```
 
-Prerequisites: [Deno](https://deno.com), [OpenCode](https://opencode.ai)
+Prerequisites: [Node.js LTS](https://nodejs.org) (>= 22), [humd](https://adiled.github.io/hum/) breathing on the thrum socket
 
 The kindling ritual clones the source, creates XDG directories, copies sacred templates, installs the `iksir` CLI to `~/.local/bin/`, registers daemon services, and consecrates agent incantations. Edit `~/.local/share/iksir/src/.env` to bind your keys, then `iksir start`.
 
 ```bash
 iksir divine            # divine the state of the Great Work
 iksir transmute         # pull latest essence, sync vessels, rekindle
-iksir rekindle mcp      # rekindle just the MCP crucible
 iksir verify            # verify the formulae and runes
 ```
 

@@ -179,6 +179,11 @@ export async function hammalaAlTasmim(): Promise<TasmimIksir> {
     await logger.haDHHir("config", `Config file not found at ${configPath}, using defaults`);
   }
 
+  if (config.hum.socket?.startsWith("~/")) {
+    const home = process.env.HOME ?? "/root";
+    config.hum.socket = join(home, config.hum.socket.slice(2));
+  }
+
   /** Override with environment variables */
   const envOverrides: Partial<TasmimIksir> = {};
 

@@ -222,7 +222,7 @@ test("smoke: murshid topic message routes to correct session", async () => {
 
     assertEquals(success, true);
 
-    /** Step 5: Verify message reached the correct OpenCode session */
+    /** Step 5: Verify message reached the correct nest session */
     const lastPrompt = wasila._calls.sendPromptAsync[wasila._calls.sendPromptAsync.length - 1];
     assertEquals(lastPrompt.sessionId, session.id);
     assertStringIncludes(lastPrompt.prompt, "GET /users");

@@ -177,15 +177,13 @@
       },
       "additionalProperties": false
     },
-    "opencode": {
+    "hum": {
       "type": "object",
-      "description": "Agent runtime connection.",
+      "description": "thrum nest connection.",
       "properties": {
-        "server": {
+        "socket": {
           "type": "string",
-          "description": "OpenCode server URL.",
-          "format": "uri",
-          "default": "http://localhost:4096"
+          "description": "thrum socket path. Omitted = hum default ($HUM_THRUM_SOCK, $HUM_SOCKET, or $XDG_STATE_HOME/hum/thrum.sock)."
         }
       },
       "additionalProperties": false

@@ -1,7 +1,7 @@
 /**
- * Code Intelligence — TypeScript/Deno symbol extraction
+ * Code Intelligence — TypeScript symbol extraction
  *
- * Uses `deno doc --json` for exports, regex for imports.
+ * Regex for exports, imports, and top-level declarations.
  * No external dependencies.
  */
 
@@ -30,8 +30,7 @@ function extractImports(content: string): string[] {
 /**
  * Extract symbols from a TypeScript file.
  *
- * Uses `deno doc --json` for exported symbols, plus regex for imports
- * and unexported top-level declarations.
+ * Regex for exports, imports, and top-level declarations.
  */
 export async function extractTypeScript(filePath: string, repoPath: string): Promise<FileEntry | null> {
   let content: string;

@@ -10,7 +10,7 @@
  * - KeepAlive: Polls for external changes, feeds to murshid
  *
  * Usage:
- *   deno run --allow-all src/main.ts [options]
+ *   node src/main.ts [options]
  *
  * Options:
  *   --help          Show help
@@ -929,7 +929,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   const abortController = new AbortController();
 
   /** Initialize session manager and istarjaa persisted state */
-  const sessionManager = istadaaKatib({ tasmim: config, opencode, rasul: messenger });
+  const sessionManager = istadaaKatib({ tasmim: config, wasila, rasul: messenger });
   await sessionManager.hammalaHala();
 
   /** Initialize IPC processor and istarjaa persisted state */

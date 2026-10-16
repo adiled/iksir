@@ -23,8 +23,8 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 1
 fi
 
-# Read current version from deno.json
-CURRENT=$(grep '"version"' deno.json | sed 's/.*"\([0-9]*\.[0-9]*\.[0-9]*\)".*/\1/')
+# Read current version from package.json
+CURRENT=$(node -p "require(\'./package.json\').version")
 IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
 
 case "$BUMP" in
@@ -45,9 +45,9 @@ if git rev-parse "$TAG" >/dev/null 2>&1; then
   exit 1
 fi
 
-# Bump version in deno.json
-sed -i "s/\"version\": \"$CURRENT\"/\"version\": \"$NEW\"/" deno.json
-git add deno.json
+# Bump version in package.json
+node -e "const p=require(\'./package.json\'); p.version(process.argv[1]); require(\'fs\').writeFileSync(\'./package.json\', JSON.stringify(p,null,2)+'\\n')" "$NEW"
+git add package.json
 git commit -m "release: v${NEW}"
 
 # Tag — always annotated

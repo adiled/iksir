@@ -33,7 +33,7 @@
     "repo": "your-repo",
     "operatorUsername": "your-github-username"
   },
-  "opencode": {
-    "server": "http://localhost:4096"
+  "hum": {
+    "socket": "~/.local/state/hum/thrum.sock"
   }
 }

@@ -296,7 +296,7 @@ export interface MaalumatSual {
   custom?: boolean;
 }
 
-/** A question.asked event from OpenCode SSE */
+/** A question.asked event synthesized from a thrum permission-ask tone */
 export interface HadathSualMatlub {
   type: "question.asked";
   properties: {
