@@ -1,0 +1,4 @@
+SERVICE saail
+RUN node ${HOME}/.local/share/iksir/src/hives/saail/saail.ts
+ENV TELEGRAM_BOT_TOKEN=
+RESTART always

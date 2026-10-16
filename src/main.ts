@@ -25,12 +25,12 @@ import {
   MAX_BACKOFF_MS
 } from "./constants.ts";
 
-import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, haddathaHuwiyyatRisalaSual } from "../db/db.ts";
+import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, jalabaAhdathGhairMuaalaja, allamaHadathMuaalaj, haddathaHuwiyyatRisalaSual } from "../db/db.ts";
 import { Wasila } from "./hum/wasila.ts";
 import { MunadiMunMcpServer } from "./mcp/iksir-mcp.ts";
 import { istarjaaMirata } from "./daemon/mirata.ts";
 import { anshaaNtfyAmil } from "./notifications/ntfy.ts";
-import { anshaaTelegramAmil } from "./notifications/telegram.ts";
+import { anshaaTelegramAmil, type TelegramMessage, type TelegramCallbackQuery } from "./notifications/telegram.ts";
 import { anshaaTelegramRasul, type TelegramMessenger } from "./notifications/messenger.ts";
 import { createLinearClient } from "./linear/client.ts";
 import { createGitHubClient } from "./github/gh.ts";
@@ -257,9 +257,8 @@ async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
   await addaIsharat(ctx);
 
   if (ctx.tasmim.isharat.telegram.mufattah) {
-    addaMualijatTelegram(ctx);
-    ctx.telegram.startPolling().catch(async (error) => {
-      await logger.sajjalKhata("telegram", "Polling error", { error: String(error) });
+    istahlakTelegram(ctx, ctx.mutahakkimIlgha.signal).catch(async (error) => {
+      await logger.sajjalKhata("telegram", "Wire drain error", { error: String(error) });
     });
   }
 
@@ -286,9 +285,8 @@ async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
   }
 }
 
-function addaMualijatTelegram(ctx: SiyaqKhadim): void {
-  ctx.telegram.onMessage(async (message) => {
-    if (!message.text) return;
+async function aalajTahdithTelegram(ctx: SiyaqKhadim, message: TelegramMessage): Promise<void> {
+  if (!message.text) return;
 
     const text = message.text.trim();
     const topicId = ctx.telegram.jalabRisalaTopicId(message);
@@ -358,10 +356,13 @@ function addaMualijatTelegram(ctx: SiyaqKhadim): void {
     }
 
     await logger.haDHHir("telegram", "Group message without topic ID");
-  });
+  }
 
-  ctx.telegram.onCallback(async (query) => {
-    await logger.akhbar("telegram", `Callback: ${query.data}`);
+async function aalajIstijabaTelegram(
+  ctx: SiyaqKhadim,
+  query: TelegramCallbackQuery,
+): Promise<void> {
+  await logger.akhbar("telegram", `Callback: ${query.data}`);
 
     if (query.data && ctx.sail.huwaIstijabaZirrSual(query.data)) {
       const parsed = ctx.sail.hallalIstijabaZirrSual(query.data);
@@ -432,7 +433,32 @@ function addaMualijatTelegram(ctx: SiyaqKhadim): void {
         `Al-Kimyawi selected option: ${query.data}`
       );
     }
-  });
+  }
+
+async function istahlakTelegram(ctx: SiyaqKhadim, signal: AbortSignal): Promise<void> {
+  await logger.akhbar("telegram", "Draining telegram wire from Sijill");
+  while (!signal.aborted) {
+    try {
+      const ahdath = jalabaAhdathGhairMuaalaja("telegram");
+      for (const hadath of ahdath) {
+        try {
+          const humula = JSON.parse(hadath.payload) as { ada?: string; update?: unknown };
+          if (humula.ada === "callback" && humula.update) {
+            await aalajIstijabaTelegram(ctx, humula.update as TelegramCallbackQuery);
+          } else if (humula.update) {
+            const tahdith = humula.update as { message?: TelegramMessage };
+            if (tahdith.message) await aalajTahdithTelegram(ctx, tahdith.message);
+          }
+        } catch (error) {
+          await logger.sajjalKhata("telegram", "Wire event failed", { error: String(error) });
+        }
+        allamaHadathMuaalaj(hadath.id);
+      }
+    } catch (error) {
+      await logger.sajjalKhata("telegram", "Wire drain failed", { error: String(error) });
+    }
+    await new Promise((r) => setTimeout(r, 2000));
+  }
 }
 
 /**

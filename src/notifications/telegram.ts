@@ -90,7 +90,7 @@ async function proxyFetch(
   return new Response(bodySection, { status, headers: responseHeaders });
 }
 
-interface TelegramMessage {
+export interface TelegramMessage {
   message_id: number;
   /** Topic ID if in a forum topic (1 = General topic) */
   message_thread_id?: number;
@@ -124,7 +124,7 @@ interface ForumTopic {
   icon_custom_emoji_id?: string;
 }
 
-interface TelegramCallbackQuery {
+export interface TelegramCallbackQuery {
   id: string;
   from: {
     id: number;
@@ -134,7 +134,7 @@ interface TelegramCallbackQuery {
   data?: string;
 }
 
-interface TelegramUpdate {
+export interface TelegramUpdate {
   update_id: number;
   message?: TelegramMessage;
   callback_query?: TelegramCallbackQuery;

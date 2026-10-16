@@ -197,7 +197,7 @@ export function aghlaaqQaidatBayanat(): void {
  * Used by MCP servers to forward tool calls to the daemon.
  */
 export function adkhalaHadath(
-  naw: "pm",
+  naw: string,
   adaIsm: string,
   humulat: Record<string, unknown>,
   huwiyyatMurshid?: string,
@@ -215,7 +215,7 @@ export function adkhalaHadath(
  * Get all unprocessed ahdath for a given naw, ordered by creation time.
  */
 export function jalabaAhdathGhairMuaalaja(
-  naw: "pm",
+  naw: string,
 ): Array<{ id: number; payload: string }> {
   const d = jalabSijill();
 

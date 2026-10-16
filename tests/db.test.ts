@@ -186,6 +186,22 @@ test("events: insert and retrieve unprocessed", async () => {
   });
 });
 
+test("events: telegram wire events round trip", async () => {
+  await withTestDb(() => {
+    adkhalaHadath("telegram", "message", { update: { message: { message_id: 7, text: "salam" } } });
+    adkhalaHadath("telegram", "callback", { update: { id: "cb-1", data: "q:abc" } });
+
+    const events = jalabaAhdathGhairMuaalaja("telegram");
+    assertEquals(events.length, 2);
+
+    const first = JSON.parse(events[0].payload);
+    assertEquals(first.update.message.text, "salam");
+
+    allamaHadathMuaalaj(events[0].id);
+    assertEquals(jalabaAhdathGhairMuaalaja("telegram").length, 1);
+  });
+});
+
 test("events: allamaHadathMuaalaj removes from unprocessed", async () => {
   await withTestDb(() => {
     adkhalaHadath("pm", "mun_commit", { message: "test" });
