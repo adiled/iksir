@@ -1,7 +1,7 @@
 import { Chi, rid, sigil } from "thrum";
 import type { Tone } from "thrum";
 import { Nahla, masar_thrum } from "../../hum/bee.ts";
-import type { JalsatHum, HadathThrum, RisalaMurshid } from "../types.ts";
+import type { JalsatHum, HadathThrum, RisalaMurshid, SijillAlat } from "../types.ts";
 import { DEFAULT_TIMEOUT_MS } from "../constants.ts";
 import { logger } from "../logging/logger.ts";
 
@@ -26,18 +26,24 @@ export class Wasila {
   #asmas = 0;
   #muntazir: Array<(h: HadathThrum) => void> = [];
   #hawadith: HadathThrum[] = [];
+  #sijill: SijillAlat | null = null;
 
-  constructor(tasmim?: { socket?: string }) {
+  constructor(tasmim?: { socket?: string; sijill?: SijillAlat }) {
     this.#masarThrum = tasmim?.socket ?? masar_thrum();
+    this.#sijill = tasmim?.sijill ?? null;
+    const adawat = this.#sijill?.adawat() ?? [];
     this.#nahla = new Nahla({
       hive: "iksir-wasila",
       prefix: "fbee",
       version: "1.0.0",
+      bee: ["forager"],
       chis: [
         Chi.hello, Chi.breath, Chi.echo, Chi.prompt, Chi.chunk, Chi.finish,
         Chi.sessionReady, Chi.pulse, Chi.error, Chi.curate, Chi.cleanup,
         Chi.cancel, Chi.releasePermit, Chi.permissionAsk,
+        Chi.toolCall, Chi.toolResult,
       ],
+      ...(adawat.length > 0 ? { tools: adawat } : {}),
       propensity: { statefulness: "convention-stateful", richness: "medium", wire: "iksir/khudam" },
       log: (m) => void logger.akhbar("wasila", m),
     });
@@ -54,6 +60,7 @@ export class Wasila {
     this.#nahla.on(Chi.sessionReady, (t) => this.nasharHadath("session-ready", t as unknown as Record<string, unknown>));
     this.#nahla.on(Chi.pulse, (t) => this.nasharHadath("pulse", t as unknown as Record<string, unknown>));
     this.#nahla.on(Chi.permissionAsk, (t) => this.nasharHadath("permission-ask", t as unknown as Record<string, unknown>));
+    this.#nahla.on(Chi.toolCall, (t) => void this.#ajabaNida(t));
   }
 
   get muttasil(): boolean {
@@ -164,9 +171,12 @@ export class Wasila {
       this.#inthaDawr(sid, { success: false, error: "wire refused the tone" });
     }
 
-    const muntaqi = new Promise<never>((_, raf) =>
-      setTimeout(() => raf(new KhataWasila(`prompt timed out after ${timeoutMs}ms`)), timeoutMs),
-    );
+    const muntaqi = new Promise<never>((_, raf) => {
+      const muqqit = setTimeout(() => raf(new KhataWasila(`prompt timed out after ${timeoutMs}ms`)), timeoutMs);
+      if (typeof (muqqit as unknown as { unref?: unknown }).unref === "function") {
+        (muqqit as unknown as { unref: () => void }).unref();
+      }
+    });
 
     try {
       return await Promise.race([muntazar, muntaqi]);
@@ -287,8 +297,36 @@ export class Wasila {
     return this.#nahla;
   }
 
-  #jamaDawr(t: Tone): void {
-    const sid = t.sid as string;
+  async #ajabaNida(t: Tone): Promise<void> {
+    const callId = t.callId as string;
+    const ism = (t.toolName ?? t.name) as string | undefined;
+    const hujaj = (t.args ?? {}) as Record<string, unknown>;
+    const rudd = (g: { callId: string; isError?: boolean; output: string }): void => {
+      this.#nahla.send({ chi: Chi.toolResult, rid: rid(), ...g } as Tone);
+    };
+    if (!this.#sijill || !ism) {
+      rudd({ callId, isError: true, output: "no sijill alat" });
+      return;
+    }
+    const tanfidh = (async (): Promise<{ ok: boolean; q: string }> => {
+      try {
+        return { ok: true, q: String(await this.#sijill!.naffidh(ism, hujaj)) };
+      } catch (kh) {
+        return { ok: false, q: String((kh as Error)?.message ?? kh) };
+      }
+    })();
+    const ajal = new Promise<{ ok: boolean; q: string }>((hal) => {
+      const muqqit = setTimeout(() => hal({ ok: false, q: "tool timed out" }), DEFAULT_TIMEOUT_MS);
+      if (typeof (muqqit as unknown as { unref?: unknown }).unref === "function") {
+        (muqqit as unknown as { unref: () => void }).unref();
+      }
+    });
+    const hasm = await Promise.race([tanfidh, ajal]);
+    if (hasm.ok) rudd({ callId, output: hasm.q });
+    else rudd({ callId, isError: true, output: hasm.q });
+  }
+
+  #jamaDawr(t: Tone): void {    const sid = t.sid as string;
     const dawr = this.#adwar.get(sid);
     const delta = t.delta as string | { text?: string } | undefined;
     const matn = typeof delta === "string" ? delta : (delta?.text ?? "");

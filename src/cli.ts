@@ -154,7 +154,7 @@ async function cmdCheck(): Promise<void> {
   }
 
   console.log("\nType checking...");
-  const entries = ["src/main.ts", "src/mcp/pm-server.ts", "src/mcp/serve.ts", "src/cli.ts"];
+  const entries = ["src/main.ts", "src/mcp/iksir-mcp.ts", "src/hum/wasila.ts", "src/cli.ts"];
   for (const entry of entries) {
     const result = await execCommand("deno", ["check", entry], { cwd: repoPath });
     if (result.success) {

@@ -6,7 +6,7 @@
  */
 
 import type { CodeSymbol, FileEntry } from "./types.ts";
-import { execCommand } from "../utils/exec.ts";
+import { readFileSync } from "node:fs";
 const encodeHex = (b: Uint8Array): string => Buffer.from(b).toString("hex");
 
 async function fileHash(content: string): Promise<string> {
@@ -26,40 +26,6 @@ function extractImports(content: string): string[] {
   return imports;
 }
 
-/** deno-lint-ignore no-explicit-any */
-function mapDocNode(node: any, exported: boolean): CodeSymbol | null {
-  const name: string = node.name ?? "";
-  const line: number = node.location?.line ?? 0;
-
-  switch (node.kind) {
-    case "function": {
-      const params = (node.functionDef?.params ?? [])
-        .map((p: any) => {
-          const pName = p.name ?? p.left?.name ?? "_";
-          const pType = p.tsType?.repr ?? p.tsType?.keyword ?? "";
-          return pType ? `${pName}: ${pType}` : pName;
-        })
-        .join(", ");
-      const ret = node.functionDef?.returnType?.repr ?? node.functionDef?.returnType?.keyword ?? "";
-      const sig = ret ? `(${params}): ${ret}` : `(${params})`;
-      return { name, kind: "function", signature: sig, line, exported };
-    }
-    case "class":
-      return { name, kind: "class", line, exported };
-    case "interface":
-      return { name, kind: "interface", line, exported };
-    case "typeAlias":
-      return { name, kind: "type", line, exported };
-    case "enum":
-      return { name, kind: "enum", line, exported };
-    case "variable": {
-      const varKind = node.variableDef?.kind ?? "const";
-      return { name, kind: varKind === "const" ? "const" : "variable", line, exported };
-    }
-    default:
-      return null;
-  }
-}
 
 /**
  * Extract symbols from a TypeScript file.
@@ -70,7 +36,7 @@ function mapDocNode(node: any, exported: boolean): CodeSymbol | null {
 export async function extractTypeScript(filePath: string, repoPath: string): Promise<FileEntry | null> {
   let content: string;
   try {
-    content = await Deno.readTextFile(filePath);
+    content = readFileSync(filePath, "utf-8");
   } catch {
     return null;
   }
@@ -78,22 +44,6 @@ export async function extractTypeScript(filePath: string, repoPath: string): Pro
   const hash = await fileHash(content);
   const imports = extractImports(content);
   const symbols: CodeSymbol[] = [];
-
-  /** Use deno doc for exported symbols */
-  const denoBin = Deno.execPath();
-  const result = await execCommand(denoBin, ["doc", "--json", filePath], { cwd: repoPath });
-  if (result.success) {
-    try {
-      const nodes = JSON.parse(result.stdout);
-      if (Array.isArray(nodes)) {
-        for (const node of nodes) {
-          const sym = mapDocNode(node, true);
-          if (sym) symbols.push(sym);
-        }
-      }
-    } catch {
-    }
-  }
 
   /** Regex fallback for non-exported top-level declarations */
   const lines = content.split("\n");

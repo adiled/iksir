@@ -6,7 +6,7 @@
  */
 
 import { join } from "node:path";
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { extractTypeScript } from "./extract-ts.ts";
 import { extractPython } from "./extract-py.ts";
 import type { CodeIndex, FileEntry } from "./types.ts";
@@ -25,20 +25,20 @@ const IGNORED_PATTERNS = [
 ];
 
 function getIndexPath(): string {
-  const dataDir = Deno.env.get("IKSIR_STATE_DIR") ??
-    join(Deno.env.get("XDG_DATA_HOME") ?? join(Deno.env.get("HOME") ?? ".", ".local", "share"), "iksir");
+  const dataDir = process.env.IKSIR_STATE_DIR ??
+    join(process.env.XDG_DATA_HOME ?? join(process.env.HOME ?? ".", ".local", "share"), "iksir");
   return join(dataDir, "code-intel.json");
 }
 
 async function walkSourceFiles(dir: string): Promise<string[]> {
   const files: string[] = [];
 
-  async function walk(current: string) {
-    for await (const entry of Deno.readDir(current)) {
-      if (entry.isDirectory) {
+  function walk(current: string) {
+    for (const entry of readdirSync(current, { withFileTypes: true })) {
+      if (entry.isDirectory()) {
         if (IGNORED_DIRS.has(entry.name) || entry.name.startsWith(".")) continue;
-        await walk(join(current, entry.name));
-      } else if (entry.isFile) {
+        walk(join(current, entry.name));
+      } else if (entry.isFile()) {
         const path = join(current, entry.name);
         if (IGNORED_PATTERNS.some((p) => p.test(entry.name))) continue;
 
@@ -51,7 +51,7 @@ async function walkSourceFiles(dir: string): Promise<string[]> {
     }
   }
 
-  await walk(dir);
+  walk(dir);
   return files;
 }
 
@@ -77,7 +77,7 @@ export async function buildIndex(repoPath: string): Promise<CodeIndex> {
 
   if (existsSync(indexPath)) {
     try {
-      const content = await Deno.readTextFile(indexPath);
+      const content = readFileSync(indexPath, "utf-8");
       existing = JSON.parse(content) as CodeIndex;
       if (existing.repoPath !== repoPath) existing = null;
     } catch {
@@ -104,7 +104,7 @@ export async function buildIndex(repoPath: string): Promise<CodeIndex> {
       const prev = existing.files[relativePath];
       if (prev) {
         try {
-          const content = await Deno.readTextFile(filePath);
+          const content = readFileSync(filePath, "utf-8");
           const data = new TextEncoder().encode(content);
           const hashBuf = await crypto.subtle.digest("SHA-256", data);
           const { encodeHex } = { encodeHex: (b: Uint8Array): string => Buffer.from(b).toString("hex") };
@@ -127,7 +127,7 @@ export async function buildIndex(repoPath: string): Promise<CodeIndex> {
   }
 
   mkdirSync(join(indexPath, ".."), { recursive: true });
-  await Deno.writeTextFile(indexPath, JSON.stringify(index, null, 2));
+  writeFileSync(indexPath, JSON.stringify(index, null, 2));
 
   await logger.akhbar("code-intel", `Index built: ${indexed} indexed, ${reused} reused, ${Object.keys(index.files).length} total files`);
 
@@ -140,7 +140,7 @@ export async function buildIndex(repoPath: string): Promise<CodeIndex> {
 export async function loadIndex(): Promise<CodeIndex | null> {
   const indexPath = getIndexPath();
   try {
-    const content = await Deno.readTextFile(indexPath);
+    const content = readFileSync(indexPath, "utf-8");
     return JSON.parse(content) as CodeIndex;
   } catch {
     return null;

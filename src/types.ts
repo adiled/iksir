@@ -596,6 +596,8 @@ export interface SijillAlat {
   /** Get a specific handler by name (for tools/call) */
   muaallijLi(name: string): MuaallijAlatMcp | undefined;
 
+  /** Validate required args and execute by name (forager dispatch) */
+  naffidh(ism: string, hujaj: Record<string, unknown>): Promise<string>;
   /** Check if a tool name is registered */
   yujad(name: string): boolean;
 

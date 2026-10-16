@@ -7,6 +7,9 @@
 
 import type { CodeSymbol, FileEntry } from "./types.ts";
 import { execCommand } from "../utils/exec.ts";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 const encodeHex = (b: Uint8Array): string => Buffer.from(b).toString("hex");
 
 async function fileHash(content: string): Promise<string> {
@@ -135,7 +138,7 @@ function extractSymbolsRegex(content: string): CodeSymbol[] {
 export async function extractPython(filePath: string, repoPath: string): Promise<FileEntry | null> {
   let content: string;
   try {
-    content = await Deno.readTextFile(filePath);
+    content = readFileSync(filePath, "utf-8");
   } catch {
     return null;
   }
@@ -145,9 +148,10 @@ export async function extractPython(filePath: string, repoPath: string): Promise
   let imports: string[];
 
   /** Try python3 AST */
-  const tmpScript = await Deno.makeTempFile({ suffix: ".py" });
+  const tmpDir = mkdtempSync(join(tmpdir(), "py-ast-"));
+  const tmpScript = join(tmpDir, "ast.py");
   try {
-    await Deno.writeTextFile(tmpScript, AST_SCRIPT);
+    writeFileSync(tmpScript, AST_SCRIPT);
     const result = await execCommand("python3", [tmpScript, filePath], { cwd: repoPath });
     if (result.success) {
       const parsed = JSON.parse(result.stdout);
@@ -161,7 +165,7 @@ export async function extractPython(filePath: string, repoPath: string): Promise
     symbols = extractSymbolsRegex(content);
     imports = extractImportsRegex(content);
   } finally {
-    try { await Deno.remove(tmpScript); } catch { /* ignore */ }
+    try { rmSync(tmpDir, { recursive: true, force: true }); } catch { /* ignore */ }
   }
 
   const relativePath = filePath.startsWith(repoPath)

@@ -39,21 +39,6 @@ import { wallidIsmFar } from "../daemon/katib.ts";
 import { loadIndex } from "../code-intel/indexer.ts";
 import { queryIndex } from "../code-intel/query.ts";
 
-/** MCP Protocol types */
-interface TalabMcp {
-  jsonrpc: "2.0";
-  id: number | string;
-  method: string;
-  params?: Record<string, unknown>;
-}
-
-interface RaddMcp {
-  jsonrpc: "2.0";
-  id: number | string;
-  result?: unknown;
-  error?: { code: number; message: string };
-}
-
 import {
   adkhalaHadath,
   adhafaQararSijill,
@@ -82,6 +67,18 @@ class MunadiSijillAlat implements SijillAlat {
     return this.#khazana.get(name)?.muaalij;
   }
 
+  async naffidh(ism: string, hujaj: Record<string, unknown>): Promise<string> {
+    const tarif = this.#khazana.get(ism);
+    if (!tarif) throw new Error(`Unknown tool: ${ism}`);
+    const missing = (tarif.tarif.inputSchema.required ?? []).filter(
+      (field) => hujaj[field] === undefined || hujaj[field] === null,
+    );
+    if (missing.length > 0) {
+      throw new Error(`Missing required argument(s) for ${ism}: ${missing.join(", ")}`);
+    }
+    return tarif.muaalij(hujaj);
+  }
+
   yujad(name: string): boolean {
     return this.#khazana.has(name);
   }
@@ -107,124 +104,6 @@ export class MunadiMunMcpServer {
    */
   get sijill(): SijillAlat {
     return this.#sijillAlat;
-  }
-
-
-  /**
-   * Handle incoming MCP request
-   */
-  async aalijTalab(request: TalabMcp): Promise<RaddMcp> {
-    switch (request.method) {
-      case "tahyia":
-        return this.#aalijBadaa(request);
-      case "tools/list":
-        return this.#aalijQaaimalAlat(request);
-      case "tools/call":
-        return this.#aalijNidaAlat(request);
-      default:
-        return {
-          jsonrpc: "2.0",
-          id: request.id,
-          error: { code: -32601, message: `Method not found: ${request.method}` },
-        };
-    }
-  }
-
-  /**
-   * Handle tahyia request
-   */
-  #aalijBadaa(request: TalabMcp): RaddMcp {
-    return {
-      jsonrpc: "2.0",
-      id: request.id,
-      result: {
-        protocolVersion: "2024-11-05",
-        capabilities: {
-          tools: {},
-        },
-        serverInfo: {
-          name: "iksir-pm-mcp",
-          version: "0.1.0",
-        },
-      },
-    };
-  }
-
-  /**
-   * Handle tools/list request
-   */
-  #aalijQaaimalAlat(request: TalabMcp): RaddMcp {
-    return {
-      jsonrpc: "2.0",
-      id: request.id,
-      result: {
-        tools: this.#sijillAlat.adawat(),
-      },
-    };
-  }
-
-  /**
-   * Validate required arguments are present and non-null.
-   * Throws with a clear message if validation fails.
-   */
-  #tahaqqaqHujaj(
-    toolName: string,
-    args: Record<string, unknown>,
-  ): void {
-    const tools = this.#sijillAlat.adawat();
-    const tool = tools.find((t) => t.name === toolName);
-    if (!tool) return;
-
-    const required = tool.inputSchema.required ?? [];
-    const missing = required.filter(
-      (field) => args[field] === undefined || args[field] === null,
-    );
-    if (missing.length > 0) {
-      throw new Error(
-        `Missing required argument(s) for ${toolName}: ${missing.join(", ")}`,
-      );
-    }
-  }
-
-  /**
-   * Handle tools/call request
-   */
-  async #aalijNidaAlat(request: TalabMcp): Promise<RaddMcp> {
-    const params = request.params as {
-      name: string;
-      arguments: Record<string, unknown>;
-    };
-    const toolName = params?.name;
-    const args = params?.arguments ?? {};
-
-    try {
-      this.#tahaqqaqHujaj(toolName, args);
-
-      const handler = this.#sijillAlat.muaallijLi(toolName);
-      if (!handler) {
-        return {
-          jsonrpc: "2.0",
-          id: request.id,
-          error: { code: -32602, message: `Unknown tool: ${toolName}` },
-        };
-      }
-
-      const result = await handler(args);
-
-      return {
-        jsonrpc: "2.0",
-        id: request.id,
-        result: {
-          content: [{ type: "text", text: result }],
-        },
-      };
-    } catch (error) {
-      return {
-        jsonrpc: "2.0",
-        id: request.id,
-        error: { code: -32000, message: String(error) },
-      };
-    }
   }
 
 

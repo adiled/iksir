@@ -27,6 +27,7 @@ import {
 
 import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, haddathaHuwiyyatRisalaSual } from "../db/db.ts";
 import { Wasila } from "./hum/wasila.ts";
+import { MunadiMunMcpServer } from "./mcp/iksir-mcp.ts";
 import { anshaaNtfyAmil } from "./notifications/ntfy.ts";
 import { anshaaTelegramAmil } from "./notifications/telegram.ts";
 import { anshaaTelegramRasul, type TelegramMessenger } from "./notifications/messenger.ts";
@@ -912,7 +913,8 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   await baddaaQaidatBayanat();
 
   /** Initialize clients */
-  const wasila = new Wasila(config.hum);
+  const pmServer = new MunadiMunMcpServer();
+  const wasila = new Wasila({ ...config.hum, sijill: pmServer.sijill });
   await wasila.ishgal();
   const ntfy = anshaaNtfyAmil(config);
   const telegram = anshaaTelegramAmil(config);
