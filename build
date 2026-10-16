@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# iksir build — the whole furnace must parse before it is hung.
+set -euo pipefail
+cd "$(dirname "$0")"
+node --check src/main.ts
+node --check src/cli.ts
+node --check src/hum/wasila.ts
+node --check hives/saail/saail.ts
+npm test --silent
+echo "iksir builds and proves itself"

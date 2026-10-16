@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# saail hive build — verify the door speaks before it is hung.
+set -euo pipefail
+cd "$(dirname "$0")"
+node --check saail.ts
+echo "saail builds (type-stripped, zero deps)"
