@@ -33,3 +33,16 @@ export function truncate(text: string, maxLen: number): string {
   if (text.length <= maxLen) return text;
   return text.slice(0, maxLen - 3) + "...";
 }
+
+/**
+ * Clean model JSON for parsing. Small cells segment their utterances and
+ * leave literal control characters inside string literals — valid speech,
+ * invalid JSON. Fences stripped, control characters dissolved to spaces.
+ */
+export function nazzifJson(nass: string): string {
+  let s = nass.trim();
+  if (s.startsWith("```")) {
+    s = s.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+  }
+  return s.replace(/[\u0000-\u001F]/g, " ");
+}

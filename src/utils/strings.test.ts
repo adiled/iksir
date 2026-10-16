@@ -1,5 +1,5 @@
 import { test, assertEquals } from "../ikhtibar.ts";
-import { escapeMarkdown, escapeMarkdownV2, truncate } from "./strings.ts";
+import { escapeMarkdown, escapeMarkdownV2, truncate, nazzifJson } from "./strings.ts";
 
 
 test("escapeMarkdown: escapes underscore", () => {
@@ -95,4 +95,15 @@ test("truncate: handles empty string", () => {
 
 test("truncate: very short maxLen", () => {
   assertEquals(truncate("hello", 3), "...");
+});
+
+test("nazzifJson: dissolves literal newlines inside strings", () => {
+  const seg = '{"\nentity\nType\n":"\nunknown\n","n":null}';
+  const parsed = JSON.parse(nazzifJson(seg)) as Record<string, unknown>;
+  assertEquals(parsed["n"], null);
+});
+
+test("nazzifJson: strips fences then dissolves", () => {
+  const fenced = "```json\n{\"a\":\n1}\n```";
+  assertEquals((JSON.parse(nazzifJson(fenced)) as { a: number }).a, 1);
 });

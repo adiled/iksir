@@ -16,6 +16,7 @@
  * in case the scrolls are absent.
  */
 
+import { nazzifJson } from "../utils/strings.ts";
 import { logger } from "../logging/logger.ts";
 import { join } from "node:path";
 import { readFileSync } from "node:fs";
@@ -198,7 +199,7 @@ export async function mayyazaTanbih(
       return { dhahab: true, sabab: "فشل التمييز", radd: null };
     }
 
-    const parsed = JSON.parse(result.response.trim());
+    const parsed = JSON.parse(nazzifJson(result.response));
     const isDhahab = parsed.tamyiz === "DHAHAB";
     return {
       dhahab: isDhahab,
@@ -259,7 +260,7 @@ export async function mayyazaSual(
     if (jsonStr.startsWith("```")) {
       jsonStr = jsonStr.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
     }
-    const parsed = JSON.parse(jsonStr);
+    const parsed = JSON.parse(nazzifJson(jsonStr));
 
     /** Resolve shorthand auto-answers to actual option labels */
     let autoAnswer = parsed.autoAnswer;

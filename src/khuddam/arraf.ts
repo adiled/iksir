@@ -20,6 +20,7 @@
  * Arraf does not execute. Arraf does not inscribe. Arraf only sees.
  */
 
+import { nazzifJson } from "../utils/strings.ts";
 import { logger } from "../logging/logger.ts";
 import type { Wasila } from "../hum/wasila.ts";
 import type { SiyaqMuhadatha } from "./munadi.ts";
@@ -350,7 +351,7 @@ ${Arraf.TAWJIHAT_NIZAM_NIYYA}`;
       }
 
       /** Translate the natn tongue of the oracle into a sacred NiyyaMustakhraja */
-      const khamm = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+      const khamm = JSON.parse(nazzifJson(jsonMatch[0])) as Record<string, unknown>;
 
       const nawKiyanMap: Record<string, NawKiyan> = {
         ticket: "wasfa", wasfa: "wasfa", epic: "malhamat", unknown: "majhul",
