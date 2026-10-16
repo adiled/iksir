@@ -287,7 +287,7 @@ export class TelegramClient {
     }
 
     try {
-      const response = await proxyFetch(`${this.baseUrl}/arsalaRisala`, this.proxy, {
+      const response = await proxyFetch(`${this.baseUrl}/sendMessage`, this.proxy, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
