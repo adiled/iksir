@@ -367,7 +367,7 @@ export class DawratHayat {
       }
 
       try {
-        const repoPath = Deno.env.get("IKSIR_REPO_PATH") ?? ".";
+        const repoPath = process.env.IKSIR_REPO_PATH ?? ".";
         await buildIndex(repoPath);
       } catch (error) {
         await logger.haDHHir("keepalive", "Code-intel index build failed", { error: String(error) });

@@ -6,7 +6,7 @@
  */
 
 import { join } from "node:path";
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createConnection } from "node:net";
 import { execCommand } from "./utils/exec.ts";
 import { masar_thrum } from "../hum/bee.ts";
@@ -35,49 +35,58 @@ function heading(step: number, total: number, title: string) {
   console.log(`  ${DIM}${"─".repeat(50)}${RESET}`);
 }
 
+import { createInterface } from "node:readline";
+
+function istaqraSatr(daawa: string): Promise<string> {
+  return new Promise((hal) => {
+    const qari = createInterface({ input: process.stdin, output: process.stdout });
+    qari.question(daawa, (jawab) => {
+      qari.close();
+      hal(jawab);
+    });
+  });
+}
+
 async function prompt(label: string, defaultValue = ""): Promise<string> {
   const suffix = defaultValue ? ` ${dim(`[${defaultValue}]`)}` : "";
-  const buf = new Uint8Array(1024);
-  Deno.stdout.writeSync(new TextEncoder().encode(`  ${label}${suffix}: `));
-  const n = await Deno.stdin.read(buf);
-  const input = new TextDecoder().decode(buf.subarray(0, n ?? 0)).trim();
+  const input = (await istaqraSatr(`  ${label}${suffix}: `)).trim();
   return input || defaultValue;
 }
 
 async function promptSecret(label: string): Promise<string> {
-  Deno.stdout.writeSync(new TextEncoder().encode(`  ${label}: `));
+  process.stdout.write(`  ${label}: `);
+  const stdin = process.stdin;
+  const wasRaw = stdin.isRaw;
   try {
-    Deno.stdin.setRaw(true);
+    if (stdin.isTTY) stdin.setRawMode(true);
+    stdin.resume();
     const chars: number[] = [];
-    const buf = new Uint8Array(1);
-    while (true) {
-      const n = await Deno.stdin.read(buf);
-      if (n === null || n === 0) break;
-      const c = buf[0];
-      if (c === 13 || c === 10) break;
-      if (c === 3) {
-        Deno.stdin.setRaw(false);
-        console.log("");
-        Deno.exit(1);
-      }
-      if (c === 127 || c === 8) {
-        if (chars.length > 0) {
-          chars.pop();
-          Deno.stdout.writeSync(new TextEncoder().encode("\b \b"));
+    for await (const chunk of stdin) {
+      for (const c of chunk as Buffer) {
+        if (c === 13 || c === 10) {
+          stdin.pause();
+          console.log("");
+          return Buffer.from(chars).toString();
         }
-        continue;
+        if (c === 3) {
+          console.log("");
+          process.exit(1);
+        }
+        if (c === 127 || c === 8) {
+          if (chars.length > 0) {
+            chars.pop();
+            process.stdout.write("\b \b");
+          }
+          continue;
+        }
+        chars.push(c);
+        process.stdout.write("*");
       }
-      chars.push(c);
-      Deno.stdout.writeSync(new TextEncoder().encode("*"));
     }
-    Deno.stdin.setRaw(false);
-    console.log("");
-    return new TextDecoder().decode(new Uint8Array(chars));
-  } catch {
-    Deno.stdin.setRaw?.(false);
-    const buf = new Uint8Array(1024);
-    const n = await Deno.stdin.read(buf);
-    return new TextDecoder().decode(buf.subarray(0, n ?? 0)).trim();
+    return Buffer.from(chars).toString();
+  } finally {
+    if (stdin.isTTY) stdin.setRawMode(wasRaw ?? false);
+    stdin.pause();
   }
 }
 
@@ -88,10 +97,9 @@ async function confirm(label: string, defaultYes = true): Promise<boolean> {
   return input.toLowerCase().startsWith("y");
 }
 
-function pause(msg = "Press Enter to continue...") {
-  Deno.stdout.writeSync(new TextEncoder().encode(`  ${dim(msg)}`));
-  const buf = new Uint8Array(64);
-  Deno.stdin.readSync(buf);
+async function pause(msg = "Press Enter to continue..."): Promise<void> {
+  process.stdout.write(`  ${dim(msg)}`);
+  await istaqraSatr("");
   console.log("");
 }
 
@@ -182,7 +190,7 @@ async function stepTelegram(state: InitState): Promise<void> {
 
   console.log("");
   console.log(`  Now send any message to ${bold(`@${state.telegramBotName}`)} on Telegram.`);
-  pause("Then press Enter here...");
+  await pause("Then press Enter here...");
 
   console.log(`  ${dim("Detecting your chat ID...")}`);
 
@@ -297,7 +305,7 @@ async function stepGithub(state: InitState): Promise<void> {
     console.log("");
     console.log(`  ${dim("Run:")} ${bold("gh auth login")}`);
     console.log("");
-    pause("Press Enter after authenticating...");
+    await pause("Press Enter after authenticating...");
   } else {
     ok("gh CLI authenticated");
   }
@@ -360,10 +368,10 @@ async function stepFinalize(state: InitState): Promise<void> {
   heading(5, TOTAL_STEPS, "Save Configuration");
   console.log("");
 
-  const repoPath = Deno.env.get("IKSIR_REPO_PATH") ?? Deno.cwd();
-  const home = Deno.env.get("HOME") ?? ".";
-  const configDir = Deno.env.get("IKSIR_CONFIG_DIR") ??
-    join(Deno.env.get("XDG_CONFIG_HOME") ?? join(home, ".config"), "iksir");
+  const repoPath = process.env.IKSIR_REPO_PATH ?? process.cwd();
+  const home = process.env.HOME ?? ".";
+  const configDir = process.env.IKSIR_CONFIG_DIR ??
+    join(process.env.XDG_CONFIG_HOME ?? join(home, ".config"), "iksir");
 
   const envPath = join(repoPath, ".env");
   const configPath = join(configDir, "iksir.json");
@@ -407,27 +415,27 @@ async function stepFinalize(state: InitState): Promise<void> {
   const envContent = envLines.join("\n") + "\n";
 
   if (await exists(envPath)) {
-    const existing = await Deno.readTextFile(envPath);
+    const existing = readFileSync(envPath);
     if (existing.includes("TELEGRAM_BOT_TOKEN") || existing.includes("LINEAR_API_KEY")) {
       if (!await confirm("  .env already has credentials. Overwrite?", false)) {
         warn(".env preserved. New values not written.");
         console.log(`  ${dim("You can edit manually:")} ${envPath}`);
       } else {
-        await Deno.writeTextFile(envPath, envContent);
+        writeFileSync(envPath, envContent);
         ok(`.env written: ${dim(envPath)}`);
       }
     } else {
-      await Deno.writeTextFile(envPath, existing.trimEnd() + "\n\n" + envContent);
+      writeFileSync(envPath, existing.trimEnd() + "\n\n" + envContent);
       ok(`.env updated: ${dim(envPath)}`);
     }
   } else {
-    await Deno.writeTextFile(envPath, envContent);
+    writeFileSync(envPath, envContent);
     ok(`.env created: ${dim(envPath)}`);
   }
 
   if (Object.keys(config).length > 1) {
-    await Deno.mkdir(configDir, { recursive: true });
-    await Deno.writeTextFile(configPath, JSON.stringify(config, null, 2) + "\n");
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n");
     ok(`Config written: ${dim(configPath)}`);
   }
 

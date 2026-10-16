@@ -1,28 +1,12 @@
-/**
- * Iksir CLI
- *
- * Single entry point for all Iksir operations.
- *
- * Usage:
- *   iksir start              Start all services
- *   iksir start mcp          Start just the MCP service
- *   iksir stop               Stop all services
- *   iksir restart             Restart all services
- *   iksir status              Show service and session status
- *   iksir check               Validate config, type check, run tests
- *   iksir sync                Sync prompts and plugins to agent runtime
- *   iksir config              Print resolved configuration
- *   iksir help                Show this help
- */
-
 import { VERSION } from "./main.ts";
 import { hammalaAlTasmim, masarMilafAlTasmim } from "./config.ts";
 import { runInit } from "./init.ts";
 import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, jalabaKullJalasat, jalabaAseilaGhairMujaba } from "../db/db.ts";
 import { execCommand } from "./utils/exec.ts";
-import { join } from "jsr:@std/path";
+import { join } from "node:path";
+import { mkdirSync, readdirSync, copyFileSync } from "node:fs";
 
-const SERVICES = ["iksir-mcp", "iksir-agent", "iksir"] as const;
+const SERVICES = ["iksir"] as const;
 
 const HELP = `
 iksir v${VERSION} - Autonomous Agent Tansiq
@@ -34,41 +18,40 @@ Setup:
   init               Interactive onboarding wizard
 
 Service management:
-  start [target]     Start services (all, mcp, agent, or daemon)
+  start [target]     Start services (all or daemon)
   stop [target]      Stop services
   restart [target]   Restart services
   status             Show service and session status
 
 Maintenance:
   update             Pull latest, sync prompts, restart services
-  check              Validate config, type check, run tests
-  sync               Sync prompts and plugins to agent runtime
+  check              Validate config, run tests
+  sync               Sync prompts and plugins to sacred vessels
   config             Print resolved configuration
   config --path      Print config file path
 
 Run './install' for first-time setup.
 `;
 
+const argv = process.argv.slice(2);
 
-/** Returns ["--user"] for non-root, [] for root. */
 function systemctlMode(): string[] {
-  return Deno.uid() === 0 ? [] : ["--user"];
+  const uid = typeof process.getuid === "function" ? process.getuid() : 1000;
+  return uid === 0 ? [] : ["--user"];
 }
 
-type ServiceTarget = "all" | "mcp" | "agent" | "daemon";
+type ServiceTarget = "all" | "daemon";
 
 function resolveTarget(arg?: string): ServiceTarget {
   if (!arg || arg.startsWith("-")) return "all";
   const targets: Record<string, ServiceTarget> = {
-    all: "all", mcp: "mcp", agent: "agent", daemon: "daemon",
+    all: "all", daemon: "daemon",
   };
   return targets[arg] ?? "all";
 }
 
 function serviceName(target: ServiceTarget): string[] {
   switch (target) {
-    case "mcp": return ["iksir-mcp"];
-    case "agent": return ["iksir-agent"];
     case "daemon": return ["iksir"];
     case "all": return [...SERVICES];
   }
@@ -87,13 +70,9 @@ async function systemctl(action: string, targets: string[]): Promise<void> {
 }
 
 async function cmdServiceAction(action: string): Promise<void> {
-  const target = resolveTarget(Deno.args[1]);
+  const target = resolveTarget(argv[1]);
   const services = serviceName(target);
 
-  /**
-   * For start/restart, order matters: mcp → agent → daemon
-   * For stop, reverse: daemon → agent → mcp
-   */
   const ordered = action === "stop" ? [...services].reverse() : services;
 
   console.log(`${action === "start" ? "Starting" : action === "stop" ? "Stopping" : "Restarting"} ${target === "all" ? "all services" : target}...`);
@@ -121,7 +100,7 @@ async function cmdStatus(): Promise<void> {
     const questions = jalabaAseilaGhairMujaba();
     console.log(`\nSessions: ${sessions.length}`);
     for (const s of sessions) {
-      console.log(`  ${s.identifier} [${s.status}] branch:${s.branch ?? "none"}`);
+      console.log(`  ${s.huwiyya} [${s.hala}] far:${s.far ?? "none"}`);
     }
     if (questions.length > 0) {
       console.log(`\nPending questions: ${questions.length}`);
@@ -137,7 +116,7 @@ async function cmdStatus(): Promise<void> {
 
 
 async function cmdCheck(): Promise<void> {
-  const repoPath = Deno.env.get("IKSIR_REPO_PATH") ?? ".";
+  const repoPath = process.env.IKSIR_REPO_PATH ?? ".";
   let failures = 0;
 
   console.log("Checking config...");
@@ -153,24 +132,11 @@ async function cmdCheck(): Promise<void> {
     failures++;
   }
 
-  console.log("\nType checking...");
-  const entries = ["src/main.ts", "src/mcp/iksir-mcp.ts", "src/hum/wasila.ts", "src/cli.ts"];
-  for (const entry of entries) {
-    const result = await execCommand("deno", ["check", entry], { cwd: repoPath });
-    if (result.success) {
-      console.log(`  \x1b[32m✓\x1b[0m ${entry}`);
-    } else {
-      console.log(`  \x1b[31m✗\x1b[0m ${entry}`);
-      console.log(`    ${result.stderr.split("\n")[0]}`);
-      failures++;
-    }
-  }
-
   console.log("\nRunning tests...");
-  const testResult = await execCommand("deno", ["test", "--allow-all"], { cwd: repoPath });
+  const testResult = await execCommand("npm", ["test"], { cwd: repoPath });
   if (testResult.success) {
-    const lines = testResult.stderr.split("\n");
-    const summary = lines.find((l) => l.includes("passed")) ?? "passed";
+    const lines = testResult.stdout.split("\n");
+    const summary = lines.find((l) => l.includes("# pass")) ?? "passed";
     console.log(`  \x1b[32m✓\x1b[0m ${summary.trim()}`);
   } else {
     console.log(`  \x1b[31m✗\x1b[0m Tests failed`);
@@ -178,25 +144,23 @@ async function cmdCheck(): Promise<void> {
   }
 
   console.log(failures === 0 ? "\n\x1b[32mAll checks passed.\x1b[0m" : `\n\x1b[31m${failures} check(s) failed.\x1b[0m`);
-  if (failures > 0) Deno.exit(1);
+  if (failures > 0) process.exit(1);
 }
 
 
 async function cmdSync(): Promise<void> {
-  const repoPath = Deno.env.get("IKSIR_REPO_PATH") ?? Deno.cwd();
-  const home = Deno.env.get("HOME") ?? ".";
-  const agentDir = join(home, ".config", "opencode", "agent");
-  const pluginDir = join(home, ".config", "opencode", "plugins");
+  const repoPath = process.env.IKSIR_REPO_PATH ?? process.cwd();
+  const home = process.env.HOME ?? ".";
+  const vesselsDir = join(home, ".config", "iksir");
 
-  await Deno.mkdir(agentDir, { recursive: true });
-  await Deno.mkdir(pluginDir, { recursive: true });
+  mkdirSync(vesselsDir, { recursive: true });
 
   let synced = 0;
   const promptsDir = join(repoPath, "prompts");
   try {
-    for await (const entry of Deno.readDir(promptsDir)) {
-      if (entry.isFile && entry.name.startsWith("iksir-") && entry.name.endsWith(".md")) {
-        await Deno.copyFile(join(promptsDir, entry.name), join(agentDir, entry.name));
+    for (const entry of readdirSync(promptsDir, { withFileTypes: true })) {
+      if (entry.isFile() && entry.name.startsWith("iksir-") && entry.name.endsWith(".md")) {
+        copyFileSync(join(promptsDir, entry.name), join(vesselsDir, entry.name));
         console.log(`  synced prompt: ${entry.name}`);
         synced++;
       }
@@ -207,9 +171,9 @@ async function cmdSync(): Promise<void> {
 
   const pluginsDir = join(repoPath, "plugins");
   try {
-    for await (const entry of Deno.readDir(pluginsDir)) {
-      if (entry.isFile && entry.name.endsWith(".ts")) {
-        await Deno.copyFile(join(pluginsDir, entry.name), join(pluginDir, entry.name));
+    for (const entry of readdirSync(pluginsDir, { withFileTypes: true })) {
+      if (entry.isFile() && entry.name.endsWith(".ts")) {
+        copyFileSync(join(pluginsDir, entry.name), join(vesselsDir, entry.name));
         console.log(`  synced plugin: ${entry.name}`);
         synced++;
       }
@@ -222,13 +186,13 @@ async function cmdSync(): Promise<void> {
 
 
 async function cmdUpdate(): Promise<void> {
-  const repoPath = Deno.env.get("IKSIR_REPO_PATH") ?? Deno.cwd();
+  const repoPath = process.env.IKSIR_REPO_PATH ?? process.cwd();
 
   console.log("Pulling latest...");
   const pull = await execCommand("git", ["pull"], { cwd: repoPath });
   if (!pull.success) {
     console.error(`  git pull failed: ${pull.stderr.trim()}`);
-    Deno.exit(1);
+    process.exit(1);
   }
   const summary = pull.stdout.trim();
   console.log(`  ${summary.includes("Already up to date") ? "Already up to date." : summary.split("\n")[0]}`);
@@ -254,7 +218,7 @@ async function cmdUpdate(): Promise<void> {
 
 async function cmdConfig(): Promise<void> {
   const config = await hammalaAlTasmim();
-  if (Deno.args.includes("--path")) {
+  if (argv.includes("--path")) {
     console.log(masarMilafAlTasmim());
     return;
   }
@@ -262,7 +226,7 @@ async function cmdConfig(): Promise<void> {
 }
 
 
-const command = Deno.args[0] ?? "help";
+const command = argv[0] ?? "help";
 
 switch (command) {
   case "init":
@@ -301,5 +265,5 @@ switch (command) {
   default:
     console.error(`Unknown command: ${command}`);
     console.log(HELP);
-    Deno.exit(1);
+    process.exit(1);
 }

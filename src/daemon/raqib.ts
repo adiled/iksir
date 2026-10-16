@@ -255,6 +255,13 @@ export class Raqib {
         await this.#messenger.arsalaMunassaq("dispatch",
           `Auto-compacted session **${identifier}** (${counts.total} messages → summarized)`
         );
+
+        await this.#sessionManager.aalajaDamj(sessionId).catch(async (e) =>
+          await logger.sajjalKhata("health-monitor", "Failed post-compaction diary reload", {
+            sessionId,
+            error: String(e),
+          })
+        );
       } else {
         await logger.haDHHir("health-monitor", `Failed to compact session ${identifier}`, {
           sessionId,

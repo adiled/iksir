@@ -148,7 +148,7 @@ async function naffadhFahs(ctx: SiyaqKhadim): Promise<void> {
     console.log("All checks passed! ✓\n");
   } else {
     console.log("Some checks failed. Review the configuration.\n");
-    Deno.exit(1);
+    process.exit(1);
   }
 }
 
@@ -171,18 +171,18 @@ async function addaIsharat(ctx: SiyaqKhadim): Promise<void> {
     aghlaaqQaidatBayanat();
 
     await logger.akhbar("main", "Shutdown complete");
-    Deno.exit(0);
+    process.exit(0);
   };
 
   const handleSignal = (signal: string) => {
     ighlaaq(signal).catch((error) => {
       console.error(`Shutdown error: ${error}`);
-      Deno.exit(1);
+      process.exit(1);
     });
   };
 
-  Deno.addSignalListener("SIGINT", () => handleSignal("SIGINT"));
-  Deno.addSignalListener("SIGTERM", () => handleSignal("SIGTERM"));
+  process.on("SIGINT", () => handleSignal("SIGINT"));
+  process.on("SIGTERM", () => handleSignal("SIGTERM"));
 }
 
 /**
@@ -248,7 +248,7 @@ async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
   const healthy = await ctx.wasila.isHealthy();
   if (!healthy) {
     await logger.sajjalKhata("main", "thrum nest is not reachable, aborting");
-    Deno.exit(1);
+    process.exit(1);
   }
 
   const version = await ctx.wasila.getVersion();
@@ -1058,10 +1058,10 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
 }
 
 if (import.meta.main) {
-  const check = Deno.args.includes("--check");
+  const check = process.argv.includes("--check");
   abda({ check }).catch(async (error) => {
     await logger.sajjalKhata("main", "Fatal error", { error: String(error) });
     console.error("Fatal error:", error);
-    Deno.exit(1);
+    process.exit(1);
   });
 }

@@ -124,7 +124,7 @@ export class Munaffidh {
       try {
         await this.aalajAhdath();
       } catch (error) {
-        if (!(error instanceof Deno.errors.NotFound)) {
+        if ((error as NodeJS.ErrnoException)?.code !== "ENOENT") {
           await logger.sajjalKhata("tool-executor", "Event processing error", {
             error: String(error),
           });
