@@ -6,12 +6,9 @@
  */
 
 import { join } from "node:path";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { createConnection } from "node:net";
-import { execCommand } from "./utils/exec.ts";
-import { masar_thrum } from "../hum/bee.ts";
-
+import { existsSync } from "node:fs";
 const exists = async (path: string): Promise<boolean> => existsSync(path);
+import { masarThrum } from "./hum/thrum.ts";
 
 
 const DIM = "\x1b[2m";
@@ -35,58 +32,49 @@ function heading(step: number, total: number, title: string) {
   console.log(`  ${DIM}${"─".repeat(50)}${RESET}`);
 }
 
-import { createInterface } from "node:readline";
-
-function istaqraSatr(daawa: string): Promise<string> {
-  return new Promise((hal) => {
-    const qari = createInterface({ input: process.stdin, output: process.stdout });
-    qari.question(daawa, (jawab) => {
-      qari.close();
-      hal(jawab);
-    });
-  });
-}
-
 async function prompt(label: string, defaultValue = ""): Promise<string> {
   const suffix = defaultValue ? ` ${dim(`[${defaultValue}]`)}` : "";
-  const input = (await istaqraSatr(`  ${label}${suffix}: `)).trim();
+  const buf = new Uint8Array(1024);
+  Deno.stdout.writeSync(new TextEncoder().encode(`  ${label}${suffix}: `));
+  const n = await Deno.stdin.read(buf);
+  const input = new TextDecoder().decode(buf.subarray(0, n ?? 0)).trim();
   return input || defaultValue;
 }
 
 async function promptSecret(label: string): Promise<string> {
-  process.stdout.write(`  ${label}: `);
-  const stdin = process.stdin;
-  const wasRaw = stdin.isRaw;
+  Deno.stdout.writeSync(new TextEncoder().encode(`  ${label}: `));
   try {
-    if (stdin.isTTY) stdin.setRawMode(true);
-    stdin.resume();
+    Deno.stdin.setRaw(true);
     const chars: number[] = [];
-    for await (const chunk of stdin) {
-      for (const c of chunk as Buffer) {
-        if (c === 13 || c === 10) {
-          stdin.pause();
-          console.log("");
-          return Buffer.from(chars).toString();
-        }
-        if (c === 3) {
-          console.log("");
-          process.exit(1);
-        }
-        if (c === 127 || c === 8) {
-          if (chars.length > 0) {
-            chars.pop();
-            process.stdout.write("\b \b");
-          }
-          continue;
-        }
-        chars.push(c);
-        process.stdout.write("*");
+    const buf = new Uint8Array(1);
+    while (true) {
+      const n = await Deno.stdin.read(buf);
+      if (n === null || n === 0) break;
+      const c = buf[0];
+      if (c === 13 || c === 10) break;
+      if (c === 3) {
+        Deno.stdin.setRaw(false);
+        console.log("");
+        process.exit(1);
       }
+      if (c === 127 || c === 8) {
+        if (chars.length > 0) {
+          chars.pop();
+          Deno.stdout.writeSync(new TextEncoder().encode("\b \b"));
+        }
+        continue;
+      }
+      chars.push(c);
+      Deno.stdout.writeSync(new TextEncoder().encode("*"));
     }
-    return Buffer.from(chars).toString();
-  } finally {
-    if (stdin.isTTY) stdin.setRawMode(wasRaw ?? false);
-    stdin.pause();
+    Deno.stdin.setRaw(false);
+    console.log("");
+    return new TextDecoder().decode(new Uint8Array(chars));
+  } catch {
+    Deno.stdin.setRaw?.(false);
+    const buf = new Uint8Array(1024);
+    const n = await Deno.stdin.read(buf);
+    return new TextDecoder().decode(buf.subarray(0, n ?? 0)).trim();
   }
 }
 
@@ -97,9 +85,10 @@ async function confirm(label: string, defaultYes = true): Promise<boolean> {
   return input.toLowerCase().startsWith("y");
 }
 
-async function pause(msg = "Press Enter to continue..."): Promise<void> {
-  process.stdout.write(`  ${dim(msg)}`);
-  await istaqraSatr("");
+function pause(msg = "Press Enter to continue...") {
+  Deno.stdout.writeSync(new TextEncoder().encode(`  ${dim(msg)}`));
+  const buf = new Uint8Array(64);
+  Deno.stdin.readSync(buf);
   console.log("");
 }
 
@@ -113,37 +102,15 @@ async function telegramApi(token: string, method: string): Promise<{ ok: boolean
   }
 }
 
-async function linearApi(apiKey: string, query: string): Promise<{ data?: unknown; errors?: unknown[] }> {
-  try {
-    const resp = await fetch("https://api.linear.app/graphql", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": apiKey,
-      },
-      body: JSON.stringify({ query }),
-    });
-    return await resp.json();
-  } catch {
-    return { errors: [{ message: "Network error" }] };
-  }
-}
-
 
 interface InitState {
   telegramBotToken: string;
   telegramChatId: string;
   telegramBotName: string;
-  issueTrackerApiKey: string;
-  issueTrackerTeamId: string;
-  issueTrackerTeamName: string;
-  githubOwner: string;
-  githubRepo: string;
-  githubUsername: string;
-  thrumSocket: string;
+  ismKimyawi: string;
+  namudhaj: string;
   skippedTelegram: boolean;
-  skippedMutabiWasfa: boolean;
-  skippedGithub: boolean;
+  sabiqaWasfa: string;
 }
 
 const TOTAL_STEPS = 5;
@@ -190,7 +157,7 @@ async function stepTelegram(state: InitState): Promise<void> {
 
   console.log("");
   console.log(`  Now send any message to ${bold(`@${state.telegramBotName}`)} on Telegram.`);
-  await pause("Then press Enter here...");
+  pause("Then press Enter here...");
 
   console.log(`  ${dim("Detecting your chat ID...")}`);
 
@@ -222,146 +189,48 @@ async function stepTelegram(state: InitState): Promise<void> {
   }
 }
 
-async function stepMutabiWasfa(state: InitState): Promise<void> {
-  heading(2, TOTAL_STEPS, "Issue Tracker");
+async function stepWasfat(state: InitState): Promise<void> {
+  heading(2, TOTAL_STEPS, "The Register");
   console.log("");
-  console.log(`  Iksir creates and manages tickets. Linear is the default provider.`);
-  console.log("");
-
-  if (!await confirm("Set up Linear?")) {
-    state.skippedMutabiWasfa = true;
-    warn("Skipped. You can configure the issue tracker later in .env");
-    return;
-  }
-
-  console.log("");
-  console.log(`  ${dim("1.")} Go to ${bold("linear.app")} > Settings > API`);
-  console.log(`  ${dim("2.")} Create a Personal API Key`);
+  console.log(`  The waṣfāt live in Iksīr's own sijill. Nothing to configure.`);
   console.log("");
 
-  while (true) {
-    const key = await promptSecret("API key");
-    if (!key) {
-      if (await confirm("Skip Linear?", false)) {
-        state.skippedMutabiWasfa = true;
-        return;
-      }
-      continue;
-    }
-
-    /** Validate + fetch teams */
-    const result = await linearApi(key, "{ teams { nodes { id key name } } }");
-    if (result.errors || !result.data) {
-      fail("Invalid API key or network error");
-      continue;
-    }
-
-    const data = result.data as { teams: { nodes: { id: string; key: string; name: string }[] } };
-    const teams = data.teams.nodes;
-
-    if (teams.length === 0) {
-      fail("No teams found in your Linear workspace");
-      continue;
-    }
-
-    state.issueTrackerApiKey = key;
-
-    if (teams.length === 1) {
-      state.issueTrackerTeamId = teams[0].key;
-      state.issueTrackerTeamName = teams[0].name;
-      ok(`Connected to Linear, team: ${bold(teams[0].name)} (${teams[0].key})`);
-    } else {
-      ok("Connected to Linear");
-      console.log("");
-      console.log("  Teams found:");
-      for (const t of teams) {
-        console.log(`    ${bold(t.key)} — ${t.name}`);
-      }
-      console.log("");
-      state.issueTrackerTeamId = await prompt("Team ID", teams[0].key);
-      const match = teams.find((t) => t.key === state.issueTrackerTeamId);
-      state.issueTrackerTeamName = match?.name ?? state.issueTrackerTeamId;
-    }
-    break;
-  }
+  state.sabiqaWasfa = await prompt("Mark that minted waṣfa names carry", "W");
+  ok(`Waṣfāt will be named ${bold(`${state.sabiqaWasfa}-1`)}, ${state.sabiqaWasfa}-2, …`);
 }
 
-async function stepGithub(state: InitState): Promise<void> {
-  heading(3, TOTAL_STEPS, "GitHub");
+async function stepKimyawi(state: InitState): Promise<void> {
+  heading(3, TOTAL_STEPS, "al-Kimyawī");
   console.log("");
-  console.log(`  Iksir creates PRs and monitors your repository.`);
+  console.log(`  So that your own words are known as yours.`);
   console.log("");
 
-  if (!await confirm("Set up GitHub?")) {
-    state.skippedGithub = true;
-    warn("Skipped. You can configure GitHub later in iksir.json");
-    return;
-  }
-
-  /** Check gh CLI */
-  const ghCheck = await execCommand("gh", ["auth", "status"]);
-  if (!ghCheck.success) {
-    warn("gh CLI not authenticated.");
-    console.log("");
-    console.log(`  ${dim("Run:")} ${bold("gh auth login")}`);
-    console.log("");
-    await pause("Press Enter after authenticating...");
-  } else {
-    ok("gh CLI authenticated");
-  }
-
-  console.log("");
-  const ownerRepo = await prompt("Repository (owner/repo)");
-  if (ownerRepo.includes("/")) {
-    const [owner, repo] = ownerRepo.split("/", 2);
-    state.githubOwner = owner;
-    state.githubRepo = repo;
-
-    /** Validate repo access */
-    const check = await execCommand("gh", ["repo", "view", ownerRepo, "--json", "name"]);
-    if (check.success) {
-      ok(`Repository accessible: ${bold(ownerRepo)}`);
-    } else {
-      warn("Could not verify repository access. Check permissions later.");
-    }
-  }
-
-  state.githubUsername = await prompt("Your GitHub username");
-  if (state.githubUsername) {
-    ok(`Username: ${bold(state.githubUsername)}`);
-  }
+  state.ismKimyawi = await prompt("The name you are known by");
+  if (state.ismKimyawi) ok(`You are ${bold(state.ismKimyawi)}`);
 }
 
 async function stepAgent(state: InitState): Promise<void> {
-  heading(4, TOTAL_STEPS, "Agent Runtime");
+  heading(4, TOTAL_STEPS, "The Nest");
   console.log("");
-  console.log(`  Iksir commissions cells from the hum nest over thrum.`);
+  console.log(`  Iksir does not run models. It nestles at a ${bold("humd")} and prompts`);
+  console.log(`  whatever hive you have kindled there. What burns in the furnace`);
+  console.log(`  is yours to choose — Iksir asks only that it can reach a worker,`);
+  console.log(`  and that something in the nest provides ${bold("fs")}.`);
+  console.log("");
+  console.log(`  ${dim("A murshid that cannot edit a repo can think, but not work.")}`);
   console.log("");
 
-  state.thrumSocket = await prompt("thrum socket", masar_thrum());
+  state.namudhaj = await prompt("Model to name on each prompt (blank = let the nest decide)", "");
 
-  if (await nabduSukhulThrum(state.thrumSocket)) {
-    ok("thrum nest answers");
-    return;
+  const miqbas = masarThrum();
+  try {
+    const ittisal = await Deno.connect({ path: miqbas, transport: "unix" });
+    ittisal.close();
+    ok(`humd reachable at ${miqbas}`);
+  } catch {
+    warn(`No humd at ${miqbas}`);
+    console.log(`  ${dim("Kindle one, then a worker hive:")} ${bold("hum hive <name> install")}`);
   }
-
-  warn("thrum nest is silent (humd may not be running yet).");
-  console.log(`  ${dim("It will be served by")} ${bold("humd")}${dim(".")}`);
-}
-
-async function nabduSukhulThrum(masar: string): Promise<boolean> {
-  return new Promise((hal) => {
-    const wasl = createConnection(masar);
-    wasl.on("connect", () => {
-      wasl.destroy();
-      hal(true);
-    });
-    wasl.on("error", () => hal(false));
-    setTimeout(() => {
-      wasl.destroy();
-      hal(false);
-    }, 3000);
-  });
 }
 
 async function stepFinalize(state: InitState): Promise<void> {
@@ -382,9 +251,6 @@ async function stepFinalize(state: InitState): Promise<void> {
     envLines.push(`TELEGRAM_BOT_TOKEN=${state.telegramBotToken}`);
     envLines.push(`TELEGRAM_CHAT_ID=${state.telegramChatId}`);
   }
-  if (state.issueTrackerApiKey) {
-    envLines.push(`LINEAR_API_KEY=${state.issueTrackerApiKey}`);
-  }
   envLines.push("");
 
   /** Build iksir.json */
@@ -392,18 +258,14 @@ async function stepFinalize(state: InitState): Promise<void> {
     $schema: "./iksir.schema.json",
   };
 
-  if (state.issueTrackerTeamId) {
-    config.issueTracker = { provider: "linear", teamId: state.issueTrackerTeamId };
+  if (state.sabiqaWasfa && state.sabiqaWasfa !== "W") {
+    config.wasfat = { sabiqa: state.sabiqaWasfa };
   }
-  if (state.githubOwner) {
-    config.github = {
-      owner: state.githubOwner,
-      repo: state.githubRepo,
-      ismKimyawi: state.githubUsername,
-    };
+  if (state.ismKimyawi) {
+    config.kimyawi = { ism: state.ismKimyawi };
   }
-  if (state.thrumSocket && state.thrumSocket !== masar_thrum()) {
-    config.hum = { socket: state.thrumSocket };
+  if (state.namudhaj) {
+    config.hum = { namudhaj: state.namudhaj };
   }
   if (state.telegramBotToken) {
     config.notifications = {
@@ -416,7 +278,7 @@ async function stepFinalize(state: InitState): Promise<void> {
 
   if (await exists(envPath)) {
     const existing = readFileSync(envPath);
-    if (existing.includes("TELEGRAM_BOT_TOKEN") || existing.includes("LINEAR_API_KEY")) {
+    if (existing.includes("TELEGRAM_BOT_TOKEN")) {
       if (!await confirm("  .env already has credentials. Overwrite?", false)) {
         warn(".env preserved. New values not written.");
         console.log(`  ${dim("You can edit manually:")} ${envPath}`);
@@ -434,7 +296,7 @@ async function stepFinalize(state: InitState): Promise<void> {
   }
 
   if (Object.keys(config).length > 1) {
-    mkdirSync(configDir, { recursive: true });
+    await Deno.mkdir(configDir, { recursive: true });
     writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n");
     ok(`Config written: ${dim(configPath)}`);
   }
@@ -447,17 +309,13 @@ async function stepFinalize(state: InitState): Promise<void> {
   } else if (state.skippedTelegram) {
     warn("Telegram: skipped");
   }
-  if (state.issueTrackerApiKey) {
-    ok(`Issue tracker: ${state.issueTrackerTeamName} (Linear)`);
-  } else if (state.skippedMutabiWasfa) {
-    warn("Issue tracker: skipped");
+  if (state.sabiqaWasfa) {
+    ok(`Waṣfāt: named ${state.sabiqaWasfa}-1, ${state.sabiqaWasfa}-2, …`);
   }
-  if (state.githubOwner) {
-    ok(`GitHub: ${state.githubOwner}/${state.githubRepo}`);
-  } else if (state.skippedGithub) {
-    warn("GitHub: skipped");
+  if (state.ismKimyawi) {
+    ok(`al-Kimyawī: ${state.ismKimyawi}`);
   }
-  ok(`thrum: ${state.thrumSocket}`);
+  ok(`Nest: ${masarThrum()}${state.namudhaj ? ` (model ${state.namudhaj})` : ""}`);
 
   console.log("");
   console.log(`  ${bold("Ready.")} Run ${cyan("iksir start")} to begin.`);
@@ -473,21 +331,15 @@ export async function runInit(): Promise<void> {
     telegramBotToken: "",
     telegramChatId: "",
     telegramBotName: "",
-    issueTrackerApiKey: "",
-    issueTrackerTeamId: "",
-    issueTrackerTeamName: "",
-    githubOwner: "",
-    githubRepo: "",
-    githubUsername: "",
-    thrumSocket: masar_thrum(),
+    ismKimyawi: "",
+    namudhaj: "",
     skippedTelegram: false,
-    skippedMutabiWasfa: false,
-    skippedGithub: false,
+    sabiqaWasfa: "W",
   };
 
   await stepTelegram(state);
-  await stepMutabiWasfa(state);
-  await stepGithub(state);
+  await stepWasfat(state);
+  await stepKimyawi(state);
   await stepAgent(state);
   await stepFinalize(state);
 }

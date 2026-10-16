@@ -1,5 +1,5 @@
 /**
- * Tests for src/notifications/messenger.ts
+ * Tests for src/rasul/messenger.ts
  *
  * Tests TelegramMessenger (RasulKharij implementation) with:
  * - Mock TelegramClient (injected via constructor)
@@ -273,10 +273,3 @@ test("hallJalsaBilQanat: miss returns null", async () => {
   });
 });
 
-
-test("client getter: returns the underlying TelegramClient", () => {
-  const tc = mockTelegramClient();
-  const m = new TelegramMessenger(tc as never);
-
-  assertEquals(m.client === (tc as never), true);
-});

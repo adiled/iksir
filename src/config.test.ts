@@ -1,18 +1,21 @@
 import { test, assertEquals } from "./ikhtibar.ts";
-import { hammalaAlTasmim } from "./config.ts";
-import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
-import {
-  TEST_PROXY_URL
+import { hammalaAlTasmim } from "./config.ts";
+import { join } from "node:path";
+import { 
+  TEST_HUM_MODEL, 
+  TEST_HUM_MODEL_ALT, 
+  TEST_PROXY_URL 
 } from "./constants.ts";
 
 
+/** Env vars we might set during tests — saved/istarjaad around each test */
 const ENV_KEYS = [
   "IKSIR_CONFIG_DIR",
+  "IKSIR_HUM_MODEL",
   "HUM_THRUM_SOCK",
   "HUM_SOCKET",
-  "LINEAR_API_KEY",
   "TELEGRAM_BOT_TOKEN",
   "TELEGRAM_CHAT_ID",
   "TELEGRAM_GROUP_ID",
@@ -62,7 +65,7 @@ async function withTestConfig(
 
 test("config: defaults when no config file exists", async () => {
   await withTestConfig(null, {}, (config) => {
-    assertEquals(config.hum, {});
+    assertEquals(config.hum.namudhaj, undefined);
     assertEquals(config.istiftaa.fajwatZamaniyya, 300000);
     assertEquals(config.istiftaa.fajwatRaqabaRisala, 60000);
     assertEquals(config.saatSukun.mufattah, true);
@@ -84,22 +87,22 @@ test("config: loads values from JSON", async () => {
       nihaya: "08:00",
     },
     hum: {
-      socket: "/tmp/thrum.sock"
+      namudhaj: TEST_HUM_MODEL
     },
   });
   await withTestConfig(json, {}, (config) => {
     assertEquals(config.saatSukun.mintaqaZamaniyya, "Asia/Karachi");
     assertEquals(config.saatSukun.bidaya, "23:00");
-    assertEquals(config.hum.socket, "/tmp/thrum.sock");
+    assertEquals(config.hum.namudhaj, TEST_HUM_MODEL);
     assertEquals(config.saatSukun.mufattah, true);
     assertEquals(config.istiftaa.fajwatZamaniyya, 300000);
   });
 });
 
 
-test("config: HUM_THRUM_SOCK env override", async () => {
-  await withTestConfig(null, { HUM_THRUM_SOCK: "/tmp/env-thrum.sock" }, (config) => {
-    assertEquals(config.hum.socket, "/tmp/env-thrum.sock");
+test("config: IKSIR_HUM_MODEL env override", async () => {
+  await withTestConfig(null, { IKSIR_HUM_MODEL: TEST_HUM_MODEL }, (config) => {
+    assertEquals(config.hum.namudhaj, TEST_HUM_MODEL);
   });
 });
 
@@ -131,10 +134,10 @@ test("config: NTFY_TOPIC enables ntfy", async () => {
 
 test("config: env overrides take precedence over JSON", async () => {
   const json = JSON.stringify({
-    hum: { socket: "/tmp/json-thrum.sock" }
+    hum: { namudhaj: TEST_HUM_MODEL }
   });
-  await withTestConfig(json, { HUM_THRUM_SOCK: "/tmp/env-thrum.sock" }, (config) => {
-    assertEquals(config.hum.socket, "/tmp/env-thrum.sock");
+  await withTestConfig(json, { IKSIR_HUM_MODEL: TEST_HUM_MODEL_ALT }, (config) => {
+    assertEquals(config.hum.namudhaj, TEST_HUM_MODEL_ALT);
   });
 });
 

@@ -642,9 +642,8 @@ export class TelegramClient {
       blocker: "🚫",
       decision: "🤔",
       progress: "📊",
-      pr_ready: "✅",
-      review_comments: "💬",
-      milestone: "🎉",
+      jawhar_mafsul: "✅",
+      taaliqat: "💬",
       external_change: "⚠️",
       quiet_hours_exit: "☀️",
     };
@@ -696,13 +695,13 @@ Beginning work...`;
    */
   async sendProgress(
     projectId: string,
-    completed: Array<{ id: string; raqamRisala?: number }>,
+    completed: Array<{ id: string; hala?: string }>,
     inProgress: Array<{ id: string; progress: number }>,
     pending: string[]
   ): Promise<number | null> {
     const completedList =
       completed.length > 0
-        ? completed.map((t) => `  ✓ ${t.id}${t.raqamRisala ? ` (PR #${t.raqamRisala})` : ""}`).join("\n")
+        ? completed.map((t) => `  ✓ ${t.id}${t.hala ? ` (${t.hala})` : ""}`).join("\n")
         : "  (none)";
 
     const inProgressList =
@@ -731,10 +730,11 @@ Overall: ${percent}% complete`;
     return this.arsalaRisala(text, { parseMode: "Markdown" });
   }
 
-  /**
-   * Send review comments summary
-   */
-  async sendTaaliqMurajas(raqamRisala: number, comments: TaaliqMuraja[]): Promise<number | null> {
+  /** What has been said upon a decanted jawhar. */
+  async sendTaaliqMurajas(
+    huwiyyatWasfa: string,
+    comments: TaaliqMuraja[],
+  ): Promise<number | null> {
     const byAuthor = new Map<string, TaaliqMuraja[]>();
     for (const comment of comments) {
       const existing = byAuthor.get(comment.author) ?? [];
@@ -742,7 +742,7 @@ Overall: ${percent}% complete`;
       byAuthor.set(comment.author, existing);
     }
 
-    let text = `💬 *Review Comments: PR #${raqamRisala}*\n\n`;
+    let text = `💬 *Said upon ${huwiyyatWasfa}*\n\n`;
 
     for (const [author, authorComments] of byAuthor) {
       text += `@${author} (${authorComments.length} comment${authorComments.length > 1 ? "s" : ""}):\n\n`;

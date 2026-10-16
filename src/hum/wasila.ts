@@ -1,7 +1,9 @@
 import { Chi, rid, sigil } from "thrum";
 import type { Tone } from "thrum";
+import { readFileSync } from "node:fs";
+import { join as joinMasar } from "node:path";
 import { Nahla, masar_thrum } from "../../hum/bee.ts";
-import type { JalsatHum, HadathThrum, HadathThehum, RisalaMurshid, SijillAlat } from "../types.ts";
+import type { JalsatHum, HadathThrum, HadathThehum, RisalaMurshid, SijillAlat, JawabSual } from "../types.ts";
 import { DEFAULT_TIMEOUT_MS } from "../constants.ts";
 import { logger } from "../logging/logger.ts";
 
@@ -28,9 +30,12 @@ export class Wasila {
   #hawadith: HadathThrum[] = [];
   #sijill: SijillAlat | null = null;
   #mirata: Array<(h: HadathThehum) => void> = [];
+  #namudhaj?: string;
+  #ruqan = new Map<string, string>();
 
-  constructor(tasmim?: { socket?: string; sijill?: SijillAlat }) {
-    this.#masarThrum = tasmim?.socket ?? masar_thrum();
+  constructor(tasmim?: { miqbas?: string; namudhaj?: string; sijill?: SijillAlat }) {
+    this.#masarThrum = tasmim?.miqbas ?? masar_thrum();
+    this.#namudhaj = tasmim?.namudhaj;
     this.#sijill = tasmim?.sijill ?? null;
     const adawat = this.#sijill?.adawat() ?? [];
     this.#nahla = new Nahla({
@@ -58,9 +63,46 @@ export class Wasila {
     this.#nahla.on(Chi.finish, (t) => this.#ikmalDawr(t));
     this.#nahla.on(Chi.error, (t) => this.#ikmalDawr(t));
 
-    this.#nahla.on(Chi.sessionReady, (t) => this.nasharHadath("session-ready", t as unknown as Record<string, unknown>));
+    this.#nahla.on(Chi.sessionReady, (t) => {
+      const sid = t.sid as string | undefined;
+      const nestId = (t as { nestId?: string }).nestId;
+      if (sid && nestId) {
+        const jalsa = this.#jalasat.get(sid);
+        if (jalsa) jalsa.nestId = nestId;
+      }
+      this.nasharHadath("session-ready", t as unknown as Record<string, unknown>);
+    });
     this.#nahla.on(Chi.pulse, (t) => this.nasharHadath("pulse", t as unknown as Record<string, unknown>));
-    this.#nahla.on(Chi.permissionAsk, (t) => this.nasharHadath("permission-ask", t as unknown as Record<string, unknown>));
+    this.#nahla.on(Chi.permissionAsk, (t) => {
+      this.nasharHadath("permission-ask", t as unknown as Record<string, unknown>);
+      const body = t as unknown as {
+        callId?: string;
+        rid?: string;
+        sid?: string;
+        questions?: unknown;
+        question?: unknown;
+        message?: unknown;
+        name?: unknown;
+      };
+      const asila = Array.isArray(body.questions)
+        ? body.questions
+        : (typeof (body.question ?? body.message ?? body.name) === "string"
+          ? [{
+            header: String(body.name ?? "permission"),
+            question: String(body.question ?? body.message ?? body.name),
+            options: [
+              { label: "allow", description: "Permit this action" },
+              { label: "deny", description: "Refuse this action" },
+            ],
+          }]
+          : []);
+      this.nasharHadath("question.asked", {
+        id: String(body.callId ?? (t as { rid?: string }).rid ?? ""),
+        sessionID: typeof body.sid === "string" ? body.sid : "",
+        questions: asila,
+        ...(body.callId ? { tool: { messageID: "", callID: String(body.callId) } } : {}),
+      });
+    });
     this.#nahla.on(Chi.toolCall, (t) => void this.#ajabaNida(t));
     this.#nahla.on("backfill-event", (t) => {
       const hadath = (t.event ?? t) as unknown as HadathThehum;
@@ -87,7 +129,7 @@ export class Wasila {
     return this.#wasfThrum;
   }
 
-  async ishgal(): Promise<void> {
+  async ittasil(): Promise<void> {
     await this.#nahla.connect(this.#masarThrum);
     const azal = Date.now() + 5000;
     while (!this.#muttasil && Date.now() < azal) {
@@ -152,10 +194,24 @@ export class Wasila {
     return wasJalsa;
   }
 
+  #ruqya(ism: string): string | undefined {
+    const mahfuz = this.#ruqan.get(ism);
+    if (mahfuz !== undefined) return mahfuz || undefined;
+    const maskan = new URL("../../prompts/", import.meta.url).pathname;
+    let nass = "";
+    try {
+      nass = readFileSync(joinMasar(maskan, `${ism}.md`), "utf-8");
+    } catch {
+      void logger.haDHHir("wasila", `No ruqya found for ${ism}; prompting without one`);
+    }
+    this.#ruqan.set(ism, nass);
+    return nass || undefined;
+  }
+
   async sendPrompt(
     sid: string,
     prompt: string,
-    options?: { modelId?: string; systemPrompt?: string; cwd?: string; timeoutMs?: number },
+    options?: { model?: { providerID: string; modelID: string }; agent?: string; system?: string; cwd?: string; disallowedTools?: string[]; timeoutMs?: number },
   ): Promise<{ success: boolean; response?: string; error?: string }> {
     const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     if (!this.#muttasil) {
@@ -168,15 +224,22 @@ export class Wasila {
       this.#adwar.set(sid, { qataa: [], hal, zaman: Date.now() });
     });
     const from = this.#nahla.hid;
+    const jalsa = this.#jalasat.get(sid);
+    const namudhaj = options?.model?.modelID ?? this.#namudhaj;
+    const nizam = options?.system ?? (options?.agent ? this.#ruqya(options.agent) : undefined);
     const tayara = this.#nahla.send({
       chi: Chi.prompt,
       rid: rid(),
       from,
       sid,
+      hive: ASAS,
       text: prompt,
-      ...(options?.modelId ? { modelId: options.modelId } : {}),
-      ...(options?.systemPrompt ? { systemPrompt: options.systemPrompt } : {}),
+      content: prompt,
+      ...(namudhaj ? { modelId: namudhaj } : {}),
+      ...(nizam ? { systemPrompt: nizam } : {}),
+      ...(jalsa?.nestId ? { resume: jalsa.nestId } : {}),
       ...(options?.cwd ? { cwd: options.cwd } : {}),
+      ...(options?.disallowedTools ? { disallowedTools: options.disallowedTools } : {}),
     } as Tone);
 
     if (!tayara) {
@@ -202,18 +265,25 @@ export class Wasila {
   async sendPromptAsync(
     sid: string,
     prompt: string,
-    options?: { modelId?: string; systemPrompt?: string; cwd?: string },
+    options?: { model?: { providerID: string; modelID: string }; agent?: string; system?: string; cwd?: string; disallowedTools?: string[] },
   ): Promise<boolean> {
     if (!this.#muttasil) return false;
+    const jalsa = this.#jalasat.get(sid);
+    const namudhaj = options?.model?.modelID ?? this.#namudhaj;
+    const nizam = options?.system ?? (options?.agent ? this.#ruqya(options.agent) : undefined);
     const tayara = this.#nahla.send({
       chi: Chi.prompt,
       rid: rid(),
       from: this.#nahla.hid,
       sid,
+      hive: ASAS,
       text: prompt,
-      ...(options?.modelId ? { modelId: options.modelId } : {}),
-      ...(options?.systemPrompt ? { systemPrompt: options.systemPrompt } : {}),
+      content: prompt,
+      ...(namudhaj ? { modelId: namudhaj } : {}),
+      ...(nizam ? { systemPrompt: nizam } : {}),
+      ...(jalsa?.nestId ? { resume: jalsa.nestId } : {}),
       ...(options?.cwd ? { cwd: options.cwd } : {}),
+      ...(options?.disallowedTools ? { disallowedTools: options.disallowedTools } : {}),
     } as Tone);
     await logger.akhbar("wasila", `Sent async prompt to session ${sid}`);
     return tayara;
@@ -225,10 +295,19 @@ export class Wasila {
 
   async jalabJalsaStatuses(): Promise<Record<string, string>> {
     const natija: Record<string, string> = {};
-    for (const jalsa of this.#jalasat.values()) {
-      natija[jalsa.id] = this.#adwar.has(jalsa.id) ? "busy" : jalsa.status === "muntasih" ? "inactive" : "idle";
+    for (const id of this.#jalasat.keys()) {
+      natija[id] = this.#adwar.has(id) ? "busy" : "sakin";
     }
     return natija;
+  }
+
+  istaadaJalsa(jalsa: JalsatHum, nestId?: string): void {
+    if (this.#jalasat.has(jalsa.id)) return;
+    this.#jalasat.set(jalsa.id, { ...jalsa, nestId });
+  }
+
+  huwiyyatUsh(sid: string): string | undefined {
+    return this.#jalasat.get(sid)?.nestId;
   }
 
   async jalabRisalaCount(sid: string): Promise<{ total: number; assistant: number; user: number } | null> {
@@ -251,7 +330,12 @@ export class Wasila {
   }
 
   async summarizeSession(sid: string): Promise<boolean> {
-    return this.#nahla.emit(Chi.curate, { sid });
+    const tayara = this.#nahla.emit(Chi.curate, { sid });
+    if (tayara) {
+      await logger.akhbar("wasila", `Curated jalsa ${sid}`);
+      this.nasharHadath("session.compacted", { sessionID: sid });
+    }
+    return tayara;
   }
 
   bassaLog(mustawa: string, risala: string, huyul?: Record<string, unknown>): boolean {

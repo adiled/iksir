@@ -3,37 +3,39 @@
  *
  * Exercises the full inbound message pipeline with real Iksir,
  * MudirJalasat, Sail, and TelegramMessenger — mocking only
- * the external boundaries (thrum nest, Linear API, Telegram API).
+ * the outward boundaries — the nest, the register, the messenger.
  *
- * Run: node --test tests/
+ * Run: npm test
  */
 
 import { test, assertEquals, assertExists, assertStringIncludes } from "../src/ikhtibar.ts";
 import {
   withTestRepo,
   mockWasila,
+  mockHayula,
   mockTelegramClient,
   mockArraf,
   makeConfig,
 } from "../src/test-helpers.ts";
-import { TelegramMessenger } from "../src/notifications/messenger.ts";
-import { MudirJalasat } from "../src/daemon/katib.ts";
-import { Munadi } from "../src/daemon/munadi.ts";
-import { Saail } from "../src/daemon/saail.ts";
-import type { NiyyaMuhallala } from "../src/daemon/arraf.ts";
+import { TelegramMessenger } from "../src/rasul/messenger.ts";
+import { MudirJalasat } from "../src/khuddam/katib.ts";
+import { Munadi } from "../src/khuddam/munadi.ts";
+import { Saail } from "../src/khuddam/saail.ts";
+import type { NiyyaMuhallala } from "../src/khuddam/arraf.ts";
 import { jalabaAseilaGhairMujaba } from "../db/db.ts";
 
 
 function buildContext() {
   const config = makeConfig();
-  const wasila = mockWasila();
+  const amil = mockWasila();
   const telegram = mockTelegramClient();
   const messenger = new TelegramMessenger(telegram as never);
   const intentResolver = mockArraf();
+  const hayula = mockHayula();
 
   const sessionManager = new MudirJalasat({
     tasmim: config,
-    wasila: wasila as never,
+    amil: amil as never,
     rasul: messenger,
   });
 
@@ -41,16 +43,17 @@ function buildContext() {
     mudirJalasat: sessionManager,
     arraf: intentResolver as never,
     rasul: messenger,
-    namatWasfa: config.mutabiWasfa?.namatWasfa,
+    hayula,
+    namatWasfa: config.wasfat?.namatWasfa,
   });
 
   const questionHandler = new Saail({
-    wasila: wasila as never,
+    amil: amil as never,
     rasul: messenger,
     mudirJalasat: sessionManager as never,
   });
 
-  return { config, wasila, telegram, messenger, sessionManager, dispatcher, intentResolver, questionHandler };
+  return { config, amil, telegram, messenger, sessionManager, dispatcher, intentResolver, questionHandler, hayula };
 }
 
 
@@ -72,12 +75,11 @@ test("smoke: /status with no sessions returns empty status", async () => {
 
 test("smoke: activateForTicketUrl creates session + topic", async () => {
   await withTestRepo(async () => {
-    const { dispatcher, wasila, telegram, sessionManager } = buildContext();
+    const { dispatcher, amil, telegram, sessionManager } = buildContext();
 
-    const result = await dispatcher.faaalLiRabitWasfa(
+    const result = await dispatcher.faaalLiWasfa(
       "TEAM-1000",
-      "Bab Al Shams Portal",
-      "https://linear.app/team/issue/TEAM-XXX"
+      "Bab Al Shams Portal"
     );
 
     assertEquals(result.tuulija, true);
@@ -85,8 +87,8 @@ test("smoke: activateForTicketUrl creates session + topic", async () => {
     assertStringIncludes(result.radd!, "TEAM-1000");
     assertStringIncludes(result.radd!, "Bab Al Shams Portal");
 
-    assertEquals(wasila._calls.khalaqaJalsa.length, 1);
-    assertStringIncludes(wasila._calls.khalaqaJalsa[0].title, "TEAM-1000");
+    assertEquals(amil._calls.khalaqaJalsa.length, 1);
+    assertStringIncludes(amil._calls.khalaqaJalsa[0].title, "TEAM-1000");
 
     /** Session manager should track the session */
     const sessions = sessionManager.wajadaJalasatMurshid();
@@ -98,7 +100,7 @@ test("smoke: activateForTicketUrl creates session + topic", async () => {
     assertStringIncludes(telegram._calls.createForumTopic[0].name, "TEAM-1000");
 
     /** Init message should have been sent to murshid via sendPromptAsync */
-    const promptCalls = wasila._calls.sendPromptAsync;
+    const promptCalls = amil._calls.sendPromptAsync;
     assertEquals(promptCalls.length >= 1, true);
   });
 });
@@ -106,16 +108,15 @@ test("smoke: activateForTicketUrl creates session + topic", async () => {
 
 test("smoke: message routed to active murshid via sendPromptAsync", async () => {
   await withTestRepo(async () => {
-    const { dispatcher, wasila, sessionManager } = buildContext();
+    const { dispatcher, amil, sessionManager } = buildContext();
 
-    await dispatcher.faaalLiRabitWasfa(
+    await dispatcher.faaalLiWasfa(
       "TEAM-2000",
-      "Alf Layla Migration",
-      "https://linear.app/team/issue/TEAM-XXX"
+      "Alf Layla Migration"
     );
 
     /** Clear the init prompt calls so we can track the next one */
-    const initPromptCount = wasila._calls.sendPromptAsync.length;
+    const initPromptCount = amil._calls.sendPromptAsync.length;
 
     /** Step 2: Send a message to the active murshid */
     const session = sessionManager.wajadaJalasatMurshid()[0];
@@ -126,8 +127,8 @@ test("smoke: message routed to active murshid via sendPromptAsync", async () => 
 
     assertEquals(success, true);
 
-    assertEquals(wasila._calls.sendPromptAsync.length, initPromptCount + 1);
-    const lastPrompt = wasila._calls.sendPromptAsync[wasila._calls.sendPromptAsync.length - 1];
+    assertEquals(amil._calls.sendPromptAsync.length, initPromptCount + 1);
+    const lastPrompt = amil._calls.sendPromptAsync[amil._calls.sendPromptAsync.length - 1];
     assertEquals(lastPrompt.sessionId, session.id);
     assertStringIncludes(lastPrompt.prompt, "null safety");
   });
@@ -138,10 +139,9 @@ test("smoke: /status with active session shows identifier", async () => {
   await withTestRepo(async () => {
     const { dispatcher } = buildContext();
 
-    await dispatcher.faaalLiRabitWasfa(
+    await dispatcher.faaalLiWasfa(
       "TEAM-3000",
-      "Qasr Al Hikma",
-      "https://linear.app/team/issue/TEAM-XXX"
+      "Qasr Al Hikma"
     );
 
     /** Now check status */
@@ -159,7 +159,7 @@ test("smoke: /status with active session shows identifier", async () => {
 
 test("smoke: dispatch message uses intent resolver for natural language", async () => {
   await withTestRepo(async () => {
-    const { dispatcher, intentResolver, wasila } = buildContext();
+    const { dispatcher, intentResolver, amil } = buildContext();
 
     intentResolver._nextResult = {
       hala: "muhallala",
@@ -168,7 +168,6 @@ test("smoke: dispatch message uses intent resolver for natural language", async 
         id: "issue-abc",
         huwiyya: "TEAM-4000",
         unwan: "Majlis Refactor",
-        url: "https://linear.app/team/issue/TEAM-XXX"
       },
       nassKham: "work on the majlis refactor",
       tariqa: "bahth_fikri",
@@ -186,19 +185,18 @@ test("smoke: dispatch message uses intent resolver for natural language", async 
     assertEquals(result.tuulija, true);
     assertExists(result.radd);
 
-    assertEquals(wasila._calls.khalaqaJalsa.length, 1);
+    assertEquals(amil._calls.khalaqaJalsa.length, 1);
   });
 });
 
 
 test("smoke: murshid topic message routes to correct session", async () => {
   await withTestRepo(async () => {
-    const { dispatcher, wasila, sessionManager } = buildContext();
+    const { dispatcher, amil, sessionManager } = buildContext();
 
-    await dispatcher.faaalLiRabitWasfa(
+    await dispatcher.faaalLiWasfa(
       "TEAM-5000",
-      "Diwan Al Rasail",
-      "https://linear.app/team/issue/TEAM-XXX"
+      "Diwan Al Rasail"
     );
 
     const session = sessionManager.wajadaJalasatMurshid()[0];
@@ -214,7 +212,7 @@ test("smoke: murshid topic message routes to correct session", async () => {
     assertEquals(resolvedMurshid!.huwiyya, "TEAM-5000");
 
     /** Step 4: Route the message */
-    const initPromptCount = wasila._calls.sendPromptAsync.length;
+    const initPromptCount = amil._calls.sendPromptAsync.length;
     const success = await sessionManager.arsalaIlaMurshidById(
       resolvedMurshid!.huwiyya,
       "add the GET /users endpoint",
@@ -222,11 +220,11 @@ test("smoke: murshid topic message routes to correct session", async () => {
 
     assertEquals(success, true);
 
-    /** Step 5: Verify message reached the correct nest session */
-    const lastPrompt = wasila._calls.sendPromptAsync[wasila._calls.sendPromptAsync.length - 1];
+    /** Step 5: Verify the message reached the right vessel */
+    const lastPrompt = amil._calls.sendPromptAsync[amil._calls.sendPromptAsync.length - 1];
     assertEquals(lastPrompt.sessionId, session.id);
     assertStringIncludes(lastPrompt.prompt, "GET /users");
-    assertEquals(wasila._calls.sendPromptAsync.length, initPromptCount + 1);
+    assertEquals(amil._calls.sendPromptAsync.length, initPromptCount + 1);
   });
 });
 
@@ -235,10 +233,9 @@ test("smoke: question event classified and forwarded to murshid topic", async ()
   await withTestRepo(async () => {
     const { dispatcher, questionHandler, sessionManager } = buildContext();
 
-    await dispatcher.faaalLiRabitWasfa(
+    await dispatcher.faaalLiWasfa(
       "TEAM-6000",
-      "Funduq Search",
-      "https://linear.app/team/issue/TEAM-XXX"
+      "Funduq Search"
     );
 
     const session = sessionManager.wajadaJalasatMurshid()[0];
@@ -274,12 +271,11 @@ test("smoke: question event classified and forwarded to murshid topic", async ()
 
 test("smoke: question answered via callback", async () => {
   await withTestRepo(async () => {
-    const { dispatcher, wasila, questionHandler, sessionManager } = buildContext();
+    const { dispatcher, amil, questionHandler, sessionManager } = buildContext();
 
-    await dispatcher.faaalLiRabitWasfa(
+    await dispatcher.faaalLiWasfa(
       "TEAM-7000",
-      "Bayt Al Hikma",
-      "https://linear.app/team/issue/TEAM-XXX"
+      "Bayt Al Hikma"
     );
 
     const session = sessionManager.wajadaJalasatMurshid()[0];
@@ -301,14 +297,14 @@ test("smoke: question answered via callback", async () => {
     });
 
     /** Clear reply calls from auto-answer attempts */
-    const replyCountBefore = wasila._calls.replyToQuestion.length;
+    const replyCountBefore = amil._calls.replyToQuestion.length;
 
     /** Answer the question */
     const success = await questionHandler.aalajIstijabaZirrSual("q-smoke-002", "Ijtihad");
     assertEquals(success, true);
 
-    assertEquals(wasila._calls.replyToQuestion.length, replyCountBefore + 1);
-    const lastReply = wasila._calls.replyToQuestion[wasila._calls.replyToQuestion.length - 1];
+    assertEquals(amil._calls.replyToQuestion.length, replyCountBefore + 1);
+    const lastReply = amil._calls.replyToQuestion[amil._calls.replyToQuestion.length - 1];
     assertEquals(lastReply.answers[0].selected, ["Ijtihad"]);
 
     assertEquals(questionHandler.wajadaSualMuallaq("q-smoke-002"), undefined);
@@ -322,12 +318,43 @@ test("smoke: second murshid activation switches active session", async () => {
   await withTestRepo(async () => {
     const { dispatcher, sessionManager } = buildContext();
 
-    await dispatcher.faaalLiRabitWasfa("TEAM-8001", "Rihla Alpha", "https://linear.app/team/TEAM-8001");
+    await dispatcher.faaalLiWasfa("TEAM-8001", "Rihla Alpha");
     assertEquals(dispatcher.hawiyyaFaila(), "TEAM-8001");
 
-    await dispatcher.faaalLiRabitWasfa("TEAM-8002", "Rihla Beta", "https://linear.app/team/TEAM-8002");
+    await dispatcher.faaalLiWasfa("TEAM-8002", "Rihla Beta");
     assertEquals(dispatcher.hawiyyaFaila(), "TEAM-8002");
 
     assertEquals(sessionManager.wajadaJalasatMurshid().length, 2);
+  });
+});
+
+
+test("smoke: vessels survive a restart, carrying their nestId", async () => {
+  await withTestRepo(async () => {
+    /** First life — light a vessel and let the worker name its handle. */
+    const first = buildContext();
+    await first.dispatcher.faaalLiWasfa("TEAM-9001", "Rihla Baqiya");
+
+    const lit = first.sessionManager.jalabMurshid("TEAM-9001");
+    assertEquals(lit !== null, true);
+    first.amil._reportNestId(lit!.id, "nest-handle-9001");
+    await first.sessionManager.hafizaHala();
+
+    /**
+     * Second life — a fresh amil that has never heard of this vessel, which
+     * is exactly the state after a restart. The sijill is the only witness.
+     */
+    const second = buildContext();
+    assertEquals(second.sessionManager.wajadaJalasatMurshid().length, 0);
+
+    await second.sessionManager.hammalaHala();
+
+    const restored = second.sessionManager.jalabMurshid("TEAM-9001");
+    assertEquals(restored !== null, true);
+    assertEquals(restored!.id, lit!.id);
+    assertEquals(restored!.far, lit!.far);
+
+    /** The amil must be able to resume, or the murshid wakes with no memory. */
+    assertEquals(second.amil.huwiyyatUsh(lit!.id), "nest-handle-9001");
   });
 });

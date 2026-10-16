@@ -1,8 +1,8 @@
 /**
- * Tests for src/daemon/question-handler.ts
+ * Tests for src/khuddam/question-handler.ts
  *
  * Tests Sail with:
- * - Mock Wasila, RasulKharij, MudirJalasat
+ * - Mock AmilHum, RasulKharij, MudirJalasat
  * - Real temp DB (for question persistence)
  *
  * Key behaviors tested:
@@ -61,7 +61,7 @@ function makeEvent(overrides?: Partial<HadathSualMatlub["properties"]>): HadathS
 
 test("isQuestionCallback: returns true for q: prefix", () => {
   const qh = new Saail({
-    wasila: mockWasila() as never,
+    amil: mockWasila() as never,
     rasul: mockMessenger(),
     mudirJalasat: mockMudirJalasat() as never,
   });
@@ -72,7 +72,7 @@ test("isQuestionCallback: returns true for q: prefix", () => {
 
 test("isQuestionCallback: returns false for other prefixes", () => {
   const qh = new Saail({
-    wasila: mockWasila() as never,
+    amil: mockWasila() as never,
     rasul: mockMessenger(),
     mudirJalasat: mockMudirJalasat() as never,
   });
@@ -85,7 +85,7 @@ test("isQuestionCallback: returns false for other prefixes", () => {
 
 test("wajadaSualMuallaq: returns undefined for unknown", () => {
   const qh = new Saail({
-    wasila: mockWasila() as never,
+    amil: mockWasila() as never,
     rasul: mockMessenger(),
     mudirJalasat: mockMudirJalasat() as never,
   });
@@ -96,7 +96,7 @@ test("wajadaSualMuallaq: returns undefined for unknown", () => {
 
 test("isAwaitingCustomInput: returns false initially", () => {
   const qh = new Saail({
-    wasila: mockWasila() as never,
+    amil: mockWasila() as never,
     rasul: mockMessenger(),
     mudirJalasat: mockMudirJalasat() as never,
   });
@@ -107,49 +107,49 @@ test("isAwaitingCustomInput: returns false initially", () => {
 
 test("buildInlineKeyboard: creates rows for each option + custom", () => {
   const qh = new Saail({
-    wasila: mockWasila() as never,
+    amil: mockWasila() as never,
     rasul: mockMessenger(),
     mudirJalasat: mockMudirJalasat() as never,
   });
 
   const question = makeMaalumatSual();
-  const keyboard = qh.banaMafatihSatriyya("q-001", question);
+  const khiyarat = qh.banaKhiyarat("q-001", question);
 
-  assertEquals(keyboard.inline_keyboard.length, 3);
-  assertEquals(keyboard.inline_keyboard[0][0].text, "Pattern A (Recommended)");
-  assertEquals(keyboard.inline_keyboard[1][0].text, "Pattern B");
-  assertEquals(keyboard.inline_keyboard[2][0].text, "Type answer...");
+  assertEquals(khiyarat.length, 3);
+  assertEquals(khiyarat[0].nass, "Pattern A (Recommended)");
+  assertEquals(khiyarat[1].nass, "Pattern B");
+  assertEquals(khiyarat[2].nass, "Type answer...");
 
-  assertEquals(keyboard.inline_keyboard[0][0].callback_data.startsWith("q:"), true);
-  assertEquals(keyboard.inline_keyboard[2][0].callback_data.endsWith("__custom__"), true);
+  assertEquals(khiyarat[0].miftah.startsWith("q:"), true);
+  assertEquals(khiyarat[2].miftah.endsWith("__custom__"), true);
 });
 
 test("buildInlineKeyboard: no custom button when custom=false", () => {
   const qh = new Saail({
-    wasila: mockWasila() as never,
+    amil: mockWasila() as never,
     rasul: mockMessenger(),
     mudirJalasat: mockMudirJalasat() as never,
   });
 
   const question = makeMaalumatSual({ custom: false });
-  const keyboard = qh.banaMafatihSatriyya("q-002", question);
+  const khiyarat = qh.banaKhiyarat("q-002", question);
 
-  assertEquals(keyboard.inline_keyboard.length, 2);
+  assertEquals(khiyarat.length, 2);
 });
 
 test("parseQuestionCallback: resolves registered short IDs", () => {
   const qh = new Saail({
-    wasila: mockWasila() as never,
+    amil: mockWasila() as never,
     rasul: mockMessenger(),
     mudirJalasat: mockMudirJalasat() as never,
   });
 
-  /** Register via buildInlineKeyboard */
+  /** Register via banaKhiyarat */
   const question = makeMaalumatSual();
-  const keyboard = qh.banaMafatihSatriyya("q-full-uuid-001", question);
+  const khiyarat = qh.banaKhiyarat("q-full-uuid-001", question);
 
-  /** Parse the first button's callback_data */
-  const parsed = qh.hallalIstijabaZirrSual(keyboard.inline_keyboard[0][0].callback_data);
+  /** Parse the first option's callback key */
+  const parsed = qh.hallalIstijabaZirrSual(khiyarat[0].miftah);
   assertExists(parsed);
   assertEquals(parsed.questionId, "q-full-uuid-001");
   assertEquals(parsed.selectedLabel.startsWith("Pattern A"), true);
@@ -157,7 +157,7 @@ test("parseQuestionCallback: resolves registered short IDs", () => {
 
 test("parseQuestionCallback: returns null for unknown short IDs", () => {
   const qh = new Saail({
-    wasila: mockWasila() as never,
+    amil: mockWasila() as never,
     rasul: mockMessenger(),
     mudirJalasat: mockMudirJalasat() as never,
   });
@@ -168,7 +168,7 @@ test("parseQuestionCallback: returns null for unknown short IDs", () => {
 
 test("parseQuestionCallback: handles labels with colons", () => {
   const qh = new Saail({
-    wasila: mockWasila() as never,
+    amil: mockWasila() as never,
     rasul: mockMessenger(),
     mudirJalasat: mockMudirJalasat() as never,
   });
@@ -178,9 +178,9 @@ test("parseQuestionCallback: handles labels with colons", () => {
     options: [{ label: "Option:With:Colons", description: "test" }],
     custom: false,
   });
-  const keyboard = qh.banaMafatihSatriyya("q-colon-test", question);
+  const khiyarat = qh.banaKhiyarat("q-colon-test", question);
 
-  const parsed = qh.hallalIstijabaZirrSual(keyboard.inline_keyboard[0][0].callback_data);
+  const parsed = qh.hallalIstijabaZirrSual(khiyarat[0].miftah);
   assertExists(parsed);
   assertEquals(parsed.selectedLabel, "Option:With:Colons");
 });
@@ -190,7 +190,7 @@ test("handleQuestionAsked: unknown session -> rejects", async () => {
   await withTestDb(async () => {
     const oc = mockWasila();
     const qh = new Saail({
-      wasila: oc as never,
+      amil: oc as never,
       rasul: mockMessenger(),
       mudirJalasat: mockMudirJalasat([]) as never,
     });
@@ -207,7 +207,7 @@ test("handleQuestionAsked: empty questions -> rejects", async () => {
     const oc = mockWasila();
     const session = makeSession();
     const qh = new Saail({
-      wasila: oc as never,
+      amil: oc as never,
       rasul: mockMessenger(),
       mudirJalasat: mockMudirJalasat([session]) as never,
     });
@@ -231,7 +231,7 @@ test("handleQuestionAsked: KHABATH -> auto-answers + injects guidance", async ()
     seedSession();
     const messenger = mockMessenger();
     const qh = new Saail({
-      wasila: oc as never,
+      amil: oc as never,
       rasul: messenger,
       mudirJalasat: mockMudirJalasat([session]) as never,
     });
@@ -263,7 +263,7 @@ test("handleQuestionAsked: DHAHAB -> forwards to al-Kimyawi", async () => {
     let forwardedCount = 0;
 
     const qh = new Saail({
-      wasila: oc as never,
+      amil: oc as never,
       rasul: messenger,
       mudirJalasat: mockMudirJalasat([session]) as never,
     });
@@ -307,7 +307,7 @@ test("handleQuestionCallback: answers question + marks in DB", async () => {
     const session = makeSession();
     seedSession();
     const qh = new Saail({
-      wasila: oc as never,
+      amil: oc as never,
       rasul: mockMessenger(),
       mudirJalasat: mockMudirJalasat([session]) as never,
     });
@@ -331,7 +331,7 @@ test("handleQuestionCallback: unknown question -> returns false", async () => {
   await withTestDb(async () => {
     const oc = mockWasila();
     const qh = new Saail({
-      wasila: oc as never,
+      amil: oc as never,
       rasul: mockMessenger(),
       mudirJalasat: mockMudirJalasat() as never,
     });
@@ -355,7 +355,7 @@ test("markAwaitingCustomInput + handlePotentialCustomAnswer: end-to-end", async 
     const session = makeSession();
     seedSession();
     const qh = new Saail({
-      wasila: oc as never,
+      amil: oc as never,
       rasul: mockMessenger(),
       mudirJalasat: mockMudirJalasat([session]) as never,
     });
@@ -379,7 +379,7 @@ test("markAwaitingCustomInput + handlePotentialCustomAnswer: end-to-end", async 
 test("handlePotentialCustomAnswer: returns false when not awaiting", async () => {
   await withTestDb(async () => {
     const qh = new Saail({
-      wasila: mockWasila() as never,
+      amil: mockWasila() as never,
       rasul: mockMessenger(),
       mudirJalasat: mockMudirJalasat() as never,
     });
@@ -397,7 +397,7 @@ test("loadState: rebuilds pendingQuestions from DB", async () => {
     const oc = mockWasila();
 
     const qh = new Saail({
-      wasila: oc as never,
+      amil: oc as never,
       rasul: mockMessenger(),
       mudirJalasat: mockMudirJalasat([session]) as never,
     });
@@ -428,7 +428,7 @@ test("loadState: rebuilds callbackIdMap (parseQuestionCallback works after load)
     const oc = mockWasila();
 
     const qh = new Saail({
-      wasila: oc as never,
+      amil: oc as never,
       rasul: mockMessenger(),
       mudirJalasat: mockMudirJalasat([session]) as never,
     });
@@ -450,8 +450,8 @@ test("loadState: rebuilds callbackIdMap (parseQuestionCallback works after load)
      * The short callback ID should be registered by loadState via #shortCallbackId
      * We can verify by building a keyboard and parsing its callback
      */
-    const keyboard = qh.banaMafatihSatriyya("q-callback-test", pending.questions[0]);
-    const parsed = qh.hallalIstijabaZirrSual(keyboard.inline_keyboard[0][0].callback_data);
+    const khiyarat = qh.banaKhiyarat("q-callback-test", pending.questions[0]);
+    const parsed = qh.hallalIstijabaZirrSual(khiyarat[0].miftah);
     assertExists(parsed);
     assertEquals(parsed.questionId, "q-callback-test");
   });
@@ -460,7 +460,7 @@ test("loadState: rebuilds callbackIdMap (parseQuestionCallback works after load)
 test("loadState: no questions -> no-op", async () => {
   await withTestDb(async () => {
     const qh = new Saail({
-      wasila: mockWasila() as never,
+      amil: mockWasila() as never,
       rasul: mockMessenger(),
       mudirJalasat: mockMudirJalasat() as never,
     });
@@ -475,7 +475,7 @@ test("loadState: unknown session -> uses sessionId as huwiyyatMurshid fallback",
     seedSession({ id: "sess-unknown", huwiyya: "ORPHAN" });
 
     const qh = new Saail({
-      wasila: mockWasila() as never,
+      amil: mockWasila() as never,
       rasul: mockMessenger(),
       mudirJalasat: mockMudirJalasat([]) as never,
     });

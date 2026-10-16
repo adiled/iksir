@@ -2,16 +2,18 @@
  * Shared Test Helpers
  *
  * Mock factories and utilities for Tier 2+ tests.
- * Provides typed mocks for Wasila, TelegramClient, RasulKharij,
+ * Provides typed mocks for AmilHum, TelegramClient, RasulKharij,
  * and MudirJalasat. Uses real temp DB instances (same pattern as db_test.ts).
  */
 
 import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, haddathaAwAdkhalaJalsa } from "../db/db.ts";
-import { execCommand } from "./utils/exec.ts";
-import type { RasulKharij, QanatRisala, JalsatMurshid, JawabSual } from "./types.ts";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { execCommand } from "./utils/exec.ts";
+import type { RasulKharij, QanatRisala, JalsatMurshid, JawabSual } from "./types.ts";
+import type { Hayula } from "./hayula/hayula.ts";
+
 
 
 /**
@@ -59,7 +61,7 @@ export async function withTestRepo(fn: () => Promise<void> | void): Promise<void
 }
 
 
-/** Minimal session shape returned by Wasila mock */
+/** Minimal session shape returned by the nest mock */
 interface MockJalsatHum {
   id: string;
   title: string;
@@ -82,11 +84,12 @@ export interface MockWasila {
     options?: unknown,
   ): Promise<{ success: boolean; response?: string; error?: string }>;
   khalaqaJalsa(huwiyyatWasfa: string, title: string): Promise<MockJalsatHum | null>;
-  bassaLog(mustawa: string, risala: string, huyul?: Record<string, unknown>): boolean;
-  atlubBackfill(author: string, from: number): boolean;
-  wadaaMirata(fn: (h: unknown) => void): void;
   jalabJalsa(sessionId: string): Promise<MockJalsatHum | null>;
   listSessions(): Promise<Array<{ id: string; title: string; createdAt: Date; lastMessageAt: Date }>>;
+  istaadaJalsa(jalsa: MockJalsatHum, nestId?: string): void;
+  huwiyyatUsh(sessionId: string): string | undefined;
+  /** Stand in for the worker reporting its handle on chi:"session-ready". */
+  _reportNestId(sessionId: string, nestId: string): void;
 
   _calls: {
     mayyaza: string[];
@@ -100,7 +103,7 @@ export interface MockWasila {
 }
 
 /**
- * Create a mock Wasila. Override specific methods via the overrides param.
+ * Create a mock AmilHum. Override specific methods via the overrides param.
  * Includes session management (khalaqaJalsa, jalabJalsa) for integration tests.
  */
 export function mockWasila(overrides?: {
@@ -125,6 +128,7 @@ export function mockWasila(overrides?: {
   };
 
   const sessions = new Map<string, MockJalsatHum>();
+  const nestIds = new Map<string, string>();
   let sessionCounter = 0;
 
   return {
@@ -197,6 +201,20 @@ export function mockWasila(overrides?: {
         createdAt: s.createdAt,
         lastMessageAt: s.lastMessageAt,
       }));
+    },
+
+    istaadaJalsa(jalsa, nestId) {
+      if (sessions.has(jalsa.id)) return;
+      sessions.set(jalsa.id, jalsa);
+      if (nestId) nestIds.set(jalsa.id, nestId);
+    },
+
+    huwiyyatUsh(sessionId) {
+      return nestIds.get(sessionId);
+    },
+
+    _reportNestId(sessionId, nestId) {
+      nestIds.set(sessionId, nestId);
     },
   };
 }
@@ -390,7 +408,6 @@ export function makeSession(overrides?: Partial<JalsatMurshid>): JalsatMurshid {
     hala: "fail",
     unshiaFi: new Date().toISOString(),
     akhirRisalaFi: new Date().toISOString(),
-    activePRs: [],
     channels: {},
     ...overrides,
   };
@@ -420,14 +437,14 @@ export function seedSession(overrides?: Partial<JalsatMurshid>): void {
  * Caller is responsible for cleanup.
  */
 export async function writeTempFile(content: string, prefix = "iksir-fixture-"): Promise<string> {
-  const dir = mkdtempSync(join(tmpdir(), prefix));
-  const path = join(dir, "fixture");
+  const tdir = mkdtempSync(join(tmpdir(), prefix));
+  const path = join(tdir, "fixture");
   writeFileSync(path, content);
   return path;
 }
 
 
-import type { NiyyaMuhallala } from "./daemon/arraf.ts";
+import type { NiyyaMuhallala } from "./khuddam/arraf.ts";
 
 export interface MockArraf {
   halla(text: string, context?: unknown): Promise<NiyyaMuhallala>;
@@ -467,13 +484,14 @@ import type { TasmimIksir } from "./types.ts";
 
 /**
  * Create a minimal TasmimIksir for testing.
- * No real Telegram/Linear/thrum connections.
+ * Nothing outward is touched.
  */
 export function makeConfig(overrides?: Partial<TasmimIksir>): TasmimIksir {
   return {
     hum: {},
     saatSukun: { bidaya: "00:00", nihaya: "06:00", mintaqaZamaniyya: "UTC" },
-    mutabiWasfa: { muqaddim: "linear", miftahApi: "", huwiyyatFareeq: "" },
+    wasfat: {},
+    madda: { hayula: "/dev/null/hayula.ts" },
     isharat: {
       telegram: {
         mufattah: false,
@@ -492,4 +510,66 @@ export function makeConfig(overrides?: Partial<TasmimIksir>): TasmimIksir {
     hafazat: {},
     ...overrides,
   } as TasmimIksir;
+}
+
+
+/**
+ * A hayūlā of nothing in particular.
+ *
+ * Core is handed matter and never asks what kind, so a test may hand it
+ * matter that is not there at all.
+ */
+export function mockHayula(): Hayula & { _amal: string[] } {
+  const amal: string[] = [];
+  let waqif = "codex";
+  return {
+    _amal: amal,
+    naw: "wahm",
+    dakhala(ina) {
+      amal.push(`dakhala:${ina}`);
+      waqif = ina;
+      return Promise.resolve(true);
+    },
+    waqif() {
+      return Promise.resolve(waqif);
+    },
+    asas() {
+      return Promise.resolve("codex");
+    },
+    mudtarib() {
+      amal.push("mudtarib");
+      return Promise.resolve(false);
+    },
+    jammada(sabab) {
+      amal.push(`jammada:${sabab}`);
+      return Promise.resolve(true);
+    },
+    thabbata(sabab) {
+      amal.push(`thabbata:${sabab}`);
+      return Promise.resolve(true);
+    },
+    sahaba(ina) {
+      amal.push(`sahaba:${ina ?? "-"}`);
+      return Promise.resolve({ najah: true });
+    },
+    masafa() {
+      return Promise.resolve(0);
+    },
+    azhara(ina) {
+      amal.push(`azhara:${ina}`);
+      return Promise.resolve(true);
+    },
+    istahala(jawhar, ahjar) {
+      amal.push(`istahala:${jawhar}:${ahjar.length}`);
+      return Promise.resolve({ najah: true, jawhar, adadAhjar: ahjar.length });
+    },
+    naqasha(ina) {
+      amal.push(`naqasha:${ina}`);
+      return Promise.resolve(true);
+    },
+    talaam(ahjar) {
+      amal.push(`talaam:${ahjar.length}`);
+      return Promise.resolve({ yaqif: true, yahtaj: [] });
+    },
+  };
 }

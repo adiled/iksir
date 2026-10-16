@@ -162,42 +162,26 @@ export class NtfyClient {
     });
   }
 
-  /**
-   * Send a PR ready notification
-   */
-  async sendPRReady(
-    raqamRisala: number,
+  /** A jawhar has been decanted and stands before al-Kimyawī. */
+  async sendJawharMafsul(
     huwiyyatWasfa: string,
-    prUrl: string,
-    summary: string
+    rabit: string,
+    mulakhkhas: string,
   ): Promise<boolean> {
     return this.send({
-      sinf: "pr_ready",
-      unwan: `Draft PR Ready: #${raqamRisala}`,
-      matn: `${huwiyyatWasfa}\n\n${summary}`,
+      sinf: "jawhar_mafsul",
+      unwan: `Jawhar decanted: ${huwiyyatWasfa}`,
+      matn: mulakhkhas,
       awwaliyya: "default",
-      url: prUrl,
+      url: rabit,
       huwiyyatWasfa,
       afaal: [
         {
-          label: "View PR",
-          action: `view_pr_${raqamRisala}`,
-          url: prUrl,
+          label: "Look upon it",
+          action: `nazar_${huwiyyatWasfa}`,
+          url: rabit,
         },
       ],
-    });
-  }
-
-  /**
-   * Send a milestone completion notification
-   */
-  async sendMilestone(projectId: string, title: string, summary: string): Promise<boolean> {
-    return this.send({
-      sinf: "milestone",
-      unwan: `Milestone Complete: ${projectId}`,
-      matn: `${title}\n\n${summary}`,
-      awwaliyya: "high",
-      huwiyyatMashru: projectId,
     });
   }
 

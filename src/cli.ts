@@ -1,11 +1,30 @@
+/**
+ * Iksir CLI
+ *
+ * Single entry point for all Iksir operations.
+ *
+ * Usage:
+ *   iksir start              Wake al-Khadim
+ *   iksir stop               Still al-Khadim
+ *   iksir restart             Wake it anew
+ *   iksir status              Show service and session status
+ *   iksir check               Validate config, type check, run tests
+ *   iksir sync                Sync the ruqan into the config dir
+ *   iksir config              Print resolved configuration
+ *   iksir help                Show this help
+ */
+
 import { VERSION } from "./main.ts";
 import { hammalaAlTasmim, masarMilafAlTasmim } from "./config.ts";
 import { runInit } from "./init.ts";
 import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, jalabaKullJalasat, jalabaAseilaGhairMujaba } from "../db/db.ts";
 import { execCommand } from "./utils/exec.ts";
 import { join } from "node:path";
-import { mkdirSync, readdirSync, copyFileSync } from "node:fs";
 
+/**
+ * One service. The nest is al-Kimyawi's to supervise, and the instruments
+ * ride al-Khadim's own process.
+ */
 const SERVICES = ["iksir"] as const;
 
 const HELP = `
@@ -18,43 +37,26 @@ Setup:
   init               Interactive onboarding wizard
 
 Service management:
-  start [target]     Start services (all or daemon)
-  stop [target]      Stop services
-  restart [target]   Restart services
+  start              Wake al-Khadim
+  stop               Still al-Khadim
+  restart            Wake it anew
   status             Show service and session status
 
 Maintenance:
-  update             Pull latest, sync prompts, restart services
-  check              Validate config, run tests
-  sync               Sync prompts and plugins to sacred vessels
+  update             Pull latest, sync ruqan, wake anew
+  check              Validate config, type check, run tests
+  sync               Sync the ruqan into the config dir
   config             Print resolved configuration
   config --path      Print config file path
 
 Run './install' for first-time setup.
 `;
 
-const argv = process.argv.slice(2);
 
+/** Returns ["--user"] for non-root, [] for root. */
 function systemctlMode(): string[] {
   const uid = typeof process.getuid === "function" ? process.getuid() : 1000;
   return uid === 0 ? [] : ["--user"];
-}
-
-type ServiceTarget = "all" | "daemon";
-
-function resolveTarget(arg?: string): ServiceTarget {
-  if (!arg || arg.startsWith("-")) return "all";
-  const targets: Record<string, ServiceTarget> = {
-    all: "all", daemon: "daemon",
-  };
-  return targets[arg] ?? "all";
-}
-
-function serviceName(target: ServiceTarget): string[] {
-  switch (target) {
-    case "daemon": return ["iksir"];
-    case "all": return [...SERVICES];
-  }
 }
 
 async function systemctl(action: string, targets: string[]): Promise<void> {
@@ -70,12 +72,10 @@ async function systemctl(action: string, targets: string[]): Promise<void> {
 }
 
 async function cmdServiceAction(action: string): Promise<void> {
-  const target = resolveTarget(argv[1]);
-  const services = serviceName(target);
+  const ordered = [...SERVICES];
 
-  const ordered = action === "stop" ? [...services].reverse() : services;
-
-  console.log(`${action === "start" ? "Starting" : action === "stop" ? "Stopping" : "Restarting"} ${target === "all" ? "all services" : target}...`);
+  const verb = action === "start" ? "Starting" : action === "stop" ? "Stopping" : "Restarting";
+  console.log(`${verb} iksir...`);
   if (action === "restart") {
     await systemctl("restart", ordered);
   } else {
@@ -100,7 +100,7 @@ async function cmdStatus(): Promise<void> {
     const questions = jalabaAseilaGhairMujaba();
     console.log(`\nSessions: ${sessions.length}`);
     for (const s of sessions) {
-      console.log(`  ${s.huwiyya} [${s.hala}] far:${s.far ?? "none"}`);
+      console.log(`  ${s.identifier} [${s.status}] branch:${s.branch ?? "none"}`);
     }
     if (questions.length > 0) {
       console.log(`\nPending questions: ${questions.length}`);
@@ -123,8 +123,6 @@ async function cmdCheck(): Promise<void> {
   try {
     const config = await hammalaAlTasmim();
     console.log(`  \x1b[32m✓\x1b[0m Config loaded from ${masarMilafAlTasmim()}`);
-    if (config.mutabiWasfa.miftahApi) console.log("  \x1b[32m✓\x1b[0m Issue tracker API key set");
-    else console.log("  \x1b[33m!\x1b[0m Issue tracker API key not set");
     if (config.isharat.telegram.ramzBot) console.log("  \x1b[32m✓\x1b[0m Telegram bot token set");
     else console.log("  \x1b[33m!\x1b[0m Telegram bot token not set");
   } catch (e) {
@@ -151,34 +149,22 @@ async function cmdCheck(): Promise<void> {
 async function cmdSync(): Promise<void> {
   const repoPath = process.env.IKSIR_REPO_PATH ?? process.cwd();
   const home = process.env.HOME ?? ".";
-  const vesselsDir = join(home, ".config", "iksir");
+  const agentDir = join(home, ".config", "iksir", "prompts");
 
-  mkdirSync(vesselsDir, { recursive: true });
+  mkdirSync(agentDir, { recursive: true });
 
   let synced = 0;
   const promptsDir = join(repoPath, "prompts");
   try {
     for (const entry of readdirSync(promptsDir, { withFileTypes: true })) {
       if (entry.isFile() && entry.name.startsWith("iksir-") && entry.name.endsWith(".md")) {
-        copyFileSync(join(promptsDir, entry.name), join(vesselsDir, entry.name));
+        copyFileSync(join(promptsDir, entry.name), join(agentDir, entry.name));
         console.log(`  synced prompt: ${entry.name}`);
         synced++;
       }
     }
   } catch {
     console.log("  No prompts directory found");
-  }
-
-  const pluginsDir = join(repoPath, "plugins");
-  try {
-    for (const entry of readdirSync(pluginsDir, { withFileTypes: true })) {
-      if (entry.isFile() && entry.name.endsWith(".ts")) {
-        copyFileSync(join(pluginsDir, entry.name), join(vesselsDir, entry.name));
-        console.log(`  synced plugin: ${entry.name}`);
-        synced++;
-      }
-    }
-  } catch {
   }
 
   console.log(`\nSynced ${synced} file(s).`);
@@ -218,7 +204,7 @@ async function cmdUpdate(): Promise<void> {
 
 async function cmdConfig(): Promise<void> {
   const config = await hammalaAlTasmim();
-  if (argv.includes("--path")) {
+  if (process.argv.slice(2).includes("--path")) {
     console.log(masarMilafAlTasmim());
     return;
   }
@@ -226,7 +212,7 @@ async function cmdConfig(): Promise<void> {
 }
 
 
-const command = argv[0] ?? "help";
+const command = process.argv.slice(2)[0] ?? "help";
 
 switch (command) {
   case "init":

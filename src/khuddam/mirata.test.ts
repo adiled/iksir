@@ -179,8 +179,8 @@ test("mirata: bassaLog emits well-formed log tone", async () => {
     wasl.write(JSON.stringify({ chi: "breath", protoVersion: "0.7.0", sessions: [] }) + "\n");
   });
   await new Promise<void>((hal) => khadm.listen(masar, () => hal()));
-  const wasila = new Wasila({ socket: masar });
-  await wasila.ishgal();
+  const wasila = new Wasila({ miqbas: masar });
+  await wasila.ittasil();
   wasila.bassaLog("info", "jalsa khalaqa TEAM-1", { naw: "jalsa", hadath: "khalaqa" });
   const azal = Date.now() + 3000;
   while (makhudha.length === 0 && Date.now() < azal) {

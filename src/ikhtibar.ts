@@ -1,19 +1,29 @@
 import { test } from "node:test";
-import assert from "node:assert/strict";
+import nodeAssert from "node:assert/strict";
 
 export { test };
 
 export function assertEquals(actual: unknown, expected: unknown, msg?: string): void {
-  if (msg === undefined) assert.deepStrictEqual(actual, expected);
-  else assert.deepStrictEqual(actual, expected, msg);
+  if (msg === undefined) nodeAssert.deepStrictEqual(actual, expected);
+  else nodeAssert.deepStrictEqual(actual, expected, msg);
 }
 
 export function assertExists(x: unknown, msg?: string): asserts x {
-  if (msg === undefined) assert.ok(x !== null && x !== undefined);
-  else assert.ok(x !== null && x !== undefined, msg);
+  if (msg === undefined) nodeAssert.ok(x !== null && x !== undefined);
+  else nodeAssert.ok(x !== null && x !== undefined, msg);
 }
 
 export function assertStringIncludes(haystack: string, needle: string, msg?: string): void {
-  if (msg === undefined) assert.ok(haystack.includes(needle));
-  else assert.ok(haystack.includes(needle), msg);
+  if (msg === undefined) nodeAssert.ok(haystack.includes(needle));
+  else nodeAssert.ok(haystack.includes(needle), msg);
+}
+
+export function assertNotEquals(actual: unknown, expected: unknown, msg?: string): void {
+  if (msg === undefined) nodeAssert.notDeepStrictEqual(actual, expected);
+  else nodeAssert.notDeepStrictEqual(actual, expected, msg);
+}
+
+export function assert(x: unknown, msg?: string): asserts x {
+  if (msg === undefined) nodeAssert.ok(x);
+  else nodeAssert.ok(x, msg);
 }

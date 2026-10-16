@@ -1,6 +1,7 @@
 import net from "node:net";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { readFileSync } from "node:fs";
 import { Chi, THRUM_VERSION, isDusk, isKnownTone, rid, type Tone } from "thrum";
 import { beeHid } from "./identity.ts";
 
@@ -43,10 +44,17 @@ export function sutur(): (chunk: string, onLine: (line: string) => void) => void
 }
 
 
-export function masar_thrum(): string {
+export function masar_thrum(sarih?: string): string {
+  if (sarih) return sarih;
   if (process.env.HUM_THRUM_SOCK) return process.env.HUM_THRUM_SOCK;
   if (process.env.HUM_SOCKET) return process.env.HUM_SOCKET;
   const state = process.env.XDG_STATE_HOME ?? join(homedir(), ".local", "state");
+  try {
+    const rt = JSON.parse(readFileSync(join(state, "hum", "runtime.json"), "utf-8")) as { socket?: string };
+    if (rt?.socket) return rt.socket;
+  } catch {
+    // No rendezvous left; fall through to the default.
+  }
   return join(state, "hum", "thrum.sock");
 }
 

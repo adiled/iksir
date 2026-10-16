@@ -1,0 +1,3 @@
+SERVICE iksir
+RUN ${HOME}/.deno/bin/deno run --allow-all --env=${HOME}/.local/share/iksir/src/.env ${HOME}/.local/share/iksir/src/src/main.ts
+RESTART always

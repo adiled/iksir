@@ -12,11 +12,13 @@
  *   qararat          — القرارات: decisions inscribed in the mudawwana
  *   ahwal_tanfidh    — أحوال التنفيذ: implementation states per wasfa
  *   matalib_muallaq  — المطالب المعلّقة: pending demands
+ *   wasfat           — الوصفات: formulae, the work itself
+ *   alaqat_wasfat    — علاقات الوصفات: what waits on what
  */
 
 import { DatabaseSync as Database } from "node:sqlite";
-import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { mkdirSync } from "node:fs";
 import { logger } from "../src/logging/logger.ts";
 
 
@@ -27,7 +29,7 @@ function masarHalatSijill(): string {
 
 let db: Database | null = null;
 
-function jalabSijill(): Database {
+export function jalabSijill(): Database {
   if (!db) {
     throw new Error("Sijill not tahyiad. Call baddaaQaidatBayanat() first.");
   }
@@ -160,6 +162,31 @@ function tatbiqSchema(d: Database): void {
     )
   `);
 
+  /** وصفات — the formulae themselves */
+  d.exec(`
+    CREATE TABLE IF NOT EXISTS wasfat (
+      huwiyya TEXT PRIMARY KEY,
+      unwan TEXT NOT NULL,
+      matn TEXT,
+      hala TEXT,
+      wasm TEXT,
+      ab TEXT,
+      qadr REAL,
+      mayayir TEXT,
+      unshia_fi TEXT NOT NULL,
+      jaddad_fi TEXT NOT NULL
+    )
+  `);
+
+  /** علاقات الوصفات — what waits on what */
+  d.exec(`
+    CREATE TABLE IF NOT EXISTS alaqat_wasfat (
+      yamnaa TEXT NOT NULL,
+      mamnu TEXT NOT NULL,
+      PRIMARY KEY (yamnaa, mamnu)
+    )
+  `);
+
   d.exec("CREATE INDEX IF NOT EXISTS idx_ahdath_kham ON ahdath(muaalaj, naw) WHERE muaalaj = 0");
   d.exec("CREATE INDEX IF NOT EXISTS idx_ahdath_unshia ON ahdath(unshia_fi)");
   d.exec("CREATE INDEX IF NOT EXISTS idx_asila_jalsa ON asila(huwiyat_jalsa)");
@@ -175,8 +202,10 @@ function tatbiqSchema(d: Database): void {
     )
   `);
 
+  d.exec("CREATE INDEX IF NOT EXISTS idx_wasfat_hala ON wasfat(hala)");
+
   d.prepare("INSERT OR IGNORE INTO schema_version VALUES (?, ?)").run(
-    3,
+    5,
     new Date().toISOString(),
   );
 }
@@ -194,10 +223,10 @@ export function aghlaaqQaidatBayanat(): void {
 
 /**
  * Insert an IPC hadath into the ahdath table.
- * Used by MCP servers to forward tool calls to the daemon.
+ * Used by the instruments to forward their nida to the daemon.
  */
 export function adkhalaHadath(
-  naw: string,
+  naw: "pm",
   adaIsm: string,
   humulat: Record<string, unknown>,
   huwiyyatMurshid?: string,
@@ -215,7 +244,7 @@ export function adkhalaHadath(
  * Get all unprocessed ahdath for a given naw, ordered by creation time.
  */
 export function jalabaAhdathGhairMuaalaja(
-  naw: string,
+  naw: "pm",
 ): Array<{ id: number; payload: string }> {
   const d = jalabSijill();
 
@@ -292,6 +321,8 @@ interface JalsaSijill {
   far: string | null;
   illa: string | null;
   unshia_fi: string;
+  /** When this vessel last moved. Stamped on every write. */
+  jaddad_fi: string;
   akhir_risala_fi: string | null;
   hala_mufassala: string | null;
 }
@@ -302,7 +333,7 @@ interface JalsaSijill {
 export function jalabaKullJalasat(): JalsaSijill[] {
   const d = jalabSijill();
   return d.prepare(
-    "SELECT id, huwiyya, unwan, naw, hala, far, illa, unshia_fi, akhir_risala_fi, hala_mufassala FROM jalasat"
+    "SELECT id, huwiyya, unwan, naw, hala, far, illa, unshia_fi, jaddad_fi, akhir_risala_fi, hala_mufassala FROM jalasat"
   ).all() as JalsaSijill[];
 }
 

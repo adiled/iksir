@@ -14,7 +14,6 @@ BIN_DIR="$HOME/.local/bin"
 IKSIR_REPO="https://github.com/adiled/iksir.git"
 IKSIR_SRC="$IKSIR_DATA/src"
 
-NODE_BIN="${NODE_BIN:-$(command -v node 2>/dev/null)}"
 
 OS="$(uname -s)"
 CMD="${1:-install}"
@@ -30,8 +29,17 @@ die()   { error "$@"; exit 1; }
 check_prereqs() {
   [ -x "$(command -v git)" ]  || die "git required"
 
-  [ -x "$NODE_BIN" ] || die "node >= 22 required — https://nodejs.org"
-  command -v humd &>/dev/null || warn "humd not found — the nest must breathe for iksir to work"
+  DENO_BIN="${DENO_BIN:-$(command -v deno 2>/dev/null || echo "$HOME/.deno/bin/deno")}"
+  [ -x "$DENO_BIN" ] || die "deno required — https://docs.deno.com/runtime/getting_started/installation/"
+
+  # Iksir runs no models. It nestles at a humd and prompts whichever hive is
+  # kindled there. humd need not be running yet, but nothing works without one.
+  THRUM_SOCK="${HUM_THRUM_SOCK:-${HUM_SOCKET:-${XDG_STATE_HOME:-$HOME/.local/state}/hum/thrum.sock}}"
+  if [ ! -S "$THRUM_SOCK" ]; then
+    warn "no humd at $THRUM_SOCK"
+    warn "install one — https://github.com/adiled/hum — then kindle a worker hive"
+    warn "and something providing 'fs', or the murshid can think but not work."
+  fi
 }
 
 ensure_dirs() {
@@ -95,21 +103,21 @@ sync_config() {
   fi
 }
 
-sync_vessels() {
-  local VESSELS_DIR="$XDG_CONFIG_HOME/iksir"
-  mkdir -p "$VESSELS_DIR"
-
-  # Symlink vessel prompts (only iksir-* are commissioned, mayyaza-* are internal)
-  for file in "$IKSIR_SRC"/prompts/iksir-*.md; do
-    [ -f "$file" ] && ln -sf "$file" "$VESSELS_DIR/$(basename "$file")"
+sync_ruqan() {
+  # The ruqan are Iksir's own now — read from prompts/ and sent as the
+  # systemPrompt on each tone. No foreign config dir holds them.
+  local RUQAN_DIR="$IKSIR_CONFIG/prompts"
+  mkdir -p "$RUQAN_DIR"
+  for file in "$IKSIR_SRC"/prompts/*.md; do
+    [ -f "$file" ] && ln -sf "$file" "$RUQAN_DIR/$(basename "$file")"
   done
-  info "linked sacred vessels"
+  info "linked ruqan"
 }
 
 install_cli() {
   cat > "$BIN_DIR/iksir" <<EOF
 #!/bin/bash
-exec "$NODE_BIN" --env-file="$IKSIR_SRC/.env" "$IKSIR_SRC/src/cli.ts" "\$@"
+exec "$DENO_BIN" run --allow-all --env="$IKSIR_SRC/.env" "$IKSIR_SRC/src/cli.ts" "\$@"
 EOF
   chmod +x "$BIN_DIR/iksir"
   info "installed $BIN_DIR/iksir"
@@ -124,7 +132,8 @@ EOF
 
 env_block() {
   cat <<EOF
-Environment=PATH=$(dirname "$NODE_BIN"):/usr/local/bin:/usr/bin:/bin
+Environment=PATH=$(dirname "$DENO_BIN"):/usr/local/bin:/usr/bin:/bin
+Environment=DENO_DIR=$HOME/.cache/deno
 Environment=HOME=$HOME
 Environment=IKSIR_CONFIG_DIR=$IKSIR_CONFIG
 Environment=IKSIR_STATE_DIR=$IKSIR_DATA
@@ -169,7 +178,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=$IKSIR_SRC
-ExecStart=$NODE_BIN --env-file=.env src/main.ts
+ExecStart=$DENO_BIN run --allow-all --env=.env src/main.ts
 Restart=on-failure
 RestartSec=10
 $ENV_VARS
@@ -230,7 +239,7 @@ cmd_install() {
   ensure_dirs
   ensure_source
   sync_config
-  sync_vessels
+  sync_ruqan
   install_cli
 
   info "registering services..."
@@ -249,7 +258,7 @@ cmd_update() {
 
   stop_daemon
   sync_config
-  sync_vessels
+  sync_ruqan
   install_cli
   register_services
 
@@ -280,10 +289,6 @@ cmd_uninstall() {
   rm -f "$BIN_DIR/iksir"
   info "removed CLI"
 
-  # Remove vessel symlinks
-  local VESSELS_DIR="$XDG_CONFIG_HOME/iksir"
-  rm -f "$VESSELS_DIR"/iksir-*.md 2>/dev/null || true
-  info "removed vessel symlinks"
 
   echo ""
   info "uninstalled. data left in place:"
@@ -306,6 +311,7 @@ case "$CMD" in
     echo "  uninstall  — stop, remove services, remove CLI"
     echo ""
     echo "Environment:"
+    echo "  DENO_BIN            Path to deno binary"
     exit 1
     ;;
 esac

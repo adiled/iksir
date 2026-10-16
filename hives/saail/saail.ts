@@ -1,6 +1,6 @@
 import { Nahla } from "../../hum/bee.ts";
 import { baddaaQaidatBayanat, adkhalaHadath } from "../../db/db.ts";
-import { anshaaTelegramAmil } from "../../src/notifications/telegram.ts";
+import { anshaaTelegramAmil } from "../../src/rasul/telegram.ts";
 import type { TasmimIksir } from "../../src/types.ts";
 import { logger } from "../../src/logging/logger.ts";
 
