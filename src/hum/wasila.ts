@@ -227,6 +227,7 @@ export class Wasila {
     const jalsa = this.#jalasat.get(sid);
     const namudhaj = options?.model?.modelID ?? this.#namudhaj;
     const nizam = options?.system ?? (options?.agent ? this.#ruqya(options.agent) : undefined);
+    await logger.akhbar("wasila", `hathth ${sid} namudhaj=${namudhaj ?? "(nest)"}`);
     const tayara = this.#nahla.send({
       chi: Chi.prompt,
       rid: rid(),
