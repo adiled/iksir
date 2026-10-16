@@ -1110,26 +1110,37 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
 
   /**
    * Handle a direct question — no entity, no ticket, just words for the nest.
-   * A scholar's sid is minted, asked, and dismissed; nothing is inscribed.
+   * One scholar's sid per dispatch thread, kept across turns: the cell
+   * rehydrates prior words through resume, so follow-ups remember.
+   * Nothing is inscribed; the thread itself is the memory.
    */
+  #sidSual: string | null = null;
+
   async aalajSualMubashir(msg: RisalaWarida, resolved: NiyyaMuhallala): Promise<NatijaIrsal> {
     const nass = msg.text.trim();
     if (!nass) {
       return { tuulija: true, radd: resolved.khata ?? "Could not find the entity you're referring to." };
     }
-    const jalsa = await this.amil.khalaqaJalsa("iksir-munadi", "Iksir Sual");
-    if (!jalsa) {
-      return { tuulija: true, khata: "The nest did not answer." };
-    }
-    try {
-      const jawab = await this.amil.sendPrompt(jalsa.id, nass, { timeoutMs: 120_000 });
-      if (jawab.success && jawab.response) {
-        return { tuulija: true, radd: jawab.response };
+    if (!this.#sidSual) {
+      const jalsa = await this.amil.khalaqaJalsa("iksir-munadi", "Iksir Sual");
+      if (!jalsa) {
+        return { tuulija: true, khata: "The nest did not answer." };
       }
-      return { tuulija: true, radd: resolved.khata ?? "Could not find the entity you're referring to." };
-    } finally {
-      await this.amil.mahaqaJalsa(jalsa.id);
+      this.#sidSual = jalsa.id;
     }
+    let jawab = await this.amil.sendPrompt(this.#sidSual, nass, { timeoutMs: 120_000 });
+    if (!jawab.success) {
+      const jalsa = await this.amil.khalaqaJalsa("iksir-munadi", "Iksir Sual");
+      if (!jalsa) {
+        return { tuulija: true, khata: "The nest did not answer." };
+      }
+      this.#sidSual = jalsa.id;
+      jawab = await this.amil.sendPrompt(this.#sidSual, nass, { timeoutMs: 120_000 });
+    }
+    if (jawab.success && jawab.response) {
+      return { tuulija: true, radd: jawab.response };
+    }
+    return { tuulija: true, radd: resolved.khata ?? "Could not find the entity you're referring to." };
   }
 
   /**
