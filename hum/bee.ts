@@ -1,8 +1,7 @@
 import net from "node:net";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { Chi, THRUM_VERSION, isDusk, isKnownTone, rid } from "../thrum/index.ts";
-import type { Tone } from "../thrum/index.ts";
+import { Chi, THRUM_VERSION, isDusk, isKnownTone, rid, type Tone } from "thrum";
 import { beeHid } from "./identity.ts";
 
 export interface Khidma {
