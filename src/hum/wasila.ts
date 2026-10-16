@@ -465,7 +465,7 @@ export class Wasila {
     }
 
     if (dawr) {
-      const matn = dawr.qataa.join("\n");
+      const matn = dawr.qataa.join("");
       if (khata) {
         dawr.hal({ success: false, error: String(t.message ?? "turn aborted") });
       } else if (!matn.trim()) {
