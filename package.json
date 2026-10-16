@@ -1,0 +1,13 @@
+{
+  "name": "@iksir/v1",
+  "version": "1.0.0",
+  "description": "Iksir v1 — autonomous coding harness grounded in the hum network",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "tools": "node bees/tools.js",
+    "mind": "node bees/mind.js",
+    "hayat": "node bees/hayat.js",
+    "test": "node --test test/*.test.js"
+  }
+}
