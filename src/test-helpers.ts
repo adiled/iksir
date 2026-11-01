@@ -12,7 +12,6 @@ import { join } from "node:path";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { execCommand } from "./utils/exec.ts";
 import type { RasulKharij, QanatRisala, JalsatMurshid, } from "./types.ts";
-import type { Hayula } from "./hayula/hayula.ts";
 
 export async function withTestDb(fn: () => Promise<void> | void): Promise<void> {
   const tempDir = mkdtempSync(join(tmpdir(), "iksir-test-"));
@@ -442,7 +441,6 @@ export function makeConfig(overrides?: Partial<TasmimIksir>): TasmimIksir {
     hum: {},
     saatSukun: { bidaya: "00:00", nihaya: "06:00", mintaqaZamaniyya: "UTC" },
     wasfat: {},
-    madda: { hayula: "/dev/null/hayula.ts" },
     isharat: {
       telegram: {
         mufattah: false,
@@ -463,57 +461,3 @@ export function makeConfig(overrides?: Partial<TasmimIksir>): TasmimIksir {
   } as TasmimIksir;
 }
 
-export function mockHayula(): Hayula & { _amal: string[] } {
-  const amal: string[] = [];
-  let waqif = "codex";
-  return {
-    _amal: amal,
-    naw: "wahm",
-    dakhala(ina) {
-      amal.push(`dakhala:${ina}`);
-      waqif = ina;
-      return Promise.resolve(true);
-    },
-    waqif() {
-      return Promise.resolve(waqif);
-    },
-    asas() {
-      return Promise.resolve("codex");
-    },
-    mudtarib() {
-      amal.push("mudtarib");
-      return Promise.resolve(false);
-    },
-    jammada(sabab) {
-      amal.push(`jammada:${sabab}`);
-      return Promise.resolve(true);
-    },
-    thabbata(sabab) {
-      amal.push(`thabbata:${sabab}`);
-      return Promise.resolve(true);
-    },
-    sahaba(ina) {
-      amal.push(`sahaba:${ina ?? "-"}`);
-      return Promise.resolve({ najah: true });
-    },
-    masafa() {
-      return Promise.resolve(0);
-    },
-    azhara(ina) {
-      amal.push(`azhara:${ina}`);
-      return Promise.resolve(true);
-    },
-    istahala(jawhar, ahjar) {
-      amal.push(`istahala:${jawhar}:${ahjar.length}`);
-      return Promise.resolve({ najah: true, jawhar, adadAhjar: ahjar.length });
-    },
-    naqasha(ina) {
-      amal.push(`naqasha:${ina}`);
-      return Promise.resolve(true);
-    },
-    talaam(ahjar) {
-      amal.push(`talaam:${ahjar.length}`);
-      return Promise.resolve({ yaqif: true, yahtaj: [] });
-    },
-  };
-}

@@ -34,56 +34,14 @@ import { anshaaTelegramAmil, type TelegramMessage, type TelegramCallbackQuery } 
 import { anshaaTelegramRasul, TelegramMessenger } from "./rasul/messenger.ts";
 import { anshaaRasulUnbub } from "./rasul/rasul-anbub.ts";
 import { anshaaSijillWasfat } from "./wasfa/sijill.ts";
-import { AMAL_FASL, AMAL_HAYULA, AMAL_SAFA, istadaa } from "./hayula/istadaa.ts";
-import type { Hayula } from "./hayula/hayula.ts";
-import type { Fasl } from "./hayula/fasl.ts";
-import type { Safa } from "./hayula/safa.ts";
 import { istadaaKatib } from "./khuddam/katib.ts";
 import { istadaaMunaffidh } from "./khuddam/munaffidh.ts";
 import { istadaaMunadi } from "./khuddam/munadi.ts";
 import { istadaaArraf } from "./khuddam/arraf.ts";
-import { awqadaHayat, type NatijaSeyana } from "./khuddam/hayat.ts";
+import { Sayrafi } from "./khuddam/sayrafi.ts";
 import { istadaaRaqib } from "./khuddam/raqib.ts";
-import type { TasmimIksir, Rasul, RisalaDakhila, TaaliqMuraja, JalsatMurshid } from "./types.ts";
+import type { TasmimIksir, Rasul, RisalaDakhila } from "./types.ts";
 import type { SijillWasfat } from "./wasfa/sijill-wasfat.ts";
-
-function safaSakita(): Safa {
-  return {
-    naw: "sakita",
-    assa: (mayayir: string[]) =>
-      Promise.resolve({
-        thabata: false,
-        ihtamala: [],
-        ihtaraq: mayayir.map((m) => ({ mayar: m, qawl: "no safa is kindled" })),
-      }),
-  };
-}
-
-function hayulaSakita(): Hayula {
-  const la = () => Promise.resolve(false);
-  return {
-    naw: "sakita",
-    dakhala: () => Promise.resolve(false),
-    waqif: () => Promise.resolve(null),
-    asas: () => Promise.resolve(""),
-    mudtarib: () => Promise.resolve(false),
-    jammada: () => Promise.resolve(false),
-    thabbata: () => Promise.resolve(false),
-    sahaba: () => Promise.resolve({ najah: false }),
-    masafa: () => Promise.resolve(0),
-  };
-}
-
-function faslSakit(): Fasl {
-  return {
-    naw: "sakit",
-    qaddama: () => Promise.resolve(null),
-    hala: () => Promise.resolve(null),
-    taaliqat: () => Promise.resolve([]),
-    thabit: () => Promise.resolve(false),
-    farq: () => Promise.resolve(null),
-  };
-}
 
 interface SiyaqKhadim {
   tasmim: TasmimIksir;
@@ -91,11 +49,10 @@ interface SiyaqKhadim {
   ntfy: ReturnType<typeof anshaaNtfyAmil>;
   rasul: Rasul;
   wasfat: SijillWasfat;
-  hayula: Hayula;
+  sayrafi: Sayrafi;
   mudirJalasat: ReturnType<typeof istadaaKatib>;
   munaffidh: ReturnType<typeof istadaaMunaffidh>;
   munadi: ReturnType<typeof istadaaMunadi>;
-  hayat: ReturnType<typeof awqadaHayat>;
   raqib: ReturnType<typeof istadaaRaqib>;
   mutahakkimIlgha: AbortController;
 }
@@ -145,10 +102,6 @@ async function tahaqqaqIttisaal(ctx: SiyaqKhadim): Promise<boolean> {
   } else {
     console.log("  ntfy server... (disabled)");
   }
-
-  process.stdout.write("  Matter... ");
-  const waqif = await ctx.hayula.waqif();
-  console.log(waqif !== null ? `✓ (${ctx.hayula.naw}, in ${waqif})` : `✓ (${ctx.hayula.naw})`);
 
   console.log("");
   return allGood;
@@ -286,12 +239,6 @@ async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
   await logger.akhbar("main", "Entering main loop (Proactive Game)");
 
   while (!ctx.mutahakkimIlgha.signal.aborted) {
-    try {
-      await dawraHayat(ctx);
-    } catch (error) {
-      await logger.sajjalKhata("main", "Keep-alive cycle error", { error: String(error) });
-    }
-
     await new Promise((resolve) => setTimeout(resolve, ctx.tasmim.istiftaa.fajwatZamaniyya));
   }
 }
@@ -392,46 +339,6 @@ function rabatRisalaDakhila(ctx: SiyaqKhadim): void {
   });
 }
 
-async function aalajAmrAlKimyawi(
-  ctx: SiyaqKhadim,
-  session: JalsatMurshid,
-  huwiyyatWasfa: string,
-  comment: TaaliqMuraja,
-): Promise<void> {
-  await logger.akhbar("main", `amr al-Kimyawi upon ${huwiyyatWasfa}`, {
-    epicId: session.huwiyya,
-    body: comment.body.slice(0, 100),
-  });
-
-  await ctx.mudirJalasat.arsalaIlaMurshidById(
-    session.huwiyya,
-    `## al-Kimyawi has spoken upon ${huwiyyatWasfa}\n\n${comment.body}\n\n` +
-      `Do as directed in your vessel, then decant again.`,
-  );
-}
-
-async function aalajTaaliqatJadida(
-  ctx: SiyaqKhadim,
-  session: JalsatMurshid,
-  huwiyyatWasfa: string,
-  comments: TaaliqMuraja[],
-): Promise<void> {
-  await logger.akhbar("main", `${comments.length} said upon ${huwiyyatWasfa}`, {
-    epicId: session.huwiyya,
-    authors: [...new Set(comments.map((c) => c.author))],
-  });
-
-  const qawl = comments
-    .map((c) => `- ${c.author}: "${c.body.slice(0, 100)}${c.body.length > 100 ? "…" : ""}"`)
-    .join("\n");
-
-  await ctx.mudirJalasat.arsalaIlaMurshidById(
-    session.huwiyya,
-    `## Said upon ${huwiyyatWasfa}\n\n${qawl}\n\n` +
-      `These are not al-Kimyawi's words. Weigh them; act on none without tawjih.`,
-  );
-}
-
 async function aalajRisalaKhassa(ctx: SiyaqKhadim): Promise<void> {
   const sessions = ctx.mudirJalasat.wajadaJalasatMurshid();
 
@@ -509,18 +416,7 @@ async function aalajAmrDakhil(ctx: SiyaqKhadim, amr: string, wusut: string[]): P
         break;
       }
       const jalsa = ctx.mudirJalasat.jalabMurshid(huwiyya);
-      const ina = jalsa?.far || huwiyya;
-
-      const naqasha = await ctx.hayula.naqasha(ina);
-      if (!naqasha) {
-        await ctx.rasul.send("dispatch", `The codex would not take ${huwiyya}.`);
-        break;
-      }
-      await ctx.wasfat.jaddid(huwiyya, { hala: "manqush" });
-      await ctx.rasul.send(
-        "dispatch",
-        `${huwiyya} is inscribed from ${ina}. It is canon now.`,
-      );
+      await ctx.rasul.send("dispatch", await ctx.sayrafi.naqasha(wasfa, jalsa?.far));
       break;
     }
 
@@ -542,114 +438,6 @@ Name a wasfa to begin. Each murshid keeps its own channel.
   }
 }
 
-async function dawraHayat(ctx: SiyaqKhadim): Promise<void> {
-  await logger.tatbeeq("main", "Breathing");
-
-  try {
-    await ctx.hayat.dawra();
-  } catch (error) {
-    await logger.sajjalKhata("main", "Breath faltered", { error: String(error) });
-  }
-}
-
-async function aalajTalabSeyana(ctx: SiyaqKhadim): Promise<boolean> {
-  const activeId = ctx.munadi.hawiyyaFaila();
-
-  if (activeId) {
-    await logger.akhbar("main", `Maintenance mode denied - ${activeId} is active`);
-    return false;
-  }
-
-  await logger.akhbar("main", "Maintenance mode granted");
-  return true;
-}
-
-async function aalajTahrirSeyana(_ctx: SiyaqKhadim): Promise<void> {
-  await logger.akhbar("main", "Maintenance mode released");
-}
-
-async function aalajIktimalSeyana(
-  ctx: SiyaqKhadim,
-  results: NatijaSeyana[]
-): Promise<void> {
-  await logger.akhbar("main", "Maintenance complete", {
-    total: results.length,
-    merged: results.filter((r) => r.fil === "udmija").length,
-    conflicts: results.filter((r) => r.fil === "taarudat").length,
-  });
-
-  const merged = results.filter((r) => r.fil === "udmija");
-  const upToDate = results.filter((r) => r.fil === "muhaddath");
-  const conflicts = results.filter((r) => r.fil === "taarudat");
-  const errors = results.filter((r) => r.fil === "khata");
-
-  let summary = "## Overnight Maintenance Complete\n\n";
-
-  if (merged.length > 0) {
-    summary += `**Merged main into ${merged.length} branch(es):**\n`;
-    for (const r of merged) {
-      summary += `- \`${r.far}\`: ${r.nass}\n`;
-    }
-    summary += "\n";
-  }
-
-  if (upToDate.length > 0) {
-    summary += `**Already up-to-date:** ${upToDate.length} branch(es)\n\n`;
-  }
-
-  if (conflicts.length > 0) {
-    summary += `**Conflicts detected in ${conflicts.length} branch(es):**\n`;
-    for (const r of conflicts) {
-      summary += `\n### ${r.huwiyya} (\`${r.far}\`)\n`;
-      summary += `${r.iltizamatKhalfa} commit(s) behind main\n`;
-      summary += `\n**Conflicting files:**\n`;
-      for (const f of r.taarudat ?? []) {
-        summary += `- \`${f}\`\n`;
-      }
-      summary += `\n**Suggestion:** Resolve manually when active, then \`mun_istihal\` to refresh risalat.\n`;
-    }
-    summary += "\n";
-  }
-
-  if (errors.length > 0) {
-    summary += `**Errors in ${errors.length} branch(es):**\n`;
-    for (const r of errors) {
-      summary += `- \`${r.far}\`: ${r.nass}\n`;
-    }
-    summary += "\n";
-  }
-
-  if (ctx.rasul.mumakkan()) {
-    let msg = "🌙 Overnight Maintenance\n\n";
-    if (merged.length > 0) msg += `✅ Merged: ${merged.length} branches\n`;
-    if (upToDate.length > 0) msg += `✓ Up-to-date: ${upToDate.length}\n`;
-    if (conflicts.length > 0) {
-      msg += `⚠️ Conflicts: ${conflicts.length}\n`;
-      for (const r of conflicts) {
-        msg += `  - ${r.huwiyya}: ${r.taarudat?.length ?? 0} file(s)\n`;
-      }
-    }
-    if (errors.length > 0) msg += `❌ Errors: ${errors.length}\n`;
-
-    await ctx.rasul.send("dispatch", msg);
-  }
-
-  for (const r of conflicts) {
-    const conflictMsg = `## Overnight Maintenance: Conflicts Detected
-
-Your branch \`${r.far}\` has conflicts with main.
-
-**${r.iltizamatKhalfa} commit(s) behind main**
-
-**Conflicting files:**
-${(r.taarudat ?? []).map((f) => `- \`${f}\``).join("\n")}
-
-**Action required:** When you become active, resolve these conflicts manually, then use \`mun_istihal\` to refresh any open risalat.`;
-
-    await ctx.mudirJalasat.arsalaIlaMurshidById(r.huwiyya, conflictMsg);
-  }
-}
-
 export const VERSION = "0.2.0";
 
 export async function abda(opts: { check?: boolean } = {}): Promise<void> {
@@ -660,19 +448,6 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   await baddaaQaidatBayanat();
 
   const warsha = process.env.IKSIR_REPO_PATH || undefined;
-  const siyaqMadda = {
-    tasmim: config,
-    warsha,
-    masar: config.madda.masar,
-  };
-
-  const hayula = config.madda?.hayula
-    ? await istadaa<Hayula>(config.madda.hayula, siyaqMadda, AMAL_HAYULA)
-    : hayulaSakita();
-  const safa = config.madda.safa
-    ? await istadaa<Safa>(config.madda.safa, siyaqMadda, AMAL_SAFA)
-    : safaSakita();
-
   const wasfat = anshaaSijillWasfat(config.wasfat?.sabiqa);
 
   const alat = new AlatAlIksir(wasfat);
@@ -684,6 +459,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     sijill: alat.sijill,
   });
   await amil.ittasil();
+  const sayrafi = new Sayrafi(amil);
 
   istarjaaMirata(amil).catch(async (error) => {
     await logger.sajjalKhata("mirata", "mirror backfill failed", { error: String(error) });
@@ -694,9 +470,6 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     ? anshaaTelegramRasul(telegram)
     : anshaaRasulUnbub();
 
-  const fasl = config.madda.fasl
-    ? await istadaa<Fasl>(config.madda.fasl, siyaqMadda, AMAL_FASL)
-    : faslSakit();
   const abortController = new AbortController();
 
   const sessionManager = istadaaKatib({ tasmim: config, amil, rasul: messenger });
@@ -705,13 +478,11 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   const ipcProcessor = istadaaMunaffidh({
     tasmim: config,
     wasfat,
-    fasl,
     rasul: messenger,
     ntfy,
     mudirJalasat: sessionManager,
     amil,
-    hayula,
-    safa,
+    sayrafi,
   });
   await ipcProcessor.hammalaHala();
 
@@ -722,7 +493,6 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     arraf: intentResolver,
     rasul: messenger,
     amil,
-    hayula,
     namatWasfa: config.wasfat?.namatWasfa,
   });
 
@@ -744,41 +514,11 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     mudirJalasat: sessionManager,
     munaffidh: ipcProcessor,
     munadi: dispatcher,
-    hayat: null as unknown as ReturnType<typeof awqadaHayat>,
     wasfat,
-    hayula,
+    sayrafi,
     raqib: healthMonitor,
     mutahakkimIlgha: abortController,
   };
-
-  const keepAlive = awqadaHayat(
-    {
-      tasmim: config,
-      mudirJalasat: sessionManager,
-      fasl,
-      hayula,
-      wasfat,
-    },
-    {
-      indaAmrAlKimyawi: async (session, huwiyyatWasfa, comment) => {
-        await aalajAmrAlKimyawi(ctx, session, huwiyyatWasfa, comment);
-      },
-      indaTaaliqatJadida: async (session, huwiyyatWasfa, comments) => {
-        await aalajTaaliqatJadida(ctx, session, huwiyyatWasfa, comments);
-      },
-      utlubWadaSeyana: async () => {
-        return await aalajTalabSeyana(ctx);
-      },
-      harrarWadaSeyana: async () => {
-        await aalajTahrirSeyana(ctx);
-      },
-      indaIktimalSeyana: async (results) => {
-        await aalajIktimalSeyana(ctx, results);
-      },
-    }
-  );
-
-  ctx.hayat = keepAlive;
 
   if (opts.check) {
     await naffadhFahs(ctx);

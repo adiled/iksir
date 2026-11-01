@@ -199,32 +199,6 @@
         }
       },
       "additionalProperties": false
-    },
-    "madda": {
-      "type": "object",
-      "description": "Where the matter, its fire, and the place a jawhar is set down are summoned from.",
-      "properties": {
-        "hayula": {
-          "type": "string",
-          "description": "Path to the hayula. Required."
-        },
-        "fasl": {
-          "type": "string",
-          "description": "Path to the fasl. Without one, a jawhar has nowhere to go."
-        },
-        "safa": {
-          "type": "string",
-          "description": "Path to the safa. Without one, nothing passes the fire."
-        },
-        "masar": {
-          "type": "string",
-          "description": "Handed to whichever is summoned."
-        }
-      },
-      "required": [
-        "hayula"
-      ],
-      "additionalProperties": false
     }
   },
   "additionalProperties": false

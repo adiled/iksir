@@ -6,7 +6,7 @@ import { DEFAULT_TIMEOUT_MS } from "../constants.ts";
 import { logger } from "../logging/logger.ts";
 
 const ASAS = "iksir";
-export const KHUDDAM = ["munadi", "arraf", "murshid", "mumayyiz"] as const;
+export const KHUDDAM = ["munadi", "arraf", "murshid", "mumayyiz", "sayrafi"] as const;
 const LISAN = "munadi";
 
 type JawabDawr = { success: boolean; response?: string; error?: string };
@@ -233,11 +233,11 @@ export class Wasila {
     });
   }
 
-  #hathth(sid: string, prompt: string, options?: { model?: { providerID: string; modelID: string }; agent?: string; system?: string; cwd?: string }): Tone<"prompt"> {
+  #hathth(sid: string, prompt: string, options?: { model?: { providerID: string; modelID: string }; agent?: string; system?: string; cwd?: string; adawat?: string[] }): Tone<"prompt"> {
     const jalsa = this.#jalasat.get(sid);
     const namudhaj = options?.model?.modelID ?? this.#namudhaj;
     const nizam = options?.system ?? (options?.agent ? this.#ruqya(options.agent) : undefined);
-    const adawat = this.#sijill?.adawat() ?? [];
+    const adawat = (this.#sijill?.adawat() ?? []).filter((a) => !options?.adawat || options.adawat.includes(a.name));
     const cwd = options?.cwd ?? (this.#warsha ? `hum:///${this.#warsha.replace(/^\/+/, "")}` : undefined);
     return {
       chi: Chi.prompt,
@@ -254,7 +254,7 @@ export class Wasila {
   async sendPrompt(
     sid: string,
     prompt: string,
-    options?: { model?: { providerID: string; modelID: string }; agent?: string; system?: string; cwd?: string; timeoutMs?: number },
+    options?: { model?: { providerID: string; modelID: string }; agent?: string; system?: string; cwd?: string; adawat?: string[]; timeoutMs?: number },
   ): Promise<JawabDawr> {
     const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     const nahl = this.#nahlJalsa(sid);
@@ -287,7 +287,7 @@ export class Wasila {
   async sendPromptAsync(
     sid: string,
     prompt: string,
-    options?: { model?: { providerID: string; modelID: string }; agent?: string; system?: string; cwd?: string },
+    options?: { model?: { providerID: string; modelID: string }; agent?: string; system?: string; cwd?: string; adawat?: string[] },
   ): Promise<boolean> {
     const nahl = this.#nahlJalsa(sid);
     if (!nahl.muttasil) return false;

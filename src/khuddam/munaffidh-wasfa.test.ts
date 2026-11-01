@@ -16,13 +16,11 @@ function mashhad() {
   const munaffidh = new Munaffidh({
     tasmim: makeConfig(),
     wasfat,
-    fasl: undefined as never,
     rasul: mockMessenger(),
     ntfy: undefined as never,
     mudirJalasat: katib,
     amil: mockWasila() as never,
-    hayula: undefined as never,
-    safa: undefined as never,
+    sayrafi: undefined as never,
   });
   return { wasfat, alat, munaffidh };
 }

@@ -31,10 +31,5 @@
   "wasfat": {
     "khabath": "linear"
   },
-  "madda": {
-    "hayula": "./hayula.ts",
-    "safa": "./safa.ts",
-    "masar": "./codex.md"
-  },
   "hum": {}
 }

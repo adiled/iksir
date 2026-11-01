@@ -10,7 +10,6 @@ export interface TasmimIksir {
   isharat: TasmimIsharat;
   wasfat: TasmimWasfat;
   kimyawi: TasmimKimyawi;
-  madda: TasmimMadda;
   hum: TasmimHum;
   hafazat: TasmimHaththat;
 }
@@ -59,13 +58,6 @@ export type NawKiyan = "wasfa" | "malhamat" | "majhul";
 
 export interface TasmimKimyawi {
   ism: string;
-}
-
-export interface TasmimMadda {
-  hayula: string;
-  fasl?: string;
-  safa?: string;
-  masar?: string;
 }
 
 export interface TasmimHum {
@@ -216,12 +208,6 @@ export interface NidaKhalqRisala {
   ras: string;
 }
 
-export interface NidaFahasFar {
-  tool: "mun_fahas_far";
-  huwiyyatMurshid: string;
-  far: string;
-}
-
 export interface NidaTabligh {
   tool: "mun_balligh";
   huwiyyatMurshid: string;
@@ -270,61 +256,6 @@ export interface NidaTalabTahakkum {
   awwaliyya: "normal" | "urgent";
 }
 
-export interface NidaKhalqFar {
-  tool: "mun_khalaq_far";
-  huwiyyatMurshid: string;
-  huwiyya: string;
-  naw: NawMurshid;
-  kunya?: string;
-}
-
-export interface NidaIltazim {
-  tool: "mun_iltazim";
-  huwiyyatMurshid: string;
-  risala: string;
-  ahjar?: string[];
-}
-
-export interface NidaRattib {
-  tool: "mun_rattib";
-  huwiyyatMurshid: string;
-  ahjar: string[];
-}
-
-export interface NidaIdfa {
-  tool: "mun_idfa";
-  huwiyyatMurshid: string;
-}
-
-export interface NidaIstikhlas {
-  tool: "mun_istikhlas";
-  huwiyyatMurshid: string;
-  huwiyyatWasfa: string;
-  ahjar: string[];
-}
-
-export interface NidaTalaum {
-  tool: "mun_talaum";
-  huwiyyatMurshid: string;
-  huwiyyatWasfa: string;
-  ahjar: string[];
-}
-
-export interface NidaIstihal {
-  tool: "mun_istihal";
-  huwiyyatMurshid: string;
-  huwiyyatWasfa: string;
-  ahjar: string[];
-}
-
-export interface NidaIstihalMutabaqq {
-  tool: "mun_istihal_mutabaqq";
-  huwiyyatMurshid: string;
-  huwiyyatWasfa: string;
-  huwiyyatAbWasfa: string;
-  ahjar: string[];
-}
-
 export interface NidaFasl {
   tool: "mun_fasl";
   huwiyyatMurshid: string;
@@ -340,29 +271,31 @@ export interface NidaSafa {
   huwiyyatWasfa: string;
 }
 
+export interface NidaShahada {
+  tool: "mun_shahada";
+  huwiyyatWasfa: string;
+  naw: "safa" | "fasl" | "naqsh";
+  natijat?: Array<{ mayar: string; kharaja: number; qawl: string }>;
+  rabit?: string;
+  huwiyya?: string;
+  khata?: string;
+}
+
 export type MunToolCall =
   | NidaKhalqWasfa
   | NidaTajdidWasfa
   | NidaWadaaAlaqat
   | NidaQiraatWasfa
   | NidaKhalqRisala
-  | NidaFahasFar
   | NidaTabligh
   | NidaRadd
   | NidaSajjalQarar
   | NidaIqraMudawwana
   | NidaTanazal
   | NidaTalabTahakkum
-  | NidaKhalqFar
-  | NidaIltazim
-  | NidaRattib
-  | NidaIdfa
-  | NidaIstikhlas
-  | NidaTalaum
-  | NidaIstihal
-  | NidaIstihalMutabaqq
   | NidaFasl
-  | NidaSafa;
+  | NidaSafa
+  | NidaShahada;
 
 export interface TaarifAla {
   name: string;

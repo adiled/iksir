@@ -70,8 +70,6 @@ export class MudirJalasat {
 
   #murshidFaailId: string | null = null;
 
-  #gitMasdud = false;
-
   constructor(deps: TasmimMudirJalasat) {
     this.#config = deps.tasmim;
     this.#amil = deps.amil;
@@ -80,14 +78,6 @@ export class MudirJalasat {
 
   get tasmim(): TasmimIksir {
     return this.#config;
-  }
-
-  huwaGitMasdud(): boolean {
-    return this.#gitMasdud;
-  }
-
-  wadaaQuflGit(value: boolean): void {
-    this.#gitMasdud = value;
   }
 
   async wajadaAwKhalaqa(
@@ -180,8 +170,8 @@ export class MudirJalasat {
       await this.#amil.sendPromptAsync(
         session.id,
         `SYSTEM: Your messaging channel is now active. ` +
-        `All pm_reply and pm_notify messages will appear there. ` +
-        `Al-Kimyawi is listening. If you have pending status updates or responses, please send them now using pm_reply.`,
+        `All mun_radd and mun_balligh messages will appear there. ` +
+        `Al-Kimyawi is listening. If you have pending status updates or responses, please send them now using mun_radd.`,
       );
     }
   }
@@ -259,8 +249,8 @@ export class MudirJalasat {
 
 <system-reminder>
 Your murshid ID is: ${session.huwiyya}
-IMPORTANT: This message is from al-Kimyawi via Telegram. You MUST use pm_reply to respond.
-Do NOT output text directly - Al-Kimyawi cannot see your text output, only pm_reply messages.
+IMPORTANT: This message is from al-Kimyawi via Telegram. You MUST use mun_radd to respond.
+Do NOT output text directly - Al-Kimyawi cannot see your text output, only mun_radd messages.
 </system-reminder>`;
   }
 
@@ -272,7 +262,7 @@ Do NOT output text directly - Al-Kimyawi cannot see your text output, only pm_re
 - **ID**: ${session.huwiyya}
 - **Title**: ${session.unwan}
 
-Please use \`pm_read_ticket\` to fetch the full epic details and begin planning.
+Read it with \`mun_iqra_wasfa\` and begin planning.
 
 Awaiting direction from al-Kimyawi...`
       : `# Chore Assignment
@@ -283,8 +273,8 @@ Awaiting direction from al-Kimyawi...`
 
 This is a standalone task (chore), not an epic. No sub-tickets needed.
 
-Please use \`pm_read_ticket\` to fetch the full details, then implement directly.
-When done, use \`mun_istihal\` to create a PR.
+Read the waṣfa with \`mun_iqra_wasfa\`, then work the matter in your vessel.
+When done, call for the fire with \`mun_safa\`; when it stands, \`mun_fasl\`.
 
 Awaiting direction from al-Kimyawi...`;
 

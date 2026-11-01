@@ -26,7 +26,6 @@ import {
   type NiyyaMuhallala,
   type NawKiyan,
 } from "./arraf.ts";
-import type { Hayula } from "../hayula/hayula.ts";
 import type { Wasila } from "../hum/wasila.ts";
 import type { JalsatMurshid, RasulKharij } from "../types.ts";
 
@@ -104,7 +103,6 @@ interface MunadiDeps {
   arraf: Arraf;
   rasul: RasulKharij;
   amil: Wasila;
-  hayula: Hayula;
   namatWasfa?: string;
 }
 
@@ -275,14 +273,11 @@ export class Munadi {
 
   static readonly AQSA_RASAAIL_SIYAQ = 10;
 
-  #hayula: Hayula;
-
   constructor(deps: MunadiDeps) {
     this.mudirJalasat = deps.mudirJalasat;
     this.arraf = deps.arraf;
     this.rasul = deps.rasul;
     this.amil = deps.amil;
-    this.#hayula = deps.hayula;
     this.namatWasfa = banaNamatWasfa(deps.namatWasfa);
   }
 
@@ -795,7 +790,7 @@ Work on the parent instead?`;
     identifier: string,
     session: JalsatMurshid,
     previousActive: string | null,
-    isNew: boolean
+    _isNew: boolean
   ): Promise<NatijaIrsal> {
     const previousSession = previousActive
       ? this.mudirJalasat.jalabMurshid(previousActive)
@@ -808,39 +803,10 @@ Work on the parent instead?`;
 
     await logger.akhbar("dispatcher", `Executing switchover: ${previousActive ?? "none"} → ${identifier}`);
 
-    this.mudirJalasat.wadaaQuflGit(true);
-
-    let wipCommitted = false;
-
-    try {
     if (previousSession) {
       await this.qataJalsa(previousSession, identifier);
-    }
-
-    const huwaWasikh = await this.#hayula.mudtarib();
-    if (huwaWasikh && previousActive) {
-      await logger.akhbar("dispatcher", `Working directory dirty, creating WIP commit for ${previousActive}`);
-      wipCommitted = await this.#hayula.jammada(previousActive);
-    }
-
-    if (previousSession) {
       await this.mudirJalasat.jaddadaḤalatMurshid(previousActive!, "sakin");
-      await this.ablaghaJalsaSabiqa(previousSession, wipCommitted);
-    }
-
-    const intaqalaIlaSuccess = await this.#hayula.dakhala(session.far);
-    if (!intaqalaIlaSuccess) {
-      if (previousSession) {
-        await this.mudirJalasat.jaddadaḤalatMurshid(previousActive!, "fail");
-      }
-      return {
-        tuulija: true,
-        khata: `Failed to intaqalaIla branch ${session.far}. Switch aborted.`,
-      };
-    }
-
-    if (!isNew) {
-      await this.#hayula.sahaba(session.far);
+      await this.ablaghaJalsaSabiqa(previousSession);
     }
 
     try {
@@ -880,9 +846,6 @@ Work on the parent instead?`;
     await logger.akhbar("dispatcher", `Control switched to ${identifier}`);
 
     return { tuulija: true };
-    } finally {
-      this.mudirJalasat.wadaaQuflGit(false);
-    }
   }
 
   async #badaaMurshidLiKiyan(
@@ -1146,14 +1109,13 @@ You will be notified when you are IDLE.`;
     await new Promise((r) => setTimeout(r, 500));
   }
 
-  async ablaghaJalsaSabiqa(session: JalsatMurshid, wipCommitted: boolean): Promise<void> {
+  async ablaghaJalsaSabiqa(session: JalsatMurshid): Promise<void> {
     const msg = `CONTROL TRANSFERRED: You are now IDLE.
 
-Branch: ${session.far} (no longer checked out)
-WIP: ${wipCommitted ? "committed" : "clean"}
+Vessel: ${session.far} (still yours; no one else enters it)
 
 Whispers will still reach you.
-Use \`pm_demand_control\` when you have actionable work.`;
+Use \`mun_talab_tahakkum\` when you have actionable work.`;
 
     await this.mudirJalasat.arsalaIlaMurshidById(session.huwiyya, msg);
   }
@@ -1161,7 +1123,7 @@ Use \`pm_demand_control\` when you have actionable work.`;
   async ablaghaJalsaJadida(session: JalsatMurshid, previousId: string | null): Promise<void> {
     const msg = `✅ CONTROL GRANTED: You are now ACTIVE.
 
-Branch: ${session.far} (checked out)
+Vessel: ${session.far} — raise it in the workshop if it is not yet there
 Previous active: ${previousId ?? "none"}
 
 The matter is yours again.`;

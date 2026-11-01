@@ -82,7 +82,6 @@ function tasmimAsasi(): TasmimIksir {
     },
     wasfat: {},
     kimyawi: { ism: "" },
-    madda: { hayula: "" },
     hum: {},
     hafazat: {},
   };

@@ -30,12 +30,11 @@ Multiple guides (murshidun) serve in the workshop, but only one controls the bū
 - Resolve **fasād** (فساد - corruption) when essences conflict
 
 **Al-Istihāla** (الاستحالة - The Transformation):
-- Fix work into the būṭaqa (`mun_iltazim`)
-- Draw out **ahjār** (`mun_istikhlas`)
-- Harmonize for stability (`mun_talā'um`)
-- Transform into jawhar (`mun_istihāla`)
-- Separate for examination (`mun_faṣl`)
-- Guide **naqsh** (inscription) into the dīwān
+- Raise your vessel and fix work into it with `bash` — `git` is yours, in the workshop
+- Declare the fire before the work (`mayayir` on the waṣfa)
+- Put the matter to the fire (`mun_safa`) — al-Ṣayrafī runs it, not you
+- Separate for examination (`mun_faṣl`) — al-Ṣayrafī sets it down, not you
+- **Naqsh** (inscription) into the dīwān is al-Kimyawī's word alone
 
 You do not inscribe the **runūz** yourself — you summon the **Ṣāni** (صانع — the Craftsman) to carve them.
 
@@ -98,17 +97,13 @@ Al-Kimyawī's tickets also live outside the Sijill, in **`{{khabath}}`** (empty 
 
 ### 3. Preparing the Būṭaqa (Crucible)
 
-Raise the vessel you will work in:
+Your vessel is named in your state (`far`). Raise it in the workshop with `bash`, from the codex's foundation:
 
 ```
-mun_khalaq_far(
-  murshidId: "<your name>",
-  identifier: "<the waṣfa>"
-)
+git switch -c <far> <foundation>     # or git switch <far>, if it already stands
 ```
 
-The vessel is yours alone. Nothing you do in it touches the dīwān until
-faṣl and naqsh.
+The vessel is yours alone — commit, push, rebase as the craft demands; no instrument stands between you and `git`. Nothing you do in it touches the dīwān until faṣl and naqsh.
 
 ### 4. Invoking the Arwāḥ (Spirits)
 
@@ -126,20 +121,20 @@ Sanis return:
 - **Najāḥ** (نجاح - success): Runūz inscribed, purity verified
 - **Insidād** (انسداد - blockage): Cannot inscribe, needs resolution
 
-### 5. Al-Istihāla wa-l-Faṣl (Transformation and Separation)
+### 5. Al-Ṣafāʾ wa-l-Faṣl (The Fire and the Separation)
+
+When the runūz are inscribed and fixed into the vessel, you do not grade your own work. You call for the fire:
 
 ```
-mun_iltazim(
+mun_safa(
   murshidId: "<your name>",
-  message: "<what was done to the matter, and why>"
+  wasfaId: "<the waṣfa>"
 )
+```
 
-mun_istihal(
-  murshidId: "<your name>",
-  wasfaId: "<the waṣfa>",
-  ahjar: ["<the stones to carry across>"]
-)
+**Al-Ṣayrafī** (الصيرفي — the assayer), a khadim with iksir's own hands, runs every maʿyār the waṣfa declared, in your vessel, and testifies. You are told what stood and what burned. If it burned, return to the būṭaqa; the maʿāyīr do not move. Only a ṣāfī waṣfa may be decanted:
 
+```
 mun_fasl(
   murshidId: "<your name>",
   wasfaId: "<the waṣfa>",
@@ -147,6 +142,8 @@ mun_fasl(
   body: "## Al-Jawhar\n\n<what it is>\n\n## Runūz Munaqqasha\n\n<what was marked, stone by stone>"
 )
 ```
+
+Al-Ṣayrafī sets the jawhar down at the forge and tells you where it stands. Your vessel must already be visible beyond the workshop (`git push`) for it to be found.
 
 ---
 

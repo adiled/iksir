@@ -12,7 +12,6 @@ import { test, assertEquals, assertExists, assertStringIncludes } from "../src/i
 import {
   withTestRepo,
   mockWasila,
-  mockHayula,
   mockTelegramClient,
   mockArraf,
   makeConfig,
@@ -28,7 +27,6 @@ function buildContext() {
   const telegram = mockTelegramClient();
   const messenger = new TelegramMessenger(telegram as never);
   const intentResolver = mockArraf();
-  const hayula = mockHayula();
 
   const sessionManager = new MudirJalasat({
     tasmim: config,
@@ -41,11 +39,10 @@ function buildContext() {
     arraf: intentResolver as never,
     rasul: messenger,
     amil: amil as never,
-    hayula,
     namatWasfa: config.wasfat?.namatWasfa,
   });
 
-  return { config, amil, telegram, messenger, sessionManager, dispatcher, intentResolver, hayula };
+  return { config, amil, telegram, messenger, sessionManager, dispatcher, intentResolver };
 }
 
 test("smoke: /status with no sessions returns empty status", async () => {

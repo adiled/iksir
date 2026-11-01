@@ -49,13 +49,11 @@ async function mashhad(faila: string | null) {
   const munaffidh = new Munaffidh({
     tasmim: makeConfig(),
     wasfat: undefined as never,
-    fasl: undefined as never,
     rasul: mockMessenger(),
     ntfy: undefined as never,
     mudirJalasat: katib,
     amil: mockWasila() as never,
-    hayula: undefined as never,
-    safa: undefined as never,
+    sayrafi: undefined as never,
   });
 
   const munadi = munadiStub(faila);

@@ -131,8 +131,9 @@ test("forager: ittasil twice starts each bee once", async () => {
   wasila.qaf();
 });
 
-test("khuddam: a vessel named for its wasfa is the murshid's; the four khuddam are themselves", () => {
+test("khuddam: a vessel named for its wasfa is the murshid's; the khuddam are themselves", () => {
   assertEquals(khadimMin("iksir-arraf"), "arraf");
+  assertEquals(khadimMin("iksir-sayrafi"), "sayrafi");
   assertEquals(khadimMin("iksir-munadi"), "munadi");
   assertEquals(khadimMin("iksir-mumayyiz"), "mumayyiz");
   assertEquals(khadimMin("iksir-murshid"), "murshid");
@@ -141,7 +142,7 @@ test("khuddam: a vessel named for its wasfa is the murshid's; the four khuddam a
   assertEquals(khadimMin("SANDBOX-pos"), "murshid");
 });
 
-test("khuddam: a wasfa's vessel prompts through the murshid bee, never a fifth", async () => {
+test("khuddam: a wasfa's vessel prompts through the murshid bee, never one of its own", async () => {
   const { nuhul, wasila } = qim();
   await wasila.ittasil();
   const jalsa = (await wasila.khalaqaJalsa("GH-71", "apple-fm-worker"))!;
@@ -151,7 +152,7 @@ test("khuddam: a wasfa's vessel prompts through the murshid bee, never a fifth",
   wasila.qaf();
 });
 
-test("khuddam: four bees, one per khadim, and a jalsa speaks through its own", async () => {
+test("khuddam: one bee per khadim, and a jalsa speaks through its own", async () => {
   const { nuhul, wasila } = qim();
   await wasila.ittasil();
   assertEquals([...nuhul.keys()].sort(), [...KHUDDAM].sort());

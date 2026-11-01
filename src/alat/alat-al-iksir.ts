@@ -17,21 +17,15 @@
 import type {
   MuaallijAla,
   MunToolCall,
-  NawMurshid,
-  NidaFahasFar,
-  NidaIdfa,
-  NidaIltazim,
   NidaIqraMudawwana,
-  NidaKhalqFar,
   NidaFasl,
   NidaKhalqWasfa,
   NidaSafa,
+  NidaShahada,
   NidaRadd,
-  NidaRattib,
   NidaSajjalQarar,
   NidaTabligh,
   NidaTajdidWasfa,
-  NidaTalaum,
   NidaTalabTahakkum,
   NidaTanazal,
   NidaWadaaAlaqat,
@@ -39,7 +33,6 @@ import type {
   SijillAlat,
   TaarifAla,
 } from "../types.ts";
-import { wallidIsmFar } from "../khuddam/katib.ts";
 import type { SijillWasfat } from "../wasfa/sijill-wasfat.ts";
 
 import { adhafaQararSijill, adkhalaHadath, jalabaQararatSijill, qiraStatus } from "../../db/db.ts";
@@ -293,28 +286,6 @@ it has begun.`,
 
     this.#sijillAlat.sajjil(
       {
-        name: "mun_fahas_far",
-        description: "Check branch status (ahead/behind relative to main, files changed).",
-        inputSchema: {
-          type: "object",
-          properties: {
-            huwiyyatMurshid: {
-              type: "string",
-              description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
-            },
-            branch: {
-              type: "string",
-              description: "Branch name to check",
-            },
-          },
-          required: ["huwiyyatMurshid", "branch"],
-        },
-      },
-      (args) => this.#aalijFahasFar(args),
-    );
-
-    this.#sijillAlat.sajjil(
-      {
         name: "mun_balligh",
         description:
           "Send a notification to al-Kimyawi. Use for blockers, decisions needed, and milestones.",
@@ -543,242 +514,42 @@ If another murshid is working, Al-Kimyawi will be asked to approve the switch.`,
       (args) => this.#aalijTalabTahakkum(args),
     );
 
-    this.#sijillAlat.sajjil(
-      {
-        name: "mun_khalaq_far",
-        description: `Create the branch for a new murshid. Called once when starting work.
-
-al-Khadim will:
-1. Ensure main is checked out and clean
-2. Pull latest main
-3. Create and intaqalaIla the branch
-4. Push to origin with -u
-
-Branch naming:
-- epic: epic/{identifier}-{slug}
-- chore: {user}/{identifier}
-- sandbox: sandbox/{slug}
-
-You should only call this once per murshid, at the start.`,
-        inputSchema: {
-          type: "object",
-          properties: {
-            huwiyyatMurshid: {
-              type: "string",
-              description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
-            },
-            identifier: {
-              type: "string",
-              description:
-                "Ticket/epic identifier (e.g., 'TEAM-200') or sandbox identifier (e.g., 'SANDBOX-pos-simulator')",
-            },
-            type: {
-              type: "string",
-              enum: ["epic", "chore", "sandbox"],
-              description:
-                "Type of murshid: 'epic' for multi-ticket work, 'chore' for standalone tasks, 'sandbox' for freeform work",
-            },
-            slug: {
-              type: "string",
-              description:
-                "Short description slug (e.g., 'bab-al-shams'). Required for epics, optional for chores/sandbox.",
-            },
-          },
-          required: ["huwiyyatMurshid", "identifier", "type"],
-        },
-      },
-      (args) => this.#aalijKhalqFar(args),
-    );
-
-    this.#sijillAlat.sajjil(
-      {
-        name: "mun_rattib",
-        description: "Stage files for commit. Use before mun_iltazim.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            huwiyyatMurshid: {
-              type: "string",
-              description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
-            },
-            files: {
-              type: "array",
-              items: { type: "string" },
-              description: "Files to stage (paths relative to repo root)",
-            },
-          },
-          required: ["huwiyyatMurshid", "files"],
-        },
-      },
-      (args) => this.#aalijRattib(args),
-    );
-
-    this.#sijillAlat.sajjil(
-      {
-        name: "mun_iltazim",
-        description: "Commit staged changes with a message.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            huwiyyatMurshid: {
-              type: "string",
-              description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
-            },
-            message: {
-              type: "string",
-              description: "Commit message (follow conventional format)",
-            },
-            files: {
-              type: "array",
-              items: { type: "string" },
-              description: "Which matter to fix. All that is molten, when unstated.",
-            },
-          },
-          required: ["huwiyyatMurshid", "message"],
-        },
-      },
-      (args) => this.#aalijIltazim(args),
-    );
-
-    this.#sijillAlat.sajjil(
-      {
-        name: "mun_idfa",
-        description: "Push current branch to origin.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            huwiyyatMurshid: {
-              type: "string",
-              description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
-            },
-          },
-          required: ["huwiyyatMurshid"],
-        },
-      },
-      (args) => this.#aalijIdfa(args),
-    );
   }
 
   #sajjilAlatKimiya(): void {
     this.#sijillAlat.sajjil(
       {
-        name: "mun_istikhlas",
-        description: "Extract rune stones from the crucible for transmutation. " +
-          "Identifies which stones contain the runes needed for this essence. " +
-          "Use mun_talaum to discover if these runes require additional summoning circles.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            huwiyyatMurshid: {
-              type: "string",
-              description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
-            },
-            huwiyyatWasfa: {
-              type: "string",
-              description: "Ticket the essence is for",
-            },
-            files: {
-              type: "array",
-              items: { type: "string" },
-              description: "Rune stones to extract (paths relative to crucible root)",
-            },
-          },
-          required: ["huwiyyatMurshid", "huwiyyatWasfa", "files"],
-        },
-      },
-      (args) => this.#aalijIstikhlas(args),
-    );
-
-    this.#sijillAlat.sajjil(
-      {
-        name: "mun_talaum",
+        name: "mun_shahada",
         description:
-          "Attune the extracted rune stones — discover summoning circles, contract dependencies, " +
-          "missing incantations required for stability. Returns which additional stones must be included. " +
-          "Call after mun_istikhlas to ensure the runes will function in isolation.",
+          `Testimony. Only al-Ṣayrafī speaks it: what the fire left, where the jawhar
+was set down, or that it entered the codex. No opinion rides in it — exit codes,
+places, names. The Sijill believes nothing else.`,
         inputSchema: {
           type: "object",
           properties: {
-            huwiyyatMurshid: {
-              type: "string",
-              description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
-            },
-            huwiyyatWasfa: {
-              type: "string",
-              description: "Ticket being attuned",
-            },
-            files: {
+            huwiyyatWasfa: { type: "string", description: "The waṣfa this testimony is for" },
+            naw: { type: "string", enum: ["safa", "fasl", "naqsh"], description: "Which duty was done" },
+            natijat: {
               type: "array",
-              items: { type: "string" },
-              description: "Rune stones currently selected for extraction",
+              items: {
+                type: "object",
+                properties: {
+                  mayar: { type: "string", description: "The maʿyār, exactly as declared" },
+                  kharaja: { type: "number", description: "Its exit code" },
+                  qawl: { type: "string", description: "The tail of what it said" },
+                },
+                required: ["mayar", "kharaja", "qawl"],
+              },
+              description: "safa: one entry per maʿyār, in order",
             },
+            rabit: { type: "string", description: "fasl/naqsh: where the jawhar stands (a URL)" },
+            huwiyya: { type: "string", description: "fasl: the jawhar's name at the forge (e.g. 71)" },
+            khata: { type: "string", description: "Why the duty could not be done, when it could not" },
           },
-          required: ["huwiyyatMurshid", "huwiyyatWasfa", "files"],
+          required: ["huwiyyatWasfa", "naw"],
         },
       },
-      (args) => this.#aalijTalaum(args),
-    );
-
-    this.#sijillAlat.sajjil(
-      {
-        name: "mun_istihal",
-        description: "Transmute rune stones into pure essence. " +
-          "The scattered runes crystallize into a coherent whole. " +
-          "After transmutation, use mun_fasl to transfer the essence for examination.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            huwiyyatMurshid: {
-              type: "string",
-              description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
-            },
-            huwiyyatWasfa: {
-              type: "string",
-              description: "Ticket ID for the essence (e.g., 'TEAM-200-BE')",
-            },
-            files: {
-              type: "array",
-              items: { type: "string" },
-              description: "Rune stones to transmute into essence",
-            },
-          },
-          required: ["huwiyyatMurshid", "huwiyyatWasfa", "files"],
-        },
-      },
-      (args) => this.#aalijIstihal(args),
-    );
-
-    this.#sijillAlat.sajjil(
-      {
-        name: "mun_istihal_mutabaqq",
-        description: "Transmute essence that requires another essence as foundation. " +
-          "The child essence depends on the parent's properties to remain stable. " +
-          "Use when transmutations must be examined in sequence.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            huwiyyatMurshid: {
-              type: "string",
-              description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
-            },
-            huwiyyatWasfa: {
-              type: "string",
-              description: "Ticket ID for this artifact (e.g., 'TEAM-200-FE')",
-            },
-            parentTicketId: {
-              type: "string",
-              description: "Parent ticket ID whose artifact this builds on (e.g., 'TEAM-200-BE')",
-            },
-            files: {
-              type: "array",
-              items: { type: "string" },
-              description: "Files to include in the essence (paths relative to repo root)",
-            },
-          },
-          required: ["huwiyyatMurshid", "huwiyyatWasfa", "parentTicketId", "files"],
-        },
-      },
-      (args) => this.#aalijIstihalMutabaqq(args),
+      (args) => this.#aalijShahada(args),
     );
 
     this.#sijillAlat.sajjil(
@@ -810,7 +581,7 @@ judged — it is set before al-Kimyawī having already survived its fire.`,
         name: "mun_fasl",
         description:
           "Decant the clear essence, separating it from sediment and transferring it for examination. " +
-          "Use after mun_istihal to present the essence to reviewers. " +
+          "Use only after mun_safa has said the matter stood; al-Ṣayrafī sets it down. " +
           "The essence moves from your vessel to theirs.",
         inputSchema: {
           type: "object",
@@ -968,25 +739,6 @@ Relations control execution order: blocked tickets wait for blockers to complete
     ajzaa.push("## Working", `**State:** ${hala ? hala.status : "not begun"}`);
 
     return ajzaa.join("\n");
-  }
-
-  async #aalijFahasFar(args: Record<string, unknown>): Promise<string> {
-    const call: NidaFahasFar = {
-      tool: "mun_fahas_far",
-      huwiyyatMurshid: args.huwiyyatMurshid as string,
-      far: args.branch as string,
-    };
-
-    this.#hawwilLiKhadim(call);
-
-    return `The question of the vessel is carried to al-Khadim.
-
-Branch: ${call.far}
-
-Daemon will return:
-- Commits ahead/behind main
-- Files changed
-- Any merge conflicts`;
   }
 
   async #aalijTabligh(args: Record<string, unknown>): Promise<string> {
@@ -1163,168 +915,18 @@ Daemon will:
 You will be notified when control is granted.`;
   }
 
-  async #aalijKhalqFar(args: Record<string, unknown>): Promise<string> {
-    const murshidType = args.type as NawMurshid;
-    const call: NidaKhalqFar = {
-      tool: "mun_khalaq_far",
-      huwiyyatMurshid: args.huwiyyatMurshid as string,
-      huwiyya: args.identifier as string,
-      naw: murshidType,
-      kunya: args.slug as string | undefined,
-    };
-
-    this.#hawwilLiKhadim(call);
-
-    const branchName = wallidIsmFar(call.huwiyya, murshidType, call.kunya);
-
-    return `Branch creation request submitted.
-
-Branch: ${branchName}
-Type: ${murshidType}
-
-Daemon will:
-1. Ensure current branch is clean
-2. Checkout and pull main
-3. Create branch: ${branchName}
-4. Push to origin with -u
-
-You will be notified when the branch is ready.`;
-  }
-
-  async #aalijRattib(args: Record<string, unknown>): Promise<string> {
-    const call: NidaRattib = {
-      tool: "mun_rattib",
-      huwiyyatMurshid: args.huwiyyatMurshid as string,
-      ahjar: args.files as string[],
-    };
-
-    this.#hawwilLiKhadim(call);
-
-    return `Git add request submitted.
-
-Files (${call.ahjar.length}):
-${call.ahjar.map((f) => `  - ${f}`).join("\n")}
-
-Daemon will stage these files.`;
-  }
-
-  async #aalijIltazim(args: Record<string, unknown>): Promise<string> {
-    const call: NidaIltazim = {
-      tool: "mun_iltazim",
-      huwiyyatMurshid: args.huwiyyatMurshid as string,
-      risala: args.message as string,
-      ahjar: args.files as string[] | undefined,
-    };
-
-    this.#hawwilLiKhadim(call);
-
-    return `Commit request submitted.
-
-Message: ${call.risala}
-${call.ahjar ? `Files: ${call.ahjar.join(", ")}` : "Files: all staged"}
-
-Daemon will create the commit.`;
-  }
-
-  async #aalijIdfa(args: Record<string, unknown>): Promise<string> {
-    const call: NidaIdfa = {
-      tool: "mun_idfa",
-      huwiyyatMurshid: args.huwiyyatMurshid as string,
-    };
-
-    this.#hawwilLiKhadim(call);
-
-    return `Push request submitted.
-
-Daemon will push current branch to origin.`;
-  }
-
-  async #aalijIstikhlas(args: Record<string, unknown>): Promise<string> {
-    const huwiyyatWasfa = args.huwiyyatWasfa as string;
-    const files = args.files as string[];
-
-    return `Rune stones identified for ${huwiyyatWasfa}.
-
-Stones selected (${files.length}):
-${files.map((f) => `  - ${f}`).join("\n")}
-
-Next steps:
-1. Use mun_talaum to verify these runes are complete
-2. Use mun_istihal to crystallize into essence`;
-  }
-
-  #aalijTalaum(args: Record<string, unknown>): string {
-    const call: NidaTalaum = {
-      tool: "mun_talaum",
-      huwiyyatMurshid: args.huwiyyatMurshid as string,
+  #aalijShahada(args: Record<string, unknown>): string {
+    const call: NidaShahada = {
+      tool: "mun_shahada",
       huwiyyatWasfa: args.huwiyyatWasfa as string,
-      ahjar: (args.files ?? args.ahjar ?? []) as string[],
+      naw: args.naw as NidaShahada["naw"],
+      natijat: args.natijat as NidaShahada["natijat"],
+      rabit: args.rabit as string | undefined,
+      huwiyya: args.huwiyya as string | undefined,
+      khata: args.khata as string | undefined,
     };
-
     this.#hawwilLiKhadim(call);
-
-    return `The matter is asked whether these ${call.ahjar.length} ahjar would hold apart.`;
-  }
-
-  async #aalijIstihal(args: Record<string, unknown>): Promise<string> {
-    const call = {
-      tool: "mun_istihal" as const,
-      huwiyyatMurshid: args.huwiyyatMurshid as string,
-      huwiyyatWasfa: args.huwiyyatWasfa as string,
-      ahjar: args.files as string[],
-    };
-
-    this.#hawwilLiKhadim(call);
-
-    const essenceBranch = wallidIsmFar(call.huwiyyatWasfa, "chore");
-
-    return `Artifact crafting request submitted.
-
-Ticket: ${call.huwiyyatWasfa}
-Essence Branch: ${essenceBranch}
-Files (${call.ahjar.length}):
-${call.ahjar.map((f) => `  - ${f}`).join("\n")}
-
-Daemon will:
-1. Merge origin/main into forge branch
-2. Create ${essenceBranch} from main
-3. Extract files from forge branch
-4. Commit and push
-
-If conflicts occur, you will be notified with resolution guidance.
-On success, use mun_fasl to create the PR.`;
-  }
-
-  async #aalijIstihalMutabaqq(args: Record<string, unknown>): Promise<string> {
-    const call = {
-      tool: "mun_istihal_mutabaqq" as const,
-      huwiyyatMurshid: args.huwiyyatMurshid as string,
-      huwiyyatWasfa: args.huwiyyatWasfa as string,
-      huwiyyatAbWasfa: args.parentTicketId as string,
-      ahjar: args.files as string[],
-    };
-
-    this.#hawwilLiKhadim(call);
-
-    const essenceBranch = wallidIsmFar(call.huwiyyatWasfa, "chore");
-    const parentBranch = wallidIsmFar(call.huwiyyatAbWasfa, "chore");
-
-    return `Stacked artifact crafting request submitted.
-
-Ticket: ${call.huwiyyatWasfa}
-Essence Branch: ${essenceBranch}
-Parent Branch: ${parentBranch}
-Files (${call.ahjar.length}):
-${call.ahjar.map((f) => `  - ${f}`).join("\n")}
-
-Daemon will:
-1. Fetch latest ${parentBranch} from origin
-2. Create ${essenceBranch} from ${parentBranch}
-3. Extract files from forge branch
-4. Commit and push
-
-On success, use mun_fasl with base pointing to parent branch.
-Note: CI may fail if parent PR is unmerged. This is expected for incremental review.`;
+    return `Testimony recorded for ${call.huwiyyatWasfa}. Your duty is done.`;
   }
 
   #hawwilLiKhadim(call: MunToolCall): void {
