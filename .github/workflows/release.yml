@@ -19,14 +19,13 @@ jobs:
       - name: Create GitHub Release
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
-          BODY=$(git for-each-ref "refs/tags/$TAG" --format='%(contents:body)' 2>/dev/null)
-          if [ -z "$(echo "$BODY" | tr -d '[:space:]')" ]; then
-            BODY=$(git for-each-ref "refs/tags/$TAG" --format='%(contents:subject)' 2>/dev/null)
+          PREV=$(git tag --sort=-v:refname | grep -v "^${TAG}$" | head -1)
+          if [ -n "$PREV" ]; then
+            BODY=$(git log --pretty=format:"- %s" "${PREV}..${TAG}" | grep -v "^- chore: bump to ")
+          else
+            BODY=$(git log --pretty=format:"- %s" "${TAG}" | grep -v "^- chore: bump to ")
           fi
-          if [ -z "$(echo "$BODY" | tr -d '[:space:]')" ]; then
-            PREV=$(git tag --sort=-v:refname | grep -v "^${TAG}$" | head -1)
-            BODY=$(git log --pretty=format:"- %s" ${PREV}..${TAG} 2>/dev/null || echo "Release $TAG")
-          fi
+          [ -n "$(echo "$BODY" | tr -d '[:space:]')" ] || BODY="Release $TAG"
           gh release create "$TAG" \
             --title "$TAG" \
             --notes "$BODY"

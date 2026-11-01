@@ -1,6 +1,6 @@
 /**
  * One version, read from package.json, spoken everywhere: the CLI, the log,
- * and the bee's hello. `./release` bumps it and nothing else carries a copy.
+ * and the bee's hello. `./release.sh` bumps it and nothing else carries a copy.
  */
 
 import pkg from "../package.json" with { type: "json" };
