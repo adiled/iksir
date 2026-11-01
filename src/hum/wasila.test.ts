@@ -37,7 +37,7 @@ function qim() {
   return { nahla, wasila };
 }
 
-test("forager: a prompt carries the mun_* tools and veils the raw wasfa_* limbs", async () => {
+test("forager: a prompt carries the mun_* tools and fences nothing else", async () => {
   const { nahla, wasila } = qim();
   await wasila.ittasil();
   const jalsa = (await wasila.khalaqaJalsa("iksir-murshid", "t"))!;
@@ -46,8 +46,18 @@ test("forager: a prompt carries the mun_* tools and veils the raw wasfa_* limbs"
   assertExists(hathth);
   assertEquals(hathth.sid, jalsa.id);
   assertEquals((hathth.tools as Array<{ name: string }>).some((t) => t.name === "mun_fasl"), true);
-  assertEquals(hathth.allowedTools!.includes("wasfa_iqra"), false);
-  assertEquals(hathth.allowedTools!.some((n) => n.startsWith("mun_")), true);
+  assertEquals(hathth.allowedTools, undefined);
+  wasila.qaf();
+});
+
+test("forager: blooms build in the workshop on this humd", async () => {
+  const nahla = new NahlaWahm();
+  const wasila = new Wasila({ warsha: "/srv/warsha", nahla });
+  await wasila.ittasil();
+  const jalsa = (await wasila.khalaqaJalsa("iksir-murshid", "t"))!;
+  await wasila.sendPromptAsync(jalsa.id, "salam");
+  const hathth = nahla.mursal.find((t) => t.chi === "prompt") as Tone<"prompt">;
+  assertEquals(hathth.cwd, "hum:///srv/warsha");
   wasila.qaf();
 });
 

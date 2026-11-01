@@ -745,7 +745,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
 
   const alat = new AlatAlIksir(wasfat);
 
-  const amil = new Wasila({ namudhaj: config.hum.namudhaj, sijill: alat.sijill });
+  const amil = new Wasila({ namudhaj: config.hum.namudhaj, warsha: process.env.IKSIR_REPO_PATH, sijill: alat.sijill });
   await amil.ittasil();
 
   istarjaaMirata(amil).catch(async (error) => {

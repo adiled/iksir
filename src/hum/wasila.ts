@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs";
 import { join as joinMasar } from "node:path";
 import type { JalsatHum, HadathThrum, HadathThehum, RisalaMurshid, SijillAlat } from "../types.ts";
 import { DEFAULT_TIMEOUT_MS } from "../constants.ts";
-import { ADAWAT_MAHJUBA } from "./hudud.ts";
 import { logger } from "../logging/logger.ts";
 
 const ASAS = "iksir";
@@ -23,7 +22,6 @@ export class Wasila {
   #nahla: NahlaHum;
   #muttasil = false;
   #wasfThrum: string | null = null;
-  #adawatNest: string[] = [];
   #jalasat = new Map<string, JalsatHum>();
   #adwar = new Map<string, DawrTawaqquf>();
   #adwarAkhira = new Map<string, { zaman: number; usage?: unknown; khata?: string }>();
@@ -33,10 +31,12 @@ export class Wasila {
   #sijill: SijillAlat | null = null;
   #mirata: Array<(h: HadathThehum) => void> = [];
   #namudhaj?: string;
+  #warsha?: string;
   #ruqan = new Map<string, string>();
 
-  constructor(tasmim?: { namudhaj?: string; sijill?: SijillAlat; nahla?: NahlaHum }) {
+  constructor(tasmim?: { namudhaj?: string; warsha?: string; sijill?: SijillAlat; nahla?: NahlaHum }) {
     this.#namudhaj = tasmim?.namudhaj;
+    this.#warsha = tasmim?.warsha;
     this.#sijill = tasmim?.sijill ?? null;
     this.#nahla = tasmim?.nahla ?? new Bee({
       hive: ASAS,
@@ -44,6 +44,7 @@ export class Wasila {
       role: Role.forager,
       hello: {
         version: "1.0.0",
+        builds: true,
         propensity: { statefulness: "convention-stateful", richness: "medium", wire: "iksir/khuddam" },
         chis: ["hello", "breath", "prompt", "cancel", "cleanup", "curate", "unfurl", "wilt", "error", "pulse", "tendril-reach", "tendril-result", "log", "backfill", "backfill-event"],
         source: "https://github.com/adiled/iksir",
@@ -53,7 +54,6 @@ export class Wasila {
     this.#nahla.on(Chi.breath, (t) => {
       this.#muttasil = true;
       this.#wasfThrum = t.protoVersion ?? null;
-      this.#adawatNest = (t.tools ?? []).map((a) => String((a as { name?: unknown }).name ?? "")).filter(Boolean);
     });
     this.#nahla.onAstray(() => {
       this.#muttasil = false;
@@ -195,7 +195,7 @@ export class Wasila {
     const namudhaj = options?.model?.modelID ?? this.#namudhaj;
     const nizam = options?.system ?? (options?.agent ? this.#ruqya(options.agent) : undefined);
     const adawat = this.#sijill?.adawat() ?? [];
-    const masmuh = [...adawat.map((a) => a.name), ...this.#adawatNest].filter((ism) => !ADAWAT_MAHJUBA.includes(ism));
+    const cwd = options?.cwd ?? (this.#warsha ? `hum:///${this.#warsha.replace(/^\/+/, "")}` : undefined);
     return {
       chi: Chi.prompt,
       sid,
@@ -203,9 +203,8 @@ export class Wasila {
       ...(namudhaj ? { modelId: namudhaj } : {}),
       ...(nizam ? { systemPrompt: nizam } : {}),
       ...(jalsa?.nestId ? { resume: jalsa.nestId } : {}),
-      ...(options?.cwd ? { cwd: options.cwd } : {}),
+      ...(cwd ? { cwd } : {}),
       ...(adawat.length > 0 ? { tools: adawat } : {}),
-      allowedTools: masmuh,
     };
   }
 
