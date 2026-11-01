@@ -2,6 +2,11 @@
 # iksir build — the whole furnace must parse and prove itself before it is hung.
 set -euo pipefail
 cd "$(dirname "$0")"
+if [ ! -d ../hum/thrum-clients/ts ]; then
+  echo "iksir speaks thrum through hum's own client, and expects hum beside it:" >&2
+  echo "  git clone --depth 1 https://github.com/adiled/hum $(cd .. && pwd)/hum" >&2
+  exit 1
+fi
 [ -e node_modules/thrum ] || npm install --silent --ignore-scripts
 node --check src/main.ts
 node --check src/cli.ts

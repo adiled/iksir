@@ -39,6 +39,7 @@ import { istadaaMunaffidh } from "./khuddam/munaffidh.ts";
 import { istadaaMunadi } from "./khuddam/munadi.ts";
 import { istadaaArraf } from "./khuddam/arraf.ts";
 import { Sayrafi } from "./khuddam/sayrafi.ts";
+import { VERSION } from "./version.ts";
 import { istadaaRaqib } from "./khuddam/raqib.ts";
 import type { TasmimIksir, Rasul, RisalaDakhila } from "./types.ts";
 import type { SijillWasfat } from "./wasfa/sijill-wasfat.ts";
@@ -114,8 +115,6 @@ async function naffadhFahs(ctx: SiyaqKhadim): Promise<void> {
   console.log("\nConfiguration:");
   console.log(`  Bee hid: ${ctx.amil.huwiyya}`);
   console.log(`  Model: ${ctx.tasmim.hum?.namudhaj ?? "(the nest decides)"}`);
-
-  console.log(`  Quiet hours: ${ctx.tasmim.saatSukun.bidaya} - ${ctx.tasmim.saatSukun.nihaya} (${ctx.tasmim.saatSukun.mintaqaZamaniyya})`);
 
   const allGood = await tahaqqaqIttisaal(ctx);
 
@@ -236,11 +235,12 @@ async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
 
   ctx.raqib.badaa(ctx.mutahakkimIlgha.signal);
 
-  await logger.akhbar("main", "Entering main loop (Proactive Game)");
+  await logger.akhbar("main", "Awake; the khuddam keep their own hours");
 
-  while (!ctx.mutahakkimIlgha.signal.aborted) {
-    await new Promise((resolve) => setTimeout(resolve, ctx.tasmim.istiftaa.fajwatZamaniyya));
-  }
+  await new Promise<void>((resolve) => {
+    if (ctx.mutahakkimIlgha.signal.aborted) return resolve();
+    ctx.mutahakkimIlgha.signal.addEventListener("abort", () => resolve(), { once: true });
+  });
 }
 
 async function istahlakTelegram(ctx: SiyaqKhadim, signal: AbortSignal): Promise<void> {
@@ -437,8 +437,6 @@ Name a wasfa to begin. Each murshid keeps its own channel.
       await ctx.rasul.send("dispatch", `Unknown command: /${amr}\n\nType /help for available commands.`);
   }
 }
-
-export const VERSION = "0.2.0";
 
 export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   await logger.baddaa();

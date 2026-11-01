@@ -4,6 +4,7 @@ import { join as joinMasar } from "node:path";
 import type { JalsatHum, HadathThrum, HadathThehum, RisalaMurshid, SijillAlat } from "../types.ts";
 import { DEFAULT_TIMEOUT_MS } from "../constants.ts";
 import { logger } from "../logging/logger.ts";
+import { VERSION } from "../version.ts";
 
 const ASAS = "iksir";
 export const KHUDDAM = ["munadi", "arraf", "murshid", "mumayyiz", "sayrafi"] as const;
@@ -59,7 +60,7 @@ export class Wasila {
       as: khadim,
       role: Role.forager,
       hello: {
-        version: "1.0.0",
+        version: VERSION,
         builds: true,
         propensity: { statefulness: "convention-stateful", richness: "medium", wire: `${ASAS}/${khadim}` },
         chis: ["hello", "breath", "prompt", "cancel", "cleanup", "curate", "unfurl", "wilt", "error", "pulse", "tendril-reach", "tendril-result", "log", "backfill", "backfill-event"],

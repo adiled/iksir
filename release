@@ -58,8 +58,8 @@ else
   git tag -a "$TAG"
 fi
 
-# Push commit and tag
-git push origin main "$TAG"
+# Push the branch you are on, and the tag
+git push origin HEAD "$TAG"
 
 echo ""
 echo "Released $TAG"

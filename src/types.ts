@@ -5,27 +5,9 @@
  */
 
 export interface TasmimIksir {
-  istiftaa: TasmimIstiftaa;
-  saatSukun: TasmimSaatSukun;
   isharat: TasmimIsharat;
   wasfat: TasmimWasfat;
-  kimyawi: TasmimKimyawi;
   hum: TasmimHum;
-  hafazat: TasmimHaththat;
-}
-
-export interface TasmimIstiftaa {
-  fajwatZamaniyya: number;
-  fajwatRaqabaRisala: number;
-}
-
-export interface TasmimSaatSukun {
-  mufattah: boolean;
-  bidaya: string;
-  nihaya: string;
-  mintaqaZamaniyya: string;
-  tanaqqulMasdud: boolean;
-  daqaiqNafizhaSeyana: number;
 }
 
 export interface TasmimIsharat {
@@ -56,16 +38,8 @@ export interface TasmimWasfat {
 
 export type NawKiyan = "wasfa" | "malhamat" | "majhul";
 
-export interface TasmimKimyawi {
-  ism: string;
-}
-
 export interface TasmimHum {
   namudhaj?: string;
-}
-
-export interface TasmimHaththat {
-  mayyazaTanbih?: string;
 }
 
 export type AwwaliyyatIshara = "min" | "low" | "default" | "high" | "urgent";
