@@ -1,5 +1,5 @@
 {
-  "$schema": "./munadi.schema.json",
+  "$schema": "./iksir.schema.json",
   "polling": {
     "defaultIntervalMs": 300000,
     "prPollIntervalMs": 60000
@@ -23,20 +23,13 @@
       "chatId": "${TELEGRAM_CHAT_ID}"
     }
   },
-  "issueTracker": {
-    "provider": "linear",
-    "apiKey": "${LINEAR_API_KEY}",
-    "teamId": "ENG"
-  },
   "github": {
     "owner": "your-org",
     "repo": "your-repo",
     "operatorUsername": "your-github-username"
   },
-  "madda": {
-    "hayula": "/root/natn-ila-iksir/hayula-nass/mod.ts",
-    "safa": "/root/natn-ila-iksir/safa-amr/mod.ts",
-    "masar": "./codex.md"
+  "wasfat": {
+    "khabath": "linear"
   },
   "hum": {}
 }

@@ -16,7 +16,7 @@
  */
 
 import { logger } from "../logging/logger.ts";
-import { TelegramClient, TOPIC_COLORS } from "./telegram.ts";
+import { TelegramClient, TOPIC_COLORS, type TelegramMessage, type TelegramCallbackQuery } from "./telegram.ts";
 import {
   haddathaAwAdkhalaQanat,
   jalabaQanat,
@@ -25,30 +25,22 @@ import {
 } from "../../db/db.ts";
 import type { Rasul, RisalaDakhila, QanatRisala, KhiyarTafauli } from "../types.ts";
 
-/** Re-export for convenience */
 export { jalabaQanat, jalabaQanatsForSession, jalabJalsaByChannel } from "../../db/db.ts";
 
-/** The provider name used in the qanawat (channels) table */
 export const MUQADDIM = "telegram";
-
 
 export class TelegramMessenger implements Rasul {
   #telegram: TelegramClient;
 
-  /** In-memory cache: provider:channelId → sessionIdentifier (reverse lookup) */
   #channelCache: Map<string, string> = new Map();
 
-  /** In-memory cache: sessionIdentifier → Record<provider, channelId> */
   #sessionChannels: Map<string, Record<string, string>> = new Map();
 
-  /** Normalized inbound message handler */
   #mualij: ((risala: RisalaDakhila) => Promise<void>) | null = null;
 
   constructor(telegram: TelegramClient) {
     this.#telegram = telegram;
   }
-
-  // ─── Rasul: inbound lifecycle ──────────────────────────────────────────────
 
   indaRisala(handler: (risala: RisalaDakhila) => Promise<void>): void {
     this.#mualij = handler;
@@ -71,8 +63,6 @@ export class TelegramMessenger implements Rasul {
     return await this.#telegram.tahaqqaqToken();
   }
 
-  // ─── Rasul: outbound ───────────────────────────────────────────────────────
-
   mumakkan(): boolean {
     return this.#telegram.mumakkan();
   }
@@ -90,7 +80,6 @@ export class TelegramMessenger implements Rasul {
       return;
     }
 
-    /** { murshid: id } */
     const topicId = this.#resolveMurshidTopic(channel.murshid);
     if (topicId !== null) {
       await this.#telegram.arsalaIlaMurshidTopic(topicId, text);
@@ -112,7 +101,6 @@ export class TelegramMessenger implements Rasul {
       return;
     }
 
-    /** { murshid: id } */
     const topicId = this.#resolveMurshidTopic(channel.murshid);
     if (topicId !== null) {
       await this.#telegram.arsalaIlaMurshidTopic(topicId, text, { parseMode: "Markdown" });
@@ -120,8 +108,6 @@ export class TelegramMessenger implements Rasul {
       await this.#telegram.sendToDispatch(`[${channel.murshid}] ${text}`, { parseMode: "Markdown" });
     }
   }
-
-  // ─── Rasul: interactive ────────────────────────────────────────────────────
 
   async arsalaSualBiKhiyarat(
     channel: QanatRisala,
@@ -150,7 +136,6 @@ export class TelegramMessenger implements Rasul {
       });
     }
 
-    /** { murshid: id } */
     const topicId = this.#resolveMurshidTopic(channel.murshid);
     if (topicId !== null) {
       return await this.#telegram.arsalaIlaMurshidTopic(topicId, nass, {
@@ -164,8 +149,6 @@ export class TelegramMessenger implements Rasul {
       keyboard,
     });
   }
-
-  // ─── Channel management ────────────────────────────────────────────────────
 
   async khalaqaQanatMurshid(identifier: string, title: string): Promise<string | null> {
     if (!this.#telegram.isGroupMode()) {
@@ -196,7 +179,6 @@ export class TelegramMessenger implements Rasul {
   }
 
   yamlikQanatMurshid(identifier: string): boolean {
-    /** Check cache first, then DB */
     const cached = this.#sessionChannels.get(identifier);
     if (cached && cached[MUQADDIM]) return true;
 
@@ -230,14 +212,17 @@ export class TelegramMessenger implements Rasul {
     return null;
   }
 
-  // ─── Inbound routing (Telegram → RisalaDakhila) ───────────────────────────
-
-  /**
-   * Wire up Telegram onMessage / onCallback to emit normalized events.
-   * This is the logic that used to live in main.ts addaMualijatTelegram().
-   */
   #rabatMualijat(): void {
     this.#telegram.onMessage(async (message) => {
+      await this.iqraRisala(message);
+    });
+
+    this.#telegram.onCallback(async (query) => {
+      await this.iqraIstijaba(query);
+    });
+  }
+
+  async iqraRisala(message: TelegramMessage): Promise<void> {
       if (!message.text || !this.#mualij) return;
 
       const text = message.text.trim();
@@ -253,7 +238,6 @@ export class TelegramMessenger implements Rasul {
         isDispatchTopic,
       });
 
-      /** Private chat → khass */
       if (isPrivateMessage) {
         await this.#mualij({ naw: "khass" });
         return;
@@ -264,7 +248,6 @@ export class TelegramMessenger implements Rasul {
         return;
       }
 
-      /** Dispatch topic → irsal or amr */
       if (isDispatchTopic) {
         if (text.startsWith("/")) {
           const [command, ...args] = text.slice(1).split(" ");
@@ -274,18 +257,10 @@ export class TelegramMessenger implements Rasul {
         }
         return;
       }
-
-      /** Murshid topic → murshid message */
-      if (topicId) {
+      if (topicId && topicId !== 1) {
         const huwiyya = this.hallJalsaBilQanat(MUQADDIM, String(topicId));
         if (huwiyya) {
           await this.#mualij({ naw: "murshid", huwiyya, nass: text });
-        } else if (topicId === 1) {
-          /** General topic — not linked */
-          await this.#telegram.arsalaRisala(
-            "Use the **Dispatch** topic to name a waṣfa and light a murshid.",
-            { topicId: 1, chatId: this.#telegram.getGroupId(), parseMode: "Markdown" },
-          );
         } else {
           await this.#telegram.arsalaRisala(
             "This topic is not linked to an active murshid.",
@@ -295,10 +270,19 @@ export class TelegramMessenger implements Rasul {
         return;
       }
 
-      await logger.haDHHir("messenger", "Group message without topic ID");
-    });
+      if (isGroupMessage) {
+        await this.#telegram.arsalaRisala(
+          "Use the **Dispatch** topic to name a waṣfa and light a murshid.",
+          { topicId: 1, chatId: this.#telegram.getGroupId(), parseMode: "Markdown" },
+        );
+        return;
+      }
 
-    this.#telegram.onCallback(async (query) => {
+      await logger.haDHHir("messenger", "Group message without topic ID");
+  }
+
+  async iqraIstijaba(query: TelegramCallbackQuery): Promise<void> {
+    if (!this.#mualij) return;
       if (!query.data) {
         await this.#telegram.answerCallback(query.id, "Received!");
         return;
@@ -306,43 +290,6 @@ export class TelegramMessenger implements Rasul {
 
       await logger.akhbar("messenger", `Callback: ${query.data}`);
 
-      /** Question button → jawab_sual or idkhal_khass_sual */
-      if (query.data.startsWith("q:")) {
-        const parts = query.data.split(":");
-        if (parts.length >= 3) {
-          const shortId = parts[1];
-          const selectedLabel = parts.slice(2).join(":");
-
-          if (selectedLabel === "__custom__") {
-            /** Need to resolve murshid from topic for custom input */
-            const topicId = query.message?.message_thread_id;
-            const huwiyya = topicId
-              ? this.hallJalsaBilQanat(MUQADDIM, String(topicId))
-              : null;
-
-            if (huwiyya && this.#mualij) {
-              await this.#mualij({
-                naw: "idkhal_khass_sual",
-                huwiyyatMurshid: huwiyya,
-                huwiyyatSual: `short:${shortId}`,
-              });
-              await this.#telegram.answerCallback(query.id, "Type your answer as a reply...");
-            } else {
-              await this.#telegram.answerCallback(query.id, "Cannot resolve murshid for custom input");
-            }
-          } else if (this.#mualij) {
-            await this.#mualij({
-              naw: "jawab_sual",
-              huwiyyatSual: `short:${shortId}`,
-              taamiyya: selectedLabel,
-            });
-            await this.#telegram.answerCallback(query.id, `Selected: ${selectedLabel}`);
-          }
-        }
-        return;
-      }
-
-      /** Munadi buttons (select/parent/switch/cancel) */
       if (
         query.data.startsWith("select:") ||
         query.data.startsWith("parent:") ||
@@ -357,13 +304,9 @@ export class TelegramMessenger implements Rasul {
       }
 
       await this.#telegram.answerCallback(query.id, "Received!");
-    });
   }
 
-  // ─── Private helpers ───────────────────────────────────────────────────────
-
   #resolveMurshidTopic(identifier: string): number | null {
-    /** Check cache */
     const cached = this.#sessionChannels.get(identifier);
     if (cached?.[MUQADDIM]) {
       return parseInt(cached[MUQADDIM], 10);
@@ -379,7 +322,6 @@ export class TelegramMessenger implements Rasul {
   }
 
   #cacheChannel(identifier: string, provider: string, channelId: string): void {
-    /** Update session → channels cache */
     const existing = this.#sessionChannels.get(identifier) ?? {};
     existing[provider] = channelId;
     this.#sessionChannels.set(identifier, existing);
@@ -388,9 +330,6 @@ export class TelegramMessenger implements Rasul {
   }
 }
 
-/**
- * Create a TelegramMessenger instance.
- */
 export function anshaaTelegramRasul(telegram: TelegramClient): TelegramMessenger {
   return new TelegramMessenger(telegram);
 }

@@ -1,10 +1,4 @@
-/**
- * Shell command execution utility.
- *
- * Running a command the workshop needs.
- * Centralizes Deno.Command usage for testability — tests can mock
- * execCommand() instead of stubbing Deno.Command everywhere.
- */
+import { spawn } from "node:child_process";
 
 export interface ExecResult {
   success: boolean;
@@ -14,44 +8,36 @@ export interface ExecResult {
 }
 
 export interface ExecOptions {
-  /** Working directory for the command */
   cwd?: string;
-  /** Abort signal to cancel the command */
   signal?: AbortSignal;
-  /** Environment variables to pass to the command */
   env?: Record<string, string>;
 }
 
-/**
- * Execute a shell command and capture output.
- *
- * @param binary - The command to run
- * @param args - Arguments to pass to the command
- * @param options - Optional cwd, signal, env
- * @returns ExecResult with stdout, stderr, success, and exit code
- */
 export async function execCommand(
   binary: string,
   args: string[],
   options?: ExecOptions,
 ): Promise<ExecResult> {
-  const command = new Deno.Command(binary, {
-    args,
-    cwd: options?.cwd,
-    stdout: "piped",
-    stderr: "piped",
-    signal: options?.signal,
-    env: options?.env,
+  return new Promise((hal) => {
+    const child = spawn(binary, args, {
+      cwd: options?.cwd,
+      env: options?.env ? { ...process.env, ...options.env } : process.env,
+      signal: options?.signal,
+    });
+
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (d: Buffer) => {
+      stdout += d.toString();
+    });
+    child.stderr.on("data", (d: Buffer) => {
+      stderr += d.toString();
+    });
+    child.on("error", (err) => {
+      hal({ success: false, stdout, stderr: String(err), code: 127 });
+    });
+    child.on("close", (code) => {
+      hal({ success: code === 0, stdout, stderr, code: code ?? 1 });
+    });
   });
-
-  const process = await command.output();
-  const stdout = new TextDecoder().decode(process.stdout);
-  const stderr = new TextDecoder().decode(process.stderr);
-
-  return {
-    success: process.success,
-    stdout,
-    stderr,
-    code: process.code,
-  };
 }

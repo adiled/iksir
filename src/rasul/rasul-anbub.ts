@@ -26,7 +26,16 @@
  * create — a channel exists the moment something is said into it.
  */
 
-import { join } from "jsr:@std/path";
+import { join } from "node:path";
+import {
+  openSync,
+  mkdirSync,
+  statSync,
+  appendFileSync,
+  createReadStream,
+} from "node:fs";
+import { execFileSync } from "node:child_process";
+import type { ReadStream } from "node:fs";
 import { logger } from "../logging/logger.ts";
 import {
   haddathaAwAdkhalaQanat,
@@ -43,10 +52,10 @@ import type {
 const MUQADDIM = "unbub";
 
 function dalilRasul(): string {
-  const hala = Deno.env.get("IKSIR_STATE_DIR") ??
+  const hala = process.env.IKSIR_STATE_DIR ??
     join(
-      Deno.env.get("XDG_DATA_HOME") ??
-        join(Deno.env.get("HOME") ?? ".", ".local", "share"),
+      process.env.XDG_DATA_HOME ??
+        join(process.env.HOME ?? ".", ".local", "share"),
       "iksir",
     );
   return join(hala, "rasul");
@@ -56,7 +65,7 @@ export class RasulUnbub implements Rasul {
   #dalil: string;
   #mualij: ((risala: RisalaDakhila) => Promise<void>) | null = null;
   #yastami = false;
-  #milaf: Deno.FsFile | null = null;
+  #milaf: ReadStream | null = null;
   #qanawat = new Map<string, string>();
 
   constructor(dalil?: string) {
@@ -81,29 +90,26 @@ export class RasulUnbub implements Rasul {
   }
 
   async #udhnMawjuda(): Promise<void> {
-    await Deno.mkdir(this.#dalil, { recursive: true });
-    await Deno.mkdir(this.masarFam, { recursive: true });
+    mkdirSync(this.#dalil, { recursive: true });
+    mkdirSync(this.masarFam, { recursive: true });
     try {
-      await Deno.stat(this.masarUdhn);
+      statSync(this.masarUdhn);
     } catch {
-      // Deno cannot mint a fifo, and mkfifo is the one contrivance here.
-      const mkfifo = new Deno.Command("mkfifo", { args: [this.masarUdhn] });
-      const { success } = await mkfifo.output();
-      if (!success) throw new Error(`could not open an ear at ${this.masarUdhn}`);
+      try {
+        execFileSync("mkfifo", [this.masarUdhn]);
+      } catch {
+        throw new Error(`could not open an ear at ${this.masarUdhn}`);
+      }
     }
   }
-
-  // ── Speaking ──────────────────────────────────────────────────────
 
   async send(qanat: QanatRisala, nass: string): Promise<void> {
     const masar = this.#masarQanat(qanat);
     const waqt = new Date().toISOString();
-    await Deno.writeTextFile(masar, `\n[${waqt}]\n${nass}\n`, { append: true });
+    appendFileSync(masar, `\n[${waqt}]\n${nass}\n`);
   }
 
   arsalaMunassaq(qanat: QanatRisala, nass: string): Promise<void> {
-    // The scroll is already plain. Markdown is left as written — a reader
-    // who wants it rendered has better tools than Iksīr.
     return this.send(qanat, nass);
   }
 
@@ -117,11 +123,9 @@ export class RasulUnbub implements Rasul {
     return null;
   }
 
-  // ── Qanawāt ───────────────────────────────────────────────────────
-
   async khalaqaQanatMurshid(huwiyya: string, unwan: string): Promise<string | null> {
     const masar = join(this.masarFam, huwiyya);
-    await Deno.writeTextFile(masar, `# ${huwiyya} — ${unwan}\n`, { append: true });
+    appendFileSync(masar, `# ${huwiyya} — ${unwan}\n`);
     this.#qanawat.set(huwiyya, huwiyya);
     haddathaAwAdkhalaQanat(huwiyya, MUQADDIM, huwiyya);
     return huwiyya;
@@ -144,13 +148,10 @@ export class RasulUnbub implements Rasul {
     return jalabJalsaByChannel(muqaddim, huwiyatQanat);
   }
 
-  // ── Listening ─────────────────────────────────────────────────────
-
   indaRisala(mualij: (risala: RisalaDakhila) => Promise<void>): void {
     this.#mualij = mualij;
   }
 
-  /** One line from the ear becomes one utterance. */
   async #hallSatr(satr: string): Promise<void> {
     const nass = satr.trim();
     if (!nass || !this.#mualij) return;
@@ -170,31 +171,10 @@ export class RasulUnbub implements Rasul {
       return;
     }
 
-    if (nass.startsWith("=")) {
-      const [huwiyyatSual, ...taamiyya] = nass.slice(1).trim().split(/\s+/);
-      if (huwiyyatSual) {
-        await this.#mualij({
-          naw: "jawab_sual",
-          huwiyyatSual,
-          taamiyya: taamiyya.join(" ") || huwiyyatSual,
-        });
-      }
-      return;
-    }
-
     const qawl = nass.startsWith(">") ? nass.slice(1).trim() : nass;
     await this.#mualij({ naw: "irsal", nass: qawl });
   }
 
-  /**
-   * The ear is held open for both reading and writing at once.
-   *
-   * A fifo opened only to read blocks until someone speaks — and it blocks
-   * the whole workshop, not just the listener, so Iksīr could not even
-   * start the process that was going to speak to it. Holding it open both
-   * ways never blocks, and because Iksīr is itself a writer the ear never
-   * falls to EOF when a speaker departs.
-   */
   async baddaa(): Promise<void> {
     await this.#udhnMawjuda();
     this.#yastami = true;
@@ -204,15 +184,17 @@ export class RasulUnbub implements Rasul {
       fam: this.masarFam,
     });
 
-    this.#milaf = await Deno.open(this.masarUdhn, { read: true, write: true });
+    const fd = openSync(this.masarUdhn, "r+");
+    const qari = createReadStream("", { fd, autoClose: true });
+    this.#milaf = qari;
 
     (async () => {
       const muhallil = new TextDecoder();
       let dhakira = "";
       try {
-        for await (const qitaa of this.#milaf!.readable) {
+        for await (const qitaa of qari) {
           if (!this.#yastami) break;
-          dhakira += muhallil.decode(qitaa, { stream: true });
+          dhakira += muhallil.decode(qitaa as Buffer, { stream: true });
           let nl: number;
           while ((nl = dhakira.indexOf("\n")) >= 0) {
             const satr = dhakira.slice(0, nl);
@@ -223,31 +205,28 @@ export class RasulUnbub implements Rasul {
           }
         }
       } catch {
-        // The ear was shut under us. Nothing more will be heard.
       } finally {
         try {
-          this.#milaf?.close();
+          qari.destroy();
         } catch {
-          // Already shut.
         }
         this.#milaf = null;
       }
     })();
   }
 
-  /**
-   * A read already waiting on the ear will not end merely because the ear
-   * is shut. So Iksīr speaks one empty word into its own ear: the listener
-   * wakes, finds that listening is over, and lets go.
-   */
   awqaf(): void {
     if (!this.#yastami) return;
     this.#yastami = false;
     try {
-      this.#milaf?.writeSync(new TextEncoder().encode("\n"));
+      appendFileSync(this.masarUdhn, "\n");
     } catch {
-      // The ear is already gone; the listener will unwind on its own.
     }
+    try {
+      this.#milaf?.destroy();
+    } catch {
+    }
+    this.#milaf = null;
   }
 
   tahaqqaq(): Promise<boolean> {

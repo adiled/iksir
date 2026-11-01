@@ -7,42 +7,30 @@
  */
 
 import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, haddathaAwAdkhalaJalsa } from "../db/db.ts";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { execCommand } from "./utils/exec.ts";
-import type { RasulKharij, QanatRisala, JalsatMurshid, JawabSual } from "./types.ts";
-import type { Hayula } from "./hayula/hayula.ts";
+import type { RasulKharij, QanatRisala, JalsatMurshid, } from "./types.ts";
 
-
-
-/**
- * Run a test function with an isolated temp SQLite DB.
- * Sets IKSIR_STATE_DIR, tahyias DB, runs fn, then cleans up.
- */
 export async function withTestDb(fn: () => Promise<void> | void): Promise<void> {
-  const tempDir = await Deno.makeTempDir({ prefix: "iksir-test-" });
-  Deno.env.set("IKSIR_STATE_DIR", tempDir);
+  const tempDir = mkdtempSync(join(tmpdir(), "iksir-test-"));
+  process.env.IKSIR_STATE_DIR = tempDir;
   try {
     await baddaaQaidatBayanat();
     await fn();
   } finally {
     aghlaaqQaidatBayanat();
-    Deno.env.delete("IKSIR_STATE_DIR");
-    await Deno.remove(tempDir, { recursive: true });
+    delete process.env.IKSIR_STATE_DIR;
+    rmSync(tempDir, { recursive: true, force: true });
   }
 }
 
-/**
- * Run a test function with both an isolated DB and an isolated git repo.
- * Creates a temp dir with `git init`, sets IKSIR_REPO_PATH + IKSIR_STATE_DIR,
- * tahyias DB, runs fn, then cleans up everything.
- *
- * Use this for tests that exercise code paths involving git operations
- * (e.g. dispatcher → session-manager → git intaqalaIla).
- */
 export async function withTestRepo(fn: () => Promise<void> | void): Promise<void> {
-  const tempDir = await Deno.makeTempDir({ prefix: "iksir-repo-test-" });
-  const prevRepo = Deno.env.get("IKSIR_REPO_PATH");
-  Deno.env.set("IKSIR_REPO_PATH", tempDir);
-  Deno.env.set("IKSIR_STATE_DIR", tempDir);
+  const tempDir = mkdtempSync(join(tmpdir(), "iksir-repo-test-"));
+  const prevRepo = process.env.IKSIR_REPO_PATH;
+  process.env.IKSIR_REPO_PATH = tempDir;
+  process.env.IKSIR_STATE_DIR = tempDir;
   try {
     await execCommand("git", ["init"], { cwd: tempDir });
     await execCommand("git", ["commit", "--allow-empty", "-m", "init"], { cwd: tempDir });
@@ -50,15 +38,13 @@ export async function withTestRepo(fn: () => Promise<void> | void): Promise<void
     await fn();
   } finally {
     aghlaaqQaidatBayanat();
-    Deno.env.delete("IKSIR_STATE_DIR");
-    if (prevRepo) Deno.env.set("IKSIR_REPO_PATH", prevRepo);
-    else Deno.env.delete("IKSIR_REPO_PATH");
-    await Deno.remove(tempDir, { recursive: true });
+    delete process.env.IKSIR_STATE_DIR;
+    if (prevRepo) process.env.IKSIR_REPO_PATH = prevRepo;
+    else delete process.env.IKSIR_REPO_PATH;
+    rmSync(tempDir, { recursive: true, force: true });
   }
 }
 
-
-/** Minimal session shape returned by the nest mock */
 interface MockJalsatHum {
   id: string;
   title: string;
@@ -66,14 +52,8 @@ interface MockJalsatHum {
   lastMessageAt: Date;
 }
 
-export interface MockAmilHum {
+export interface MockWasila {
   mayyaza(prompt: string): Promise<{ success: boolean; response?: string; error?: string }>;
-  replyToQuestion(
-    sessionId: string,
-    questionId: string,
-    answers: JawabSual[],
-  ): Promise<boolean>;
-  rejectQuestion(sessionId: string, questionId: string): Promise<boolean>;
   sendPromptAsync(sessionId: string, prompt: string, options?: unknown): Promise<boolean>;
   sendPrompt(
     sessionId: string,
@@ -85,13 +65,10 @@ export interface MockAmilHum {
   listSessions(): Promise<Array<{ id: string; title: string; createdAt: Date; lastMessageAt: Date }>>;
   istaadaJalsa(jalsa: MockJalsatHum, nestId?: string): void;
   huwiyyatUsh(sessionId: string): string | undefined;
-  /** Stand in for the worker reporting its handle on chi:"session-ready". */
   _reportNestId(sessionId: string, nestId: string): void;
 
   _calls: {
     mayyaza: string[];
-    replyToQuestion: Array<{ sessionId: string; questionId: string; answers: JawabSual[] }>;
-    rejectQuestion: Array<{ sessionId: string; questionId: string }>;
     sendPromptAsync: Array<{ sessionId: string; prompt: string }>;
     sendPrompt: Array<{ sessionId: string; prompt: string }>;
     khalaqaJalsa: Array<{ huwiyyatWasfa: string; title: string }>;
@@ -99,26 +76,14 @@ export interface MockAmilHum {
   _sessions: Map<string, MockJalsatHum>;
 }
 
-/**
- * Create a mock AmilHum. Override specific methods via the overrides param.
- * Includes session management (khalaqaJalsa, jalabJalsa) for integration tests.
- */
-export function mockAmilHum(overrides?: {
+export function mockWasila(overrides?: {
   mayyaza?: (prompt: string) => Promise<{ success: boolean; response?: string; error?: string }>;
-  replyToQuestion?: (
-    sessionId: string,
-    questionId: string,
-    answers: JawabSual[],
-  ) => Promise<boolean>;
-  rejectQuestion?: (sessionId: string, questionId: string) => Promise<boolean>;
   sendPromptAsync?: (sessionId: string, prompt: string) => Promise<boolean>;
   sendPrompt?: (sessionId: string, prompt: string) => Promise<{ success: boolean; response?: string; error?: string }>;
   khalaqaJalsa?: (huwiyyatWasfa: string, title: string) => Promise<MockJalsatHum | null>;
-}): MockAmilHum {
-  const calls: MockAmilHum["_calls"] = {
+}): MockWasila {
+  const calls: MockWasila["_calls"] = {
     mayyaza: [],
-    replyToQuestion: [],
-    rejectQuestion: [],
     sendPromptAsync: [],
     sendPrompt: [],
     khalaqaJalsa: [],
@@ -138,18 +103,6 @@ export function mockAmilHum(overrides?: {
       return { success: true, response: '{"tamyiz":"DHAHAB","reason":"test","rejection":null}' };
     },
 
-    async replyToQuestion(sessionId, questionId, answers) {
-      calls.replyToQuestion.push({ sessionId, questionId, answers });
-      if (overrides?.replyToQuestion) return overrides.replyToQuestion(sessionId, questionId, answers);
-      return true;
-    },
-
-    async rejectQuestion(sessionId, questionId) {
-      calls.rejectQuestion.push({ sessionId, questionId });
-      if (overrides?.rejectQuestion) return overrides.rejectQuestion(sessionId, questionId);
-      return true;
-    },
-
     async sendPromptAsync(sessionId, prompt) {
       calls.sendPromptAsync.push({ sessionId, prompt });
       if (overrides?.sendPromptAsync) return overrides.sendPromptAsync(sessionId, prompt);
@@ -160,6 +113,17 @@ export function mockAmilHum(overrides?: {
       calls.sendPrompt.push({ sessionId, prompt });
       if (overrides?.sendPrompt) return overrides.sendPrompt(sessionId, prompt);
       return { success: true, response: "ok" };
+    },
+
+    async bassaLog(_mustawa: string, _risala: string, _huyul?: Record<string, unknown>) {
+      return true;
+    },
+
+    atlubBackfill(_author: string, _from: number) {
+      return true;
+    },
+
+    wadaaMirata(_fn: (h: unknown) => void) {
     },
 
     async khalaqaJalsa(huwiyyatWasfa, title) {
@@ -195,6 +159,41 @@ export function mockAmilHum(overrides?: {
       if (nestId) nestIds.set(jalsa.id, nestId);
     },
 
+    async mahaqaJalsa(sessionId) {
+      return sessions.delete(sessionId);
+    },
+
+    async abortSession(_sessionId) {
+      return true;
+    },
+
+    async summarizeSession(_sessionId) {
+      return true;
+    },
+
+    async jalabJalsaStatuses() {
+      const natija: Record<string, string> = {};
+      for (const id of sessions.keys()) natija[id] = "sakin";
+      return natija;
+    },
+
+    async jalabRisalaCount(sessionId) {
+      if (!sessions.has(sessionId)) return null;
+      return { total: 0, assistant: 0, user: 0 };
+    },
+
+    async getLastAssistantMessage(_sessionId) {
+      return null;
+    },
+
+    async isHealthy() {
+      return true;
+    },
+
+    async getVersion() {
+      return "0.7.0";
+    },
+
     huwiyyatUsh(sessionId) {
       return nestIds.get(sessionId);
     },
@@ -204,7 +203,6 @@ export function mockAmilHum(overrides?: {
     },
   };
 }
-
 
 export interface MockTelegramClient {
   mumakkan(): boolean;
@@ -235,9 +233,6 @@ export interface MockTelegramClient {
   };
 }
 
-/**
- * Create a mock TelegramClient.
- */
 export function mockTelegramClient(overrides?: {
   mumakkan?: boolean;
   isGroupMode?: boolean;
@@ -290,7 +285,6 @@ export function mockTelegramClient(overrides?: {
   };
 }
 
-
 export interface MockMessenger extends RasulKharij {
   _calls: {
     send: Array<{ channel: QanatRisala; text: string }>;
@@ -302,9 +296,6 @@ export interface MockMessenger extends RasulKharij {
   };
 }
 
-/**
- * Create a mock RasulKharij.
- */
 export function mockMessenger(overrides?: {
   mumakkan?: boolean;
   khalaqaQanatMurshid?: (id: string, title: string) => Promise<string | null>;
@@ -362,15 +353,11 @@ export function mockMessenger(overrides?: {
   };
 }
 
-
 export interface MockMudirJalasat {
   wajadaJalasatMurshid(): JalsatMurshid[];
   _sessions: JalsatMurshid[];
 }
 
-/**
- * Create a mock MudirJalasat with a fixed set of sessions.
- */
 export function mockMudirJalasat(sessions: JalsatMurshid[] = []): MockMudirJalasat {
   return {
     _sessions: sessions,
@@ -380,10 +367,6 @@ export function mockMudirJalasat(sessions: JalsatMurshid[] = []): MockMudirJalas
   };
 }
 
-
-/**
- * Create a minimal JalsatMurshid for testing.
- */
 export function makeSession(overrides?: Partial<JalsatMurshid>): JalsatMurshid {
   return {
     id: "session-001",
@@ -399,10 +382,6 @@ export function makeSession(overrides?: Partial<JalsatMurshid>): JalsatMurshid {
   };
 }
 
-/**
- * Insert a session row in the DB (satisfies FK constraints for questions table).
- * Call inside withTestDb() before inserting questions.
- */
 export function seedSession(overrides?: Partial<JalsatMurshid>): void {
   const s = makeSession(overrides);
   haddathaAwAdkhalaJalsa({
@@ -418,16 +397,12 @@ export function seedSession(overrides?: Partial<JalsatMurshid>): void {
   });
 }
 
-/**
- * Create a temp file with given content, return its path.
- * Caller is responsible for cleanup.
- */
 export async function writeTempFile(content: string, prefix = "iksir-fixture-"): Promise<string> {
-  const path = await Deno.makeTempFile({ prefix });
-  await Deno.writeTextFile(path, content);
+  const tdir = mkdtempSync(join(tmpdir(), prefix));
+  const path = join(tdir, "fixture");
+  writeFileSync(path, content);
   return path;
 }
-
 
 import type { NiyyaMuhallala } from "./khuddam/arraf.ts";
 
@@ -437,11 +412,6 @@ export interface MockArraf {
   _nextResult: NiyyaMuhallala | null;
 }
 
-/**
- * Create a mock Arraf.
- * Set `_nextResult` to control what resolve() returns.
- * Default: returns "not_found".
- */
 export function mockArraf(): MockArraf {
   const calls: MockArraf["_calls"] = [];
   return {
@@ -464,19 +434,13 @@ export function mockArraf(): MockArraf {
   };
 }
 
-
 import type { TasmimIksir } from "./types.ts";
 
-/**
- * Create a minimal TasmimIksir for testing.
- * Nothing outward is touched.
- */
 export function makeConfig(overrides?: Partial<TasmimIksir>): TasmimIksir {
   return {
     hum: {},
     saatSukun: { bidaya: "00:00", nihaya: "06:00", mintaqaZamaniyya: "UTC" },
     wasfat: {},
-    madda: { hayula: "/dev/null/hayula.ts" },
     isharat: {
       telegram: {
         mufattah: false,
@@ -497,64 +461,3 @@ export function makeConfig(overrides?: Partial<TasmimIksir>): TasmimIksir {
   } as TasmimIksir;
 }
 
-
-/**
- * A hayūlā of nothing in particular.
- *
- * Core is handed matter and never asks what kind, so a test may hand it
- * matter that is not there at all.
- */
-export function mockHayula(): Hayula & { _amal: string[] } {
-  const amal: string[] = [];
-  let waqif = "codex";
-  return {
-    _amal: amal,
-    naw: "wahm",
-    dakhala(ina) {
-      amal.push(`dakhala:${ina}`);
-      waqif = ina;
-      return Promise.resolve(true);
-    },
-    waqif() {
-      return Promise.resolve(waqif);
-    },
-    asas() {
-      return Promise.resolve("codex");
-    },
-    mudtarib() {
-      amal.push("mudtarib");
-      return Promise.resolve(false);
-    },
-    jammada(sabab) {
-      amal.push(`jammada:${sabab}`);
-      return Promise.resolve(true);
-    },
-    thabbata(sabab) {
-      amal.push(`thabbata:${sabab}`);
-      return Promise.resolve(true);
-    },
-    sahaba(ina) {
-      amal.push(`sahaba:${ina ?? "-"}`);
-      return Promise.resolve({ najah: true });
-    },
-    masafa() {
-      return Promise.resolve(0);
-    },
-    azhara(ina) {
-      amal.push(`azhara:${ina}`);
-      return Promise.resolve(true);
-    },
-    istahala(jawhar, ahjar) {
-      amal.push(`istahala:${jawhar}:${ahjar.length}`);
-      return Promise.resolve({ najah: true, jawhar, adadAhjar: ahjar.length });
-    },
-    naqasha(ina) {
-      amal.push(`naqasha:${ina}`);
-      return Promise.resolve(true);
-    },
-    talaam(ahjar) {
-      amal.push(`talaam:${ahjar.length}`);
-      return Promise.resolve({ yaqif: true, yahtaj: [] });
-    },
-  };
-}

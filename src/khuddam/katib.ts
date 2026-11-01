@@ -17,7 +17,7 @@
  * No state persists that Katib has not recorded.
  */
 
-import { AmilHum } from "../hum/client.ts";
+import { Wasila } from "../hum/wasila.ts";
 import { logger } from "../logging/logger.ts";
 import { 
   haddathaAwAdkhalaJalsa,
@@ -32,19 +32,10 @@ import type {
   RasulKharij,
 } from "../types.ts";
 
-/** The name of the inscriber — for chore branch naming */
 function ismMustakhdimGit(): string {
-  return Deno.env.get("IKSIR_GIT_USER") ?? "dev";
+  return process.env.IKSIR_GIT_USER ?? "dev";
 }
 
-/**
- * Wallid ism al-far — generate the branch name.
- *
- * The single source of truth for the naming of furū:
- *   malhamat:  epic/{huwiyya}-{kunya}
- *   khadma:    {ismMustakhdim}/{huwiyya}
- *   warsha:    sandbox/{kunya}
- */
 export function wallidIsmFar(
   identifier: string,
   type: "epic" | "chore" | "sandbox",
@@ -55,11 +46,9 @@ export function wallidIsmFar(
     return `${ismMustakhdimGit()}/${identifier}`;
   }
   if (type === "sandbox") {
-    /** Warsha: kunya if given, else extract from huwiyya */
     const name = slug ?? identifier.replace(/^SANDBOX-/i, "").toLowerCase();
     return `sandbox/${name}`;
   }
-  /** Malhamat: kunya if given, else derive from unwan */
   const effectiveSlug = slug ?? (title
     ? title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30)
     : "work");
@@ -68,20 +57,18 @@ export function wallidIsmFar(
 
 interface TasmimMudirJalasat {
   tasmim: TasmimIksir;
-  amil: AmilHum;
+  amil: Wasila;
   rasul: RasulKharij;
 }
 
 export class MudirJalasat {
   #config: TasmimIksir;
-  #amil: AmilHum;
+  #amil: Wasila;
   #messenger: RasulKharij;
 
   #murshidSessions: Map<string, JalsatMurshid> = new Map();
 
   #murshidFaailId: string | null = null;
-
-  #gitMasdud = false;
 
   constructor(deps: TasmimMudirJalasat) {
     this.#config = deps.tasmim;
@@ -89,26 +76,10 @@ export class MudirJalasat {
     this.#messenger = deps.rasul;
   }
 
-  /** The tasmim of Iksīr */
   get tasmim(): TasmimIksir {
     return this.#config;
   }
 
-  /** Is git masdud — locked during vessel switches? */
-  huwaGitMasdud(): boolean {
-    return this.#gitMasdud;
-  }
-
-  /** Seal or unseal the git qufl */
-  wadaaQuflGit(value: boolean): void {
-    this.#gitMasdud = value;
-  }
-
-
-  /**
-   * Get or create murshid session
-   * Returns metadata about what happened for clear user feedback
-   */
   async wajadaAwKhalaqa(
     identifier: string,
     title: string,
@@ -116,7 +87,6 @@ export class MudirJalasat {
   ): Promise<{ session: JalsatMurshid; jadida: boolean; mustarjaa: boolean; faailSabiq: string | null } | null> {
     const faailSabiq = this.#murshidFaailId;
 
-    /** Is this vessel already lit? */
     const mawjuda = this.#murshidSessions.get(identifier);
     if (mawjuda) {
       await logger.akhbar("session-manager", `Resuming tracked murshid session for ${identifier}`, {
@@ -124,6 +94,7 @@ export class MudirJalasat {
       });
       this.#murshidFaailId = identifier;
       await this.takkadMinQanat(mawjuda);
+      this.#ushhidaJalsa("istirjaa", mawjuda);
       return { session: mawjuda, jadida: false, mustarjaa: true, faailSabiq };
     }
 
@@ -158,38 +129,25 @@ export class MudirJalasat {
 
     await this.#arsalaTasisMurshid(session);
 
+    this.#ushhidaJalsa("khalaqa", session);
     return { session, jadida: true, mustarjaa: false, faailSabiq };
   }
 
-  /**
-   * Get the active murshid session
-   */
   wajadaMurshidFaail(): JalsatMurshid | null {
     if (!this.#murshidFaailId) return null;
     return this.#murshidSessions.get(this.#murshidFaailId) ?? null;
   }
 
-  /**
-   * Get murshid by epic ID
-   */
   jalabMurshid(epicId: string): JalsatMurshid | null {
     return this.#murshidSessions.get(epicId) ?? null;
   }
 
-  /**
-   * Get murshid by messaging channel (provider + channelId).
-   * Uses the messenger's cached reverse lookup.
-   */
   wajadaMurshidBiQanat(provider: string, channelId: string): JalsatMurshid | null {
     const identifier = this.#messenger.hallJalsaBilQanat(provider, channelId);
     if (!identifier) return null;
     return this.#murshidSessions.get(identifier) ?? null;
   }
 
-  /**
-   * Ensure a messaging channel exists for an murshid.
-   * Creates one if missing. Called automatically when murshid starts.
-   */
   async takkadMinQanat(session: JalsatMurshid): Promise<void> {
     if (this.#messenger.yamlikQanatMurshid(session.huwiyya)) {
       return;
@@ -212,29 +170,20 @@ export class MudirJalasat {
       await this.#amil.sendPromptAsync(
         session.id,
         `SYSTEM: Your messaging channel is now active. ` +
-        `All pm_reply and pm_notify messages will appear there. ` +
-        `Al-Kimyawi is listening. If you have pending status updates or responses, please send them now using pm_reply.`,
+        `All mun_radd and mun_balligh messages will appear there. ` +
+        `Al-Kimyawi is listening. If you have pending status updates or responses, please send them now using mun_radd.`,
       );
     }
   }
 
-  /**
-   * Get the active murshid ID
-   */
   wajadaMurshidFaailId(): string | null {
     return this.#murshidFaailId;
   }
 
-  /**
-   * Set the active murshid (called by dispatcher during switch)
-   */
   wadaaMurshidFaail(epicId: string | null): void {
     this.#murshidFaailId = epicId;
   }
 
-  /**
-   * Update murshid status
-   */
   async jaddadaḤalatMurshid(
     epicId: string,
     status: JalsatMurshid["hala"],
@@ -258,14 +207,11 @@ export class MudirJalasat {
       blockedReason,
     });
 
+    this.#ushhidaJalsa("hala", session);
+
     return true;
   }
 
-
-  /**
-   * Send a message to a specific murshid by epicId.
-   * Automatically injects huwiyyatMurshid reminder for pm_reply/pm_notify routing.
-   */
   async arsalaIlaMurshidById(epicId: string, message: string): Promise<boolean> {
     const session = this.#murshidSessions.get(epicId);
     if (!session) {
@@ -282,10 +228,6 @@ export class MudirJalasat {
     return success;
   }
 
-  /**
-   * Send a message to the active murshid session.
-   * Automatically injects huwiyyatMurshid reminder for pm_reply/pm_notify routing.
-   */
   async arsalaIlaMurshid(message: string): Promise<boolean> {
     const session = this.wajadaMurshidFaail();
     if (!session) {
@@ -302,23 +244,16 @@ export class MudirJalasat {
     return success;
   }
 
-  /**
-   * Build message with system-reminder suffix for murshid routing.
-   */
   maaTadhkirNizam(session: JalsatMurshid, message: string): string {
     return `${message}
 
 <system-reminder>
 Your murshid ID is: ${session.huwiyya}
-IMPORTANT: This message is from al-Kimyawi via Telegram. You MUST use pm_reply to respond.
-Do NOT output text directly - Al-Kimyawi cannot see your text output, only pm_reply messages.
+IMPORTANT: This message is from al-Kimyawi via Telegram. You MUST use mun_radd to respond.
+Do NOT output text directly - Al-Kimyawi cannot see your text output, only mun_radd messages.
 </system-reminder>`;
   }
 
-  /**
-   * Send initial prompt to murshid session
-   * Uses iksir-murshid agent which has the full system prompt
-   */
   async #arsalaTasisMurshid(session: JalsatMurshid): Promise<void> {
     const prompt = session.naw === "epic" 
       ? `# Epic Assignment
@@ -327,7 +262,7 @@ Do NOT output text directly - Al-Kimyawi cannot see your text output, only pm_re
 - **ID**: ${session.huwiyya}
 - **Title**: ${session.unwan}
 
-Please use \`pm_read_ticket\` to fetch the full epic details and begin planning.
+Read it with \`mun_iqra_wasfa\` and begin planning.
 
 Awaiting direction from al-Kimyawi...`
       : `# Chore Assignment
@@ -338,8 +273,8 @@ Awaiting direction from al-Kimyawi...`
 
 This is a standalone task (chore), not an epic. No sub-tickets needed.
 
-Please use \`pm_read_ticket\` to fetch the full details, then implement directly.
-When done, use \`mun_istihal\` to create a PR.
+Read the waṣfa with \`mun_iqra_wasfa\`, then work the matter in your vessel.
+When done, call for the fire with \`mun_safa\`; when it stands, \`mun_fasl\`.
 
 Awaiting direction from al-Kimyawi...`;
 
@@ -348,11 +283,6 @@ Awaiting direction from al-Kimyawi...`;
     });
   }
 
-
-  /**
-   * Get murshid by jalsa id (reverse lookup).
-   * Used where a hadath carries only the sid.
-   */
   wajadaMurshidBiHuwiyyatJalsa(sessionId: string): JalsatMurshid | null {
     for (const session of this.#murshidSessions.values()) {
       if (session.id === sessionId) return session;
@@ -360,17 +290,6 @@ Awaiting direction from al-Kimyawi...`;
     return null;
   }
 
-  /**
-   * Handle a compaction event for an murshid session.
-   *
-   * Curation summarizes the murshid's history and prior context is lost with
-   * it. This sends a follow-up carrying the diary entries back in, with a
-   * reminder to use pm_read_diary — the only thing standing between a curated
-   * murshid and a murshid that has forgotten its own decisions.
-   *
-   * Reaches only curations Raqib asked for. A worker that curates itself on
-   * token overflow raises no tone Iksir can hear.
-   */
   async aalajaDamj(sessionId: string): Promise<void> {
     const session = this.wajadaMurshidBiHuwiyyatJalsa(sessionId);
     if (!session) return;
@@ -379,7 +298,6 @@ Awaiting direction from al-Kimyawi...`;
       sessionId,
     });
 
-    /** Fetch diary entries for this murshid */
     const entries = jalabaQararatSijill({
       huwiyyatMurshid: session.huwiyya,
       limit: 15,
@@ -390,14 +308,13 @@ Awaiting direction from al-Kimyawi...`;
         `<system-reminder>
 Context compaction occurred. Your conversation history was summarized.
 Your murshid ID is: ${session.huwiyya}
-Use pm_reply to respond to al-Kimyawi — direct text output is invisible.
-Use pm_read_diary to reload full decision history if needed.
+Use mun_radd to respond to al-Kimyawi — direct text output is invisible.
+Use mun_iqra_mudawwana to reload full decision history if needed.
 </system-reminder>`
       );
       return;
     }
 
-    /** Format diary entries */
     const diaryBlock = entries
       .map(
         (e) =>
@@ -412,22 +329,16 @@ Context compaction occurred. Key diary decisions for your reference:
 ${diaryBlock}
 
 Your murshid ID is: ${session.huwiyya}
-Use pm_reply to respond to al-Kimyawi — direct text output is invisible.
-Call pm_read_diary for full decision history with reasoning.
+Use mun_radd to respond to al-Kimyawi — direct text output is invisible.
+Call mun_iqra_mudawwana for full decision history with reasoning.
 </system-reminder>`
     );
   }
 
-  /**
-   * Get all murshid sessions
-   */
   wajadaJalasatMurshid(): JalsatMurshid[] {
     return Array.from(this.#murshidSessions.values());
   }
 
-  /**
-   * Export state for persistence
-   */
   saddaraHala(): {
     murshidun: JalsatMurshid[];
     murshidFaail: string | null;
@@ -438,9 +349,6 @@ Call pm_read_diary for full decision history with reasoning.
     };
   }
 
-  /**
-   * Import state from persistence
-   */
   istawradaHala(state: {
     murshidun?: JalsatMurshid[];
     murshidFaail?: string | null;
@@ -456,17 +364,7 @@ Call pm_read_diary for full decision history with reasoning.
     }
   }
 
-
-  /**
-   * Write one vessel to the sijill.
-   *
-   * A vessel is written alone because jaddad_fi is stamped on every write.
-   * Saving all of them to record a change in one gives every other vessel a
-   * fresh timestamp it did not earn, and the sijill can no longer say which
-   * one moved.
-   */
   #hafizaJalsa(session: JalsatMurshid): void {
-    /** Handle legacy sessions that might have epicTitle instead of title */
     haddathaAwAdkhalaJalsa({
       id: session.id,
       huwiyya: session.huwiyya,
@@ -478,11 +376,6 @@ Call pm_read_diary for full decision history with reasoning.
       unshiaFi: session.unshiaFi,
       akhirRisalaFi: session.akhirRisalaFi,
       halaMufassala: {
-        /**
-         * The worker's own handle for this vessel. Without it a
-         * restarted murshid resumes nothing and wakes with no memory
-         * of its own work.
-         */
         nestId: this.#amil.huwiyyatUsh(session.id),
       },
     });
@@ -492,9 +385,6 @@ Call pm_read_diary for full decision history with reasoning.
     }
   }
 
-  /**
-   * Write a single vessel to the sijill, by the waṣfa it carries.
-   */
   async hafizaJalsaWahida(epicId: string): Promise<void> {
     const session = this.#murshidSessions.get(epicId);
     if (!session) return;
@@ -508,9 +398,19 @@ Call pm_read_diary for full decision history with reasoning.
     }
   }
 
-  /**
-   * Save session state to SQLite
-   */
+  #ushhidaJalsa(hadath: string, session: JalsatMurshid): void {
+    this.#amil.bassaLog("info", `jalsa ${hadath} ${session.huwiyya}`, {
+      naw: "jalsa",
+      hadath,
+      huwiyya: session.huwiyya,
+      unwan: session.unwan,
+      nawJalsa: session.naw,
+      hala: session.hala,
+      far: session.far,
+      sidJalsa: session.id,
+    });
+  }
+
   async hafizaHala(): Promise<void> {
     try {
       for (const session of this.#murshidSessions.values()) {
@@ -527,18 +427,6 @@ Call pm_read_diary for full decision history with reasoning.
     }
   }
 
-  /**
-   * Restore the vessels from the sijill.
-   *
-   * The sijill is the truth of which jalasat exist. Nothing is asked of the
-   * nest here — a vessel is not less real because no cell happens to be
-   * burning in it, and a worker that exits between turns (claude `-p` does)
-   * would make every restart look like a graveyard.
-   *
-   * Each restored vessel is handed back to the amil with the worker's
-   * nestId, so the next hathth carries a resume and the murshid wakes
-   * remembering its own work.
-   */
   async hammalaHala(): Promise<void> {
     try {
       const dbSessions = jalabaKullJalasat();
@@ -554,7 +442,6 @@ Call pm_read_diary for full decision history with reasoning.
           nestId?: string;
         };
 
-        /** Hydrate qanawat from the sijill */
         const channels = this.#messenger.hammalQanawatLilJalsa(dbSession.huwiyya);
 
         const session: JalsatMurshid = {
@@ -590,7 +477,6 @@ Call pm_read_diary for full decision history with reasoning.
         murshidun: murshidunṢalihun,
       });
 
-      /** Find active murshid (one with status="fail") */
       const activeSession = murshidunṢalihun.find(s => s.hala === "fail");
       if (activeSession) {
         this.#murshidFaailId = activeSession.huwiyya;
@@ -610,12 +496,8 @@ Call pm_read_diary for full decision history with reasoning.
       });
     }
   }
-
 }
 
-/**
- * Create a session manager instance
- */
 export function istadaaKatib(deps: TasmimMudirJalasat): MudirJalasat {
   return new MudirJalasat(deps);
 }

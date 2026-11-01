@@ -14,10 +14,6 @@ import { escapeMarkdown, escapeMarkdownV2 } from "../utils/strings.ts";
 import type { TasmimIksir, Ishara, TaaliqMuraja } from "../types.ts";
 import { PROTOCOL_SOCKS5, TELEGRAM_API_BASE } from "../constants.ts";
 
-/**
- * Fetch wrapper that uses SOCKS5 proxy for Telegram API if configured.
- * Uses execCommand to call curl with --socks5 flag.
- */
 async function proxyFetch(
   url: string,
   proxy: string,
@@ -27,7 +23,6 @@ async function proxyFetch(
     return fetch(url, options);
   }
 
-  /** Use curl with SOCKS5 proxy */
   const method = options?.method ?? "GET";
   const headers = options?.headers as Record<string, string> | undefined;
   const body = options?.body as string | undefined;
@@ -60,7 +55,6 @@ async function proxyFetch(
     throw new Error(`curl failed: ${result.stderr}`);
   }
 
-  /** Parse curl -i output (headers + body) */
   const output = result.stdout;
   const headerEndIndex = output.indexOf("\r\n\r\n");
 
@@ -71,11 +65,9 @@ async function proxyFetch(
   const headerSection = output.slice(0, headerEndIndex);
   const bodySection = output.slice(headerEndIndex + 4);
 
-  /** Parse status from first line (e.g., "HTTP/1.1 200 OK") */
   const statusMatch = headerSection.match(/HTTP\/[\d.]+ (\d+)/);
   const status = statusMatch ? parseInt(statusMatch[1], 10) : 200;
 
-  /** Parse headers */
   const responseHeaders = new Headers();
   const headerLines = headerSection.split("\r\n").slice(1);
   for (const line of headerLines) {
@@ -90,11 +82,9 @@ async function proxyFetch(
   return new Response(bodySection, { status, headers: responseHeaders });
 }
 
-interface TelegramMessage {
+export interface TelegramMessage {
   message_id: number;
-  /** Topic ID if in a forum topic (1 = General topic) */
   message_thread_id?: number;
-  /** True if this message is in a topic */
   is_topic_message?: boolean;
   from?: {
     id: number;
@@ -107,7 +97,6 @@ interface TelegramMessage {
   date: number;
 }
 
-/** Forum topic colors (Telegram predefined) */
 export const TOPIC_COLORS = {
   blue: 0x6FB9F0,
   yellow: 0xFFD67E,
@@ -124,7 +113,7 @@ interface ForumTopic {
   icon_custom_emoji_id?: string;
 }
 
-interface TelegramCallbackQuery {
+export interface TelegramCallbackQuery {
   id: string;
   from: {
     id: number;
@@ -134,7 +123,7 @@ interface TelegramCallbackQuery {
   data?: string;
 }
 
-interface TelegramUpdate {
+export interface TelegramUpdate {
   update_id: number;
   message?: TelegramMessage;
   callback_query?: TelegramCallbackQuery;
@@ -178,51 +167,30 @@ export class TelegramClient {
     this.baseUrl = `${TELEGRAM_API_BASE}/bot${this.botToken}`;
   }
 
-  /**
-   * Get the group ID if configured
-   */
   getGroupId(): string | undefined {
     return this.groupId;
   }
 
-  /**
-   * Get the private chat ID
-   */
   getChatId(): string {
     return this.chatId;
   }
 
-  /**
-   * Get the dispatch topic ID if configured
-   */
   getDispatchTopicId(): number | undefined {
     return this.dispatchTopicId;
   }
 
-  /**
-   * Check if group mode is enabled (has both group ID and dispatch topic)
-   */
   isGroupMode(): boolean {
     return Boolean(this.groupId && this.dispatchTopicId);
   }
 
-  /**
-   * Get the effective chat ID for operations (group if available, else private)
-   */
   getEffectiveChatId(): string {
     return this.groupId ?? this.chatId;
   }
 
-  /**
-   * Check if Telegram notifications are enabled
-   */
   mumakkan(): boolean {
     return this.enabled;
   }
 
-  /**
-   * Validate that the bot token works
-   */
   async tahaqqaqToken(): Promise<boolean> {
     if (!this.enabled) return false;
 
@@ -235,28 +203,21 @@ export class TelegramClient {
     }
   }
 
-  /** @deprecated Use the shared escapeMarkdownV2() from utils/strings.ts directly */
   escapeMarkdownV2(text: string): string {
     return escapeMarkdownV2(text);
   }
 
-  /** @deprecated Use the shared escapeMarkdown() from utils/strings.ts directly */
   escapeMarkdown(text: string): string {
     return escapeMarkdown(text);
   }
 
-  /**
-   * Send a message, optionally to a specific topic
-   */
   async arsalaRisala(
     text: string,
     options?: {
       parseMode?: "Markdown" | "MarkdownV2" | "HTML";
       keyboard?: InlineKeyboardMarkup;
       disableNotification?: boolean;
-      /** Topic ID to send to (omit for General topic) */
       topicId?: number;
-      /** Override chat ID (defaults to group if available, else private chat) */
       chatId?: string;
     }
   ): Promise<number | null> {
@@ -265,7 +226,6 @@ export class TelegramClient {
       return null;
     }
 
-    /** Use provided chatId, or group if available, or private chat */
     const targetChatId = options?.chatId ?? this.getEffectiveChatId();
 
     const body: Record<string, unknown> = {
@@ -287,7 +247,7 @@ export class TelegramClient {
     }
 
     try {
-      const response = await proxyFetch(`${this.baseUrl}/arsalaRisala`, this.proxy, {
+      const response = await proxyFetch(`${this.baseUrl}/sendMessage`, this.proxy, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -311,10 +271,6 @@ export class TelegramClient {
     }
   }
 
-  /**
-   * Send a message with fallback chain: Markdown → plain text.
-   * Use this when the message may contain user-generated content with special chars.
-   */
   async arsalaRisalaWithFallback(
     text: string,
     options?: {
@@ -324,7 +280,6 @@ export class TelegramClient {
       chatId?: string;
     }
   ): Promise<number | null> {
-    /** Try Markdown first */
     const result = await this.arsalaRisala(text, {
       ...options,
       parseMode: "Markdown",
@@ -341,9 +296,6 @@ export class TelegramClient {
     });
   }
 
-  /**
-   * Send a message to the dispatch topic (for spawning murshids)
-   */
   async sendToDispatch(
     text: string,
     options?: {
@@ -362,9 +314,6 @@ export class TelegramClient {
     });
   }
 
-  /**
-   * Send a message to an murshid's topic
-   */
   async arsalaIlaMurshidTopic(
     topicId: number,
     text: string,
@@ -384,11 +333,6 @@ export class TelegramClient {
     });
   }
 
-
-  /**
-   * Create a forum topic for an murshid session.
-   * Requires a forum-enabled supergroup (groupId must be set).
-   */
   async createForumTopic(
     name: string,
     options?: {
@@ -438,9 +382,6 @@ export class TelegramClient {
     }
   }
 
-  /**
-   * Close a forum topic (hides it but preserves history)
-   */
   async closeForumTopic(topicId: number): Promise<boolean> {
     if (!this.enabled || !this.groupId) return false;
 
@@ -464,9 +405,6 @@ export class TelegramClient {
     }
   }
 
-  /**
-   * Reopen a closed forum topic
-   */
   async reopenForumTopic(topicId: number): Promise<boolean> {
     if (!this.enabled || !this.groupId) return false;
 
@@ -487,9 +425,6 @@ export class TelegramClient {
     }
   }
 
-  /**
-   * Delete a forum topic (removes it and all messages)
-   */
   async deleteForumTopic(topicId: number): Promise<boolean> {
     if (!this.enabled || !this.groupId) return false;
 
@@ -513,9 +448,6 @@ export class TelegramClient {
     }
   }
 
-  /**
-   * Edit a forum topic's name or icon
-   */
   async editForumTopic(
     topicId: number,
     options: {
@@ -551,23 +483,14 @@ export class TelegramClient {
     }
   }
 
-  /**
-   * Get the topic ID from a message (1 = General, undefined = no topics)
-   */
   jalabRisalaTopicId(message: TelegramMessage): number | undefined {
     return message.message_thread_id;
   }
 
-  /**
-   * Check if a message is from the General topic (or no topic)
-   */
   isGeneralTopic(message: TelegramMessage): boolean {
     return !message.message_thread_id || message.message_thread_id === 1;
   }
 
-  /**
-   * Answer a callback query (removes loading spinner from button)
-   */
   async answerCallback(callbackQueryId: string, text?: string): Promise<boolean> {
     try {
       const response = await proxyFetch(`${this.baseUrl}/answerCallbackQuery`, this.proxy, {
@@ -586,9 +509,6 @@ export class TelegramClient {
     }
   }
 
-  /**
-   * Edit a message
-   */
   async editMessage(messageId: number, text: string, keyboard?: InlineKeyboardMarkup): Promise<boolean> {
     if (!this.enabled) return false;
 
@@ -616,9 +536,6 @@ export class TelegramClient {
     }
   }
 
-  /**
-   * Send a notification (unified interface)
-   */
   async sendNotification(notification: Ishara): Promise<number | null> {
     const emoji = this.getCategoryEmoji(notification.sinf);
     const text = `${emoji} *${notification.unwan}*\n\n${notification.matn}`;
@@ -634,9 +551,6 @@ export class TelegramClient {
     });
   }
 
-  /**
-   * Get emoji for notification category
-   */
   private getCategoryEmoji(category: string): string {
     const emojis: Record<string, string> = {
       blocker: "🚫",
@@ -650,11 +564,7 @@ export class TelegramClient {
     return emojis[category] ?? "📢";
   }
 
-  /**
-   * Build an inline keyboard
-   */
   private buildKeyboard(buttons: Array<{ text: string; callback_data?: string; url?: string }>): InlineKeyboardMarkup {
-    /** Arrange buttons in rows of 2 */
     const rows: InlineKeyboardButton[][] = [];
     for (let i = 0; i < buttons.length; i += 2) {
       rows.push(buttons.slice(i, i + 2));
@@ -662,9 +572,6 @@ export class TelegramClient {
     return { inline_keyboard: rows };
   }
 
-  /**
-   * Send project started message
-   */
   async sendProjectStarted(
     projectId: string,
     title: string,
@@ -690,9 +597,6 @@ Beginning work...`;
     return this.arsalaRisala(text, { parseMode: "Markdown" });
   }
 
-  /**
-   * Send progress update
-   */
   async sendProgress(
     projectId: string,
     completed: Array<{ id: string; hala?: string }>,
@@ -730,7 +634,6 @@ Overall: ${percent}% complete`;
     return this.arsalaRisala(text, { parseMode: "Markdown" });
   }
 
-  /** What has been said upon a decanted jawhar. */
   async sendTaaliqMurajas(
     huwiyyatWasfa: string,
     comments: TaaliqMuraja[],
@@ -763,23 +666,14 @@ Overall: ${percent}% complete`;
     return this.arsalaRisala(text, { parseMode: "Markdown" });
   }
 
-  /**
-   * Register a message handler
-   */
   onMessage(handler: MessageHandler): void {
     this.messageHandlers.push(handler);
   }
 
-  /**
-   * Register a callback query handler
-   */
   onCallback(handler: CallbackHandler): void {
     this.callbackHandlers.push(handler);
   }
 
-  /**
-   * Start polling for updates
-   */
   async startPolling(): Promise<void> {
     if (!this.enabled) {
       await logger.haDHHir("telegram", "Telegram is disabled, not starting polling");
@@ -823,9 +717,6 @@ Overall: ${percent}% complete`;
     await logger.akhbar("telegram", "Stopped Telegram polling");
   }
 
-  /**
-   * Stop polling
-   */
   stopPolling(): void {
     this.isPolling = false;
     if (this.pollAbortController) {
@@ -834,11 +725,7 @@ Overall: ${percent}% complete`;
     }
   }
 
-  /**
-   * Handle an incoming update
-   */
   private async handleUpdate(update: TelegramUpdate): Promise<void> {
-    /** Validate chat ID for security - allow private chat OR group */
     const chatId = update.message?.chat.id ?? update.callback_query?.message?.chat.id;
     const chatIdStr = chatId ? String(chatId) : undefined;
     
@@ -873,34 +760,21 @@ Overall: ${percent}% complete`;
     }
   }
 
-  /**
-   * Check if a message is from the dispatch topic
-   */
   isDispatchTopic(message: TelegramMessage): boolean {
     if (!this.dispatchTopicId) return false;
     return message.message_thread_id === this.dispatchTopicId;
   }
 
-  /**
-   * Check if a message is from the group
-   */
   isGroupMessage(message: TelegramMessage): boolean {
     return this.groupId ? String(message.chat.id) === this.groupId : false;
   }
 
-  /**
-   * Check if a message is from private chat
-   */
   isPrivateMessage(message: TelegramMessage): boolean {
     return String(message.chat.id) === this.chatId;
   }
 }
 
-/**
- * Create a Telegram client instance
- */
 export function anshaaTelegramAmil(config: TasmimIksir): TelegramClient {
   return new TelegramClient(config);
 }
-
 

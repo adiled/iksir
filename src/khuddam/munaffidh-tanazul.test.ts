@@ -1,19 +1,15 @@
-import { assertEquals, assertStringIncludes } from "@std/assert";
+import { test, assertEquals, assertStringIncludes } from "../ikhtibar.ts";
 import { Munaffidh } from "./munaffidh.ts";
 import { MudirJalasat } from "./katib.ts";
 import { jalabaKullJalasat } from "../../db/db.ts";
 import {
   makeConfig,
-  mockAmilHum,
+  mockWasila,
   mockMessenger,
   withTestDb,
 } from "../test-helpers.ts";
 import type { JalsatMurshid } from "../types.ts";
 
-/**
- * A Munadi that holds the flame wherever the test puts it, and records any
- * switchover it is asked for.
- */
 function munadiStub(faila: string | null) {
   const tahwilat: string[] = [];
   return {
@@ -32,7 +28,7 @@ function munadiStub(faila: string | null) {
 async function mashhad(faila: string | null) {
   const katib = new MudirJalasat({
     tasmim: makeConfig(),
-    amil: mockAmilHum() as never,
+    amil: mockWasila() as never,
     rasul: mockMessenger(),
   });
 
@@ -53,13 +49,11 @@ async function mashhad(faila: string | null) {
   const munaffidh = new Munaffidh({
     tasmim: makeConfig(),
     wasfat: undefined as never,
-    fasl: undefined as never,
     rasul: mockMessenger(),
     ntfy: undefined as never,
     mudirJalasat: katib,
-    amil: mockAmilHum() as never,
-    hayula: undefined as never,
-    safa: undefined as never,
+    amil: mockWasila() as never,
+    sayrafi: undefined as never,
   });
 
   const munadi = munadiStub(faila);
@@ -78,13 +72,7 @@ const nida = (sabab: string, tafasil: string) => ({
 const halaSijill = (huwiyya: string) =>
   jalabaKullJalasat().find((s) => s.huwiyya === huwiyya)?.hala;
 
-/**
- * A murshid that kept working after the flame moved on still finishes. How its
- * work ended is its own to say, and the sijill must hear it — otherwise the
- * record keeps whatever the last accepted yield said, and is wrong with no
- * event to contradict it.
- */
-Deno.test("a murshid without the flame still records how its work ended", async () => {
+test("a murshid without the flame still records how its work ended", async () => {
   await withTestDb(async () => {
     const { munaffidh } = await mashhad(null);
 
@@ -95,11 +83,7 @@ Deno.test("a murshid without the flame still records how its work ended", async 
   });
 });
 
-/**
- * Recording is not passing the flame on. Only the murshid holding it may say
- * where it goes next.
- */
-Deno.test("a murshid without the flame does not move control", async () => {
+test("a murshid without the flame does not move control", async () => {
   await withTestDb(async () => {
     const { munaffidh, munadi } = await mashhad("LUGHA-1");
 
@@ -110,10 +94,7 @@ Deno.test("a murshid without the flame does not move control", async () => {
   });
 });
 
-/**
- * The murshid holding the flame yields as it always did.
- */
-Deno.test("the murshid holding the flame still yields it", async () => {
+test("the murshid holding the flame still yields it", async () => {
   await withTestDb(async () => {
     const { munaffidh, munadi } = await mashhad("LUGHA-2");
 
@@ -124,10 +105,7 @@ Deno.test("the murshid holding the flame still yields it", async () => {
   });
 });
 
-/**
- * A yield from something holding no vessel is refused, and writes nothing.
- */
-Deno.test("a yield from no vessel is refused", async () => {
+test("a yield from no vessel is refused", async () => {
   await withTestDb(async () => {
     const { munaffidh } = await mashhad(null);
 

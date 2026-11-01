@@ -13,12 +13,10 @@
  * The hands that turn the Murshid's words into action.
  */
 
-import type { Fasl } from "../hayula/fasl.ts";
-import type { Safa } from "../hayula/safa.ts";
 import type { RasulKharij } from "../types.ts";
 import type { SijillWasfat, Wasfa } from "../wasfa/sijill-wasfat.ts";
 import { NtfyClient } from "../rasul/ntfy.ts";
-import { AmilHum } from "../hum/client.ts";
+import { Wasila } from "../hum/wasila.ts";
 import { logger } from "../logging/logger.ts";
 import { 
   jalabaAhdathGhairMuaalaja, 
@@ -33,52 +31,37 @@ import type {
   NidaKhalqWasfa,
   NidaTajdidWasfa,
   NidaWadaaAlaqat,
-  NidaFahasFar,
   NidaTabligh,
   NidaRadd,
   NidaTanazal,
   NidaTalabTahakkum,
-  NidaKhalqFar,
   NidaSafa,
-  NidaTalaum,
+  NidaShahada,
   NidaFasl,
-  NidaIstihal,
-  NidaIstihalMutabaqq,
-  NidaIltazim,
-  NidaRattib,
 } from "../types.ts";
-import { wallidIsmFar } from "./katib.ts";
 import { mayyazaTanbih } from "./mumayyiz.ts";
 import type { MudirJalasat } from "./katib.ts";
 import type { Munadi } from "./munadi.ts";
-import type { Hayula } from "../hayula/hayula.ts";
+import type { Sayrafi } from "./sayrafi.ts";
 
 interface MunaffidhDeps {
   tasmim: TasmimIksir;
   wasfat: SijillWasfat;
-  fasl: Fasl;
   rasul: RasulKharij;
   ntfy: NtfyClient;
   mudirJalasat: MudirJalasat;
-  amil: AmilHum;
-  /** The matter worked upon. Iksīr never asks what kind. */
-  hayula: Hayula;
-  /** The fire a waṣfa declares for itself. */
-  safa: Safa;
+  amil: Wasila;
+  sayrafi: Sayrafi;
 }
-
-
 
 export class Munaffidh {
   readonly #config: TasmimIksir;
   #wasfat: SijillWasfat;
-  #fasl: Fasl;
   #messenger: RasulKharij;
   #ntfy: NtfyClient;
   #sessionManager: MudirJalasat;
-  #amil: AmilHum;
-  #hayula: Hayula;
-  #safa: Safa;
+  #amil: Wasila;
+  #sayrafi: Sayrafi;
   #iksir: Munadi | null = null;
 
   #mutahakkimIlgha: AbortController | null = null;
@@ -86,45 +69,28 @@ export class Munaffidh {
   constructor(deps: MunaffidhDeps) {
     this.#config = deps.tasmim;
     this.#wasfat = deps.wasfat;
-    this.#fasl = deps.fasl;
     this.#messenger = deps.rasul;
     this.#ntfy = deps.ntfy;
     this.#sessionManager = deps.mudirJalasat;
     this.#amil = deps.amil;
-    this.#hayula = deps.hayula;
-    this.#safa = deps.safa;
+    this.#sayrafi = deps.sayrafi;
   }
 
-  /**
-   * Set Munadi (called after Munadi is created to avoid circular dep)
-   */
   wadaaMunadi(iksir: Munadi): void {
     this.#iksir = iksir;
   }
 
-  /** Access config for quiet hours checks etc. */
   get tasmim(): TasmimIksir {
     return this.#config;
   }
 
-  /**
-   * Load persisted state (call before startProcessing)
-   * With SQLite, there's no offset to load - processed state is in the DB.
-   */
   async hammalaHala(): Promise<void> {
     await logger.akhbar("tool-executor", "State managed by SQLite (no offset to load)");
   }
 
-  /**
-   * Save state to disk (public, for graceful ighlaaq)
-   * With SQLite, processed events are already marked - nothing to persist separately.
-   */
   async hafizaHala(): Promise<void> {
   }
 
-  /**
-   * Start draining the ahdath the instruments inscribe
-   */
   async badaaMuaalaja(signal: AbortSignal): Promise<void> {
     this.#mutahakkimIlgha = new AbortController();
     const combinedSignal = AbortSignal.any([signal, this.#mutahakkimIlgha.signal]);
@@ -133,7 +99,7 @@ export class Munaffidh {
       try {
         await this.aalajAhdath();
       } catch (error) {
-        if (!(error instanceof Deno.errors.NotFound)) {
+        if ((error as NodeJS.ErrnoException)?.code !== "ENOENT") {
           await logger.sajjalKhata("tool-executor", "Event processing error", {
             error: String(error),
           });
@@ -143,17 +109,11 @@ export class Munaffidh {
     }
   }
 
-  /**
-   * Stop processing
-   */
   awqafMuaalaja(): void {
     this.#mutahakkimIlgha?.abort();
     this.#mutahakkimIlgha = null;
   }
 
-  /**
-   * Process unprocessed events from SQLite
-   */
   async aalajAhdath(): Promise<void> {
     const events = jalabaAhdathGhairMuaalaja("pm");
     
@@ -176,29 +136,8 @@ export class Munaffidh {
     }
   }
 
-  /**
-   * Handle one hadath
-   */
-  /** Instruments that alter the matter, sealed while a vessel is being changed */
-  static readonly GIT_TOOLS = new Set([
-    "mun_khalaq_far", "mun_rattib", "mun_iltazim", "mun_idfa", "mun_istihal", "mun_istihal_mutabaqq",
-  ]);
-
   async aalajHadath(event: MunToolCall): Promise<void> {
     await logger.tatbeeq("tool-executor", `Processing: ${event.tool}`);
-
-    if (Munaffidh.GIT_TOOLS.has(event.tool) && this.#sessionManager.huwaGitMasdud()) {
-      const msg = `The matter is sealed: a vessel is being changed. Try again shortly.`;
-      const targetId = ("huwiyyatMurshid" in event && event.huwiyyatMurshid)
-        ? event.huwiyyatMurshid as string
-        : null;
-      if (targetId) {
-        await this.#sessionManager.arsalaIlaMurshidById(targetId, `## Tool Result: ${event.tool}\n\n${msg}`);
-      } else {
-        await this.#sessionManager.arsalaIlaMurshid(`## Tool Result: ${event.tool}\n\n${msg}`);
-      }
-      return;
-    }
 
     let result: string;
 
@@ -214,9 +153,6 @@ export class Munaffidh {
           result = await this.aalajAlaqat(event);
           break;
 
-        case "mun_fahas_far":
-          result = await this.aalajFahsFar(event);
-          break;
         case "mun_balligh":
           result = await this.aalajTanbih(event);
           break;
@@ -225,32 +161,14 @@ export class Munaffidh {
           break;
         case "mun_sajjal_qarar":
           return;
+        case "mun_shahada":
+          await this.aalajShahada(event);
+          return;
         case "mun_tanazal":
           result = await this.aalajTanazul(event);
           break;
         case "mun_talab_tahakkum":
           result = await this.aalajTalabTahakkum(event);
-          break;
-        case "mun_khalaq_far":
-          result = await this.aalajKhalqFar(event);
-          break;
-        case "mun_rattib":
-          result = await this.aalajGitAdd(event);
-          break;
-        case "mun_iltazim":
-          result = await this.aalajIltizam(event);
-          break;
-        case "mun_idfa":
-          result = await this.aalajGitPush();
-          break;
-        case "mun_talaum":
-          result = await this.aalajTalaum(event);
-          break;
-        case "mun_istihal":
-          result = await this.aalajIstihal(event);
-          break;
-        case "mun_istihal_mutabaqq":
-          result = await this.aalajIstihalMutabaqq(event);
           break;
         case "mun_safa":
           result = await this.aalajSafa(event);
@@ -262,7 +180,6 @@ export class Munaffidh {
           result = `Unknown tool: ${(event as { tool: string }).tool}`;
       }
 
-      /** Send result back to the originating murshid (not necessarily the active one) */
       const targetId = ("huwiyyatMurshid" in event && event.huwiyyatMurshid)
         ? event.huwiyyatMurshid as string
         : null;
@@ -285,18 +202,16 @@ export class Munaffidh {
     }
   }
 
-
-  /**
-   * Handle pm_create_wasfa
-   */
   async #aalajaKhalqWasfa(call: NidaKhalqWasfa): Promise<string> {
     const wasfa = await this.#wasfat.khalaq({
+      huwiyya: call.huwiyya,
       unwan: call.unwan,
       matn: call.wasf,
       qadr: call.taqdir,
       hala: call.hala,
       wasm: call.wasamat,
       ab: call.huwiyyatAb,
+      mayayir: call.mayayir,
     });
 
     return `Wasfa inscribed.
@@ -304,13 +219,11 @@ export class Munaffidh {
 **Name:** ${wasfa.huwiyya}
 **Says:** ${wasfa.unwan}
 **Condition:** ${wasfa.hala ?? "khaam"}
+**Fire:** ${wasfa.mayayir?.length ? `${wasfa.mayayir.length} maʿāyīr` : "none declared — mun_safa cannot assay it until mun_jaddid_wasfa gives it one"}
 
 Bind it to others with mun_wadaa_alaqat.`;
   }
 
-  /**
-   * Handle pm_update_wasfa
-   */
   async #aalajaTajdidWasfa(call: NidaTajdidWasfa): Promise<string> {
     const issue = await this.#wasfat.iqra(call.huwiyyatWasfa);
     if (!issue) {
@@ -322,17 +235,15 @@ Bind it to others with mun_wadaa_alaqat.`;
     if (call.updates.wasf) taghyir.matn = call.updates.wasf;
     if (call.updates.taqdir) taghyir.qadr = call.updates.taqdir;
     if (call.updates.hala) taghyir.hala = call.updates.hala;
+    if (call.updates.mayayir) taghyir.mayayir = call.updates.mayayir;
 
     await this.#wasfat.jaddid(issue.huwiyya, taghyir);
 
     return `Wasfa altered: ${call.huwiyyatWasfa}
 
-Updated fields: ${Object.keys(call.updates).join(", ")}`;
+Updated fields: ${Object.entries(call.updates).filter(([, v]) => v !== undefined).map(([k]) => k).join(", ")}`;
   }
 
-  /**
-   * Handle pm_set_relations
-   */
   async aalajAlaqat(call: NidaWadaaAlaqat): Promise<string> {
     await logger.akhbar("tool-executor", "Setting relations", {
       huwiyyatWasfa: call.huwiyyatWasfa,
@@ -352,36 +263,7 @@ ${call.yahjub?.length ? `**Blocks:** ${call.yahjub.join(", ")}` : ""}
 ${call.mahjoubBi?.length ? `**Blocked by:** ${call.mahjoubBi.join(", ")}` : ""}`;
   }
 
-  /**
-   * Handle pm_check_branch_status
-   */
-  async aalajFahsFar(call: NidaFahasFar): Promise<string> {
-    const defaultBranch = await this.#hayula.asas();
-    const comparison = await this.#fasl.farq(defaultBranch, call.far);
-
-    if (!comparison) {
-      return `The vessel ${call.far} could not be compared. It may not exist.`;
-    }
-
-    return `## Vessel: ${call.far}
-
-**Ahead of the codex:** ${comparison.amam}
-**Behind it:** ${comparison.khalf}
-**Matter changed:** ${comparison.ahjar}
-
-${
-      comparison.khalf > 0
-        ? "⚠️ The codex has moved beneath this vessel. Draw it in before decanting."
-        : "✓ The vessel stands on current ground."
-    }`;
-  }
-
-  /**
-   * Handle pm_notify
-   * Filters khabath notifications, routes dhahab ones to mawdu al-Kimyawi.
-   */
   async aalajTanbih(call: NidaTabligh): Promise<string> {
-    /** Step 1: Mayyiz the tanbih */
     const tamyiz = await mayyazaTanbih(this.#amil, call.risala);
 
     if (!tamyiz.dhahab) {
@@ -440,11 +322,6 @@ Awwaliyya: ${call.awwaliyya}
 Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." : ""}`;
   }
 
-  /**
-   * Handle pm_reply
-   * Direct response to al-Kimyawi's question - no filtering, just route to topic.
-   * Uses fallback chain: Markdown → MarkdownV2 → plain text
-   */
   async aalajRadd(call: NidaRadd): Promise<string> {
     if (!this.#messenger.mumakkan()) {
       return "Warning: Messenger not enabled. Reply not delivered.";
@@ -470,9 +347,6 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
     }
   }
 
-  /**
-   * Handle pm_yield - murshid voluntarily yields control
-   */
   async aalajTanazul(call: NidaTanazal): Promise<string> {
     if (!this.#iksir) {
       return "Error: Munadi not tahyiad.";
@@ -486,12 +360,6 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
       return `Cannot yield: you (${yielderId}) hold no vessel.`;
     }
 
-    /**
-     * A murshid says how its own work ended. That is its own to say, and it
-     * is recorded whether or not the flame is still with it — a murshid that
-     * kept working after control moved on would otherwise finish masdud and
-     * leave the sijill saying whatever the last accepted yield said.
-     */
     const newStatus = call.sabab === "masdud" ? "masdud" : "muntazir";
     await this.#sessionManager.jaddadaḤalatMurshid(yielderId, newStatus, call.tafasil);
 
@@ -500,16 +368,11 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
       suggestNext: call.iqtarahTali,
     });
 
-    /**
-     * Passing the flame on is another matter. Only the murshid holding it may
-     * decide where it goes next.
-     */
     if (yielderId !== activeEpicId) {
       await logger.akhbar("tool-executor", `${yielderId} yielded without holding the flame (active: ${activeEpicId ?? "none"})`);
       return `Recorded: you are ${newStatus}. Control was not yours to yield — the active murshid is ${activeEpicId ?? "none"}.`;
     }
 
-    /** Check pending demands first (persisted in SQLite, sorted by awwaliyya then time) */
     const demands = jalabaMatalebMuallaq();
     if (demands.length > 0) {
       const demand = demands[0];
@@ -533,14 +396,12 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
       }
     }
 
-    /** Check for idle sessions */
     const murshidun = this.#sessionManager.wajadaJalasatMurshid();
     const idleSessions = murshidun.filter(
       (o) => o.huwiyya !== yielderId && o.hala === "sakin"
     );
 
     if (idleSessions.length > 0) {
-      /** Notify al-Kimyawi */
       const msg = `${yielderId} yielded (${call.sabab}). ${idleSessions.length} idle session(s) available:\n${idleSessions.map(s => `• ${s.huwiyya}`).join("\n")}`;
       await this.#messenger.send("dispatch", msg);
       return `Yielded control. ${idleSessions.length} idle session(s) available. Al-Kimyawi can /switch to one.`;
@@ -553,9 +414,6 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
     return `Yielded control. No other sessions available. System is idle.`;
   }
 
-  /**
-   * Handle pm_demand_control - murshid demands control back
-   */
   async aalajTalabTahakkum(call: NidaTalabTahakkum): Promise<string> {
     if (!this.#iksir) {
       return "Error: Munadi not tahyiad.";
@@ -588,7 +446,6 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
       return `You (${demanderId}) are already the active murshid.`;
     }
 
-    /** Case 3: Current active is blocked/waiting — graceful snatch */
     const currentActive = this.#sessionManager.jalabMurshid(activeEpicId);
     if (currentActive && (currentActive.hala === "masdud" || currentActive.hala === "muntazir")) {
       const result = await this.#iksir.aalajIstijabaZirr("cli", `switch:${demanderId}`);
@@ -616,292 +473,112 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
     return `Demand queued. Current active: ${activeEpicId}.\n\nYou will be activated when ${activeEpicId} yields.`;
   }
 
-
-  /**
-   * Handle pm_create_branch - create epic, chore, or sandbox branch
-   */
-  async aalajKhalqFar(call: NidaKhalqFar): Promise<string> {
-    const branchName = wallidIsmFar(call.huwiyya, call.naw, call.kunya);
-
-    await logger.akhbar("tool-executor", `Creating branch: ${branchName}`);
-
-    if (await this.#hayula.mudtarib()) {
-      return `Error: Working directory is dirty. Cannot create branch.
-
-Please commit or stash changes first.`;
-    }
-
-    /** Checkout default branch and pull */
-    const defaultBranch = await this.#hayula.asas();
-    const intaqalaIlaMain = await this.#hayula.dakhala(defaultBranch);
-    if (!intaqalaIlaMain) {
-      return `Error: Failed to intaqalaIla ${defaultBranch} branch.`;
-    }
-
-    await this.#hayula.sahaba(defaultBranch);
-
-    /** Create new branch */
-    const intaqalaIlaNew = await this.#hayula.dakhala(branchName);
-    if (!intaqalaIlaNew) {
-      return `Error: Failed to create branch ${branchName}.`;
-    }
-
-    /** Push with -u */
-    const pushed = await this.#hayula.azhara?.(branchName, true);
-    if (!pushed) {
-      return `Branch created locally but failed to push.
-
-Branch: ${branchName}
-
-The vessel could not be shown beyond the workshop.`;
-    }
-
-    /** Update session with branch name */
-    const session = this.#sessionManager.jalabMurshid(call.huwiyya);
-    if (session) {
-      session.far = branchName;
-      await this.#sessionManager.hafizaHala();
-    }
-
-    return `Branch created and pushed successfully.
-
-Branch: ${branchName}
-Status: Checked out and tracking origin
-
-You can now start implementation.`;
-  }
-
-  /**
-   * Talāʾum — ask the matter whether these ahjar would hold apart from it.
-   *
-   * Iksīr does not answer this. Only the matter knows what its own pieces
-   * need, and a hayūlā that cannot tell says so rather than pretending all
-   * is well.
-   */
-  async aalajTalaum(call: NidaTalaum): Promise<string> {
-    if (!this.#hayula.talaam) {
-      return `This matter cannot say whether ${call.ahjar.length} ahjar would hold ` +
-        `apart from it. Judge for yourself, and let safa find what you missed.`;
-    }
-
-    const natija = await this.#hayula.talaam(call.ahjar);
-
-    if (natija.yaqif) {
-      return `These ${call.ahjar.length} ahjar would hold on their own.` +
-        (natija.bayan ? `\n\n${natija.bayan}` : "");
-    }
-
-    const yahtaj = natija.yahtaj.map((h) => `  - ${h}`).join("\n");
-    return `These ahjar would not hold apart. They still want:\n\n${yahtaj}\n\n` +
-      `Carry these across too, or the jawhar will be whole in appearance only.` +
-      (natija.bayan ? `\n\n${natija.bayan}` : "");
-  }
-
-  /**
-   * Ṣafāʾ — set the matter to the fire the waṣfa declared.
-   *
-   * The maʿāyīr were written into the waṣfa before the work began. Nothing
-   * here decides anything; it reports what stood.
-   */
   async aalajSafa(call: NidaSafa): Promise<string> {
     const wasfa = await this.#wasfat.iqra(call.huwiyyatWasfa);
     if (!wasfa) return `No wasfa by that name: ${call.huwiyyatWasfa}`;
 
-    const mayayir = wasfa.mayayir ?? [];
-    if (mayayir.length === 0) {
+    if (!wasfa.mayayir?.length) {
       return `${wasfa.huwiyya} declares no maʿāyīr al-ṣafāʾ. ` +
         `A waṣfa without a fire cannot be assayed — state them with mun_jaddid_wasfa first.`;
     }
 
-    const natija = await this.#safa.assa(mayayir);
-
-    if (natija.thabata) {
-      await this.#wasfat.jaddid(wasfa.huwiyya, { hala: "safi" });
-      return `The matter stood. All ${natija.ihtamala.length} maʿyār withstood.\n\n` +
-        `${wasfa.huwiyya} is ṣāfī. You may now perform faṣl.`;
-    }
-
-    const ihtaraq = natija.ihtaraq
-      .map((b) => `- ${b.mayar}\n  ${b.qawl.split("\n").slice(0, 6).join("\n  ")}`)
-      .join("\n\n");
-
-    return `The matter did not stand.\n\nWithstood: ${natija.ihtamala.length}\n` +
-      `Burned away:\n\n${ihtaraq}\n\nReturn to the buwtaqa.`;
+    const far = this.#sessionManager.jalabMurshid(call.huwiyyatMurshid)?.far;
+    return await this.#sayrafi.assa(wasfa, far);
   }
 
-  /**
-   * Faṣl — pour the clear off the dead head and set it before al-Kimyawī.
-   *
-   * Refused before ṣafāʾ. A jawhar is not presented to be judged; it is
-   * presented having already survived its fire.
-   */
   async aalajFasl(call: NidaFasl): Promise<string> {
     const wasfa = await this.#wasfat.iqra(call.huwiyyatWasfa);
     if (!wasfa) return `No wasfa by that name: ${call.huwiyyatWasfa}`;
 
     if (wasfa.hala !== "safi") {
-      return `Faṣl refused: ${wasfa.huwiyya} has not withstood its fire. ` +
-        `Run mun_safa first.`;
+      return `Faṣl refused: ${wasfa.huwiyya} has not withstood its fire. Run mun_safa first.`;
     }
 
-    const jawhar = await this.#fasl.qaddama({
-      unwan: call.unwan,
-      matn: call.matn,
-      jawhar: (await this.#hayula.waqif()) ?? call.huwiyyatWasfa,
-      asas: await this.#hayula.asas(),
-      musawwada: call.musawwada,
-    });
+    const far = this.#sessionManager.jalabMurshid(call.huwiyyatMurshid)?.far;
+    return await this.#sayrafi.qaddama(wasfa, far, { unwan: call.unwan, matn: call.matn, musawwada: call.musawwada });
+  }
 
-    if (!jawhar) return `The jawhar could not be set down.`;
+  async aalajShahada(call: NidaShahada): Promise<string> {
+    const wasfa = await this.#wasfat.iqra(call.huwiyyatWasfa);
+    if (!wasfa) return `No wasfa by that name: ${call.huwiyyatWasfa}`;
+
+    const radd = call.naw === "safa"
+      ? await this.#shahadatSafa(wasfa, call)
+      : call.naw === "fasl"
+      ? await this.#shahadatFasl(wasfa, call)
+      : await this.#shahadatNaqsh(wasfa, call);
+    await this.#sayrafi.intaha(wasfa.huwiyya);
+    return radd;
+  }
+
+  async #shahadatSafa(wasfa: Wasfa, call: NidaShahada): Promise<string> {
+    const natijat = call.natijat ?? [];
+    const ihtaraq = natijat.filter((n) => n.kharaja !== 0);
+    const kull = wasfa.mayayir?.length ?? 0;
+    const thabata = !call.khata && natijat.length === kull && ihtaraq.length === 0;
+
+    let risala: string;
+    if (thabata) {
+      await this.#wasfat.jaddid(wasfa.huwiyya, { hala: "safi" });
+      risala = `The matter stood. All ${kull} maʿāyīr withstood.\n\n${wasfa.huwiyya} is ṣāfī. You may now perform faṣl.`;
+    } else {
+      const burned = ihtaraq
+        .map((b) => `- \`${b.mayar}\` → exit ${b.kharaja}\n  ${b.qawl.split("\n").slice(-6).join("\n  ")}`)
+        .join("\n\n");
+      risala = `The matter did not stand.\n\nWithstood: ${natijat.length - ihtaraq.length} of ${kull}\n` +
+        (burned ? `Burned away:\n\n${burned}\n\n` : "") +
+        (call.khata ? `The ṣayrafī says: ${call.khata}\n\n` : "") +
+        `Return to the būṭaqa.`;
+    }
+
+    await this.#ablighMurshid(wasfa.huwiyya, `## Ṣafāʾ: ${wasfa.huwiyya}\n\n${risala}`);
+    return risala;
+  }
+
+  async #shahadatFasl(wasfa: Wasfa, call: NidaShahada): Promise<string> {
+    if (call.khata || !call.rabit) {
+      const risala = `The jawhar could not be set down. ${call.khata ?? ""}`.trim();
+      await this.#ablighMurshid(wasfa.huwiyya, `## Faṣl: ${wasfa.huwiyya}\n\n${risala}`);
+      return risala;
+    }
 
     await this.#wasfat.jaddid(wasfa.huwiyya, { hala: "mafsul" });
-
-    /**
-     * The one who decanted does not know how to reach al-Kimyawī, and should
-     * not. Telling is the rasūl's work, and the rasūl lives here.
-     */
     await this.#messenger.arsalaMunassaq(
       "kimyawi",
-      `**${wasfa.huwiyya}** — ${call.unwan}\n\n` +
+      `**${wasfa.huwiyya}** — ${wasfa.unwan}\n\n` +
         `It withstood its fire and has been decanted.\n\n` +
-        (jawhar.rabit ? `It stands at: \`${jawhar.rabit}\`\n\n` : "") +
+        `It stands at: ${call.rabit}\n\n` +
         `Inscribe it with \`/naqsh ${wasfa.huwiyya}\`, or say what you will of it.`,
     );
-
-    return `Decanted. ${jawhar.huwiyya} stands before al-Kimyawī.\n\n` +
+    const risala = `Decanted. ${call.huwiyya ?? wasfa.huwiyya} stands before al-Kimyawī at ${call.rabit}.\n\n` +
       `Naqsh is not yours to perform.`;
+    await this.#ablighMurshid(wasfa.huwiyya, `## Faṣl: ${wasfa.huwiyya}\n\n${risala}`);
+    return risala;
   }
 
-  /**
-   * Rattib — choose which matter is to be fixed.
-   *
-   * Some hayūlā keep a staging ground between the molten and the fixed;
-   * most do not. Iksīr does not pretend to one. The choice is acknowledged
-   * here and carried into the fixing itself, where thabbata takes the same
-   * list. Nothing is done to the matter yet.
-   */
-  aalajGitAdd(call: NidaRattib): Promise<string> {
-    return Promise.resolve(
-      `Chosen for fixing (${call.ahjar.length}):\n${call.ahjar.map((f) => `  · ${f}`).join("\n")}\n\n` +
-        `Nothing is fixed until mun_iltazim.`,
-    );
+  async #shahadatNaqsh(wasfa: Wasfa, call: NidaShahada): Promise<string> {
+    if (call.khata) {
+      const risala = `The codex would not take ${wasfa.huwiyya}. ${call.khata}`;
+      await this.#messenger.arsalaMunassaq("dispatch", risala);
+      return risala;
+    }
+
+    await this.#wasfat.jaddid(wasfa.huwiyya, { hala: "manqush" });
+    const risala = `${wasfa.huwiyya} is inscribed${call.rabit ? ` (${call.rabit})` : ""}. It is canon now.`;
+    await this.#messenger.arsalaMunassaq("dispatch", risala);
+    await this.#ablighMurshid(wasfa.huwiyya, `## Naqsh: ${wasfa.huwiyya}\n\n${risala}`);
+    return risala;
   }
 
-  /**
-   * Handle pm_commit - commit staged changes
-   */
-  async aalajIltizam(call: NidaIltazim): Promise<string> {
-    const najah = await this.#hayula.thabbata(call.risala, call.ahjar);
-    if (!najah) {
-      return `The matter would not be fixed. It may already be settled, or nothing was molten.`;
+  async #ablighMurshid(huwiyya: string, nass: string): Promise<void> {
+    if (this.#sessionManager.jalabMurshid(huwiyya)) {
+      await this.#sessionManager.arsalaIlaMurshidById(huwiyya, nass);
+    } else {
+      await this.#messenger.arsalaMunassaq("dispatch", nass);
     }
-
-    return `Matter fixed into the vessel.
-
-Reason: ${call.risala}`;
-  }
-
-  /**
-   * Handle pm_git_push - push current branch
-   */
-  async aalajGitPush(): Promise<string> {
-    const currentBranch = await this.#hayula.waqif();
-    if (!currentBranch) {
-      return `Error: Could not determine current branch.`;
-    }
-
-    const pushed = await this.#hayula.azhara?.(currentBranch);
-    if (!pushed) {
-      return `Error: Failed to push ${currentBranch} to origin.`;
-    }
-
-    return `Pushed successfully.
-
-Branch: ${currentBranch}
-Remote: origin`;
-  }
-
-  /**
-   * Handle mun_istihal - transmute ahjar from buwtaqa into jawhar
-   */
-  async aalajIstihal(call: NidaIstihal): Promise<string> {
-    await logger.akhbar("tool-executor", `Istihal for ${call.huwiyyatWasfa}`, {
-      ahjar: call.ahjar.length,
-    });
-
-    const jawharBranch = wallidIsmFar(call.huwiyyatWasfa, "chore");
-
-    const result = await this.#hayula.istahala(jawharBranch, call.ahjar);
-
-    if (!result.najah) {
-      if (result.nawKhata === "taarud" && result.taarudat) {
-        return `Istihal failed: Ahjar conflict with codex.
-
-Conflicted ahjar:
-${result.taarudat.map((f) => `  - ${f}`).join("\n")}
-
-To resolve:
-1. Reconcile the conflicting ahjar in buwtaqa, then retry mun_istihal
-2. Look at the matter to find where it contends
-3. Reconcile it, then fix it with mun_iltazim`;
-      }
-      return `Istihal failed (${result.nawKhata}): ${result.khata}`;
-    }
-
-    return `Istihal complete.
-
-Jawhar: ${jawharBranch}
-Buwtaqa: ${result.buwtaqa}
-Ahjar transmuted: ${result.adadAhjar}
-
-Next: Use mun_fasl to create the risala.`;
-  }
-
-  /**
-   * Handle mun_istihal_mutabaqq - layered istihal targeting parent jawhar
-   */
-  async aalajIstihalMutabaqq(call: NidaIstihalMutabaqq): Promise<string> {
-    await logger.akhbar("tool-executor", `Layered istihal for ${call.huwiyyatWasfa}`, {
-      parentTicketId: call.huwiyyatAbWasfa,
-      ahjar: call.ahjar.length,
-    });
-
-    const jawharBranch = wallidIsmFar(call.huwiyyatWasfa, "chore");
-    const parentJawhar = wallidIsmFar(call.huwiyyatAbWasfa, "chore");
-
-    const result = await this.#hayula.istahala(jawharBranch, call.ahjar, parentJawhar);
-
-    if (!result.najah) {
-      if (result.nawKhata === "taarud" && result.taarudat) {
-        return `Layered istihal failed: Conflicts with codex.
-
-Conflicted ahjar:
-${result.taarudat.map((f) => `  - ${f}`).join("\n")}
-
-Resolve conflicts in buwtaqa before retrying.`;
-      }
-      return `Layered istihal failed (${result.nawKhata}): ${result.khata}`;
-    }
-
-    const codex = await this.#hayula.asas();
-
-    return `Layered istihal complete.
-
-Jawhar: ${jawharBranch}
-Parent jawhar: ${parentJawhar}
-Buwtaqa: ${result.buwtaqa}
-Ahjar transmuted: ${result.adadAhjar}
-
-Next: Use mun_fasl to create the risala (base on parent jawhar).
-
-NOTE: Risala may be unstable until parent jawhar inscribes.
-When parent inscribes, use mun_istihal to re-transmute onto ${codex}.`;
   }
 }
 
-/**
- * Create an IPC processor instance
- */
 export function istadaaMunaffidh(deps: MunaffidhDeps): Munaffidh {
   return new Munaffidh(deps);
 }

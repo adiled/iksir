@@ -1,3 +1,18 @@
+ARG HUM_SRC=
+ARG IKSIR_STATE_DIR=
+ARG IKSIR_REPO_PATH=
+
+SERVICE hive-install
+RUN ${HUM_SRC}/install
+ONESHOT true
+
 SERVICE iksir
-RUN ${HOME}/.deno/bin/deno run --allow-all --env=${HOME}/.local/share/iksir/src/.env ${HOME}/.local/share/iksir/src/src/main.ts
+RUN node --env-file-if-exists=${HUM_SRC}/.env ${HUM_SRC}/src/main.ts
+ENV IKSIR_STATE_DIR=${IKSIR_STATE_DIR}
+ENV IKSIR_REPO_PATH=${IKSIR_REPO_PATH}
+RESTART always
+
+SERVICE saail
+RUN node --env-file-if-exists=${HUM_SRC}/.env ${HUM_SRC}/hives/saail/saail.ts
+ENV IKSIR_STATE_DIR=${IKSIR_STATE_DIR}
 RESTART always

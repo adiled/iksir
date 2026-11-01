@@ -192,34 +192,12 @@
           "type": "string",
           "description": "How a wasfa name is recognised in an utterance.",
           "default": "[A-Z]+-\\d+"
+        },
+        "khabath": {
+          "type": "string",
+          "description": "The outer tracker al-Kimyawi's tickets live in, as web2 or a host CLI names it (e.g. linear). The khuddam fetch from it and inscribe into the Sijill; iksir itself never speaks to it."
         }
       },
-      "additionalProperties": false
-    },
-    "madda": {
-      "type": "object",
-      "description": "Where the matter, its fire, and the place a jawhar is set down are summoned from.",
-      "properties": {
-        "hayula": {
-          "type": "string",
-          "description": "Path to the hayula. Required."
-        },
-        "fasl": {
-          "type": "string",
-          "description": "Path to the fasl. Without one, a jawhar has nowhere to go."
-        },
-        "safa": {
-          "type": "string",
-          "description": "Path to the safa. Without one, nothing passes the fire."
-        },
-        "masar": {
-          "type": "string",
-          "description": "Handed to whichever is summoned."
-        }
-      },
-      "required": [
-        "hayula"
-      ],
       "additionalProperties": false
     }
   },
