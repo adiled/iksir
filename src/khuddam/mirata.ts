@@ -65,9 +65,9 @@ export async function tabbiqHadathMirata(h: HadathThehum): Promise<boolean> {
     }
     return false;
   }
-  if (h.chi === "tool-call") {
-    const body = (h.body ?? {}) as { toolName?: string; name?: string; args?: Record<string, unknown>; sid?: string };
-    const ism = body.toolName ?? body.name ?? "majhul";
+  if (h.chi === "tendril-reach") {
+    const body = (h.body ?? {}) as { name?: string; args?: Record<string, unknown>; sid?: string };
+    const ism = body.name ?? "majhul";
     const alan = new Date(h.ts_ms ?? Date.now()).toISOString();
     adkhalaHadathMirror({
       id: `th-${h.author}-${h.seq}`,
@@ -76,46 +76,6 @@ export async function tabbiqHadathMirata(h: HadathThehum): Promise<boolean> {
       humulat: { ...(body.args ?? {}), sid: body.sid },
       unshiaFi: alan,
     });
-    haddathaWatermark(h.author, Math.max(jalabaWatermark(h.author), h.seq));
-    return true;
-  }
-  if (h.chi === "permission-ask") {
-    const body = (h.body ?? {}) as {
-      callId?: string;
-      sid?: string;
-      toolName?: string;
-      message?: string;
-      arg?: { questions?: Array<{ question?: string; options?: Array<{ label?: string }> }> };
-    };
-    if (!body.callId || !body.sid) return false;
-    const jalsa = jalabaKullJalasat().find((j) => j.id === body.sid);
-    if (!jalsa) {
-      await logger.haDHHir("mirata", "sual without mirrored jalsa, kept in thehum", { sid: body.sid });
-      haddathaWatermark(h.author, Math.max(jalabaWatermark(h.author), h.seq));
-      return false;
-    }
-    const sual = body.arg?.questions?.[0];
-    adkhalaSual({
-      id: body.callId,
-      sessionId: body.sid,
-      question: sual?.question ?? body.message ?? body.toolName ?? "istijaba",
-      options: sual?.options?.map((o) => o.label ?? "") ?? [],
-    });
-    haddathaWatermark(h.author, Math.max(jalabaWatermark(h.author), h.seq));
-    return true;
-  }
-  if (h.chi === "release-permit") {
-    const body = (h.body ?? {}) as {
-      callId?: string;
-      ok?: boolean;
-      ext?: { "iksir-wasila"?: { answers?: Array<{ selected?: string[] }> } };
-    };
-    if (!body.callId || body.ok !== true) {
-      haddathaWatermark(h.author, Math.max(jalabaWatermark(h.author), h.seq));
-      return false;
-    }
-    const muntakhab = body.ext?.["iksir-wasila"]?.answers?.[0]?.selected?.join(", ");
-    allamaJawabSual(body.callId, muntakhab ?? "ujiba abra al-nest");
     haddathaWatermark(h.author, Math.max(jalabaWatermark(h.author), h.seq));
     return true;
   }

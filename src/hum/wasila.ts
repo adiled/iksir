@@ -1,10 +1,9 @@
-import { Chi, rid, sigil } from "thrum";
-import type { Tone } from "thrum";
+import { Bee, Chi, PetalKind, PulseKind, Role, humCli, type Tone } from "thrum";
 import { readFileSync } from "node:fs";
 import { join as joinMasar } from "node:path";
-import { Nahla, masar_thrum } from "../../hum/bee.ts";
-import type { JalsatHum, HadathThrum, HadathThehum, RisalaMurshid, SijillAlat, JawabSual } from "../types.ts";
+import type { JalsatHum, HadathThrum, HadathThehum, RisalaMurshid, SijillAlat } from "../types.ts";
 import { DEFAULT_TIMEOUT_MS } from "../constants.ts";
+import { ADAWAT_MAHJUBA } from "./hudud.ts";
 import { logger } from "../logging/logger.ts";
 
 const ASAS = "iksir";
@@ -17,11 +16,14 @@ interface DawrTawaqquf {
   zaman: number;
 }
 
+/** The face of hum's client that Wasila leans on; a test may hand in its own. */
+export type NahlaHum = Pick<Bee, "on" | "onSid" | "offSid" | "onAny" | "onNestled" | "onAstray" | "onAdvisory" | "start" | "send" | "close" | "id">;
+
 export class Wasila {
-  #nahla: Nahla;
-  #masarThrum: string;
+  #nahla: NahlaHum;
   #muttasil = false;
   #wasfThrum: string | null = null;
+  #adawatNest: string[] = [];
   #jalasat = new Map<string, JalsatHum>();
   #adwar = new Map<string, DawrTawaqquf>();
   #adwarAkhira = new Map<string, { zaman: number; usage?: unknown; khata?: string }>();
@@ -33,79 +35,33 @@ export class Wasila {
   #namudhaj?: string;
   #ruqan = new Map<string, string>();
 
-  constructor(tasmim?: { miqbas?: string; namudhaj?: string; sijill?: SijillAlat }) {
-    this.#masarThrum = tasmim?.miqbas ?? masar_thrum();
+  constructor(tasmim?: { namudhaj?: string; sijill?: SijillAlat; nahla?: NahlaHum }) {
     this.#namudhaj = tasmim?.namudhaj;
     this.#sijill = tasmim?.sijill ?? null;
-    const adawat = this.#sijill?.adawat() ?? [];
-    this.#nahla = new Nahla({
-      hive: "iksir-wasila",
-      prefix: "fbee",
-      version: "1.0.0",
-      bee: ["forager"],
-      chis: [
-        Chi.hello, Chi.breath, Chi.echo, Chi.prompt, Chi.chunk, Chi.finish,
-        Chi.sessionReady, Chi.pulse, Chi.error, Chi.curate, Chi.cleanup,
-        Chi.cancel, Chi.releasePermit, Chi.permissionAsk,
-        Chi.toolCall, Chi.toolResult,
-      ],
-      ...(adawat.length > 0 ? { tools: adawat } : {}),
-      propensity: { statefulness: "convention-stateful", richness: "medium", wire: "iksir/khudam" },
-      log: (m) => void logger.akhbar("wasila", m),
+    this.#nahla = tasmim?.nahla ?? new Bee({
+      hive: ASAS,
+      as: "wasila",
+      role: Role.forager,
+      hello: {
+        version: "1.0.0",
+        propensity: { statefulness: "convention-stateful", richness: "medium", wire: "iksir/khuddam" },
+        chis: ["hello", "breath", "prompt", "cancel", "cleanup", "curate", "unfurl", "wilt", "error", "pulse", "tendril-reach", "tendril-result", "log", "backfill", "backfill-event"],
+        source: "https://github.com/adiled/iksir",
+      },
     });
 
     this.#nahla.on(Chi.breath, (t) => {
       this.#muttasil = true;
-      this.#wasfThrum = (t as { protoVersion?: string }).protoVersion ?? null;
+      this.#wasfThrum = t.protoVersion ?? null;
+      this.#adawatNest = (t.tools ?? []).map((a) => String((a as { name?: unknown }).name ?? "")).filter(Boolean);
     });
-
-    this.#nahla.on(Chi.chunk, (t) => this.#jamaDawr(t));
-    this.#nahla.on(Chi.finish, (t) => this.#ikmalDawr(t));
-    this.#nahla.on(Chi.error, (t) => this.#ikmalDawr(t));
-
-    this.#nahla.on(Chi.sessionReady, (t) => {
-      const sid = t.sid as string | undefined;
-      const nestId = (t as { nestId?: string }).nestId;
-      if (sid && nestId) {
-        const jalsa = this.#jalasat.get(sid);
-        if (jalsa) jalsa.nestId = nestId;
-      }
-      this.nasharHadath("session-ready", t as unknown as Record<string, unknown>);
+    this.#nahla.onAstray(() => {
+      this.#muttasil = false;
+      for (const sid of [...this.#adwar.keys()]) this.#inthaDawr(sid, { success: false, error: "humd went away mid-bloom" });
     });
-    this.#nahla.on(Chi.pulse, (t) => this.nasharHadath("pulse", t as unknown as Record<string, unknown>));
-    this.#nahla.on(Chi.permissionAsk, (t) => {
-      this.nasharHadath("permission-ask", t as unknown as Record<string, unknown>);
-      const body = t as unknown as {
-        callId?: string;
-        rid?: string;
-        sid?: string;
-        questions?: unknown;
-        question?: unknown;
-        message?: unknown;
-        name?: unknown;
-      };
-      const asila = Array.isArray(body.questions)
-        ? body.questions
-        : (typeof (body.question ?? body.message ?? body.name) === "string"
-          ? [{
-            header: String(body.name ?? "permission"),
-            question: String(body.question ?? body.message ?? body.name),
-            options: [
-              { label: "allow", description: "Permit this action" },
-              { label: "deny", description: "Refuse this action" },
-            ],
-          }]
-          : []);
-      this.nasharHadath("question.asked", {
-        id: String(body.callId ?? (t as { rid?: string }).rid ?? ""),
-        sessionID: typeof body.sid === "string" ? body.sid : "",
-        questions: asila,
-        ...(body.callId ? { tool: { messageID: "", callID: String(body.callId) } } : {}),
-      });
-    });
-    this.#nahla.on(Chi.toolCall, (t) => void this.#ajabaNida(t));
-    this.#nahla.on("backfill-event", (t) => {
-      const hadath = (t.event ?? t) as unknown as HadathThehum;
+    this.#nahla.onAdvisory((a) => void logger.haDHHir("wasila", `${a.code}: ${a.message}`));
+    this.#nahla.on(Chi.backfillEvent, (t) => {
+      const hadath = t.event as HadathThehum;
       for (const fn of this.#mirata) {
         try {
           fn(hadath);
@@ -115,14 +71,15 @@ export class Wasila {
       }
       this.nasharHadath("backfill-event", t as unknown as Record<string, unknown>);
     });
+    this.#nahla.onAny((t) => void logger.akhbar("wasila", `stray ${t.chi}`));
   }
 
   get muttasil(): boolean {
     return this.#muttasil;
   }
 
-  get masarThrum(): string {
-    return this.#masarThrum;
+  get huwiyya(): string {
+    return this.#nahla.id;
   }
 
   get wasfaThrum(): string | null {
@@ -130,18 +87,18 @@ export class Wasila {
   }
 
   async ittasil(): Promise<void> {
-    await this.#nahla.connect(this.#masarThrum);
+    await this.#nahla.start();
     const azal = Date.now() + 5000;
     while (!this.#muttasil && Date.now() < azal) {
       await new Promise((r) => setTimeout(r, 50));
     }
     if (!this.#muttasil) {
-      throw new KhataWasila(`thrum socket did not breathe: ${this.#masarThrum}`);
+      throw new KhataWasila(`humd admitted the bee but never breathed (${humCli()})`);
     }
   }
 
   qaf(): void {
-    this.#nahla.close();
+    void this.#nahla.close();
     this.#muttasil = false;
   }
 
@@ -154,8 +111,7 @@ export class Wasila {
   }
 
   khalaqaSid(): string {
-    const thiqa = `${Date.now().toString(36)}-${(++this.#asmas).toString(36)}`;
-    return `${sigil(ASAS, thiqa)}-${thiqa}`;
+    return `${ASAS}-${Date.now().toString(36)}-${(++this.#asmas).toString(36)}`;
   }
 
   async khalaqaJalsa(huwiyyatWasfa: string, title: string): Promise<JalsatHum | null> {
@@ -170,6 +126,7 @@ export class Wasila {
       lastMessageAt: wadem,
     };
     this.#jalasat.set(jalsa.id, jalsa);
+    this.#tabaa(jalsa.id);
     await logger.akhbar("wasila", `Created session ${jalsa.id} for ${huwiyyatWasfa}`);
     return jalsa;
   }
@@ -187,7 +144,8 @@ export class Wasila {
 
   async mahaqaJalsa(sid: string): Promise<boolean> {
     const wasJalsa = this.#jalasat.has(sid);
-    this.#nahla.emit(Chi.cleanup, { sid });
+    this.#nahla.send({ chi: Chi.cleanup, sid });
+    this.#nahla.offSid(sid);
     this.#jalasat.delete(sid);
     this.#adwarAkhira.delete(sid);
     this.#inthaDawr(sid, { success: false, error: "session dismissed" });
@@ -208,50 +166,70 @@ export class Wasila {
     return nass || undefined;
   }
 
-  async sendPrompt(
-    sid: string,
-    prompt: string,
-    options?: { model?: { providerID: string; modelID: string }; agent?: string; system?: string; cwd?: string; disallowedTools?: string[]; timeoutMs?: number },
-  ): Promise<{ success: boolean; response?: string; error?: string }> {
-    const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-    if (!this.#muttasil) {
-      return { success: false, error: "thrum is not connected" };
-    }
-
-        const muntazar = new Promise<JawabDawr>((hal) => {
-      const sabbq = this.#adwar.get(sid);
-      sabbq?.hal({ success: false, error: "stale prompt superseded" });
-      this.#adwar.set(sid, { qataa: [], hal, zaman: Date.now() });
+  /** Every tone of a sigil comes to its follower: the bloom, the cell's life, and the reaches of our own tools. */
+  #tabaa(sid: string): void {
+    this.#nahla.onSid(sid, (t) => {
+      switch (t.chi) {
+        case Chi.unfurl:
+          return this.#jamaDawr(t);
+        case Chi.wilt:
+        case Chi.error:
+          return this.#ikmalDawr(t);
+        case Chi.pulse: {
+          if (t.kind === PulseKind.cellReady && t.cell) {
+            const jalsa = this.#jalasat.get(sid);
+            if (jalsa) jalsa.nestId = t.cell;
+          }
+          return this.nasharHadath("pulse", t as unknown as Record<string, unknown>);
+        }
+        case Chi.tendrilReach:
+          return void this.#ajabaNida(t);
+        default:
+          return;
+      }
     });
-    const from = this.#nahla.hid;
+  }
+
+  #hathth(sid: string, prompt: string, options?: { model?: { providerID: string; modelID: string }; agent?: string; system?: string; cwd?: string }): Tone<"prompt"> {
     const jalsa = this.#jalasat.get(sid);
     const namudhaj = options?.model?.modelID ?? this.#namudhaj;
     const nizam = options?.system ?? (options?.agent ? this.#ruqya(options.agent) : undefined);
-    await logger.akhbar("wasila", `hathth ${sid} namudhaj=${namudhaj ?? "(nest)"}`);
-    const tayara = this.#nahla.send({
+    const adawat = this.#sijill?.adawat() ?? [];
+    const masmuh = [...adawat.map((a) => a.name), ...this.#adawatNest].filter((ism) => !ADAWAT_MAHJUBA.includes(ism));
+    return {
       chi: Chi.prompt,
-      rid: rid(),
-      from,
       sid,
-      hive: ASAS,
       text: prompt,
-      content: prompt,
       ...(namudhaj ? { modelId: namudhaj } : {}),
       ...(nizam ? { systemPrompt: nizam } : {}),
       ...(jalsa?.nestId ? { resume: jalsa.nestId } : {}),
       ...(options?.cwd ? { cwd: options.cwd } : {}),
-      ...(options?.disallowedTools ? { disallowedTools: options.disallowedTools } : {}),
-    } as Tone);
+      ...(adawat.length > 0 ? { tools: adawat } : {}),
+      allowedTools: masmuh,
+    };
+  }
 
-    if (!tayara) {
-      this.#inthaDawr(sid, { success: false, error: "wire refused the tone" });
+  async sendPrompt(
+    sid: string,
+    prompt: string,
+    options?: { model?: { providerID: string; modelID: string }; agent?: string; system?: string; cwd?: string; timeoutMs?: number },
+  ): Promise<JawabDawr> {
+    const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    if (!this.#muttasil) {
+      return { success: false, error: "thrum is not connected" };
     }
+    const muntazar = new Promise<JawabDawr>((hal) => {
+      const sabbq = this.#adwar.get(sid);
+      sabbq?.hal({ success: false, error: "stale prompt superseded" });
+      this.#adwar.set(sid, { qataa: [], hal, zaman: Date.now() });
+    });
+    const tone = this.#hathth(sid, prompt, options);
+    await logger.akhbar("wasila", `hathth ${sid} namudhaj=${tone.modelId ?? "(nest)"}`);
+    this.#nahla.send(tone);
 
     const muntaqi = new Promise<never>((_, raf) => {
       const muqqit = setTimeout(() => raf(new KhataWasila(`prompt timed out after ${timeoutMs}ms`)), timeoutMs);
-      if (typeof (muqqit as unknown as { unref?: unknown }).unref === "function") {
-        (muqqit as unknown as { unref: () => void }).unref();
-      }
+      muqqit.unref?.();
     });
 
     try {
@@ -266,32 +244,18 @@ export class Wasila {
   async sendPromptAsync(
     sid: string,
     prompt: string,
-    options?: { model?: { providerID: string; modelID: string }; agent?: string; system?: string; cwd?: string; disallowedTools?: string[] },
+    options?: { model?: { providerID: string; modelID: string }; agent?: string; system?: string; cwd?: string },
   ): Promise<boolean> {
     if (!this.#muttasil) return false;
-    const jalsa = this.#jalasat.get(sid);
-    const namudhaj = options?.model?.modelID ?? this.#namudhaj;
-    const nizam = options?.system ?? (options?.agent ? this.#ruqya(options.agent) : undefined);
-    const tayara = this.#nahla.send({
-      chi: Chi.prompt,
-      rid: rid(),
-      from: this.#nahla.hid,
-      sid,
-      hive: ASAS,
-      text: prompt,
-      content: prompt,
-      ...(namudhaj ? { modelId: namudhaj } : {}),
-      ...(nizam ? { systemPrompt: nizam } : {}),
-      ...(jalsa?.nestId ? { resume: jalsa.nestId } : {}),
-      ...(options?.cwd ? { cwd: options.cwd } : {}),
-      ...(options?.disallowedTools ? { disallowedTools: options.disallowedTools } : {}),
-    } as Tone);
+    this.#nahla.send(this.#hathth(sid, prompt, options));
     await logger.akhbar("wasila", `Sent async prompt to session ${sid}`);
-    return tayara;
+    return true;
   }
 
   async abortSession(sid: string): Promise<boolean> {
-    return this.#nahla.emit(Chi.cancel, { sid });
+    if (!this.#muttasil) return false;
+    this.#nahla.send({ chi: Chi.cancel, sid });
+    return true;
   }
 
   async jalabJalsaStatuses(): Promise<Record<string, string>> {
@@ -305,6 +269,7 @@ export class Wasila {
   istaadaJalsa(jalsa: JalsatHum, nestId?: string): void {
     if (this.#jalasat.has(jalsa.id)) return;
     this.#jalasat.set(jalsa.id, { ...jalsa, nestId });
+    this.#tabaa(jalsa.id);
   }
 
   huwiyyatUsh(sid: string): string | undefined {
@@ -314,8 +279,8 @@ export class Wasila {
   async jalabRisalaCount(sid: string): Promise<{ total: number; assistant: number; user: number } | null> {
     const jalsa = this.#jalasat.get(sid);
     if (!jalsa) return null;
-    const jumla = this.#adwarAkhiraCount(sid);
-    return { total: jumla, assistant: this.#adwarAkhira.has(sid) ? 1 : 0, user: jumla };
+    const jumla = this.#adwarAkhira.has(sid) ? 1 : 0;
+    return { total: jumla, assistant: jumla, user: jumla };
   }
 
   async getLastAssistantMessage(sid: string): Promise<RisalaMurshid | null> {
@@ -324,27 +289,24 @@ export class Wasila {
     return {
       id: sid,
       createdAt: dawr.zaman,
-      tokensOutput: (dawr.usage as { usage?: { output?: number } })?.usage?.output ?? 0,
+      tokensOutput: (dawr.usage as { output?: number; output_tokens?: number } | undefined)?.output ?? (dawr.usage as { output_tokens?: number } | undefined)?.output_tokens ?? 0,
       cost: 0,
       error: dawr.khata,
     };
   }
 
   async summarizeSession(sid: string): Promise<boolean> {
-    const tayara = this.#nahla.emit(Chi.curate, { sid });
-    if (tayara) {
-      await logger.akhbar("wasila", `Curated jalsa ${sid}`);
-      this.nasharHadath("session.compacted", { sessionID: sid });
-    }
-    return tayara;
+    if (!this.#muttasil) return false;
+    this.#nahla.send({ chi: Chi.curate, sid });
+    await logger.akhbar("wasila", `Curated jalsa ${sid}`);
+    this.nasharHadath("session.compacted", { sessionID: sid });
+    return true;
   }
 
   bassaLog(mustawa: string, risala: string, huyul?: Record<string, unknown>): boolean {
-    return this.#nahla.emit(Chi.log, {
-      level: mustawa,
-      message: risala,
-      ...(huyul ? { fields: huyul } : {}),
-    });
+    if (!this.#muttasil) return false;
+    this.#nahla.send({ chi: Chi.log, level: mustawa, message: risala, ...(huyul ? { fields: huyul } : {}) });
+    return true;
   }
 
   wadaaMirata(fn: (h: HadathThehum) => void): void {
@@ -352,10 +314,12 @@ export class Wasila {
   }
 
   atlubBackfill(author: string, from: number): boolean {
-    return this.#nahla.emit(Chi.backfill, { author, from });
+    if (!this.#muttasil) return false;
+    this.#nahla.send({ chi: Chi.backfill, author, from });
+    return true;
   }
 
-  async mayyaza(prompt: string): Promise<{ success: boolean; response?: string; error?: string }> {
+  async mayyaza(prompt: string): Promise<JawabDawr> {
     const jalsa = await this.khalaqaJalsa("iksir-mumayyiz", "Iksir Tamyiz");
     if (!jalsa) {
       return { success: false, error: "failed to create mumayyiz session" };
@@ -376,17 +340,13 @@ export class Wasila {
       }
       yield await new Promise<HadathThrum>((hal) => this.#muntazir.push(hal));
     }
-    this.#hawadith = [];
-    for (const muntazir of this.#muntazir) {
-      muntazir(this.#hadathWaqt());
-    }
-    this.#muntazir = [];
+    this.stopEventSubscription();
   }
 
   stopEventSubscription(): void {
     this.#hawadith = [];
     for (const muntazir of this.#muntazir) {
-      muntazir(this.#hadathWaqt());
+      muntazir({ type: "loop-stopped", properties: {}, timestamp: new Date() });
     }
     this.#muntazir = [];
   }
@@ -398,63 +358,45 @@ export class Wasila {
     else this.#hawadith.push(hadath);
   }
 
-  async replyToQuestion(_sessionId: string, questionId: string, answers: Array<{ questionIndex: number; selected: string[]; custom?: string }>): Promise<boolean> {
-    return this.#nahla.emit(Chi.releasePermit, { callId: questionId, ok: true }, { ext: { "iksir-wasila": { answers } } });
-  }
-
-  async rejectQuestion(_sessionId: string, questionId: string): Promise<boolean> {
-    return this.#nahla.emit(Chi.releasePermit, { callId: questionId, ok: false, error: "question dismissed by wasila" });
-  }
-
-  seesAsNahla(): Nahla {
-    return this.#nahla;
-  }
-
-  async #ajabaNida(t: Tone): Promise<void> {
-    const callId = t.callId as string;
-    const ism = (t.toolName ?? t.name) as string | undefined;
-    const hujaj = (t.args ?? {}) as Record<string, unknown>;
-    const rudd = (g: { callId: string; isError?: boolean; output: string }): void => {
-      this.#nahla.send({ chi: Chi.toolResult, rid: rid(), ...g } as Tone);
+  async #ajabaNida(t: Tone<"tendril-reach">): Promise<void> {
+    const rudd = (g: { isError?: boolean; output: string }): void => {
+      this.#nahla.send({ chi: Chi.tendrilResult, callId: t.callId, ...(t.sid ? { sid: t.sid } : {}), ...g });
     };
-    if (!this.#sijill || !ism) {
-      rudd({ callId, isError: true, output: "no sijill alat" });
+    if (!this.#sijill) {
+      rudd({ isError: true, output: "no sijill alat" });
       return;
     }
+    const hujaj = (t.args ?? {}) as Record<string, unknown>;
     const tanfidh = (async (): Promise<{ ok: boolean; q: string }> => {
       try {
-        return { ok: true, q: String(await this.#sijill!.naffidh(ism, hujaj)) };
+        return { ok: true, q: String(await this.#sijill!.naffidh(t.name, hujaj)) };
       } catch (kh) {
         return { ok: false, q: String((kh as Error)?.message ?? kh) };
       }
     })();
     const ajal = new Promise<{ ok: boolean; q: string }>((hal) => {
       const muqqit = setTimeout(() => hal({ ok: false, q: "tool timed out" }), DEFAULT_TIMEOUT_MS);
-      if (typeof (muqqit as unknown as { unref?: unknown }).unref === "function") {
-        (muqqit as unknown as { unref: () => void }).unref();
-      }
+      muqqit.unref?.();
     });
     const hasm = await Promise.race([tanfidh, ajal]);
-    if (hasm.ok) rudd({ callId, output: hasm.q });
-    else rudd({ callId, isError: true, output: hasm.q });
+    rudd(hasm.ok ? { output: hasm.q } : { isError: true, output: hasm.q });
   }
 
-  #jamaDawr(t: Tone): void {    const sid = t.sid as string;
+  #jamaDawr(t: Tone<"unfurl">): void {
+    const sid = t.sid as string;
     const dawr = this.#adwar.get(sid);
-    const delta = t.delta as string | { text?: string } | undefined;
-    const matn = typeof delta === "string" ? delta : (delta?.text ?? "");
-    if (matn && dawr) dawr.qataa.push(matn);
-    this.nasharHadath("chunk", t as unknown as Record<string, unknown>);
+    if (t.kind === PetalKind.text && t.text && !t.closed && dawr) dawr.qataa.push(t.text);
+    this.nasharHadath("unfurl", t as unknown as Record<string, unknown>);
   }
 
-  #ikmalDawr(t: Tone): void {
+  #ikmalDawr(t: Tone<"wilt"> | Tone<"error">): void {
     const sid = t.sid as string;
     const khata = t.chi === Chi.error;
     const dawr = this.#adwar.get(sid);
 
     this.#adwarAkhira.set(sid, {
       zaman: Date.now(),
-      usage: t.usage,
+      usage: t.nectar,
       khata: khata ? String(t.message ?? "turn aborted") : undefined,
     });
 
@@ -474,7 +416,7 @@ export class Wasila {
         dawr.hal({ success: true, response: matn });
       }
     }
-    this.nasharHadath(khata ? "error" : "finish", t as unknown as Record<string, unknown>);
+    this.nasharHadath(khata ? "error" : "wilt", t as unknown as Record<string, unknown>);
   }
 
   #inthaDawr(sid: string, jawab: JawabDawr): void {
@@ -486,14 +428,6 @@ export class Wasila {
 
   #zamanDawrAkhira(sid: string): number {
     return this.#adwarAkhira.get(sid)?.zaman ?? this.#jalasat.get(sid)?.lastMessageAt.getTime() ?? 0;
-  }
-
-  #adwarAkhiraCount(sid: string): number {
-    return this.#adwarAkhira.has(sid) ? 1 : 0;
-  }
-
-  #hadathWaqt(): HadathThrum {
-    return { type: "loop-stopped", properties: {}, timestamp: new Date() };
   }
 }
 

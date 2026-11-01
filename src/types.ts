@@ -88,12 +88,6 @@ export interface TasmimMadda {
 
 export interface TasmimHum {
   /**
-   * Explicit thrum socket. Left unset, Iksir discovers it the way every
-   * bee must: HUM_THRUM_SOCK, then HUM_SOCKET, then humd's rendezvous
-   * file, then $XDG_STATE_HOME/hum/thrum.sock.
-   */
-  miqbas?: string;
-  /**
    * The model to name on each prompt. Left unset, the nest decides —
    * which is the point. Iksir has no opinion on what burns in the furnace.
    */

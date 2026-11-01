@@ -1,7 +1,6 @@
 import { test, assertEquals, assertExists } from "../ikhtibar.ts";
-import { createServer } from "node:net";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { Wasila } from "../hum/wasila.ts";
 import type { HadathThehum } from "../types.ts";
@@ -66,11 +65,11 @@ test("mirata: log jalsa event upserts roster and watermark", async () => {
 test("mirata: tool-call event lands in pm ledger with stable id", async () => {
   await withTestDb(async () => {
     const h: HadathThehum = {
-      chi: "tool-call",
+      chi: "tendril-reach",
       author: "h-bee-1",
       seq: 8,
       ts_ms: Date.now(),
-      body: { toolName: "mun_naqsh", args: { huwiyyatWasfa: "W-1" }, sid: "s-1" },
+      body: { name: "mun_naqsh", args: { huwiyyatWasfa: "W-1" }, sid: "s-1" },
     };
     assertEquals(await tabbiqHadathMirata(h), true);
     assertEquals(await tabbiqHadathMirata(h), true);
@@ -86,109 +85,24 @@ test("mirata: foreign chi is ignored", async () => {
   });
 });
 
-test("mirata: permission-ask becomes sual under mirrored jalsa", async () => {
-  await withTestDb(async () => {
-    assertEquals(await tabbiqHadathMirata({
-      chi: "log",
-      author: "h-bee-1",
-      seq: 9,
-      ts_ms: Date.now(),
-      body: {
-        fields: {
-          naw: "jalsa",
-          hadath: "khalaqa",
-          huwiyya: "TEAM-9100",
-          unwan: "Ask Hall",
-          nawJalsa: "epic",
-          hala: "fail",
-          far: "epic/team-9100",
-          sidJalsa: "nest-sid-9100",
-        },
-      },
-    }), true);
-    assertEquals(await tabbiqHadathMirata({
-      chi: "permission-ask",
-      author: "h-bee-1",
-      seq: 10,
-      ts_ms: Date.now(),
-      body: {
-        callId: "q-mirror-1",
-        sid: "nest-sid-9100",
-        toolName: "ask",
-        message: "Should we proceed?",
-      },
-    }), true);
-    const { jalabaAseilaGhairMujaba } = await import("../../db/db.ts");
-    const aseila = jalabaAseilaGhairMujaba();
-    assertEquals(aseila.length, 1);
-    assertEquals(aseila[0].id, "q-mirror-1");
-  });
-});
-
-test("mirata: release-permit marks jawab", async () => {
-  await withTestDb(async () => {
-    const { adkhalaSual, jalabaAseilaGhairMujaba } = await import("../../db/db.ts");
-    const { seedSession } = await import("../test-helpers.ts");
-    seedSession();
-    adkhalaSual({ id: "q-mirror-2", sessionId: "session-001", question: "Go?", options: [] });
-    assertEquals(await tabbiqHadathMirata({
-      chi: "release-permit",
-      author: "h-bee-1",
-      seq: 11,
-      ts_ms: Date.now(),
-      body: {
-        callId: "q-mirror-2",
-        ok: true,
-        ext: { "iksir-wasila": { answers: [{ selected: ["Naam"] }] } },
-      },
-    }), true);
-    assertEquals(jalabaAseilaGhairMujaba().length, 0);
-  });
-});
-
-test("mirata: permission-ask without jalsa is kept in thehum", async () => {
-  await withTestDb(async () => {
-    assertEquals(await tabbiqHadathMirata({
-      chi: "permission-ask",
-      author: "h-bee-1",
-      seq: 12,
-      ts_ms: Date.now(),
-      body: { callId: "q-orphan", sid: "sid-ghayr-mawjud", message: "Lost?" },
-    }), false);
-    assertEquals(jalabaWatermark("h-bee-1"), 12);
-  });
-});
-
 test("mirata: bassaLog emits well-formed log tone", async () => {
-  const dir = mkdtempSync(join(tmpdir(), "thrum-nash-"));
-  const masar = join(dir, "thrum.sock");
-  const makhudha: Array<Record<string, unknown>> = [];
-  const khadm = createServer((wasl) => {
-    let buf = "";
-    wasl.on("data", (d: Buffer) => {
-      buf += d.toString();
-      let nl: number;
-      while ((nl = buf.indexOf("\n")) >= 0) {
-        const line = buf.slice(0, nl);
-        buf = buf.slice(nl + 1);
-        if (!line) continue;
-        const t = JSON.parse(line) as Record<string, unknown>;
-        if (t.chi === "log") makhudha.push(t);
-      }
-    });
-    wasl.write(JSON.stringify({ chi: "breath", protoVersion: "0.7.0", sessions: [] }) + "\n");
-  });
-  await new Promise<void>((hal) => khadm.listen(masar, () => hal()));
-  const wasila = new Wasila({ miqbas: masar });
+  const mursal: Array<Record<string, unknown>> = [];
+  const nahla = {
+    id: "bee_wahm",
+    on(chi: string, fn: (t: unknown) => unknown) { if (chi === "breath") this.breath = fn; return this; },
+    breath: undefined as undefined | ((t: unknown) => unknown),
+    onSid() { return this; }, offSid() { return this; }, onAny() { return this; },
+    onNestled() { return this; }, onAstray() { return this; }, onAdvisory() { return this; },
+    async start() { this.breath?.({ chi: "breath", sigils: {}, protoVersion: "0.8.0" }); },
+    send(t: Record<string, unknown>) { mursal.push(t); },
+    async close() {},
+  };
+  const wasila = new Wasila({ nahla: nahla as never });
   await wasila.ittasil();
   wasila.bassaLog("info", "jalsa khalaqa TEAM-1", { naw: "jalsa", hadath: "khalaqa" });
-  const azal = Date.now() + 3000;
-  while (makhudha.length === 0 && Date.now() < azal) {
-    await new Promise((r) => setTimeout(r, 25));
-  }
-  assertEquals(makhudha.length, 1);
-  assertEquals(makhudha[0].level, "info");
-  assertEquals((makhudha[0].fields as Record<string, unknown>).naw, "jalsa");
+  const log = mursal.filter((t) => t.chi === "log");
+  assertEquals(log.length, 1);
+  assertEquals(log[0].level, "info");
+  assertEquals((log[0].fields as Record<string, unknown>).naw, "jalsa");
   wasila.qaf();
-  khadm.close();
 });

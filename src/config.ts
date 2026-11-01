@@ -164,9 +164,6 @@ export async function hammalaAlTasmim(): Promise<TasmimIksir> {
   /** Override with environment variables */
   const envOverrides: Partial<TasmimIksir> = {};
 
-  if (process.env.HUM_THRUM_SOCK || process.env.HUM_SOCKET) {
-    envOverrides.hum = { ...config.hum, miqbas: process.env.HUM_THRUM_SOCK ?? process.env.HUM_SOCKET! };
-  }
   if (process.env.IKSIR_HUM_MODEL) {
     envOverrides.hum = { ...config.hum, namudhaj: process.env.IKSIR_HUM_MODEL! };
   }

@@ -1,4 +1,3 @@
-import { Nahla } from "../../hum/bee.ts";
 import { baddaaQaidatBayanat, adkhalaHadath } from "../../db/db.ts";
 import { anshaaTelegramAmil } from "../../src/rasul/telegram.ts";
 import type { TasmimIksir } from "../../src/types.ts";
@@ -39,17 +38,6 @@ async function abwab(): Promise<void> {
     await logger.akhbar("saail", "wire callback forwarded", { id: istijaba.id });
   });
 
-  const nahla = new Nahla({
-    hive: "saail",
-    prefix: "fbee",
-    version: "1.0.0",
-    bee: ["forager"],
-    chis: ["hello", "breath", "echo"],
-    propensity: { statefulness: "stateless", richness: "lean", wire: "telegram/bot-api" },
-    log: (m) => void logger.akhbar("saail", m),
-  });
-  await nahla.connect();
-  await logger.akhbar("saail", `nestled as ${nahla.hid}`);
 
   await amil.startPolling();
 }

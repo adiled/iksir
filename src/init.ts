@@ -8,7 +8,7 @@
 import { join } from "node:path";
 import { existsSync } from "node:fs";
 const exists = async (path: string): Promise<boolean> => existsSync(path);
-import { masar_thrum } from "../hum/bee.ts";
+import { humCli } from "thrum";
 
 
 const DIM = "\x1b[2m";
@@ -209,20 +209,14 @@ async function stepKimyawi(state: InitState): Promise<void> {
   if (state.ismKimyawi) ok(`You are ${bold(state.ismKimyawi)}`);
 }
 
-async function nabduSukhulThrum(masar: string): Promise<boolean> {
-  const net = await import("node:net");
-  return new Promise((hal) => {
-    const wasl = net.createConnection(masar);
-    wasl.on("connect", () => {
-      wasl.destroy();
-      hal(true);
-    });
-    wasl.on("error", () => hal(false));
-    setTimeout(() => {
-      wasl.destroy();
-      hal(false);
-    }, 3000);
-  });
+async function nabduSukhulThrum(hum: string): Promise<boolean> {
+  const { accessSync, constants } = await import("node:fs");
+  try {
+    accessSync(hum, constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function stepAgent(state: InitState): Promise<void> {
@@ -238,10 +232,10 @@ async function stepAgent(state: InitState): Promise<void> {
 
   state.namudhaj = await prompt("Model to name on each prompt (blank = let the nest decide)", "");
 
-  const miqbas = masar_thrum();
-  nabduSukhulThrum(miqbas).then((hayy) => {    if (hayy) ok(`humd reachable at ${miqbas}`);
+  const miqbas = humCli();
+  nabduSukhulThrum(miqbas).then((hayy) => {    if (hayy) ok(`hum at ${miqbas}`);
     else {
-      warn(`No humd at ${miqbas}`);
+      warn(`No hum at ${miqbas}`);
       console.log(`  ${dim("Kindle one, then a worker hive:")} ${bold("hum hive <name> install")}`);
     }
   });
@@ -329,7 +323,7 @@ async function stepFinalize(state: InitState): Promise<void> {
   if (state.ismKimyawi) {
     ok(`al-Kimyawī: ${state.ismKimyawi}`);
   }
-  ok(`Nest: ${masar_thrum()}${state.namudhaj ? ` (model ${state.namudhaj})` : ""}`);
+  ok(`Nest: ${humCli()}${state.namudhaj ? ` (model ${state.namudhaj})` : ""}`);
 
   console.log("");
   console.log(`  ${bold("Ready.")} Run ${cyan("iksir start")} to begin.`);

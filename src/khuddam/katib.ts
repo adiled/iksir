@@ -18,7 +18,6 @@
  */
 
 import { Wasila } from "../hum/wasila.ts";
-import { ADAWAT_MAHJUBA } from "../hum/hudud.ts";
 import { logger } from "../logging/logger.ts";
 import { 
   haddathaAwAdkhalaJalsa,
@@ -279,9 +278,7 @@ export class MudirJalasat {
     }
 
     const messageWithReminder = this.maaTadhkirNizam(session, message);
-    const success = await this.#amil.sendPromptAsync(session.id, messageWithReminder, {
-      disallowedTools: [...ADAWAT_MAHJUBA],
-    });
+    const success = await this.#amil.sendPromptAsync(session.id, messageWithReminder);
     if (success) {
       session.akhirRisalaFi = new Date().toISOString();
       await this.hafizaJalsaWahida(session.huwiyya);
@@ -301,9 +298,7 @@ export class MudirJalasat {
     }
 
     const messageWithReminder = this.maaTadhkirNizam(session, message);
-    const success = await this.#amil.sendPromptAsync(session.id, messageWithReminder, {
-      disallowedTools: [...ADAWAT_MAHJUBA],
-    });
+    const success = await this.#amil.sendPromptAsync(session.id, messageWithReminder);
     if (success) {
       session.akhirRisalaFi = new Date().toISOString();
       await this.hafizaJalsaWahida(session.huwiyya);

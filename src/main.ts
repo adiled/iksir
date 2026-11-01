@@ -28,7 +28,6 @@ import {
 import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, jalabaAhdathGhairMuaalaja, allamaHadathMuaalaj, haddathaHuwiyyatRisalaSual } from "../db/db.ts";
 import { Wasila } from "./hum/wasila.ts";
 import { istarjaaMirata } from "./khuddam/mirata.ts";
-import { masar_thrum } from "../hum/bee.ts";
 import { AlatAlIksir } from "./alat/alat-al-iksir.ts";
 import { anshaaNtfyAmil } from "./rasul/ntfy.ts";
 import { anshaaTelegramAmil, type TelegramMessage, type TelegramCallbackQuery } from "./rasul/telegram.ts";
@@ -46,7 +45,7 @@ import { istadaaArraf } from "./khuddam/arraf.ts";
 import { awqadaHayat, type NatijaSeyana } from "./khuddam/hayat.ts";
 import { istadaaSaail } from "./khuddam/saail.ts";
 import { istadaaRaqib } from "./khuddam/raqib.ts";
-import type { TasmimIksir, Rasul, RisalaDakhila, TaaliqMuraja, JalsatMurshid, HadathSualMatlub, MaalumatSual, SualMuallaq } from "./types.ts";
+import type { TasmimIksir, Rasul, RisalaDakhila, TaaliqMuraja, JalsatMurshid, MaalumatSual, SualMuallaq } from "./types.ts";
 import type { SijillWasfat } from "./wasfa/sijill-wasfat.ts";
 
 /**
@@ -169,7 +168,6 @@ async function naffadhFahs(ctx: SiyaqKhadim): Promise<void> {
   console.log(`Config file: ${masarMilafAlTasmim()}`);
 
   console.log("\nConfiguration:");
-  console.log(`  Thrum socket: ${masar_thrum(ctx.tasmim.hum?.miqbas)}`);
   console.log(`  Bee hid: ${ctx.amil.huwiyya}`);
   console.log(`  Model: ${ctx.tasmim.hum?.namudhaj ?? "(the nest decides)"}`);
 
@@ -233,11 +231,6 @@ async function ishtarakAhdath(ctx: SiyaqKhadim): Promise<void> {
       for await (const event of ctx.amil.subscribeToEvents(ctx.mutahakkimIlgha.signal)) {
         backoffMs = INITIAL_BACKOFF_MS;
 
-        if (event.type === "question.asked") {
-          const questionEvent = event as unknown as HadathSualMatlub;
-          await ctx.sail.aalajSualMatlub(questionEvent);
-        }
-
         if (event.type === "session.compacted") {
           const sessionId = (event.properties as { sessionID?: string })?.sessionID;
           if (sessionId) {
@@ -274,7 +267,6 @@ async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
     await ctx.amil.ittasil();
   } catch (error) {
     await logger.sajjalKhata("main", "No humd at the thrum socket, aborting", {
-      miqbas: masar_thrum(ctx.tasmim.hum?.miqbas),
       error: String(error),
     });
     process.exit(1);
@@ -788,7 +780,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
 
   const alat = new AlatAlIksir(wasfat);
 
-  const amil = new Wasila({ miqbas: config.hum.miqbas, namudhaj: config.hum.namudhaj, sijill: alat.sijill });
+  const amil = new Wasila({ namudhaj: config.hum.namudhaj, sijill: alat.sijill });
   await amil.ittasil();
 
   istarjaaMirata(amil).catch(async (error) => {
