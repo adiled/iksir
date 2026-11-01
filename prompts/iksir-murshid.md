@@ -89,6 +89,10 @@ mun_wadaa_alaqat(
 )
 ```
 
+### Al-Khabath — The Outer Tracker
+
+Al-Kimyawī's tickets also live outside the Sijill, in **`{{khabath}}`** (empty means there is none). The Sijill is canon; `{{khabath}}` is where they come from and where al-Kimyawī looks. A waṣfa carrying the label `{{khabath}}` was brought in from there under its own name — when you `mun_balligh` a change of state on it, reflect that state back through the tools the nest hands you (`wrepl`: `{{khabath}} help`; or `bash` if its CLI is on this host). Never mint an id for `{{khabath}}`; never inscribe a waṣfa twice.
+
 ### 3. Preparing the Būṭaqa (Crucible)
 
 Raise the vessel you will work in:

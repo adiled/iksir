@@ -192,6 +192,10 @@
           "type": "string",
           "description": "How a wasfa name is recognised in an utterance.",
           "default": "[A-Z]+-\\d+"
+        },
+        "khabath": {
+          "type": "string",
+          "description": "The outer tracker al-Kimyawi's tickets live in, as web2 or a host CLI names it (e.g. linear). The khuddam fetch from it and inscribe into the Sijill; iksir itself never speaks to it."
         }
       },
       "additionalProperties": false

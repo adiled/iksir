@@ -63,11 +63,7 @@ interface NiyyaMustakhraja {
   nawKiyan: NawKiyan;
   kalimatBahth: string[];
   huwiyyatWasfa?: string;
-  talmiMashru?: string;
-  talmiMarhala?: string;
-  mukalaf?: "me" | null;
-  hala?: "todo" | "in_progress" | "done" | "backlog" | null;
-  dawra?: "current" | "next" | null;
+  hala?: string | null;
   yushirIlaTarkiz?: boolean;
   fil?: "taqaddam" | "istifsar" | "ilgha" | null;
 }
@@ -199,40 +195,6 @@ export class Arraf {
     return null;
   }
 
-  static readonly TAWJIHAT_NIZAM_NIYYA = `You are a JSON extraction tool for project management. Return ONLY valid JSON, no explanations.
-
-Output format:
-{
-  "entityType": "ticket" | "epic" | "milestone" | "project" | "unknown",
-  "searchTerms": ["term1", "term2"],
-  "huwiyyatWasfa": "TEAM-1234" or null,
-  "projectHint": "project name" or null,
-  "milestoneHint": "milestone name" or null,
-  "assignee": "me" or null,
-  "status": "todo" | "in_progress" | "done" | "backlog" or null,
-  "cycle": "current" | "next" or null,
-  "referencesFocus": true or false,
-  "action": "proceed" | "query" | "cancel" or null
-}
-
-Rules:
-- entityType: What type of entity they're referring to
-- searchTerms: Keywords to search for (exclude common words like "the", "work on", "assigned", "my", "find", "start", "need", etc.)
-- huwiyyatWasfa: Only if they mentioned a specific formula ID like "TEAM-1234"
-- projectHint: If they mentioned "in project X" or "the X project"
-- milestoneHint: If they mentioned "in milestone Y" or "the Y milestone/sprint"
-- assignee: "me" if they said "my tickets", "assigned to me", "my tasks", etc.
-- status: "todo" for unstarted/todo, "in_progress" for active, "done" for completed, "backlog" for backlog
-- cycle: "current" for current cycle/sprint, "next" for next cycle/sprint
-- referencesFocus: TRUE only if clearly referring to a previously discussed entity ("ok", "yes", "go", "work on it", "that one", "proceed"). FALSE for new searches.
-- action: "proceed" to start work on focus entity, "query" to ask about it, "cancel" to cancel, null otherwise
-
-Examples:
-- "the upsells milestone" → {"entityType":"milestone","searchTerms":["upsells"],"huwiyyatWasfa":null,"projectHint":null,"milestoneHint":"upsells","assignee":null,"status":null,"cycle":null,"referencesFocus":false,"action":null}
-- "TEAM-200" → {"entityType":"ticket","searchTerms":[],"huwiyyatWasfa":"TEAM-200","projectHint":null,"milestoneHint":null,"assignee":null,"status":null,"cycle":null,"referencesFocus":false,"action":null}
-- "ok" (with focus) → {"entityType":"unknown","searchTerms":[],"huwiyyatWasfa":null,"projectHint":null,"milestoneHint":null,"assignee":null,"status":null,"cycle":null,"referencesFocus":true,"action":"proceed"}
-- "my todo tickets in current cycle" → {"entityType":"ticket","searchTerms":[],"huwiyyatWasfa":null,"projectHint":null,"milestoneHint":null,"assignee":"me","status":"todo","cycle":"current","referencesFocus":false,"action":null}`;
-
   async istakhrajNiyyaBiLLM(nassKham: string, context?: SiyaqMuhadatha): Promise<NiyyaMustakhraja | null> {
     const jalsaId = await this.wajadaJalsatNiyya();
     if (!jalsaId) {
@@ -254,14 +216,10 @@ Examples:
       }
     }
 
-    const talabOracle = `TASK: Extract intent as JSON. Return ONLY the JSON object, nothing else. No explanation, no markdown, no code blocks.
-
-MESSAGE: "${nassKham}"${siyaqNass}
-
-${Arraf.TAWJIHAT_NIZAM_NIYYA}`;
+    const talabOracle = `MESSAGE: "${nassKham}"${siyaqNass}`;
 
     const radd = await this.#amil.sendPrompt(jalsaId, talabOracle, {
-      system: Arraf.TAWJIHAT_NIZAM_NIYYA,
+      agent: "arraf-niyya",
       timeoutMs: 90_000,
     });
 
@@ -282,21 +240,17 @@ ${Arraf.TAWJIHAT_NIZAM_NIYYA}`;
       const khamm = JSON.parse(nazzifJson(jsonMatch[0])) as Record<string, unknown>;
 
       const nawKiyanMap: Record<string, NawKiyan> = {
-        ticket: "wasfa", wasfa: "wasfa", epic: "malhamat", unknown: "majhul",
+        wasfa: "wasfa", malhamat: "malhamat", majhul: "majhul",
       };
       const filMap: Record<string, NiyyaMustakhraja["fil"]> = {
         proceed: "taqaddam", query: "istifsar", cancel: "ilgha",
       };
 
       const niyya: NiyyaMustakhraja = {
-        nawKiyan: nawKiyanMap[khamm.entityType as string] ?? "majhul",
+        nawKiyan: nawKiyanMap[khamm.naw as string] ?? "majhul",
         kalimatBahth: (khamm.searchTerms as string[]) ?? [],
-        huwiyyatWasfa: (khamm.huwiyyatWasfa as string) ?? undefined,
-        talmiMashru: (khamm.projectHint as string) ?? undefined,
-        talmiMarhala: (khamm.milestoneHint as string) ?? undefined,
-        mukalaf: khamm.assignee === "me" ? "me" : null,
-        hala: (khamm.status as NiyyaMustakhraja["hala"]) ?? null,
-        dawra: (khamm.cycle as NiyyaMustakhraja["dawra"]) ?? null,
+        huwiyyatWasfa: typeof khamm.huwiyya === "string" ? khamm.huwiyya.toUpperCase() : undefined,
+        hala: typeof khamm.hala === "string" ? khamm.hala : null,
         yushirIlaTarkiz: Boolean(khamm.referencesFocus),
         fil: filMap[khamm.action as string] ?? null,
       };
@@ -333,7 +287,7 @@ ${Arraf.TAWJIHAT_NIZAM_NIYYA}`;
   ): Promise<NiyyaMuhallala> {
     const nawFaail = niyya.nawKiyan !== "majhul" ? niyya.nawKiyan : talmihNaw;
     const kalimatBahth = niyya.kalimatBahth.join(" ");
-    const ladayhaMusaffiyat = niyya.mukalaf || niyya.hala || niyya.dawra;
+    const ladayhaMusaffiyat = Boolean(niyya.hala);
 
     if (!kalimatBahth && !niyya.huwiyyatWasfa && !ladayhaMusaffiyat) {
       return {

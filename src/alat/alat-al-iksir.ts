@@ -150,6 +150,10 @@ export class AlatAlIksir {
               type: "string",
               description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
             },
+            huwiyya: {
+              type: "string",
+              description: "Its name, when it already has one in the outer tracker (e.g. ENG-123); left out, the Sijill mints one",
+            },
             title: {
               type: "string",
               description: "Ticket title (concise, action-oriented)",
@@ -842,6 +846,7 @@ judged — it is set before al-Kimyawī having already survived its fire.`,
     const call: NidaKhalqWasfa = {
       tool: "mun_khalaq_wasfa",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
+      huwiyya: args.huwiyya as string | undefined,
       unwan: args.title as string,
       wasf: args.description as string | undefined,
       taqdir: args.estimate as number | undefined,

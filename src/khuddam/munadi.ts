@@ -976,14 +976,14 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
       }
       this.#sidSual = jalsa.id;
     }
-    let jawab = await this.amil.sendPrompt(this.#sidSual, nass, { timeoutMs: 120_000 });
+    let jawab = await this.amil.sendPrompt(this.#sidSual, nass, { agent: "iksir-alim", timeoutMs: 120_000 });
     if (!jawab.success) {
       const jalsa = await this.amil.khalaqaJalsa("iksir-munadi", "Iksir Sual");
       if (!jalsa) {
         return { tuulija: true, khata: "The nest did not answer." };
       }
       this.#sidSual = jalsa.id;
-      jawab = await this.amil.sendPrompt(this.#sidSual, nass, { timeoutMs: 120_000 });
+      jawab = await this.amil.sendPrompt(this.#sidSual, nass, { agent: "iksir-alim", timeoutMs: 120_000 });
     }
     if (jawab.success && jawab.response) {
       return { tuulija: true, radd: jawab.response };

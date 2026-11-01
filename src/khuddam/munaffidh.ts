@@ -257,6 +257,7 @@ export class Munaffidh {
 
   async #aalajaKhalqWasfa(call: NidaKhalqWasfa): Promise<string> {
     const wasfa = await this.#wasfat.khalaq({
+      huwiyya: call.huwiyya,
       unwan: call.unwan,
       matn: call.wasf,
       qadr: call.taqdir,

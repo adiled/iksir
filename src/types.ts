@@ -52,6 +52,7 @@ export interface TasmimTelegram {
 export interface TasmimWasfat {
   sabiqa?: string;
   namatWasfa?: string;
+  khabath?: string;
 }
 
 export type NawKiyan = "wasfa" | "malhamat" | "majhul";
@@ -168,6 +169,7 @@ export interface HadathHum {
 export interface NidaKhalqWasfa {
   tool: "mun_khalaq_wasfa";
   huwiyyatMurshid: string;
+  huwiyya?: string;
   unwan: string;
   wasf?: string;
   taqdir?: number;

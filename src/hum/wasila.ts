@@ -32,10 +32,12 @@ export class Wasila {
   #namudhaj?: string;
   #warsha?: string;
   #ruqan = new Map<string, string>();
+  #mutaghayyirat: Record<string, string>;
 
-  constructor(tasmim?: { namudhaj?: string; warsha?: string; sijill?: SijillAlat; nahla?: NahlaHum }) {
+  constructor(tasmim?: { namudhaj?: string; warsha?: string; mutaghayyirat?: Record<string, string>; sijill?: SijillAlat; nahla?: NahlaHum }) {
     this.#namudhaj = tasmim?.namudhaj;
     this.#warsha = tasmim?.warsha;
+    this.#mutaghayyirat = tasmim?.mutaghayyirat ?? {};
     this.#sijill = tasmim?.sijill ?? null;
     this.#nahla = tasmim?.nahla ?? new Bee({
       hive: ASAS,
@@ -157,7 +159,7 @@ export class Wasila {
     const maskan = new URL("../../prompts/", import.meta.url).pathname;
     let nass = "";
     try {
-      nass = readFileSync(joinMasar(maskan, `${ism}.md`), "utf-8");
+      nass = readFileSync(joinMasar(maskan, `${ism}.md`), "utf-8").replace(/\{\{(\w+)\}\}/g, (_, k) => this.#mutaghayyirat[k] ?? "");
     } catch {
       void logger.haDHHir("wasila", `No ruqya found for ${ism}; prompting without one`);
     }
