@@ -17,7 +17,13 @@ class NahlaWahm implements NahlaHum {
   onNestled(fn: () => unknown) { this.#nestled.push(fn); return this; }
   onAstray() { return this; }
   onAdvisory() { return this; }
-  async start() { for (const fn of this.#nestled) fn(); this.sawt({ chi: "breath", sigils: {}, protoVersion: "0.8.0", tools: [{ name: "wasfa_iqra" }] }); }
+  #badaa = false;
+  async start() {
+    if (this.#badaa) throw new Error("this bee has already started");
+    this.#badaa = true;
+    for (const fn of this.#nestled) fn();
+    this.sawt({ chi: "breath", sigils: {}, protoVersion: "0.8.0", tools: [{ name: "wasfa_iqra" }] });
+  }
   send(t: Tone) { this.mursal.push(t); }
   async close() {}
   sawt(t: Tone) { ((t.sid && this.#bySid.get(t.sid)) ?? this.#byChi.get(t.chi))?.(t); }
@@ -110,6 +116,14 @@ test("forager: valid reach dispatches body and answers output", async () => {
     assertExists(nahla.nataij()[0].output);
     wasila.qaf();
   });
+});
+
+test("forager: ittasil twice starts the bee once", async () => {
+  const { wasila } = qim();
+  await wasila.ittasil();
+  await wasila.ittasil();
+  assertEquals(wasila.muttasil, true);
+  wasila.qaf();
 });
 
 test("forager: dismissing a jalsa sends cleanup and stops following", async () => {

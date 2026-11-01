@@ -21,8 +21,8 @@ import { mkdirSync } from "node:fs";
 import { logger } from "../src/logging/logger.ts";
 
 function masarHalatSijill(): string {
-  return process.env.IKSIR_STATE_DIR ??
-    join(process.env.XDG_DATA_HOME ?? join(process.env.HOME ?? "/root", ".local", "share"), "iksir");
+  return process.env.IKSIR_STATE_DIR ||
+    join(process.env.XDG_DATA_HOME || join(process.env.HOME || "/root", ".local", "share"), "iksir");
 }
 
 let db: Database | null = null;

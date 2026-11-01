@@ -87,8 +87,11 @@ export class Wasila {
     return this.#wasfThrum;
   }
 
+  #bidaya: Promise<void> | null = null;
+
   async ittasil(): Promise<void> {
-    await this.#nahla.start();
+    this.#bidaya ??= this.#nahla.start();
+    await this.#bidaya;
     const azal = Date.now() + 5000;
     while (!this.#muttasil && Date.now() < azal) {
       await new Promise((r) => setTimeout(r, 50));

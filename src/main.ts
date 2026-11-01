@@ -659,9 +659,10 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
 
   await baddaaQaidatBayanat();
 
+  const warsha = process.env.IKSIR_REPO_PATH || undefined;
   const siyaqMadda = {
     tasmim: config,
-    warsha: process.env.IKSIR_REPO_PATH,
+    warsha,
     masar: config.madda.masar,
   };
 
@@ -678,8 +679,8 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
 
   const amil = new Wasila({
     namudhaj: config.hum.namudhaj,
-    warsha: process.env.IKSIR_REPO_PATH,
-    mutaghayyirat: { khabath: config.wasfat.khabath ?? "", warsha: process.env.IKSIR_REPO_PATH ?? "" },
+    warsha,
+    mutaghayyirat: { khabath: config.wasfat.khabath ?? "", warsha: warsha ?? "" },
     sijill: alat.sijill,
   });
   await amil.ittasil();

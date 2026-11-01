@@ -9,8 +9,8 @@ import { mkdirSync, appendFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 function masarSijillAhdaq(): string {
-  return process.env.IKSIR_LOG_DIR ??
-    join(process.env.XDG_STATE_HOME ?? join(process.env.HOME ?? "/root", ".local", "state"), "iksir");
+  return process.env.IKSIR_LOG_DIR ||
+    join(process.env.XDG_STATE_HOME || join(process.env.HOME || "/root", ".local", "state"), "iksir");
 }
 
 const LOG_FILES = {
