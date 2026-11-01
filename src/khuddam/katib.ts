@@ -308,8 +308,8 @@ Awaiting direction from al-Kimyawi...`;
         `<system-reminder>
 Context compaction occurred. Your conversation history was summarized.
 Your murshid ID is: ${session.huwiyya}
-Use pm_reply to respond to al-Kimyawi — direct text output is invisible.
-Use pm_read_diary to reload full decision history if needed.
+Use mun_radd to respond to al-Kimyawi — direct text output is invisible.
+Use mun_iqra_mudawwana to reload full decision history if needed.
 </system-reminder>`
       );
       return;
@@ -329,8 +329,8 @@ Context compaction occurred. Key diary decisions for your reference:
 ${diaryBlock}
 
 Your murshid ID is: ${session.huwiyya}
-Use pm_reply to respond to al-Kimyawi — direct text output is invisible.
-Call pm_read_diary for full decision history with reasoning.
+Use mun_radd to respond to al-Kimyawi — direct text output is invisible.
+Call mun_iqra_mudawwana for full decision history with reasoning.
 </system-reminder>`
     );
   }
