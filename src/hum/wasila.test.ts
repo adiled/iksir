@@ -1,6 +1,6 @@
 import { test, assertEquals, assertExists } from "../ikhtibar.ts";
 import type { Tone } from "thrum";
-import { KHUDDAM, Wasila, type NahlaHum } from "./wasila.ts";
+import { KHUDDAM, Wasila, khadimMin, type NahlaHum } from "./wasila.ts";
 import { AlatAlIksir } from "../alat/alat-al-iksir.ts";
 import { withTestDb } from "../test-helpers.ts";
 
@@ -128,6 +128,26 @@ test("forager: ittasil twice starts each bee once", async () => {
   await wasila.ittasil();
   await wasila.ittasil();
   assertEquals(wasila.muttasil, true);
+  wasila.qaf();
+});
+
+test("khuddam: a vessel named for its wasfa is the murshid's; the four khuddam are themselves", () => {
+  assertEquals(khadimMin("iksir-arraf"), "arraf");
+  assertEquals(khadimMin("iksir-munadi"), "munadi");
+  assertEquals(khadimMin("iksir-mumayyiz"), "mumayyiz");
+  assertEquals(khadimMin("iksir-murshid"), "murshid");
+  assertEquals(khadimMin("GH-71"), "murshid");
+  assertEquals(khadimMin("TEAM-9001"), "murshid");
+  assertEquals(khadimMin("SANDBOX-pos"), "murshid");
+});
+
+test("khuddam: a wasfa's vessel prompts through the murshid bee, never a fifth", async () => {
+  const { nuhul, wasila } = qim();
+  await wasila.ittasil();
+  const jalsa = (await wasila.khalaqaJalsa("GH-71", "apple-fm-worker"))!;
+  assertEquals(await wasila.sendPromptAsync(jalsa.id, "ibda"), true);
+  assertEquals(nuhul.get("murshid")!.mursal.filter((t) => t.chi === "prompt" && t.sid === jalsa.id).length, 1);
+  assertEquals(nuhul.size, KHUDDAM.length);
   wasila.qaf();
 });
 

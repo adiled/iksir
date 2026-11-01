@@ -28,7 +28,8 @@ interface Nahl {
 }
 
 export function khadimMin(huwiyyatWasfa: string): string {
-  return huwiyyatWasfa.replace(new RegExp(`^${ASAS}-`), "");
+  const ism = huwiyyatWasfa.replace(new RegExp(`^${ASAS}-`), "");
+  return (KHUDDAM as readonly string[]).includes(ism) ? ism : "murshid";
 }
 
 export class Wasila {
