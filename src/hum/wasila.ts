@@ -6,6 +6,8 @@ import { DEFAULT_TIMEOUT_MS } from "../constants.ts";
 import { logger } from "../logging/logger.ts";
 
 const ASAS = "iksir";
+export const KHUDDAM = ["munadi", "arraf", "murshid", "mumayyiz"] as const;
+const LISAN = "munadi";
 
 type JawabDawr = { success: boolean; response?: string; error?: string };
 
@@ -17,10 +19,22 @@ interface DawrTawaqquf {
 
 export type NahlaHum = Pick<Bee, "on" | "onSid" | "offSid" | "onAny" | "onNestled" | "onAstray" | "onAdvisory" | "start" | "send" | "close" | "id">;
 
+interface Nahl {
+  khadim: string;
+  nahla: NahlaHum;
+  muttasil: boolean;
+  wasfThrum: string | null;
+  bidaya: Promise<void> | null;
+}
+
+export function khadimMin(huwiyyatWasfa: string): string {
+  return huwiyyatWasfa.replace(new RegExp(`^${ASAS}-`), "");
+}
+
 export class Wasila {
-  #nahla: NahlaHum;
-  #muttasil = false;
-  #wasfThrum: string | null = null;
+  #nuhul = new Map<string, Nahl>();
+  #sanaa: (khadim: string) => NahlaHum;
+  #khadimJalsa = new Map<string, string>();
   #jalasat = new Map<string, JalsatHum>();
   #adwar = new Map<string, DawrTawaqquf>();
   #adwarAkhira = new Map<string, { zaman: number; usage?: unknown; khata?: string }>();
@@ -34,34 +48,42 @@ export class Wasila {
   #ruqan = new Map<string, string>();
   #mutaghayyirat: Record<string, string>;
 
-  constructor(tasmim?: { namudhaj?: string; warsha?: string; mutaghayyirat?: Record<string, string>; sijill?: SijillAlat; nahla?: NahlaHum }) {
+  constructor(tasmim?: { namudhaj?: string; warsha?: string; mutaghayyirat?: Record<string, string>; sijill?: SijillAlat; sanaaNahla?: (khadim: string) => NahlaHum }) {
     this.#namudhaj = tasmim?.namudhaj;
     this.#warsha = tasmim?.warsha;
     this.#mutaghayyirat = tasmim?.mutaghayyirat ?? {};
     this.#sijill = tasmim?.sijill ?? null;
-    this.#nahla = tasmim?.nahla ?? new Bee({
+    this.#sanaa = tasmim?.sanaaNahla ?? ((khadim) => new Bee({
       hive: ASAS,
-      as: "wasila",
+      as: khadim,
       role: Role.forager,
       hello: {
         version: "1.0.0",
         builds: true,
-        propensity: { statefulness: "convention-stateful", richness: "medium", wire: "iksir/khuddam" },
+        propensity: { statefulness: "convention-stateful", richness: "medium", wire: `${ASAS}/${khadim}` },
         chis: ["hello", "breath", "prompt", "cancel", "cleanup", "curate", "unfurl", "wilt", "error", "pulse", "tendril-reach", "tendril-result", "log", "backfill", "backfill-event"],
         source: "https://github.com/adiled/iksir",
       },
-    });
+    }));
+  }
 
-    this.#nahla.on(Chi.breath, (t) => {
-      this.#muttasil = true;
-      this.#wasfThrum = t.protoVersion ?? null;
+  #nahl(khadim: string): Nahl {
+    const mawjud = this.#nuhul.get(khadim);
+    if (mawjud) return mawjud;
+    const nahl: Nahl = { khadim, nahla: this.#sanaa(khadim), muttasil: false, wasfThrum: null, bidaya: null };
+    this.#nuhul.set(khadim, nahl);
+    nahl.nahla.on(Chi.breath, (t) => {
+      nahl.muttasil = true;
+      nahl.wasfThrum = t.protoVersion ?? null;
     });
-    this.#nahla.onAstray(() => {
-      this.#muttasil = false;
-      for (const sid of [...this.#adwar.keys()]) this.#inthaDawr(sid, { success: false, error: "humd went away mid-bloom" });
+    nahl.nahla.onAstray(() => {
+      nahl.muttasil = false;
+      for (const [sid, k] of this.#khadimJalsa) {
+        if (k === khadim) this.#inthaDawr(sid, { success: false, error: "humd went away mid-bloom" });
+      }
     });
-    this.#nahla.onAdvisory((a) => void logger.haDHHir("wasila", `${a.code}: ${a.message}`));
-    this.#nahla.on(Chi.backfillEvent, (t) => {
+    nahl.nahla.onAdvisory((a) => void logger.haDHHir("wasila", `${khadim}: ${a.code}: ${a.message}`));
+    nahl.nahla.on(Chi.backfillEvent, (t) => {
       const hadath = t.event as HadathThehum;
       for (const fn of this.#mirata) {
         try {
@@ -72,46 +94,58 @@ export class Wasila {
       }
       this.nasharHadath("backfill-event", t as unknown as Record<string, unknown>);
     });
-    this.#nahla.onAny((t) => void logger.akhbar("wasila", `stray ${t.chi}`));
+    nahl.nahla.onAny((t) => void logger.akhbar("wasila", `${khadim}: stray ${t.chi}`));
+    return nahl;
+  }
+
+  #lisan(): Nahl {
+    return this.#nahl(LISAN);
+  }
+
+  #nahlJalsa(sid: string): Nahl {
+    return this.#nahl(this.#khadimJalsa.get(sid) ?? LISAN);
   }
 
   get muttasil(): boolean {
-    return this.#muttasil;
+    return this.#lisan().muttasil;
   }
 
   get huwiyya(): string {
-    return this.#nahla.id;
+    return [...this.#nuhul.values()].map((n) => `${n.khadim}=${n.nahla.id}`).join(" ");
   }
 
   get wasfaThrum(): string | null {
-    return this.#wasfThrum;
+    return this.#lisan().wasfThrum;
   }
 
-  #bidaya: Promise<void> | null = null;
-
   async ittasil(): Promise<void> {
-    this.#bidaya ??= this.#nahla.start();
-    await this.#bidaya;
+    await Promise.all(KHUDDAM.map((k) => {
+      const nahl = this.#nahl(k);
+      nahl.bidaya ??= nahl.nahla.start();
+      return nahl.bidaya;
+    }));
     const azal = Date.now() + 5000;
-    while (!this.#muttasil && Date.now() < azal) {
+    while (!this.#lisan().muttasil && Date.now() < azal) {
       await new Promise((r) => setTimeout(r, 50));
     }
-    if (!this.#muttasil) {
-      throw new KhataWasila(`humd admitted the bee but never breathed (${humCli()})`);
+    if (!this.#lisan().muttasil) {
+      throw new KhataWasila(`humd admitted the bees but never breathed (${humCli()})`);
     }
   }
 
   qaf(): void {
-    void this.#nahla.close();
-    this.#muttasil = false;
+    for (const nahl of this.#nuhul.values()) {
+      void nahl.nahla.close();
+      nahl.muttasil = false;
+    }
   }
 
   async isHealthy(): Promise<boolean> {
-    return this.#muttasil;
+    return this.muttasil;
   }
 
   async getVersion(): Promise<string | null> {
-    return this.#wasfThrum;
+    return this.wasfaThrum;
   }
 
   khalaqaSid(): string {
@@ -130,7 +164,7 @@ export class Wasila {
       lastMessageAt: wadem,
     };
     this.#jalasat.set(jalsa.id, jalsa);
-    this.#tabaa(jalsa.id);
+    this.#tabaa(jalsa);
     await logger.akhbar("wasila", `Created session ${jalsa.id} for ${huwiyyatWasfa}`);
     return jalsa;
   }
@@ -148,9 +182,11 @@ export class Wasila {
 
   async mahaqaJalsa(sid: string): Promise<boolean> {
     const wasJalsa = this.#jalasat.has(sid);
-    this.#nahla.send({ chi: Chi.cleanup, sid });
-    this.#nahla.offSid(sid);
+    const nahl = this.#nahlJalsa(sid);
+    nahl.nahla.send({ chi: Chi.cleanup, sid });
+    nahl.nahla.offSid(sid);
     this.#jalasat.delete(sid);
+    this.#khadimJalsa.delete(sid);
     this.#adwarAkhira.delete(sid);
     this.#inthaDawr(sid, { success: false, error: "session dismissed" });
     return wasJalsa;
@@ -170,8 +206,11 @@ export class Wasila {
     return nass || undefined;
   }
 
-  #tabaa(sid: string): void {
-    this.#nahla.onSid(sid, (t) => {
+  #tabaa(jalsa: JalsatHum): void {
+    const sid = jalsa.id;
+    const nahl = this.#nahl(khadimMin(jalsa.huwiyyatWasfa));
+    this.#khadimJalsa.set(sid, nahl.khadim);
+    nahl.nahla.onSid(sid, (t) => {
       switch (t.chi) {
         case Chi.unfurl:
           return this.#jamaDawr(t);
@@ -180,13 +219,13 @@ export class Wasila {
           return this.#ikmalDawr(t);
         case Chi.pulse: {
           if (t.kind === PulseKind.cellReady && t.cell) {
-            const jalsa = this.#jalasat.get(sid);
-            if (jalsa) jalsa.nestId = t.cell;
+            const j = this.#jalasat.get(sid);
+            if (j) j.nestId = t.cell;
           }
           return this.nasharHadath("pulse", t as unknown as Record<string, unknown>);
         }
         case Chi.tendrilReach:
-          return void this.#ajabaNida(t);
+          return void this.#ajabaNida(t, nahl);
         default:
           return;
       }
@@ -217,8 +256,9 @@ export class Wasila {
     options?: { model?: { providerID: string; modelID: string }; agent?: string; system?: string; cwd?: string; timeoutMs?: number },
   ): Promise<JawabDawr> {
     const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-    if (!this.#muttasil) {
-      return { success: false, error: "thrum is not connected" };
+    const nahl = this.#nahlJalsa(sid);
+    if (!nahl.muttasil) {
+      return { success: false, error: `${nahl.khadim} is not nestled` };
     }
     const muntazar = new Promise<JawabDawr>((hal) => {
       const sabbq = this.#adwar.get(sid);
@@ -226,8 +266,8 @@ export class Wasila {
       this.#adwar.set(sid, { qataa: [], hal, zaman: Date.now() });
     });
     const tone = this.#hathth(sid, prompt, options);
-    await logger.akhbar("wasila", `hathth ${sid} namudhaj=${tone.modelId ?? "(nest)"}`);
-    this.#nahla.send(tone);
+    await logger.akhbar("wasila", `${nahl.khadim}: hathth ${sid} namudhaj=${tone.modelId ?? "(nest)"}`);
+    nahl.nahla.send(tone);
 
     const muntaqi = new Promise<never>((_, raf) => {
       const muqqit = setTimeout(() => raf(new KhataWasila(`prompt timed out after ${timeoutMs}ms`)), timeoutMs);
@@ -248,15 +288,17 @@ export class Wasila {
     prompt: string,
     options?: { model?: { providerID: string; modelID: string }; agent?: string; system?: string; cwd?: string },
   ): Promise<boolean> {
-    if (!this.#muttasil) return false;
-    this.#nahla.send(this.#hathth(sid, prompt, options));
-    await logger.akhbar("wasila", `Sent async prompt to session ${sid}`);
+    const nahl = this.#nahlJalsa(sid);
+    if (!nahl.muttasil) return false;
+    nahl.nahla.send(this.#hathth(sid, prompt, options));
+    await logger.akhbar("wasila", `${nahl.khadim}: sent async prompt to session ${sid}`);
     return true;
   }
 
   async abortSession(sid: string): Promise<boolean> {
-    if (!this.#muttasil) return false;
-    this.#nahla.send({ chi: Chi.cancel, sid });
+    const nahl = this.#nahlJalsa(sid);
+    if (!nahl.muttasil) return false;
+    nahl.nahla.send({ chi: Chi.cancel, sid });
     return true;
   }
 
@@ -270,8 +312,9 @@ export class Wasila {
 
   istaadaJalsa(jalsa: JalsatHum, nestId?: string): void {
     if (this.#jalasat.has(jalsa.id)) return;
-    this.#jalasat.set(jalsa.id, { ...jalsa, nestId });
-    this.#tabaa(jalsa.id);
+    const mustaadda = { ...jalsa, nestId };
+    this.#jalasat.set(jalsa.id, mustaadda);
+    this.#tabaa(mustaadda);
   }
 
   huwiyyatUsh(sid: string): string | undefined {
@@ -298,16 +341,18 @@ export class Wasila {
   }
 
   async summarizeSession(sid: string): Promise<boolean> {
-    if (!this.#muttasil) return false;
-    this.#nahla.send({ chi: Chi.curate, sid });
-    await logger.akhbar("wasila", `Curated jalsa ${sid}`);
+    const nahl = this.#nahlJalsa(sid);
+    if (!nahl.muttasil) return false;
+    nahl.nahla.send({ chi: Chi.curate, sid });
+    await logger.akhbar("wasila", `${nahl.khadim}: curated jalsa ${sid}`);
     this.nasharHadath("session.compacted", { sessionID: sid });
     return true;
   }
 
   bassaLog(mustawa: string, risala: string, huyul?: Record<string, unknown>): boolean {
-    if (!this.#muttasil) return false;
-    this.#nahla.send({ chi: Chi.log, level: mustawa, message: risala, ...(huyul ? { fields: huyul } : {}) });
+    const lisan = this.#lisan();
+    if (!lisan.muttasil) return false;
+    lisan.nahla.send({ chi: Chi.log, level: mustawa, message: risala, ...(huyul ? { fields: huyul } : {}) });
     return true;
   }
 
@@ -316,13 +361,14 @@ export class Wasila {
   }
 
   atlubBackfill(author: string, from: number): boolean {
-    if (!this.#muttasil) return false;
-    this.#nahla.send({ chi: Chi.backfill, author, from });
+    const lisan = this.#lisan();
+    if (!lisan.muttasil) return false;
+    lisan.nahla.send({ chi: Chi.backfill, author, from });
     return true;
   }
 
   async mayyaza(prompt: string): Promise<JawabDawr> {
-    const jalsa = await this.khalaqaJalsa("iksir-mumayyiz", "Iksir Tamyiz");
+    const jalsa = await this.khalaqaJalsa(`${ASAS}-mumayyiz`, "Iksir Tamyiz");
     if (!jalsa) {
       return { success: false, error: "failed to create mumayyiz session" };
     }
@@ -360,9 +406,9 @@ export class Wasila {
     else this.#hawadith.push(hadath);
   }
 
-  async #ajabaNida(t: Tone<"tendril-reach">): Promise<void> {
+  async #ajabaNida(t: Tone<"tendril-reach">, nahl: Nahl): Promise<void> {
     const rudd = (g: { isError?: boolean; output: string }): void => {
-      this.#nahla.send({ chi: Chi.tendrilResult, callId: t.callId, ...(t.sid ? { sid: t.sid } : {}), ...g });
+      nahl.nahla.send({ chi: Chi.tendrilResult, callId: t.callId, ...(t.sid ? { sid: t.sid } : {}), ...g });
     };
     if (!this.#sijill) {
       rudd({ isError: true, output: "no sijill alat" });

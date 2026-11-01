@@ -97,7 +97,7 @@ test("mirata: bassaLog emits well-formed log tone", async () => {
     send(t: Record<string, unknown>) { mursal.push(t); },
     async close() {},
   };
-  const wasila = new Wasila({ nahla: nahla as never });
+  const wasila = new Wasila({ sanaaNahla: () => nahla as never });
   await wasila.ittasil();
   wasila.bassaLog("info", "jalsa khalaqa TEAM-1", { naw: "jalsa", hadath: "khalaqa" });
   const log = mursal.filter((t) => t.chi === "log");

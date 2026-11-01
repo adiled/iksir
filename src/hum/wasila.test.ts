@@ -1,11 +1,12 @@
 import { test, assertEquals, assertExists } from "../ikhtibar.ts";
 import type { Tone } from "thrum";
-import { Wasila, type NahlaHum } from "./wasila.ts";
+import { KHUDDAM, Wasila, type NahlaHum } from "./wasila.ts";
 import { AlatAlIksir } from "../alat/alat-al-iksir.ts";
 import { withTestDb } from "../test-helpers.ts";
 
 class NahlaWahm implements NahlaHum {
-  id = "bee_wahm";
+  id: string;
+  constructor(khadim = "wahm") { this.id = `bee_${khadim}`; }
   mursal: Tone[] = [];
   #byChi = new Map<string, (t: any) => unknown>();
   #bySid = new Map<string, (t: Tone) => unknown>();
@@ -36,10 +37,15 @@ async function intazir(f: () => boolean): Promise<void> {
   assertEquals(f(), true);
 }
 
-function qim() {
-  const nahla = new NahlaWahm();
-  const wasila = new Wasila({ sijill: new AlatAlIksir().sijill, nahla });
-  return { nahla, wasila };
+function qim(warsha?: string) {
+  const nuhul = new Map<string, NahlaWahm>();
+  const sanaaNahla = (khadim: string) => {
+    const n = nuhul.get(khadim) ?? new NahlaWahm(khadim);
+    nuhul.set(khadim, n);
+    return n;
+  };
+  const wasila = new Wasila({ sijill: new AlatAlIksir().sijill, warsha, sanaaNahla });
+  return { nahla: nuhul.get("murshid") ?? sanaaNahla("murshid"), nuhul, wasila };
 }
 
 test("forager: a prompt carries the mun_* tools and fences nothing else", async () => {
@@ -56,8 +62,7 @@ test("forager: a prompt carries the mun_* tools and fences nothing else", async 
 });
 
 test("forager: blooms build in the workshop on this humd", async () => {
-  const nahla = new NahlaWahm();
-  const wasila = new Wasila({ warsha: "/srv/warsha", nahla });
+  const { nahla, wasila } = qim("/srv/warsha");
   await wasila.ittasil();
   const jalsa = (await wasila.khalaqaJalsa("iksir-murshid", "t"))!;
   await wasila.sendPromptAsync(jalsa.id, "salam");
@@ -118,11 +123,27 @@ test("forager: valid reach dispatches body and answers output", async () => {
   });
 });
 
-test("forager: ittasil twice starts the bee once", async () => {
+test("forager: ittasil twice starts each bee once", async () => {
   const { wasila } = qim();
   await wasila.ittasil();
   await wasila.ittasil();
   assertEquals(wasila.muttasil, true);
+  wasila.qaf();
+});
+
+test("khuddam: four bees, one per khadim, and a jalsa speaks through its own", async () => {
+  const { nuhul, wasila } = qim();
+  await wasila.ittasil();
+  assertEquals([...nuhul.keys()].sort(), [...KHUDDAM].sort());
+  assertEquals(wasila.huwiyya.includes("arraf=bee_arraf"), true);
+  const oracle = (await wasila.khalaqaJalsa("iksir-arraf", "t"))!;
+  await wasila.sendPromptAsync(oracle.id, "divine");
+  assertEquals(nuhul.get("arraf")!.mursal.filter((t) => t.chi === "prompt").length, 1);
+  assertEquals(nuhul.get("murshid")!.mursal.filter((t) => t.chi === "prompt").length, 0);
+  nuhul.get("arraf")!.sawt({ chi: "tendril-reach", sid: oracle.id, callId: "c9", name: "mun_ghayr_mawjod", args: {} });
+  await intazir(() => nuhul.get("arraf")!.nataij().length === 1);
+  wasila.bassaLog("info", "kalima");
+  assertEquals(nuhul.get("munadi")!.mursal.some((t) => t.chi === "log"), true);
   wasila.qaf();
 });
 
