@@ -180,6 +180,12 @@ export class AlatAlIksir {
               type: "string",
               description: "Parent ticket ID (use sparingly, prefer relations)",
             },
+            mayayir: {
+              type: "array",
+              items: { type: "string" },
+              description:
+                "Maʿāyīr al-ṣafāʾ — the fire mun_safa puts the jawhar to: each a command run in the workshop, withstood when it exits 0. Declared before the work begins.",
+            },
           },
           required: ["huwiyyatMurshid", "title"],
         },
@@ -210,6 +216,11 @@ export class AlatAlIksir {
                 description: { type: "string" },
                 estimate: { type: "number" },
                 status: { type: "string" },
+                mayayir: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "Maʿāyīr al-ṣafāʾ — commands run in the workshop; exit 0 withstands. Replaces the fire whole.",
+                },
               },
               description: "Fields to update",
             },
@@ -853,6 +864,7 @@ judged — it is set before al-Kimyawī having already survived its fire.`,
       hala: args.status as "triage" | "backlog" | undefined,
       wasamat: args.labels as string[] | undefined,
       huwiyyatAb: args.parentId as string | undefined,
+      mayayir: args.mayayir as string[] | undefined,
     };
 
     this.#hawwilLiKhadim(call);
@@ -867,11 +879,18 @@ Daemon will create the ticket and return the ticket ID.`;
   }
 
   async #aalajaTajdidWasfa(args: Record<string, unknown>): Promise<string> {
+    const tahdith = (args.updates ?? {}) as Record<string, unknown>;
     const call: NidaTajdidWasfa = {
       tool: "mun_jaddid_wasfa",
       huwiyyatMurshid: args.huwiyyatMurshid as string,
       huwiyyatWasfa: args.huwiyyatWasfa as string,
-      updates: args.updates as NidaTajdidWasfa["updates"],
+      updates: {
+        unwan: tahdith.title as string | undefined,
+        wasf: tahdith.description as string | undefined,
+        taqdir: tahdith.estimate as number | undefined,
+        hala: tahdith.status as string | undefined,
+        mayayir: tahdith.mayayir as string[] | undefined,
+      },
     };
 
     this.#hawwilLiKhadim(call);

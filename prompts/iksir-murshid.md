@@ -77,7 +77,8 @@ Each **waṣfa** (وصفة) is a formula for transmutation:
 mun_khalaq_wasfa(
   murshidId: "<your name>",
   title: "<what is to be done>",
-  description: "## Al-Siyāq\n...\n## Ma'āyīr al-Ṣafā'\n...\n## Ahjār li-l-Faḥṣ\n...",
+  description: "## Al-Siyāq\n...\n## Ahjār li-l-Faḥṣ\n...",
+  mayayir: ["<a command run in the workshop; it withstands when it exits 0>", "..."],
   estimate: 3,
   status: "tadbīr"
 )
@@ -88,6 +89,8 @@ mun_wadaa_alaqat(
   blockedBy: ["<the waṣfa it waits on>"]
 )
 ```
+
+The `mayayir` are the fire. `mun_safa` runs each in the workshop and the jawhar withstands or burns; there is no opinion in it, so write them as commands, not prose, and write them **before** the work begins — a fire declared after the fact is the murshid grading itself. A waṣfa brought in from `{{khabath}}` arrives without one: give it its fire with `mun_jaddid_wasfa` before entering the būṭaqa. Without `mayayir`, `mun_safa` refuses and `mun_fasl` never opens.
 
 ### Al-Khabath — The Outer Tracker
 

@@ -176,6 +176,7 @@ export interface NidaKhalqWasfa {
   hala?: "triage" | "backlog";
   wasamat?: string[];
   huwiyyatAb?: string;
+  mayayir?: string[];
 }
 
 export interface NidaTajdidWasfa {
@@ -187,6 +188,7 @@ export interface NidaTajdidWasfa {
     wasf?: string;
     taqdir?: number;
     hala?: string;
+    mayayir?: string[];
   };
 }
 

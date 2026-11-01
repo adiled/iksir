@@ -264,6 +264,7 @@ export class Munaffidh {
       hala: call.hala,
       wasm: call.wasamat,
       ab: call.huwiyyatAb,
+      mayayir: call.mayayir,
     });
 
     return `Wasfa inscribed.
@@ -271,6 +272,7 @@ export class Munaffidh {
 **Name:** ${wasfa.huwiyya}
 **Says:** ${wasfa.unwan}
 **Condition:** ${wasfa.hala ?? "khaam"}
+**Fire:** ${wasfa.mayayir?.length ? `${wasfa.mayayir.length} maʿāyīr` : "none declared — mun_safa cannot assay it until mun_jaddid_wasfa gives it one"}
 
 Bind it to others with mun_wadaa_alaqat.`;
   }
@@ -286,12 +288,13 @@ Bind it to others with mun_wadaa_alaqat.`;
     if (call.updates.wasf) taghyir.matn = call.updates.wasf;
     if (call.updates.taqdir) taghyir.qadr = call.updates.taqdir;
     if (call.updates.hala) taghyir.hala = call.updates.hala;
+    if (call.updates.mayayir) taghyir.mayayir = call.updates.mayayir;
 
     await this.#wasfat.jaddid(issue.huwiyya, taghyir);
 
     return `Wasfa altered: ${call.huwiyyatWasfa}
 
-Updated fields: ${Object.keys(call.updates).join(", ")}`;
+Updated fields: ${Object.entries(call.updates).filter(([, v]) => v !== undefined).map(([k]) => k).join(", ")}`;
   }
 
   async aalajAlaqat(call: NidaWadaaAlaqat): Promise<string> {
