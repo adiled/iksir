@@ -83,33 +83,32 @@ Iksīr (إكسير - The Elixir)
   |
   |- Khuddām (خدّام - Sacred Servants)
   |    Eternal, bound to the workshop. One of each. They are Iksīr.
-  |    Five of them enter the humd as bees of their own.
   |
-  |    |- Munadi     منادي  - Dispatch: hears you, summons, holds the one flame     (bee)
-  |    |- Arraf      عرّاف  - divines intent from your words                        (bee)
-  |    |- Alim       عالم   - the scholar at the gate: answers, reads the khabath
-  |    |- Mumayyiz   مميّز  - separates dhahab from khabath in what murshidūn say   (bee)
-  |    |- Sayrafi    صيرفي  - the assayer: runs the fire, sets the jawhar down     (bee)
-  |    |- Katib      كاتب   - keeps the sessions and their topics
-  |    |- Munaffidh  منفذ   - executes every instrument a murshid speaks
-  |    |- Raqib      رقيب   - guards against fasad (corruption)
-  |    '- Saail      سائل   - carries your Telegram words into the Sijill
+  |    |- Munadi     منادي  - calls forth, and keeps the one flame
+  |    |- Arraf      عرّاف  - divines intent from your words
+  |    |- Alim       عالم   - answers at the gate
+  |    |- Mumayyiz   مميّز  - separates dhahab from khabath
+  |    |- Sayrafi    صيرفي  - assays the jawhar by fire
+  |    |- Katib      كاتب   - inscribes who labours where
+  |    |- Munaffidh  منفذ   - turns word into deed
+  |    |- Raqib      رقيب   - guards against fasad
+  |    '- Saail      سائل   - carries your words within
   |
-  '- Murshidun (مرشدون - The Guides)                                                (bee)
+  '- Murshidun (مرشدون - The Guides)
        Summoned per waṣfa, many, but only one at the flame. Each dwells in its
-       own inā', on its own branch, with bash in its hands and a topic of its own.
+       own inā', and perishes when the work is done.
        |
        '- Sani (صانع - The Craftsman)
             Summoned by a Murshid for one waṣfa. Inscribes the runūz.
   |
 Buwtaqa (بوتقة - The Crucible)
   |
-Athanor (أثانور - The Sacred Furnace: the nurse you kindled)
+Athanor (أثانور - The Sacred Furnace)
 ```
 
-The Khuddām are Iksīr's own flesh. The Murshidūn are not — they are cells burning in a nest al-Kimyawi has kindled, reached across the thrum. Iksīr summons them, guards the single flame among them, and carries their words to you; what they are made of was never Iksīr's to decide.
+The Khuddām are Iksīr's own flesh. The Murshidūn are not — they burn in the athanor al-Kimyawi has kindled. Iksīr summons them, guards the single flame among them, and carries their words to you; what they are made of was never Iksīr's to decide.
 
-The **Ālāt al-Iksīr** (آلات الإكسير - instruments of the Elixir) ride every prompt as tools: inscribing and altering waṣfāt, binding them, replying, recording decisions, yielding and demanding the flame, and the two gates — `mun_safa` and `mun_fasl`. A murshid's `git` is its own, through `bash`.
+The **Ālāt al-Iksīr** (آلات الإكسير - instruments of the Elixir) are what a murshid may do by name: inscribe and alter a waṣfa, bind one to another, speak to you, record a decision, yield or demand the flame, call for the fire, and decant. Its hands in the vessel are its own.
 
 ## The Sacred Laws
 
