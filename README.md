@@ -15,10 +15,10 @@ The modern world has forgotten the scent of real alchemy - the sharp bite of sul
 ---
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/adiled/iksir/main/install | bash
+hum hive https://github.com/adiled/iksir install
 ```
 
-Prerequisites: [Deno](https://deno.com), and a [hum](https://github.com/adiled/hum) nest.
+Iksīr is a [hum](https://github.com/adiled/hum) hive. Prerequisites: Node 22+, and a humd.
 
 **Iksīr kindles no furnace of its own.** It nestles at a `humd` as a forager bee and prompts whatever hive you have chosen. What burns there is yours to decide — that choice was never Iksīr's to make. It asks only two things of al-Kimyawi:
 
@@ -123,7 +123,7 @@ Iksīr provides the workshop, but the recipes are yours:
 - **Ta'lim** (تعليم): what your alchemists must know of your materials and methods
 - **Ruqya** (رقية): Murshid and Sani incantations  
 - **Qanawat** (قنوات): Telegram channels carry messages by default. Any conduit may be consecrated
-- **Sahifa** (صحيفة): Linear holds formulae by default. Other grimoires await binding
+- **Sahifa** (صحيفة): the Sijill al-Waṣfāt holds formulae; a murshid or Dispatch inscribes them
 - **Khatm** (ختم): vessel naming, formula patterns, divination tuning — all may be inscribed
 
 ## Alchemy

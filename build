@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# iksir build — the whole furnace must parse before it is hung.
+# iksir build — the whole furnace must parse and prove itself before it is hung.
 set -euo pipefail
 cd "$(dirname "$0")"
+[ -e node_modules/thrum ] || npm install --silent --ignore-scripts
 node --check src/main.ts
 node --check src/cli.ts
 node --check src/hum/wasila.ts
 node --check hives/saail/saail.ts
 npm test --silent
-echo "iksir builds and proves itself"

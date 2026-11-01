@@ -60,10 +60,6 @@ test("unbub: the tongue routes each shape", async () => {
     await qala(rasul, "/status");
     await hatta(() => samia.length >= 2);
     assertEquals(samia[1], { naw: "amr", amr: "status", wusut: [] });
-
-    await qala(rasul, "= q-1 allow");
-    await hatta(() => samia.length >= 3);
-    assertEquals(samia[2], { naw: "jawab_sual", huwiyyatSual: "q-1", taamiyya: "allow" });
   });
 });
 

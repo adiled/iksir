@@ -15,7 +15,7 @@ import { logger } from "../logging/logger.ts";
 const IGNORED_DIRS = new Set([
   "node_modules", ".git", "dist", "build", "__pycache__",
   ".venv", "venv", ".tox", ".mypy_cache", ".pytest_cache",
-  "graveyard", "backlog", ".deno",
+  "graveyard", "backlog",
 ]);
 
 const IGNORED_PATTERNS = [

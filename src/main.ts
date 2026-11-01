@@ -10,7 +10,7 @@
  * - KeepAlive: Polls for external changes, feeds to murshid
  *
  * Usage:
- *   deno run --allow-all src/main.ts [options]
+ *   node src/main.ts [options]
  *
  * Options:
  *   --help          Show help
@@ -25,7 +25,7 @@ import {
   MAX_BACKOFF_MS
 } from "./constants.ts";
 
-import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, jalabaAhdathGhairMuaalaja, allamaHadathMuaalaj, haddathaHuwiyyatRisalaSual } from "../db/db.ts";
+import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, jalabaAhdathGhairMuaalaja, allamaHadathMuaalaj } from "../db/db.ts";
 import { Wasila } from "./hum/wasila.ts";
 import { istarjaaMirata } from "./khuddam/mirata.ts";
 import { AlatAlIksir } from "./alat/alat-al-iksir.ts";
@@ -43,9 +43,8 @@ import { istadaaMunaffidh } from "./khuddam/munaffidh.ts";
 import { istadaaMunadi } from "./khuddam/munadi.ts";
 import { istadaaArraf } from "./khuddam/arraf.ts";
 import { awqadaHayat, type NatijaSeyana } from "./khuddam/hayat.ts";
-import { istadaaSaail } from "./khuddam/saail.ts";
 import { istadaaRaqib } from "./khuddam/raqib.ts";
-import type { TasmimIksir, Rasul, RisalaDakhila, TaaliqMuraja, JalsatMurshid, MaalumatSual, SualMuallaq } from "./types.ts";
+import type { TasmimIksir, Rasul, RisalaDakhila, TaaliqMuraja, JalsatMurshid } from "./types.ts";
 import type { SijillWasfat } from "./wasfa/sijill-wasfat.ts";
 
 /**
@@ -104,7 +103,6 @@ interface SiyaqKhadim {
   munaffidh: ReturnType<typeof istadaaMunaffidh>;
   munadi: ReturnType<typeof istadaaMunadi>;
   hayat: ReturnType<typeof awqadaHayat>;
-  sail: ReturnType<typeof istadaaSaail>;
   raqib: ReturnType<typeof istadaaRaqib>;
   mutahakkimIlgha: AbortController;
 }
@@ -196,7 +194,6 @@ async function addaIsharat(ctx: SiyaqKhadim): Promise<void> {
     await Promise.all([
       ctx.mudirJalasat.hafizaHala(),
       ctx.munaffidh.hafizaHala(),
-      ctx.sail.hafizaHala(),
     ]);
 
     aghlaaqQaidatBayanat();
@@ -217,8 +214,7 @@ async function addaIsharat(ctx: SiyaqKhadim): Promise<void> {
 }
 
 /**
- * Drain the ahdath the amil raises from the thrum, routing asila to Sail
- * and curations to Katib.
+ * Drain the ahdath the amil raises from the thrum: curations go to Katib.
  */
 async function ishtarakAhdath(ctx: SiyaqKhadim): Promise<void> {
   await logger.akhbar("ahdath", "Draining ahdath from the thrum");
@@ -357,14 +353,6 @@ function rabatRisalaDakhila(ctx: SiyaqKhadim): void {
         /** Message from a murshid topic */
         const { huwiyya, nass } = risala;
 
-        /** Check if waiting for custom question input */
-        if (ctx.sail.huwaYantazirIdkhal(huwiyya)) {
-          const handled = await ctx.sail.aalajJawabKhass(huwiyya, nass);
-          if (handled) {
-            await ctx.rasul.send({ murshid: huwiyya }, "Answer submitted.");
-            return;
-          }
-        }
 
         /** Route to murshid session */
         await logger.akhbar("inbound", `Routing to murshid ${huwiyya}`);
@@ -406,29 +394,6 @@ function rabatRisalaDakhila(ctx: SiyaqKhadim): void {
       case "amr": {
         /** Slash command from dispatch topic */
         await aalajAmrDakhil(ctx, risala.amr, risala.wusut);
-        break;
-      }
-
-      case "jawab_sual": {
-        /** Question button selection */
-        const { huwiyyatSual, taamiyya } = risala;
-        /** huwiyyatSual is "short:{8chars}" — extract and resolve */
-        const shortId = huwiyyatSual.replace("short:", "");
-        const questionId = ctx.sail.hallaIdIstijaba(shortId);
-        if (questionId) {
-          await ctx.sail.aalajIstijabaZirrSual(questionId, taamiyya);
-        }
-        break;
-      }
-
-      case "idkhal_khass_sual": {
-        /** Custom input requested for question */
-        const { huwiyyatMurshid, huwiyyatSual } = risala;
-        const shortId = huwiyyatSual.replace("short:", "");
-        const questionId = ctx.sail.hallaIdIstijaba(shortId);
-        if (questionId) {
-          await ctx.sail.allamIntizarIdkhal(huwiyyatMurshid, questionId);
-        }
         break;
       }
 
@@ -836,27 +801,6 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
 
   await dispatcher.istarjaaIndaNashaat();
 
-  /** Initialize question handler (for question tool events from murshids) */
-  const questionHandler = istadaaSaail({
-    amil,
-    rasul: messenger,
-    mudirJalasat: sessionManager,
-  });
-  await questionHandler.hammalaHala();
-
-  questionHandler.wadaaIndaTahwilSual(async (pending: SualMuallaq, question: MaalumatSual) => {
-    const khiyarat = questionHandler.banaKhiyarat(pending.id, question);
-    const messageId = await messenger.arsalaSualBiKhiyarat(
-      { murshid: pending.huwiyyatMurshid },
-      "Use buttons below to answer:",
-      khiyarat,
-    );
-    if (messageId) {
-      pending.huwiyyatRisalaMuqaddim = messageId;
-      haddathaHuwiyyatRisalaSual(pending.id, messageId);
-    }
-  });
-
   /** Initialize health monitor (session stuck detection + auto-compaction) */
   const healthMonitor = istadaaRaqib({
     amil,
@@ -874,7 +818,6 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     munaffidh: ipcProcessor,
     munadi: dispatcher,
     hayat: null as unknown as ReturnType<typeof awqadaHayat>,
-    sail: questionHandler,
     wasfat,
     hayula,
     raqib: healthMonitor,

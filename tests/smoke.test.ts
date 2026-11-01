@@ -20,9 +20,7 @@ import {
 import { TelegramMessenger } from "../src/rasul/messenger.ts";
 import { MudirJalasat } from "../src/khuddam/katib.ts";
 import { Munadi } from "../src/khuddam/munadi.ts";
-import { Saail } from "../src/khuddam/saail.ts";
 import type { NiyyaMuhallala } from "../src/khuddam/arraf.ts";
-import { jalabaAseilaGhairMujaba } from "../db/db.ts";
 
 
 function buildContext() {
@@ -48,13 +46,8 @@ function buildContext() {
     namatWasfa: config.wasfat?.namatWasfa,
   });
 
-  const questionHandler = new Saail({
-    amil: amil as never,
-    rasul: messenger,
-    mudirJalasat: sessionManager as never,
-  });
 
-  return { config, amil, telegram, messenger, sessionManager, dispatcher, intentResolver, questionHandler, hayula };
+  return { config, amil, telegram, messenger, sessionManager, dispatcher, intentResolver, hayula };
 }
 
 
@@ -226,91 +219,6 @@ test("smoke: murshid topic message routes to correct session", async () => {
     assertEquals(lastPrompt.sessionId, session.id);
     assertStringIncludes(lastPrompt.prompt, "GET /users");
     assertEquals(amil._calls.sendPromptAsync.length, initPromptCount + 1);
-  });
-});
-
-
-test("smoke: question event classified and forwarded to murshid topic", async () => {
-  await withTestRepo(async () => {
-    const { dispatcher, questionHandler, sessionManager } = buildContext();
-
-    await dispatcher.faaalLiWasfa(
-      "TEAM-6000",
-      "Funduq Search"
-    );
-
-    const session = sessionManager.wajadaJalasatMurshid()[0];
-
-    await questionHandler.aalajSualMatlub({
-      type: "question.asked",
-      properties: {
-        id: "q-smoke-001",
-        sessionID: session.id,
-        questions: [{
-          header: "Architecture choice",
-          question: "Should we use REST or GraphQL?",
-          options: [
-            { label: "REST (Recommended)", description: "Standard approach" },
-            { label: "GraphQL", description: "Flexible queries" },
-          ],
-        }],
-      },
-    });
-
-    /** Step 3: Verify question is pending */
-    const pending = questionHandler.wajadaSualMuallaq("q-smoke-001");
-    assertExists(pending);
-    assertEquals(pending.huwiyyatMurshid, "TEAM-6000");
-
-    /** Step 4: Verify question was persisted in DB */
-    const dbQuestions = jalabaAseilaGhairMujaba();
-    assertEquals(dbQuestions.length, 1);
-    assertEquals(dbQuestions[0].id, "q-smoke-001");
-  });
-});
-
-
-test("smoke: question answered via callback", async () => {
-  await withTestRepo(async () => {
-    const { dispatcher, amil, questionHandler, sessionManager } = buildContext();
-
-    await dispatcher.faaalLiWasfa(
-      "TEAM-7000",
-      "Bayt Al Hikma"
-    );
-
-    const session = sessionManager.wajadaJalasatMurshid()[0];
-
-    await questionHandler.aalajSualMatlub({
-      type: "question.asked",
-      properties: {
-        id: "q-smoke-002",
-        sessionID: session.id,
-        questions: [{
-          header: "Approach",
-          question: "Which path?",
-          options: [
-            { label: "Sabr", description: "Patient approach" },
-            { label: "Ijtihad", description: "Independent reasoning" },
-          ],
-        }],
-      },
-    });
-
-    /** Clear reply calls from auto-answer attempts */
-    const replyCountBefore = amil._calls.replyToQuestion.length;
-
-    /** Answer the question */
-    const success = await questionHandler.aalajIstijabaZirrSual("q-smoke-002", "Ijtihad");
-    assertEquals(success, true);
-
-    assertEquals(amil._calls.replyToQuestion.length, replyCountBefore + 1);
-    const lastReply = amil._calls.replyToQuestion[amil._calls.replyToQuestion.length - 1];
-    assertEquals(lastReply.answers[0].selected, ["Ijtihad"]);
-
-    assertEquals(questionHandler.wajadaSualMuallaq("q-smoke-002"), undefined);
-
-    assertEquals(jalabaAseilaGhairMujaba().length, 0);
   });
 });
 

@@ -19,14 +19,6 @@ logs/
 *.log
 *.pid
 
-# Deno cache
-.deno/
-deno.lock
-
-# Tooling artifacts
-/tools/*.json
-/verify-all.sh
-
 # Editor
 .zed/
 

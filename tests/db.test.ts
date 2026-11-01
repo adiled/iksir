@@ -15,9 +15,6 @@ import {
   adkhalaHadath,
   jalabaAhdathGhairMuaalaja,
   allamaHadathMuaalaj,
-  adkhalaSual,
-  jalabaAseilaGhairMujaba,
-  allamaJawabSual,
   adhafaQararSijill,
   jalabaQararatSijill,
   haddathaAwAdkhalaMatlabMuallaq,
@@ -230,61 +227,7 @@ test("events: ordering is by creation time", async () => {
 });
 
 
-test("questions: insert and retrieve unanswered", async () => {
-  await withTestDb(() => {
-    haddathaAwAdkhalaJalsa({
-      id: "sess-1",
-      huwiyya: "TEAM-200",
-      unwan: "Test",
-      naw: "epic",
-      hala: "fail",
-      far: "",
-      unshiaFi: new Date().toISOString(),
-      akhirRisalaFi: new Date().toISOString(),
-      halaMufassala: {},
-    });
 
-    adkhalaSual({
-      id: "q-1",
-      sessionId: "sess-1",
-      question: "Which approach?",
-      options: ["A", "B", "C"],
-    });
-
-    const questions = jalabaAseilaGhairMujaba();
-    assertEquals(questions.length, 1);
-    assertEquals(questions[0].sual, "Which approach?");
-    assertEquals(JSON.parse(questions[0].khiyarat!), ["A", "B", "C"]);
-  });
-});
-
-test("questions: allamaJawabSual removes from unanswered", async () => {
-  await withTestDb(() => {
-    haddathaAwAdkhalaJalsa({
-      id: "sess-1",
-      huwiyya: "TEAM-200",
-      unwan: "Test",
-      naw: "epic",
-      hala: "fail",
-      far: "",
-      unshiaFi: new Date().toISOString(),
-      akhirRisalaFi: new Date().toISOString(),
-      halaMufassala: {},
-    });
-
-    adkhalaSual({
-      id: "q-1",
-      sessionId: "sess-1",
-      question: "Which approach?",
-      options: ["A", "B"],
-    });
-
-    allamaJawabSual("q-1", "A");
-
-    const questions = jalabaAseilaGhairMujaba();
-    assertEquals(questions.length, 0);
-  });
-});
 
 
 test("diary: add and query decisions", async () => {

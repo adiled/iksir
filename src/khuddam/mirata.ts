@@ -8,8 +8,6 @@ import {
   haddathaWatermark,
   haddathaAwAdkhalaJalsa,
   adkhalaHadathMirror,
-  adkhalaSual,
-  allamaJawabSual,
   jalabaKullJalasat,
 } from "../../db/db.ts";
 import { logger } from "../logging/logger.ts";

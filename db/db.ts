@@ -8,7 +8,6 @@
  *   jalasat          — الجلسات: murshid vessels
  *   qanawat          — القنوات: messaging conduits
  *   ahdath           — الأحداث: IPC event log
- *   asila            — الأسئلة: questions posed to al-Kimyawi
  *   qararat          — القرارات: decisions inscribed in the mudawwana
  *   ahwal_tanfidh    — أحوال التنفيذ: implementation states per wasfa
  *   matalib_muallaq  — المطالب المعلّقة: pending demands
@@ -113,19 +112,6 @@ function tatbiqSchema(d: Database): void {
     )
   `);
 
-  /** أسئلة — questions posed to al-Kimyawi */
-  d.exec(`
-    CREATE TABLE IF NOT EXISTS asila (
-      id TEXT PRIMARY KEY,
-      huwiyat_jalsa TEXT NOT NULL REFERENCES jalasat(id),
-      sual TEXT NOT NULL,
-      khiyarat TEXT,
-      jawab TEXT,
-      huwiyat_risala INTEGER,
-      unshia_fi TEXT NOT NULL,
-      ujiba_fi TEXT
-    )
-  `);
 
   /** قرارات — decisions inscribed in the mudawwana */
   d.exec(`
@@ -189,8 +175,6 @@ function tatbiqSchema(d: Database): void {
 
   d.exec("CREATE INDEX IF NOT EXISTS idx_ahdath_kham ON ahdath(muaalaj, naw) WHERE muaalaj = 0");
   d.exec("CREATE INDEX IF NOT EXISTS idx_ahdath_unshia ON ahdath(unshia_fi)");
-  d.exec("CREATE INDEX IF NOT EXISTS idx_asila_jalsa ON asila(huwiyat_jalsa)");
-  d.exec("CREATE INDEX IF NOT EXISTS idx_asila_ghair_mujaba ON asila(huwiyat_jalsa) WHERE ujiba_fi IS NULL");
   d.exec("CREATE INDEX IF NOT EXISTS idx_qararat_murshid ON qararat(huwiyat_murshid)");
   d.exec("CREATE INDEX IF NOT EXISTS idx_qanawat_bahth ON qanawat(muqaddim, huwiyat_qanat)");
 
@@ -420,72 +404,6 @@ export function mahaqaQanat(
 }
 
 
-interface HujajIdkhalSual {
-  id: string;
-  sessionId: string;
-  question: string;
-  options: string[];
-  telegramMessageId?: number;
-}
-
-/**
- * Insert a pending sual into the sijill.
- */
-export function adkhalaSual(args: HujajIdkhalSual): void {
-  const d = jalabSijill();
-  d.prepare(`
-    INSERT OR IGNORE INTO asila (id, huwiyat_jalsa, sual, khiyarat, huwiyat_risala, unshia_fi)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(
-    args.id,
-    args.sessionId,
-    args.question,
-    JSON.stringify(args.options),
-    args.telegramMessageId ?? null,
-    new Date().toISOString(),
-  );
-}
-
-interface SualGhairMujabSijill {
-  id: string;
-  huwiyyatJalsa: string;
-  sual: string;
-  khiyarat: string | null;
-  huwiyyatRisala: number | null;
-  unshiaFi: string;
-}
-
-/**
- * Get all unanswered asila.
- */
-export function jalabaAseilaGhairMujaba(): SualGhairMujabSijill[] {
-  const d = jalabSijill();
-  return d
-    .prepare(
-      "SELECT id, huwiyat_jalsa AS huwiyyatJalsa, sual, khiyarat, huwiyat_risala AS huwiyyatRisala, unshia_fi AS unshiaFi FROM asila WHERE ujiba_fi IS NULL",
-    )
-    .all() as SualGhairMujabSijill[];
-}
-
-/**
- * Mark a sual as answered in the sijill.
- */
-export function allamaJawabSual(sualId: string, jawab: string): void {
-  const d = jalabSijill();
-  d.prepare(
-    "UPDATE asila SET jawab = ?, ujiba_fi = ? WHERE id = ?",
-  ).run(jawab, new Date().toISOString(), sualId);
-}
-
-/**
- * Update the huwiyat_risala for a sual (set after sending to Telegram).
- */
-export function haddathaHuwiyyatRisalaSual(sualId: string, huwiyatRisala: number): void {
-  const d = jalabSijill();
-  d.prepare(
-    "UPDATE asila SET huwiyat_risala = ? WHERE id = ?",
-  ).run(huwiyatRisala, sualId);
-}
 
 
 interface HujajIdkhalQarar {

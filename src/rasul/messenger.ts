@@ -326,42 +326,6 @@ export class TelegramMessenger implements Rasul {
 
       await logger.akhbar("messenger", `Callback: ${query.data}`);
 
-      /** Question button → jawab_sual or idkhal_khass_sual */
-      if (query.data.startsWith("q:")) {
-        const parts = query.data.split(":");
-        if (parts.length >= 3) {
-          const shortId = parts[1];
-          const selectedLabel = parts.slice(2).join(":");
-
-          if (selectedLabel === "__custom__") {
-            /** Need to resolve murshid from topic for custom input */
-            const topicId = query.message?.message_thread_id;
-            const huwiyya = topicId
-              ? this.hallJalsaBilQanat(MUQADDIM, String(topicId))
-              : null;
-
-            if (huwiyya && this.#mualij) {
-              await this.#mualij({
-                naw: "idkhal_khass_sual",
-                huwiyyatMurshid: huwiyya,
-                huwiyyatSual: `short:${shortId}`,
-              });
-              await this.#telegram.answerCallback(query.id, "Type your answer as a reply...");
-            } else {
-              await this.#telegram.answerCallback(query.id, "Cannot resolve murshid for custom input");
-            }
-          } else if (this.#mualij) {
-            await this.#mualij({
-              naw: "jawab_sual",
-              huwiyyatSual: `short:${shortId}`,
-              taamiyya: selectedLabel,
-            });
-            await this.#telegram.answerCallback(query.id, `Selected: ${selectedLabel}`);
-          }
-        }
-        return;
-      }
-
       /** Munadi buttons (select/parent/switch/cancel) */
       if (
         query.data.startsWith("select:") ||

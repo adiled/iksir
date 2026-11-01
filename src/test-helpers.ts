@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { execCommand } from "./utils/exec.ts";
-import type { RasulKharij, QanatRisala, JalsatMurshid, JawabSual } from "./types.ts";
+import type { RasulKharij, QanatRisala, JalsatMurshid, } from "./types.ts";
 import type { Hayula } from "./hayula/hayula.ts";
 
 
@@ -71,12 +71,6 @@ interface MockJalsatHum {
 
 export interface MockWasila {
   mayyaza(prompt: string): Promise<{ success: boolean; response?: string; error?: string }>;
-  replyToQuestion(
-    sessionId: string,
-    questionId: string,
-    answers: JawabSual[],
-  ): Promise<boolean>;
-  rejectQuestion(sessionId: string, questionId: string): Promise<boolean>;
   sendPromptAsync(sessionId: string, prompt: string, options?: unknown): Promise<boolean>;
   sendPrompt(
     sessionId: string,
@@ -93,8 +87,6 @@ export interface MockWasila {
 
   _calls: {
     mayyaza: string[];
-    replyToQuestion: Array<{ sessionId: string; questionId: string; answers: JawabSual[] }>;
-    rejectQuestion: Array<{ sessionId: string; questionId: string }>;
     sendPromptAsync: Array<{ sessionId: string; prompt: string }>;
     sendPrompt: Array<{ sessionId: string; prompt: string }>;
     khalaqaJalsa: Array<{ huwiyyatWasfa: string; title: string }>;
@@ -108,20 +100,12 @@ export interface MockWasila {
  */
 export function mockWasila(overrides?: {
   mayyaza?: (prompt: string) => Promise<{ success: boolean; response?: string; error?: string }>;
-  replyToQuestion?: (
-    sessionId: string,
-    questionId: string,
-    answers: JawabSual[],
-  ) => Promise<boolean>;
-  rejectQuestion?: (sessionId: string, questionId: string) => Promise<boolean>;
   sendPromptAsync?: (sessionId: string, prompt: string) => Promise<boolean>;
   sendPrompt?: (sessionId: string, prompt: string) => Promise<{ success: boolean; response?: string; error?: string }>;
   khalaqaJalsa?: (huwiyyatWasfa: string, title: string) => Promise<MockJalsatHum | null>;
 }): MockWasila {
   const calls: MockWasila["_calls"] = {
     mayyaza: [],
-    replyToQuestion: [],
-    rejectQuestion: [],
     sendPromptAsync: [],
     sendPrompt: [],
     khalaqaJalsa: [],
@@ -139,18 +123,6 @@ export function mockWasila(overrides?: {
       calls.mayyaza.push(prompt);
       if (overrides?.mayyaza) return overrides.mayyaza(prompt);
       return { success: true, response: '{"tamyiz":"DHAHAB","reason":"test","rejection":null}' };
-    },
-
-    async replyToQuestion(sessionId, questionId, answers) {
-      calls.replyToQuestion.push({ sessionId, questionId, answers });
-      if (overrides?.replyToQuestion) return overrides.replyToQuestion(sessionId, questionId, answers);
-      return true;
-    },
-
-    async rejectQuestion(sessionId, questionId) {
-      calls.rejectQuestion.push({ sessionId, questionId });
-      if (overrides?.rejectQuestion) return overrides.rejectQuestion(sessionId, questionId);
-      return true;
     },
 
     async sendPromptAsync(sessionId, prompt) {

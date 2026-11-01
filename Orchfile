@@ -1,3 +1,22 @@
+ARG HUM_SRC=
+ARG TELEGRAM_BOT_TOKEN=
+ARG TELEGRAM_CHAT_ID=
+ARG TELEGRAM_GROUP_ID=
+ARG IKSIR_STATE_DIR=
+
+SERVICE hive-install
+RUN ${HUM_SRC}/install
+ONESHOT true
+
 SERVICE iksir
-RUN node --env-file=${HOME}/.local/share/iksir/src/.env ${HOME}/.local/share/iksir/src/src/main.ts
+RUN node --env-file-if-exists=${HUM_SRC}/.env ${HUM_SRC}/src/main.ts
+ENV IKSIR_STATE_DIR=${IKSIR_STATE_DIR}
+RESTART always
+
+SERVICE saail
+RUN node --env-file-if-exists=${HUM_SRC}/.env ${HUM_SRC}/hives/saail/saail.ts
+ENV TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+ENV TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+ENV TELEGRAM_GROUP_ID=${TELEGRAM_GROUP_ID}
+ENV IKSIR_STATE_DIR=${IKSIR_STATE_DIR}
 RESTART always

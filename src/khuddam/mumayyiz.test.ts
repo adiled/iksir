@@ -1,20 +1,18 @@
 /**
  * Tests for src/khuddam/mumayyiz.ts
  *
- * Tests mayyazaTanbih() and mayyazaSual() with mock AmilHum.
+ * Tests mayyazaTanbih() with mock AmilHum.
  * AGENTS.md is loaded from a temp fixture file.
  *
  * Key behaviors tested:
  * - Correct parsing of LLM JSON responses
  * - Fail-open on errors (dhahab:true / DHAHAB)
- * - Markdown-wrapped JSON stripping (mayyazaSual)
  * - "pick recommended" / "pick first" shortcut resolution
  */
 
 import { test, assertEquals } from "../ikhtibar.ts";
 import { mockWasila, writeTempFile } from "../test-helpers.ts";
-import { mayyazaTanbih, mayyazaSual } from "./mumayyiz.ts";
-import type { MaalumatSual } from "../types.ts";
+import { mayyazaTanbih } from "./mumayyiz.ts";
 
 
 /**
@@ -30,18 +28,6 @@ async function ensureFixture(): Promise<void> {
 }
 
 
-
-function makeQuestion(overrides?: Partial<MaalumatSual>): MaalumatSual {
-  return {
-    header: "Test question",
-    question: "Should we do X or Y?",
-    options: [
-      { label: "Option A (Recommended)", description: "The recommended option" },
-      { label: "Option B", description: "Alternative option" },
-    ],
-    ...overrides,
-  };
-}
 
 
 test("mayyazaTanbih: DHAHAB response parsed correctly", async () => {
@@ -139,142 +125,4 @@ test("mayyazaTanbih: KHABATH missing rejection gets default", async () => {
   const result = await mayyazaTanbih(oc as never, "Some message");
   assertEquals(result.dhahab, false);
   assertEquals(result.radd, "Handle this autonomously.");
-});
-
-
-test("mayyazaSual: DHAHAB response parsed correctly", async () => {
-  await ensureFixture();
-  const oc = mockWasila({
-    mayyaza: async () => ({
-      success: true,
-      response: '{"tamyiz":"DHAHAB","reason":"architecture","rejection":null,"autoAnswer":null}',
-    }),
-  });
-
-  const result = await mayyazaSual(oc as never, makeQuestion());
-  assertEquals(result.tamyiz, "DHAHAB");
-  assertEquals(result.reason, "architecture");
-  assertEquals(result.rejection, null);
-  assertEquals(result.autoAnswer, null);
-});
-
-test("mayyazaSual: KHABATH with autoAnswer", async () => {
-  await ensureFixture();
-  const oc = mockWasila({
-    mayyaza: async () => ({
-      success: true,
-      response: '{"tamyiz":"KHABATH","reason":"obvious","rejection":"Read the docs.","autoAnswer":"Option B"}',
-    }),
-  });
-
-  const result = await mayyazaSual(oc as never, makeQuestion());
-  assertEquals(result.tamyiz, "KHABATH");
-  assertEquals(result.reason, "obvious");
-  assertEquals(result.rejection, "Read the docs.");
-  assertEquals(result.autoAnswer, "Option B");
-});
-
-test("mayyazaSual: 'pick recommended' resolves to (Recommended) option", async () => {
-  await ensureFixture();
-  const oc = mockWasila({
-    mayyaza: async () => ({
-      success: true,
-      response: '{"tamyiz":"KHABATH","reason":"trivial","rejection":"Use recommended.","autoAnswer":"pick recommended"}',
-    }),
-  });
-
-  const result = await mayyazaSual(oc as never, makeQuestion());
-  assertEquals(result.tamyiz, "KHABATH");
-  assertEquals(result.autoAnswer, "Option A (Recommended)");
-});
-
-test("mayyazaSual: 'pick first' resolves to first option", async () => {
-  await ensureFixture();
-  const oc = mockWasila({
-    mayyaza: async () => ({
-      success: true,
-      response: '{"tamyiz":"KHABATH","reason":"trivial","rejection":"Just pick one.","autoAnswer":"pick first"}',
-    }),
-  });
-
-  const result = await mayyazaSual(oc as never, makeQuestion());
-  assertEquals(result.tamyiz, "KHABATH");
-  assertEquals(result.autoAnswer, "Option A (Recommended)");
-});
-
-test("mayyazaSual: 'pick recommended' with no recommended -> falls back to first", async () => {
-  await ensureFixture();
-  const oc = mockWasila({
-    mayyaza: async () => ({
-      success: true,
-      response: '{"tamyiz":"KHABATH","reason":"trivial","rejection":"Pick one.","autoAnswer":"pick recommended"}',
-    }),
-  });
-
-  const q = makeQuestion({
-    options: [
-      { label: "Alpha", description: "First" },
-      { label: "Beta", description: "Second" },
-    ],
-  });
-
-  const result = await mayyazaSual(oc as never, q);
-  assertEquals(result.autoAnswer, "Alpha");
-});
-
-test("mayyazaSual: markdown-wrapped JSON -> parsed correctly", async () => {
-  await ensureFixture();
-  const oc = mockWasila({
-    mayyaza: async () => ({
-      success: true,
-      response: '```json\n{"tamyiz":"KHABATH","reason":"obvious","rejection":"Handle it.","autoAnswer":"Option B"}\n```',
-    }),
-  });
-
-  const result = await mayyazaSual(oc as never, makeQuestion());
-  assertEquals(result.tamyiz, "KHABATH");
-  assertEquals(result.autoAnswer, "Option B");
-});
-
-test("mayyazaSual: malformed JSON -> fail-open DHAHAB", async () => {
-  await ensureFixture();
-  const oc = mockWasila({
-    mayyaza: async () => ({
-      success: true,
-      response: "not json",
-    }),
-  });
-
-  const result = await mayyazaSual(oc as never, makeQuestion());
-  assertEquals(result.tamyiz, "DHAHAB");
-  assertEquals(result.reason, "خطأ في التمييز");
-});
-
-test("mayyazaSual: LLM throws -> fail-open DHAHAB", async () => {
-  await ensureFixture();
-  const oc = mockWasila({
-    mayyaza: async () => {
-      throw new Error("timeout");
-    },
-  });
-
-  const result = await mayyazaSual(oc as never, makeQuestion());
-  assertEquals(result.tamyiz, "DHAHAB");
-  assertEquals(result.reason, "خطأ في التمييز");
-});
-
-test("mayyazaSual: DHAHAB nullifies autoAnswer and rejection", async () => {
-  await ensureFixture();
-  /** LLM returns DHAHAB but also includes autoAnswer (shouldn't happen, but defensive) */
-  const oc = mockWasila({
-    mayyaza: async () => ({
-      success: true,
-      response: '{"tamyiz":"DHAHAB","reason":"needs judgment","rejection":"some text","autoAnswer":"Option A"}',
-    }),
-  });
-
-  const result = await mayyazaSual(oc as never, makeQuestion());
-  assertEquals(result.tamyiz, "DHAHAB");
-  assertEquals(result.rejection, null);
-  assertEquals(result.autoAnswer, null);
 });

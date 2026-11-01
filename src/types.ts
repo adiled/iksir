@@ -97,8 +97,6 @@ export interface TasmimHum {
 export interface TasmimHaththat {
   /** Path to tanbih tamyiz prompt template */
   mayyazaTanbih?: string;
-  /** Path to sual tamyiz prompt template */
-  mayyazaSual?: string;
 }
 
 
@@ -197,74 +195,6 @@ export interface HadathHum {
 }
 
 
-/** A single question option */
-export interface KhiyarSual {
-  label: string;
-  description: string;
-}
-
-/** A single question in a question request */
-export interface MaalumatSual {
-  /** Very short label (max 30 chars) */
-  header: string;
-  /** The full question text */
-  question: string;
-  /** Available choices */
-  options: KhiyarSual[];
-  /** Allow selecting multiple choices */
-  multiple?: boolean;
-  /** Allow custom text answer (default true) */
-  custom?: boolean;
-}
-
-/** A question.asked event from the nest */
-export interface HadathSualMatlub {
-  type: "question.asked";
-  properties: {
-    /** Unique question request ID */
-    id: string;
-    /** Session that asked the question */
-    sessionID: string;
-    /** The questions being asked */
-    questions: MaalumatSual[];
-    /** Tool context if from a tool call */
-    tool?: {
-      messageID: string;
-      callID: string;
-    };
-  };
-}
-
-/** An answer to a question */
-export interface JawabSual {
-  /** Index of the question in the questions array */
-  questionIndex: number;
-  /** Selected option labels */
-  selected: string[];
-  /** Custom text answer if provided */
-  custom?: string;
-}
-
-/** Tamyiz result for a sual */
-export interface TasnifSual {
-  tamyiz: "DHAHAB" | "KHABATH";
-  reason: string;
-  /** Terse guidance if KHABATH */
-  rejection: string | null;
-  /** Label of option to auto-select if KHABATH */
-  autoAnswer: string | null;
-}
-
-/** Pending question state */
-export interface SualMuallaq {
-  id: string;
-  sessionID: string;
-  huwiyyatMurshid: string;
-  questions: MaalumatSual[];
-  /** Provider message ID (for editing/referencing the sent question) */
-  huwiyyatRisalaMuqaddim?: number;
-  createdAt: string;
-}
 
 
 /**
@@ -610,8 +540,6 @@ export type RisalaDakhila =
   | { naw: "murshid"; huwiyya: string; nass: string }
   | { naw: "irsal"; nass: string; huwiyyatRisala?: number }
   | { naw: "amr"; amr: string; wusut: string[] }
-  | { naw: "jawab_sual"; huwiyyatSual: string; taamiyya: string }
-  | { naw: "idkhal_khass_sual"; huwiyyatMurshid: string; huwiyyatSual: string }
   | { naw: "ikhtiyar_munadi"; miftah: string }
   | { naw: "khass" };
 

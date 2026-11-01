@@ -180,18 +180,6 @@ export class RasulUnbub implements Rasul {
       return;
     }
 
-    if (nass.startsWith("=")) {
-      const [huwiyyatSual, ...taamiyya] = nass.slice(1).trim().split(/\s+/);
-      if (huwiyyatSual) {
-        await this.#mualij({
-          naw: "jawab_sual",
-          huwiyyatSual,
-          taamiyya: taamiyya.join(" ") || huwiyyatSual,
-        });
-      }
-      return;
-    }
-
     const qawl = nass.startsWith(">") ? nass.slice(1).trim() : nass;
     await this.#mualij({ naw: "irsal", nass: qawl });
   }
