@@ -439,7 +439,6 @@ import type { TasmimIksir } from "./types.ts";
 export function makeConfig(overrides?: Partial<TasmimIksir>): TasmimIksir {
   return {
     hum: {},
-    saatSukun: { bidaya: "00:00", nihaya: "06:00", mintaqaZamaniyya: "UTC" },
     wasfat: {},
     isharat: {
       telegram: {
@@ -456,7 +455,6 @@ export function makeConfig(overrides?: Partial<TasmimIksir>): TasmimIksir {
         topic: "",
       },
     },
-    hafazat: {},
     ...overrides,
   } as TasmimIksir;
 }

@@ -11,8 +11,6 @@ const exists = async (path: string): Promise<boolean> => existsSync(path);
 import type { TasmimIksir } from "./types.ts";
 import { logger } from "./logging/logger.ts";
 import { DEFAULT_NTFY_SERVER } from "./constants.ts";
-const DEFAULT_POLL_INTERVAL_MS = 300000;
-const DEFAULT_PR_POLL_INTERVAL_MS = 60000;
 
 const CONFIG_FILENAME = "iksir.json";
 
@@ -55,18 +53,6 @@ function resolveEnvVarsDeep(obj: unknown): unknown {
 
 function tasmimAsasi(): TasmimIksir {
   return {
-    istiftaa: {
-      fajwatZamaniyya: DEFAULT_POLL_INTERVAL_MS,
-      fajwatRaqabaRisala: DEFAULT_PR_POLL_INTERVAL_MS,
-    },
-    saatSukun: {
-      mufattah: true,
-      bidaya: "22:00",
-      nihaya: "07:00",
-      mintaqaZamaniyya: "UTC",
-      tanaqqulMasdud: true,
-      daqaiqNafizhaSeyana: 60,
-    },
     isharat: {
       ntfy: {
         mufattah: false,
@@ -81,36 +67,26 @@ function tasmimAsasi(): TasmimIksir {
       },
     },
     wasfat: {},
-    kimyawi: { ism: "" },
     hum: {},
-    hafazat: {},
   };
 }
 
 function deepMerge(target: TasmimIksir, source: Partial<TasmimIksir>): TasmimIksir {
-  const result = { ...target };
+  return damaja(target as Record<string, unknown>, source as Record<string, unknown>) as unknown as TasmimIksir;
+}
 
-  for (const key of Object.keys(source) as (keyof TasmimIksir)[]) {
-    const sourceValue = source[key];
-    const targetValue = target[key];
+function shay(x: unknown): x is Record<string, unknown> {
+  return x !== null && typeof x === "object" && !Array.isArray(x);
+}
 
-    if (
-      sourceValue !== undefined &&
-      sourceValue !== null &&
-      typeof sourceValue === "object" &&
-      !Array.isArray(sourceValue) &&
-      targetValue !== undefined &&
-      targetValue !== null &&
-      typeof targetValue === "object" &&
-      !Array.isArray(targetValue)
-    ) {
-      (result as any)[key] = { ...targetValue, ...sourceValue };
-    } else if (sourceValue !== undefined) {
-      (result as any)[key] = sourceValue;
-    }
+function damaja(asl: Record<string, unknown>, fawq: Record<string, unknown>): Record<string, unknown> {
+  const natija = { ...asl };
+  for (const [miftah, qima] of Object.entries(fawq)) {
+    if (qima === undefined) continue;
+    const qadim = asl[miftah];
+    natija[miftah] = shay(qima) && shay(qadim) ? damaja(qadim, qima) : qima;
   }
-
-  return result;
+  return natija;
 }
 
 function tahaqqaqConfig(config: TasmimIksir): string[] {

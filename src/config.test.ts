@@ -62,13 +62,7 @@ async function withTestConfig(
 test("config: defaults when no config file exists", async () => {
   await withTestConfig(null, {}, (config) => {
     assertEquals(config.hum.namudhaj, undefined);
-    assertEquals(config.istiftaa.fajwatZamaniyya, 300000);
-    assertEquals(config.istiftaa.fajwatRaqabaRisala, 60000);
-    assertEquals(config.saatSukun.mufattah, true);
-    assertEquals(config.saatSukun.bidaya, "22:00");
-    assertEquals(config.saatSukun.nihaya, "07:00");
-    assertEquals(config.saatSukun.mintaqaZamaniyya, "UTC");
-    assertEquals(config.saatSukun.daqaiqNafizhaSeyana, 60);
+    assertEquals(config.wasfat.khabath, undefined);
     assertEquals(config.isharat.telegram.mufattah, false);
     assertEquals(config.isharat.ntfy.mufattah, false);
   });
@@ -76,21 +70,16 @@ test("config: defaults when no config file exists", async () => {
 
 test("config: loads values from JSON", async () => {
   const json = JSON.stringify({
-    saatSukun: {
-      mintaqaZamaniyya: "Asia/Karachi",
-      bidaya: "23:00",
-      nihaya: "08:00",
-    },
+    wasfat: { khabath: "github", sabiqa: "LUGHA" },
     hum: {
       namudhaj: TEST_HUM_MODEL
     },
   });
   await withTestConfig(json, {}, (config) => {
-    assertEquals(config.saatSukun.mintaqaZamaniyya, "Asia/Karachi");
-    assertEquals(config.saatSukun.bidaya, "23:00");
+    assertEquals(config.wasfat.khabath, "github");
+    assertEquals(config.wasfat.sabiqa, "LUGHA");
     assertEquals(config.hum.namudhaj, TEST_HUM_MODEL);
-    assertEquals(config.saatSukun.mufattah, true);
-    assertEquals(config.istiftaa.fajwatZamaniyya, 300000);
+    assertEquals(config.isharat.ntfy.mufattah, false);
   });
 });
 
@@ -137,12 +126,12 @@ test("config: env overrides take precedence over JSON", async () => {
 
 test("config: deep merge preserves nested defaults", async () => {
   const json = JSON.stringify({
-    saatSukun: { mintaqaZamaniyya: "Asia/Karachi" },
+    isharat: { ntfy: { topic: "qasr" } },
   });
   await withTestConfig(json, {}, (config) => {
-    assertEquals(config.saatSukun.mintaqaZamaniyya, "Asia/Karachi");
-    assertEquals(config.saatSukun.mufattah, true);
-    assertEquals(config.saatSukun.bidaya, "22:00");
-    assertEquals(config.saatSukun.tanaqqulMasdud, true);
+    assertEquals(config.isharat.ntfy.topic, "qasr");
+    assertEquals(config.isharat.ntfy.mufattah, false);
+    assertEquals(config.isharat.ntfy.server.startsWith("http"), true);
+    assertEquals(config.isharat.telegram.mufattah, false);
   });
 });

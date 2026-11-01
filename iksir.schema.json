@@ -1,201 +1,53 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://iksir.dev/iksir.schema.json",
-  "title": "Iksir Configuration",
-  "description": "Configuration for Iksir",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/adiled/iksir/iksir.schema.json",
+  "title": "iksir.json",
+  "description": "Al-Kimyawi's configuration, at $XDG_CONFIG_HOME/iksir/iksir.json. Secrets never live here; they ride .env.",
   "type": "object",
   "properties": {
-    "$schema": {
-      "type": "string",
-      "description": "JSON Schema reference (ignored at runtime)."
-    },
-    "polling": {
+    "$schema": { "type": "string" },
+    "wasfat": {
       "type": "object",
-      "description": "Polling intervals for external services.",
+      "description": "Sijill al-Wasfat, iksir's own register of formulae.",
       "properties": {
-        "defaultIntervalMs": {
-          "type": "integer",
-          "description": "Default polling interval in milliseconds.",
-          "default": 300000,
-          "minimum": 1000
-        },
-        "prPollIntervalMs": {
-          "type": "integer",
-          "description": "Minimum interval between polls of the same PR (ms).",
-          "default": 60000,
-          "minimum": 1000
-        }
-      },
-      "additionalProperties": false
-    },
-    "quietHours": {
-      "type": "object",
-      "description": "Suppress non-urgent notifications during off hours.",
-      "properties": {
-        "enabled": {
-          "type": "boolean",
-          "description": "Enable quiet hours.",
-          "default": true
-        },
-        "start": {
+        "sabiqa": {
           "type": "string",
-          "description": "Start time in HH:MM format (24h).",
-          "pattern": "^[0-2]\\d:[0-5]\\d$",
-          "default": "22:00"
+          "description": "The mark minted wasfa names carry: W gives W-1, W-2, … Default W."
         },
-        "end": {
+        "namatWasfa": {
           "type": "string",
-          "description": "End time in HH:MM format (24h).",
-          "pattern": "^[0-2]\\d:[0-5]\\d$",
-          "default": "07:00"
+          "description": "A regex that recognises a wasfa name in al-Kimyawi's words, when the default (PREFIX-123) does not fit."
         },
-        "timezone": {
+        "khabath": {
           "type": "string",
-          "description": "IANA timezone identifier.",
-          "default": "UTC",
-          "examples": [
-            "UTC",
-            "America/New_York",
-            "Asia/Tokyo"
-          ]
-        },
-        "blockersPassthrough": {
-          "type": "boolean",
-          "description": "Allow urgent/blocker notifications during quiet hours.",
-          "default": true
-        },
-        "maintenanceWindowMinutes": {
-          "type": "integer",
-          "description": "Minutes before quiet hours end to run maintenance tasks.",
-          "default": 60,
-          "minimum": 0
-        }
-      },
-      "additionalProperties": false
-    },
-    "notifications": {
-      "type": "object",
-      "description": "Notification backends.",
-      "properties": {
-        "ntfy": {
-          "type": "object",
-          "description": "Ntfy push notification backend.",
-          "properties": {
-            "enabled": {
-              "type": "boolean",
-              "description": "Enable ntfy notifications.",
-              "default": false
-            },
-            "topic": {
-              "type": "string",
-              "description": "Ntfy topic name.",
-              "default": "iksir"
-            },
-            "server": {
-              "type": "string",
-              "description": "Ntfy server URL.",
-              "format": "uri",
-              "default": "https://ntfy.sh"
-            }
-          },
-          "additionalProperties": false
-        },
-        "telegram": {
-          "type": "object",
-          "description": "Telegram messaging backend.",
-          "properties": {
-            "enabled": {
-              "type": "boolean",
-              "description": "Enable Telegram notifications.",
-              "default": false
-            },
-            "botToken": {
-              "type": "string",
-              "description": "Telegram bot token. Prefer TELEGRAM_BOT_TOKEN env var."
-            },
-            "chatId": {
-              "type": "string",
-              "description": "Telegram chat ID for direct messages. Prefer TELEGRAM_CHAT_ID env var."
-            },
-            "groupId": {
-              "type": "string",
-              "description": "Forum-enabled supergroup ID for topic-per-orchestrator mode."
-            },
-            "dispatchTopicId": {
-              "type": "integer",
-              "description": "Topic ID in the group for dispatching new orchestrators."
-            },
-            "proxy": {
-              "type": "string",
-              "description": "SOCKS5 proxy URL for Telegram API calls.",
-              "examples": [
-                "socks5://localhost:1080"
-              ]
-            }
-          },
-          "additionalProperties": false
+          "description": "The outer tracker al-Kimyawi's tickets live in, as a host CLI or web2 names it: github, linear, … The khuddam fetch from it and inscribe into the Sijill; iksir itself never speaks to it."
         }
       },
       "additionalProperties": false
     },
     "hum": {
       "type": "object",
-      "description": "The nest Iksir nestles at. Both fields are optional: the socket is discovered, and the model is chosen by kindling a hive.",
+      "description": "The nest iksir nestles at. The socket is discovered; only the model is named here.",
       "properties": {
-        "miqbas": {
-          "type": "string",
-          "description": "Explicit thrum socket path. Omit to discover via HUM_THRUM_SOCK, HUM_SOCKET, humd's runtime.json, then $XDG_STATE_HOME/hum/thrum.sock."
-        },
         "namudhaj": {
           "type": "string",
-          "description": "Model id to name on each prompt. Omit to let the nest decide."
+          "description": "Model id named on every prompt; humd routes to a nurse advertising it. IKSIR_HUM_MODEL in .env overrides. Omit to let the nest decide."
         }
       },
       "additionalProperties": false
     },
-    "prompts": {
+    "isharat": {
       "type": "object",
-      "description": "Override paths for prompt template files. Null or omitted = use bundled defaults.",
+      "description": "Signals beyond Telegram. Telegram itself is configured by TELEGRAM_* in .env.",
       "properties": {
-        "classifyNotification": {
-          "type": "string",
-          "description": "Path to notification classification prompt template."
-        },
-        "classifyQuestion": {
-          "type": "string",
-          "description": "Path to question classification prompt template."
-        }
-      },
-      "additionalProperties": false
-    },
-    "kimyawi": {
-      "type": "object",
-      "description": "Who al-Kimyawi is, so their own words are known as theirs.",
-      "properties": {
-        "ism": {
-          "type": "string",
-          "description": "The name al-Kimyawi is known by."
-        }
-      },
-      "additionalProperties": false
-    },
-    "wasfat": {
-      "type": "object",
-      "description": "The register of formulae.",
-      "properties": {
-        "sabiqa": {
-          "type": "string",
-          "description": "The mark a minted wasfa name carries.",
-          "default": "W"
-        },
-        "namatWasfa": {
-          "type": "string",
-          "description": "How a wasfa name is recognised in an utterance.",
-          "default": "[A-Z]+-\\d+"
-        },
-        "khabath": {
-          "type": "string",
-          "description": "The outer tracker al-Kimyawi's tickets live in, as web2 or a host CLI names it (e.g. linear). The khuddam fetch from it and inscribe into the Sijill; iksir itself never speaks to it."
+        "ntfy": {
+          "type": "object",
+          "properties": {
+            "mufattah": { "type": "boolean", "description": "Send ntfy pushes." },
+            "server": { "type": "string", "description": "ntfy server. Default https://ntfy.sh." },
+            "topic": { "type": "string", "description": "ntfy topic." }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false

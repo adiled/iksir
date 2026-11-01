@@ -1,7 +1,7 @@
 # Agent Guidelines
 
-Customize this file for your project. Munadi's classifier loads it via `MUNADI_AGENTS_MD_PATH`
-and injects it into classification prompts so the LLM knows your team's norms.
+Customize this file for your project. Al-Mumayyiz reads it from `~/.config/iksir/AGENTS.md`
+(or `IKSIR_AGENTS_MD_PATH`) when it weighs whether a murshid's word is for you.
 
 ---
 

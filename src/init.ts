@@ -98,25 +98,44 @@ async function telegramApi(token: string, method: string): Promise<{ ok: boolean
 
 interface InitState {
   telegramBotToken: string;
-  telegramChatId: string;
   telegramBotName: string;
-  ismKimyawi: string;
-  namudhaj: string;
+  telegramChatId: string;
+  telegramGroupId: string;
+  telegramDispatchTopicId: string;
   skippedTelegram: boolean;
   sabiqaWasfa: string;
+  khabath: string;
+  namudhaj: string;
+  warsha: string;
 }
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 4;
+
+type Update = {
+  message?: {
+    chat: { id: number; type: string; title?: string; first_name?: string; is_forum?: boolean };
+    message_thread_id?: number;
+    is_topic_message?: boolean;
+  };
+};
+
+async function akhirTahdith(token: string, yaqbal: (m: NonNullable<Update["message"]>) => boolean): Promise<NonNullable<Update["message"]> | null> {
+  const updates = await telegramApi(token, "getUpdates?limit=20&timeout=10");
+  if (!updates.ok || !Array.isArray(updates.result)) return null;
+  const m = (updates.result as Update[]).map((u) => u.message).filter((m): m is NonNullable<Update["message"]> => !!m && yaqbal(m));
+  return m.at(-1) ?? null;
+}
 
 async function stepTelegram(state: InitState): Promise<void> {
   heading(1, TOTAL_STEPS, "Telegram");
   console.log("");
-  console.log(`  Iksir talks to you through a Telegram bot you own.`);
+  console.log(`  Iksir speaks to you through a Telegram bot you own: Dispatch in one`);
+  console.log(`  topic of a forum group, and a topic of its own for every murshid.`);
   console.log("");
 
   if (!await confirm("Set up Telegram?")) {
     state.skippedTelegram = true;
-    warn("Skipped. You can configure Telegram later in .env");
+    warn("Skipped. Iksir will have no voice until TELEGRAM_* are set in .env");
     return;
   }
 
@@ -135,7 +154,6 @@ async function stepTelegram(state: InitState): Promise<void> {
       }
       continue;
     }
-
     const me = await telegramApi(token, "getMe");
     if (me.ok && me.result) {
       const bot = me.result as { username: string; first_name: string };
@@ -143,62 +161,73 @@ async function stepTelegram(state: InitState): Promise<void> {
       state.telegramBotName = bot.username;
       ok(`Connected to ${bold(`@${bot.username}`)} (${bot.first_name})`);
       break;
-    } else {
-      fail(`Invalid token: ${me.description ?? "unknown error"}`);
     }
+    fail(`Invalid token: ${me.description ?? "unknown error"}`);
   }
 
   console.log("");
-  console.log(`  Now send any message to ${bold(`@${state.telegramBotName}`)} on Telegram.`);
+  console.log(`  Send any message to ${bold(`@${state.telegramBotName}`)} directly, so it knows you.`);
   await pause("Then press Enter here...");
-
-  console.log(`  ${dim("Detecting your chat ID...")}`);
-
-  await telegramApi(state.telegramBotToken, "getUpdates?offset=-1");
-  await new Promise((r) => setTimeout(r, 500));
-
-  const updates = await telegramApi(state.telegramBotToken, "getUpdates?limit=5&timeout=10");
-  if (updates.ok && Array.isArray(updates.result) && updates.result.length > 0) {
-    const last = updates.result[updates.result.length - 1] as {
-      message?: { chat: { id: number; first_name?: string } };
-    };
-    if (last.message?.chat?.id) {
-      state.telegramChatId = String(last.message.chat.id);
-      const name = last.message.chat.first_name ?? "you";
-      ok(`Chat ID detected: ${bold(state.telegramChatId)} (${name})`);
-      return;
-    }
+  const dm = await akhirTahdith(state.telegramBotToken, (m) => m.chat.type === "private");
+  if (dm) {
+    state.telegramChatId = String(dm.chat.id);
+    ok(`Chat ID: ${bold(state.telegramChatId)} (${dm.chat.first_name ?? "you"})`);
+  } else {
+    warn("Not seen yet. Message @userinfobot on Telegram for your ID, or try again later.");
+    state.telegramChatId = await prompt("Chat ID");
   }
 
-  warn("Could not auto-detect. You may need to send the message and try again,");
-  warn("or enter your chat ID manually.");
   console.log("");
-  console.log(`  ${dim("Tip: message @userinfobot on Telegram to find your ID")}`);
-  console.log("");
-  state.telegramChatId = await prompt("Chat ID");
-  if (state.telegramChatId) {
-    ok(`Chat ID: ${state.telegramChatId}`);
+  console.log(`  Now the workshop's hall:`);
+  console.log(`  ${dim("1.")} Create a group, turn on ${bold("Topics")} in its settings`);
+  console.log(`  ${dim("2.")} Add ${bold(`@${state.telegramBotName}`)} as an ${bold("admin")} (it must manage topics)`);
+  console.log(`  ${dim("3.")} Create a topic named ${bold("Dispatch")} and send a message in it`);
+  await pause("Then press Enter here...");
+  const hall = await akhirTahdith(state.telegramBotToken, (m) => m.chat.type === "supergroup" && m.message_thread_id !== undefined);
+  if (hall) {
+    state.telegramGroupId = String(hall.chat.id);
+    state.telegramDispatchTopicId = String(hall.message_thread_id);
+    ok(`Group: ${bold(state.telegramGroupId)} (${hall.chat.title ?? "the hall"}), Dispatch topic: ${bold(state.telegramDispatchTopicId)}`);
+  } else {
+    warn("No topic message seen. Without a hall, iksir speaks only in your direct chat.");
+    state.telegramGroupId = await prompt("Group ID (blank to skip)");
+    if (state.telegramGroupId) state.telegramDispatchTopicId = await prompt("Dispatch topic ID");
   }
 }
 
 async function stepWasfat(state: InitState): Promise<void> {
   heading(2, TOTAL_STEPS, "The Register");
   console.log("");
-  console.log(`  The waṣfāt live in Iksīr's own sijill. Nothing to configure.`);
+  console.log(`  The waṣfāt live in Sijill al-Waṣfāt, iksir's own register. Your tickets may`);
+  console.log(`  also live outside, in a khabath — name it and the khuddam will know where to`);
+  console.log(`  look when you say "issue 9": github, linear, or whatever your host CLI or`);
+  console.log(`  web2 calls it. Blank means there is none.`);
   console.log("");
 
+  state.khabath = await prompt("Khabath (outer tracker)", "github");
+  if (state.khabath) ok(`Khabath: ${bold(state.khabath)}`);
   state.sabiqaWasfa = await prompt("Mark that minted waṣfa names carry", "W");
-  ok(`Waṣfāt will be named ${bold(`${state.sabiqaWasfa}-1`)}, ${state.sabiqaWasfa}-2, …`);
+  ok(`Waṣfāt iksir mints are named ${bold(`${state.sabiqaWasfa}-1`)}, ${state.sabiqaWasfa}-2, …`);
 }
 
-async function stepKimyawi(state: InitState): Promise<void> {
-  heading(3, TOTAL_STEPS, "al-Kimyawī");
+async function stepNest(state: InitState): Promise<void> {
+  heading(3, TOTAL_STEPS, "The Nest and the Workshop");
   console.log("");
-  console.log(`  So that your own words are known as yours.`);
+  console.log(`  Iksir runs no models. It nestles at a ${bold("humd")} as five bees and prompts`);
+  console.log(`  whatever nurse you have kindled there. The ${bold("bash")} hive lends the murshidūn`);
+  console.log(`  their hands in the workshop — the repository they work on.`);
   console.log("");
 
-  state.ismKimyawi = await prompt("The name you are known by");
-  if (state.ismKimyawi) ok(`You are ${bold(state.ismKimyawi)}`);
+  state.warsha = await prompt("Workshop (the repository's path)", process.cwd());
+  ok(`Workshop: ${bold(state.warsha)}`);
+  state.namudhaj = await prompt("Model to name on each prompt (blank = let the nest decide)", "");
+
+  const miqbas = humCli();
+  if (await nabduSukhulThrum(miqbas)) ok(`hum at ${miqbas}`);
+  else {
+    warn(`No hum at ${miqbas}`);
+    console.log(`  ${dim("Install hum, then:")} ${bold("hum hive bash install")} ${dim("and a nurse of your choosing")}`);
+  }
 }
 
 async function nabduSukhulThrum(hum: string): Promise<boolean> {
@@ -211,111 +240,60 @@ async function nabduSukhulThrum(hum: string): Promise<boolean> {
   }
 }
 
-async function stepAgent(state: InitState): Promise<void> {
-  heading(4, TOTAL_STEPS, "The Nest");
-  console.log("");
-  console.log(`  Iksir does not run models. It nestles at a ${bold("humd")} and prompts`);
-  console.log(`  whatever hive you have kindled there. What burns in the furnace`);
-  console.log(`  is yours to choose — Iksir asks only that it can reach a worker,`);
-  console.log(`  and that something in the nest provides ${bold("fs")}.`);
-  console.log("");
-  console.log(`  ${dim("A murshid that cannot edit a repo can think, but not work.")}`);
-  console.log("");
-
-  state.namudhaj = await prompt("Model to name on each prompt (blank = let the nest decide)", "");
-
-  const miqbas = humCli();
-  nabduSukhulThrum(miqbas).then((hayy) => {    if (hayy) ok(`hum at ${miqbas}`);
-    else {
-      warn(`No hum at ${miqbas}`);
-      console.log(`  ${dim("Kindle one, then a worker hive:")} ${bold("hum hive <name> install")}`);
-    }
-  });
-}
-
 async function stepFinalize(state: InitState): Promise<void> {
-  heading(5, TOTAL_STEPS, "Save Configuration");
+  heading(4, TOTAL_STEPS, "Save");
   console.log("");
 
-  const repoPath = process.env.IKSIR_REPO_PATH ?? process.cwd();
+  const here = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
   const home = process.env.HOME ?? ".";
   const configDir = process.env.IKSIR_CONFIG_DIR ??
     join(process.env.XDG_CONFIG_HOME ?? join(home, ".config"), "iksir");
 
-  const envPath = join(repoPath, ".env");
+  const envPath = join(here, ".env");
   const configPath = join(configDir, "iksir.json");
 
-  const envLines: string[] = ["# Generated by iksir init", ""];
+  const envLines: string[] = ["# Written by iksir init", ""];
   if (state.telegramBotToken) {
     envLines.push(`TELEGRAM_BOT_TOKEN=${state.telegramBotToken}`);
     envLines.push(`TELEGRAM_CHAT_ID=${state.telegramChatId}`);
+    if (state.telegramGroupId) envLines.push(`TELEGRAM_GROUP_ID=${state.telegramGroupId}`);
+    if (state.telegramDispatchTopicId) envLines.push(`TELEGRAM_DISPATCH_TOPIC_ID=${state.telegramDispatchTopicId}`);
   }
+  envLines.push(`IKSIR_REPO_PATH=${state.warsha}`);
   envLines.push("");
 
-  const config: Record<string, unknown> = {
-    $schema: "./iksir.schema.json",
-  };
-
-  if (state.sabiqaWasfa && state.sabiqaWasfa !== "W") {
-    config.wasfat = { sabiqa: state.sabiqaWasfa };
-  }
-  if (state.ismKimyawi) {
-    config.kimyawi = { ism: state.ismKimyawi };
-  }
-  if (state.namudhaj) {
-    config.hum = { namudhaj: state.namudhaj };
-  }
-  if (state.telegramBotToken) {
-    config.notifications = {
-      telegram: { enabled: true },
-    };
-  }
+  const config: Record<string, unknown> = { $schema: join(here, "iksir.schema.json") };
+  const wasfat: Record<string, string> = {};
+  if (state.khabath) wasfat.khabath = state.khabath;
+  if (state.sabiqaWasfa && state.sabiqaWasfa !== "W") wasfat.sabiqa = state.sabiqaWasfa;
+  if (Object.keys(wasfat).length) config.wasfat = wasfat;
+  if (state.namudhaj) config.hum = { namudhaj: state.namudhaj };
 
   const envContent = envLines.join("\n") + "\n";
-
-  if (await exists(envPath)) {
-    const existing = readFileSync(envPath, "utf-8");
-    if (existing.includes("TELEGRAM_BOT_TOKEN")) {
-      if (!await confirm("  .env already has credentials. Overwrite?", false)) {
-        warn(".env preserved. New values not written.");
-        console.log(`  ${dim("You can edit manually:")} ${envPath}`);
-      } else {
-        writeFileSync(envPath, envContent);
-        ok(`.env written: ${dim(envPath)}`);
-      }
+  if (await exists(envPath) && readFileSync(envPath, "utf-8").includes("TELEGRAM_BOT_TOKEN")) {
+    if (await confirm("  .env already has credentials. Overwrite?", false)) {
+      writeFileSync(envPath, envContent);
+      ok(`.env written: ${dim(envPath)}`);
     } else {
-      writeFileSync(envPath, existing.trimEnd() + "\n\n" + envContent);
-      ok(`.env updated: ${dim(envPath)}`);
+      warn(`.env preserved: ${dim(envPath)}`);
     }
   } else {
     writeFileSync(envPath, envContent);
-    ok(`.env created: ${dim(envPath)}`);
+    ok(`.env written: ${dim(envPath)}`);
   }
 
-  if (Object.keys(config).length > 1) {
-    mkdirSync(configDir, { recursive: true });
-    writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n");
-    ok(`Config written: ${dim(configPath)}`);
-  }
+  mkdirSync(configDir, { recursive: true });
+  writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n");
+  ok(`Config written: ${dim(configPath)}`);
 
   console.log("");
   console.log(`  ${DIM}${"─".repeat(50)}${RESET}`);
   console.log("");
-  if (state.telegramBotToken) {
-    ok(`Telegram: @${state.telegramBotName}`);
-  } else if (state.skippedTelegram) {
-    warn("Telegram: skipped");
-  }
-  if (state.sabiqaWasfa) {
-    ok(`Waṣfāt: named ${state.sabiqaWasfa}-1, ${state.sabiqaWasfa}-2, …`);
-  }
-  if (state.ismKimyawi) {
-    ok(`al-Kimyawī: ${state.ismKimyawi}`);
-  }
-  ok(`Nest: ${humCli()}${state.namudhaj ? ` (model ${state.namudhaj})` : ""}`);
-
+  console.log(`  ${bold("Ready.")} Hand it to your humd:`);
   console.log("");
-  console.log(`  ${bold("Ready.")} Run ${cyan("iksir start")} to begin.`);
+  console.log(`      ${cyan(`hum hive ${here} install`)}`);
+  console.log("");
+  console.log(`  Then speak in the Dispatch topic.`);
   console.log("");
 }
 
@@ -325,17 +303,19 @@ export async function runInit(): Promise<void> {
 
   const state: InitState = {
     telegramBotToken: "",
-    telegramChatId: "",
     telegramBotName: "",
-    ismKimyawi: "",
-    namudhaj: "",
+    telegramChatId: "",
+    telegramGroupId: "",
+    telegramDispatchTopicId: "",
     skippedTelegram: false,
     sabiqaWasfa: "W",
+    khabath: "",
+    namudhaj: "",
+    warsha: process.cwd(),
   };
 
   await stepTelegram(state);
   await stepWasfat(state);
-  await stepKimyawi(state);
-  await stepAgent(state);
+  await stepNest(state);
   await stepFinalize(state);
 }
