@@ -15,22 +15,13 @@
 
 /** What the fire left. */
 export interface NatijaSafa {
-  /** Did the matter stand? */
   thabata: boolean;
-  /** Which maʿāyīr it withstood. */
   ihtamala: string[];
-  /** Which it did not, and what the fire said of each. */
   ihtaraq: Array<{ mayar: string; qawl: string }>;
 }
 
 export interface Safa {
   readonly naw: string;
 
-  /**
-   * Set the matter to its declared fire.
-   *
-   * @param mayayir the criteria of purity, as the waṣfa states them
-   * @param ina     the vessel holding the matter to be tried
-   */
   assa(mayayir: string[], ina?: string): Promise<NatijaSafa>;
 }

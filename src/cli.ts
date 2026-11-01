@@ -21,10 +21,6 @@ import { baddaaQaidatBayanat, aghlaaqQaidatBayanat, jalabaKullJalasat, jalabaAse
 import { execCommand } from "./utils/exec.ts";
 import { join } from "node:path";
 
-/**
- * One service. The nest is al-Kimyawi's to supervise, and the instruments
- * ride al-Khadim's own process.
- */
 const SERVICES = ["iksir"] as const;
 
 const HELP = `
@@ -52,8 +48,6 @@ Maintenance:
 Run './install' for first-time setup.
 `;
 
-
-/** Returns ["--user"] for non-root, [] for root. */
 function systemctlMode(): string[] {
   const uid = typeof process.getuid === "function" ? process.getuid() : 1000;
   return uid === 0 ? [] : ["--user"];
@@ -82,7 +76,6 @@ async function cmdServiceAction(action: string): Promise<void> {
     await systemctl(action, ordered);
   }
 }
-
 
 async function cmdStatus(): Promise<void> {
   const mode = systemctlMode();
@@ -114,7 +107,6 @@ async function cmdStatus(): Promise<void> {
   }
 }
 
-
 async function cmdCheck(): Promise<void> {
   const repoPath = process.env.IKSIR_REPO_PATH ?? ".";
   let failures = 0;
@@ -145,7 +137,6 @@ async function cmdCheck(): Promise<void> {
   if (failures > 0) process.exit(1);
 }
 
-
 async function cmdSync(): Promise<void> {
   const repoPath = process.env.IKSIR_REPO_PATH ?? process.cwd();
   const home = process.env.HOME ?? ".";
@@ -169,7 +160,6 @@ async function cmdSync(): Promise<void> {
 
   console.log(`\nSynced ${synced} file(s).`);
 }
-
 
 async function cmdUpdate(): Promise<void> {
   const repoPath = process.env.IKSIR_REPO_PATH ?? process.cwd();
@@ -201,7 +191,6 @@ async function cmdUpdate(): Promise<void> {
   console.log("\nUpdate complete.");
 }
 
-
 async function cmdConfig(): Promise<void> {
   const config = await hammalaAlTasmim();
   if (process.argv.slice(2).includes("--path")) {
@@ -210,7 +199,6 @@ async function cmdConfig(): Promise<void> {
   }
   console.log(JSON.stringify(config, null, 2));
 }
-
 
 const command = process.argv.slice(2)[0] ?? "help";
 

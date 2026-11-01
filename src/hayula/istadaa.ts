@@ -11,19 +11,12 @@
 
 import type { TasmimIksir } from "../types.ts";
 
-/** What a summoned thing is handed when it is made. */
 export interface SiyaqIstidaa {
   tasmim: TasmimIksir;
   warsha?: string;
   masar?: string;
 }
 
-/**
- * Summon one. The module must export `anshaa`.
- *
- * @param masar   where it lives
- * @param amal    the operations it must be able to perform
- */
 export async function istadaa<T>(
   masar: string,
   siyaq: SiyaqIstidaa,
@@ -53,7 +46,6 @@ export async function istadaa<T>(
   return shay as T;
 }
 
-/** What a Hayūlā must be able to do. */
 export const AMAL_HAYULA = [
   "dakhala",
   "waqif",
@@ -67,8 +59,6 @@ export const AMAL_HAYULA = [
   "naqasha",
 ];
 
-/** What a Faṣl must be able to do. */
 export const AMAL_FASL = ["qaddama", "hala", "taaliqat", "thabit", "farq"];
 
-/** What a Ṣafāʾ must be able to do. */
 export const AMAL_SAFA = ["assa"];

@@ -38,17 +38,10 @@ export class NtfyClient {
     this.enabled = config.isharat.ntfy.mufattah;
   }
 
-  /**
-   * Check if ntfy notifications are enabled
-   */
   mumakkan(): boolean {
     return this.enabled;
   }
 
-  /**
-   * Build action string for ntfy
-   * Format: "action, label, url[, clear=true]"
-   */
   private buildActions(actions: FiilIshara[]): string {
     return actions
       .map((action) => {
@@ -58,9 +51,6 @@ export class NtfyClient {
       .join("; ");
   }
 
-  /**
-   * Send a notification
-   */
   async send(notification: Ishara): Promise<boolean> {
     if (!this.enabled) {
       await logger.haDHHir("ntfy", "ntfy notifications are disabled, skipping");
@@ -110,9 +100,6 @@ export class NtfyClient {
     }
   }
 
-  /**
-   * Send a blocker notification with action buttons
-   */
   async sendBlocker(
     title: string,
     body: string,
@@ -136,9 +123,6 @@ export class NtfyClient {
     });
   }
 
-  /**
-   * Send a decision request with options
-   */
   async sendDecision(
     title: string,
     body: string,
@@ -162,7 +146,6 @@ export class NtfyClient {
     });
   }
 
-  /** A jawhar has been decanted and stands before al-Kimyawī. */
   async sendJawharMafsul(
     huwiyyatWasfa: string,
     rabit: string,
@@ -185,9 +168,6 @@ export class NtfyClient {
     });
   }
 
-  /**
-   * Send a quiet hours exit notification with blocked status
-   */
   async sendQuietHoursExit(blockedItems: string[], options: string[]): Promise<boolean> {
     const body =
       blockedItems.length > 0
@@ -212,9 +192,6 @@ export class NtfyClient {
   }
 }
 
-/**
- * Create an ntfy client instance
- */
 export function anshaaNtfyAmil(config: TasmimIksir): NtfyClient {
   return new NtfyClient(config);
 }

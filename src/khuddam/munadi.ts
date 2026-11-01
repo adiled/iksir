@@ -30,7 +30,6 @@ import type { Hayula } from "../hayula/hayula.ts";
 import type { Wasila } from "../hum/wasila.ts";
 import type { JalsatMurshid, RasulKharij } from "../types.ts";
 
-
 type NawNiyya = "query" | "operation" | "command" | "sandbox";
 export type InboundSource = "telegram" | "cli" | "pr_comment";
 
@@ -41,7 +40,6 @@ interface Niyya {
   nassKham: string;
   amr?: string;
   hujajAmr?: string[];
-  /** For sandbox intent: the name of the sandbox project */
   ismWarsha?: string;
 }
 
@@ -68,7 +66,6 @@ interface NatijaIrsal {
   khata?: string;
 }
 
-/** Pending disambiguation state */
 interface TamyizMuallaq {
   source: InboundSource;
   murashshahun: NonNullable<NiyyaMuhallala["murashshahun"]>;
@@ -76,7 +73,6 @@ interface TamyizMuallaq {
   expiresAt: Date;
 }
 
-/** Pending parent suggestion state */
 interface IqtirahAbMuallaq {
   source: InboundSource;
   wasfa: NonNullable<NiyyaMuhallala["kiyan"]>;
@@ -85,7 +81,6 @@ interface IqtirahAbMuallaq {
   expiresAt: Date;
 }
 
-/** A message in the conversation history */
 interface RisalaMuhadatha {
   text: string;
   timestamp: Date;
@@ -93,12 +88,9 @@ interface RisalaMuhadatha {
   radd?: string;
 }
 
-/** Short-term conversation context for intent resolution */
 export interface SiyaqMuhadatha {
-  /** Recent messages in the conversation */
   recentMessages: RisalaMuhadatha[];
 
-  /** The current focus entity (most recently resolved) */
   focusEntity?: {
     naw: NawKiyan;
     huwiyya: string;
@@ -112,40 +104,26 @@ interface MunadiDeps {
   arraf: Arraf;
   rasul: RasulKharij;
   amil: Wasila;
-  /** The matter worked upon, for the intiqāl between vessels. */
   hayula: Hayula;
   namatWasfa?: string;
 }
 
-/**
- * Parameters for creating/activating an murshid.
- * Used by the common #khalaqaWaFailaMurshid method.
- */
 interface MuatayatKhalqMurshid {
   huwiyya: string;
   unwan: string;
   type: "epic" | "chore" | "sandbox";
-  /** Init message to send to new murshidun */
   initMessage: string;
-  /** Optional ticket URL for ticket-based murshidun */
 }
-
 
 const NAMAT_AMR = /^\/(\w+)(?:\s+(.*))?$/;
 
-/** How a wasfa names itself by default — ABC-123 */
 const NAMAT_WASFA_IFTIRADHI = "[A-Z]+-\\d+";
 
-/**
- * Build ticket ID regex from config or default.
- * Wraps the pattern in word boundaries and a capture group.
- */
 function banaNamatWasfa(configPattern?: string): RegExp {
   const pattern = configPattern ?? NAMAT_WASFA_IFTIRADHI;
   return new RegExp(`\\b(${pattern})\\b`, "i");
 }
 
-/** Query indicators */
 const ANMAT_ISTIFSAR = [
   /^what('s| is)/i,
   /^how('s| is| are)/i,
@@ -158,7 +136,6 @@ const ANMAT_ISTIFSAR = [
   /^list\b/i,
 ];
 
-/** Operation indicators */
 const ANMAT_AMALIYYA = [
   /^start\s+(implementing|working)/i,
   /^implement\b/i,
@@ -172,7 +149,6 @@ const ANMAT_AMALIYYA = [
   /^work\s+on/i,
 ];
 
-/** Sandbox/brainstorm indicators - freeform work without tickets */
 const ANMAT_WARSHA_HURRA = [
   /without\s+(creating\s+)?(a\s+)?tickets?/i,
   /no\s+tickets?/i,
@@ -185,20 +161,14 @@ const ANMAT_WARSHA_HURRA = [
   /spike/i,
 ];
 
-/** Extract sandbox name from text (e.g., "the epic would be pos-simulator" -> "pos-simulator") */
 const ANMAT_ISM_WARSHA = [
   /(?:epic|project|name|call(?:ed)?|named)\s+(?:would\s+be\s+|is\s+|it\s+)?["']?([a-z0-9][-a-z0-9_]*)/i,
   /["']([a-z0-9][-a-z0-9_]*)["']/i,
 ];
 
-/**
- * Parse basic intent (commands, query vs operation)
- * @param ticketPattern - Regex for matching ticket identifiers (from config)
- */
 function hallalNiyyaAsasiyya(text: string, ticketPattern: RegExp): Niyya {
   const trimmed = text.trim();
 
-  /** Check for commands */
   const commandMatch = trimmed.match(NAMAT_AMR);
   if (commandMatch) {
     const [, command, argsStr] = commandMatch;
@@ -223,14 +193,12 @@ function hallalNiyyaAsasiyya(text: string, ticketPattern: RegExp): Niyya {
     };
   }
 
-  /** Extract huwiyya if present */
   let huwiyya: string | null = null;
   const idMatch = trimmed.match(ticketPattern);
   if (idMatch) {
     huwiyya = idMatch[1].toUpperCase();
   }
 
-  /** Check for sandbox/brainstorm intent first (highest awwaliyya) */
   let isSandbox = false;
   let ismWarsha: string | undefined;
 
@@ -259,7 +227,6 @@ function hallalNiyyaAsasiyya(text: string, ticketPattern: RegExp): Niyya {
     };
   }
 
-  /** Mayyiz as query or operation */
   let naw: NawNiyya = "query";
   let thiqqa = 0.5;
 
@@ -281,7 +248,6 @@ function hallalNiyyaAsasiyya(text: string, ticketPattern: RegExp): Niyya {
 
   return { huwiyya, naw, thiqqa, nassKham: trimmed };
 }
-
 
 export class Munadi {
   mudirJalasat: MudirJalasat;
@@ -320,12 +286,6 @@ export class Munadi {
     this.namatWasfa = banaNamatWasfa(deps.namatWasfa);
   }
 
-
-  /**
-   * Serialize dispatch/callback processing to prevent concurrent state mutations.
-   * Multiple Telegram messages or yield-triggered switches can arrive concurrently;
-   * this ensures only one modifies dispatcher state at a time.
-   */
   async maQuflIrsal<T>(fn: () => Promise<T>): Promise<T> {
     let release: () => void;
     const prev = this.quflIrsal;
@@ -338,11 +298,6 @@ export class Munadi {
     }
   }
 
-
-  /**
-   * Shared preamble: check pending selections, parse intent, handle commands/sandbox.
-   * Returns a DispatchResult if handled, or the parsed intent if further routing needed.
-   */
   async aalajMuqaddima(msg: RisalaWarida, label: string): Promise<NatijaIrsal | { intent: Niyya }> {
     if (this.tamyizMuallaq) {
       const result = await this.aalajRaddTamyiz(msg);
@@ -378,26 +333,17 @@ export class Munadi {
     return { intent: basicIntent };
   }
 
-  /**
-   * Handle a message from the Dispatch topic (control plane).
-   * Always uses intent resolver — never short-circuits to active murshid.
-   * Dispatch is for ticket lookups, spawning murshidun, and commands.
-   */
   async aalajRisalaIrsal(msg: RisalaWarida): Promise<NatijaIrsal> {
     return this.maQuflIrsal(async () => {
       const preamble = await this.aalajMuqaddima(msg, "Dispatch");
       if ("tuulija" in preamble) return preamble;
 
-      /** Always use intent resolver — dispatch is a control plane, not a chat relay */
       const result = await this.aalajBiArraf(msg, preamble.intent);
       this.tatabbaRisala(msg.text, result.radd);
       return result;
     });
   }
 
-  /**
-   * Handle an inbound message from any source
-   */
   async aalajWarid(msg: RisalaWarida): Promise<NatijaIrsal> {
     const preamble = await this.aalajMuqaddima(msg, "Basic");
     if ("tuulija" in preamble) return preamble;
@@ -416,15 +362,11 @@ export class Munadi {
       }
     }
 
-    /** For queries/operations with explicit ticket reference, use intent resolver */
     const result = await this.aalajBiArraf(msg, basicIntent);
     this.tatabbaRisala(msg.text, result.radd);
     return result;
   }
 
-  /**
-   * Track a message in the conversation context
-   */
   tatabbaRisala(text: string, radd?: string): void {
     this.siyaq.recentMessages.push({
       text,
@@ -437,9 +379,6 @@ export class Munadi {
     }
   }
 
-  /**
-   * Set the focus entity (most recently resolved entity)
-   */
   wadaKiyanMurakkazAlayh(entity: NonNullable<NiyyaMuhallala["kiyan"]>): void {
     this.siyaq.focusEntity = {
       ...entity,
@@ -447,19 +386,12 @@ export class Munadi {
     };
   }
 
-  /**
-   * Clear recent messages after starting/resuming an murshid
-   */
   masahRasaailAkhira(): void {
     this.siyaq.recentMessages = [];
   }
 
-  /**
-   * Handle callback data from button presses
-   */
   async aalajIstijabaZirr(source: InboundSource, data: string): Promise<NatijaIrsal> {
     return this.maQuflIrsal(async () => {
-      /** Parse callback data format: "action:value" */
       const [action, ...valueParts] = data.split(":");
       const value = valueParts.join(":");
 
@@ -482,9 +414,6 @@ export class Munadi {
     });
   }
 
-  /**
-   * Handle command messages
-   */
   async aalajAmr(msg: RisalaWarida, intent: Niyya): Promise<NatijaIrsal> {
     const { amr, hujajAmr } = intent;
 
@@ -527,9 +456,6 @@ export class Munadi {
     }
   }
 
-  /**
-   * Handle message with intent resolver (smart entity lookup)
-   */
   async aalajBiArraf(
     msg: RisalaWarida,
     basicIntent: Niyya
@@ -541,7 +467,6 @@ export class Munadi {
       }
     }
 
-    /** Use intent resolver for smart entity lookup, passing conversation context */
     const resolved = await this.arraf.halla(msg.text, this.siyaq);
 
     await logger.akhbar("dispatcher", `Intent resolved: status=${resolved.hala}, method=${resolved.tariqa}`);
@@ -570,9 +495,6 @@ export class Munadi {
     }
   }
 
-  /**
-   * Handle a list result (filtered query that returns multiple items)
-   */
   aalajNatijaQaima(resolved: NiyyaMuhallala): NatijaIrsal {
     const murashshahun = resolved.murashshahun ?? [];
 
@@ -595,9 +517,6 @@ export class Munadi {
     };
   }
 
-  /**
-   * Handle a fully resolved intent
-   */
   async aalajNiyyaMuhallala(
     msg: RisalaWarida,
     resolved: NiyyaMuhallala,
@@ -607,10 +526,8 @@ export class Munadi {
 
     this.wadaKiyanMurakkazAlayh(entity);
 
-    /** Determine epic ID based on entity type */
     const epicId = entity.huwiyya;
 
-    /** Check if murshid already exists for this ticket */
     const existingSession = this.mudirJalasat.wajadaJalasatMurshid().find(
       (s) => s.huwiyya === epicId
     );
@@ -635,10 +552,6 @@ export class Munadi {
       }
     }
 
-    /**
-     * Need to start a new murshid
-     * Check if this is a "proceed" action from context (e.g., "ok", "work on it")
-     */
     const isProceeding = resolved.fil === "taqaddam";
 
     if (basicIntent.naw === "query" && !isProceeding) {
@@ -651,9 +564,6 @@ export class Munadi {
     return this.#badaaMurshidLiKiyan(msg, entity);
   }
 
-  /**
-   * Start disambiguation flow
-   */
   async badaaTamyiz(
     msg: RisalaWarida,
     resolved: NiyyaMuhallala
@@ -667,7 +577,6 @@ export class Munadi {
       expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     };
 
-    /** Build response with buttons */
     const lines = ["Found multiple matches. Which one did you mean?\n"];
 
     const buttons: Array<{ text: string; data: string }> = [];
@@ -691,9 +600,6 @@ export class Munadi {
     };
   }
 
-  /**
-   * Handle disambiguation response (button press or text)
-   */
   async aalajRaddTamyiz(msg: RisalaWarida): Promise<NatijaIrsal> {
     const pending = this.tamyizMuallaq!;
 
@@ -702,7 +608,6 @@ export class Munadi {
       return { tuulija: false };
     }
 
-    /** Check for numeric selection */
     const numMatch = msg.text.match(/^(\d+)$/);
     if (numMatch) {
       const index = parseInt(numMatch[1], 10) - 1;
@@ -717,9 +622,6 @@ export class Munadi {
     return { tuulija: false };
   }
 
-  /**
-   * Handle disambiguation selection
-   */
   async aalajIkhtiyarTamyiz(
     source: InboundSource,
     value: string
@@ -752,13 +654,6 @@ export class Munadi {
     );
   }
 
-  /**
-   * Start parent suggestion flow
-   * Only called when:
-   * - Ticket has a parent
-   * - No murshid exists for either ticket or parent
-   * - Entity is a plain ticket (not already an epic)
-   */
   async badaaIqtirahAb(
     msg: RisalaWarida,
     ticket: NonNullable<NiyyaMuhallala["kiyan"]>,
@@ -784,9 +679,6 @@ Work on the parent instead?`;
     return { tuulija: true, radd, buttons };
   }
 
-  /**
-   * Handle parent suggestion response (text reply)
-   */
   async aalajRaddIqtirahAb(msg: RisalaWarida): Promise<NatijaIrsal> {
     const pending = this.iqtirahAbMuallaq!;
 
@@ -808,9 +700,6 @@ Work on the parent instead?`;
     return { tuulija: false };
   }
 
-  /**
-   * Handle parent selection (button press or text)
-   */
   async aalajIkhtiyarAb(source: InboundSource, useParent: boolean): Promise<NatijaIrsal> {
     const pending = this.iqtirahAbMuallaq;
     if (!pending) {
@@ -830,17 +719,6 @@ Work on the parent instead?`;
     return this.#badaaMurshidLiKiyan({ source, text: "" }, entity);
   }
 
-
-  /**
-   * Common murshid creation and activation.
-   * Handles:
-   * 1. Session creation via session manager
-   * 2. Formal switchover (WIP commit, branch intaqalaIla, notifications)
-   * 3. Init message for new sessions
-   * 4. Resumption message for existing sessions
-   *
-   * Both ticket-based and sandbox murshidun use this path.
-   */
   async #khalaqaWaFailaMurshid(
     params: MuatayatKhalqMurshid
   ): Promise<NatijaIrsal> {
@@ -848,7 +726,6 @@ Work on the parent instead?`;
 
     await logger.akhbar("dispatcher", `Creating/activating murshid: ${huwiyya}`, { naw: type, unwan });
 
-    /** Step 1: Get or create session */
     const result = await this.mudirJalasat.wajadaAwKhalaqa(huwiyya, unwan, type);
 
     if (!result) {
@@ -860,7 +737,6 @@ Work on the parent instead?`;
 
     const { session, jadida, mustarjaa, faailSabiq } = result;
 
-    /** Step 2: Formal switchover (handles branch intaqalaIla, WIP commit, notifications) */
     const switchResult = await this.#naffadhaTahwilMurshid(
       huwiyya,
       session,
@@ -882,7 +758,6 @@ Work on the parent instead?`;
       );
     }
 
-    /** Step 5: Build confirmation response */
     let radd: string;
 
     if (jadida) {
@@ -916,11 +791,6 @@ Work on the parent instead?`;
     };
   }
 
-  /**
-   * Execute the formal switchover for an murshid.
-   * Handles WIP commit, branch intaqalaIla, and state updates.
-   * Used for both new and existing murshidun.
-   */
   async #naffadhaTahwilMurshid(
     identifier: string,
     session: JalsatMurshid,
@@ -947,7 +817,6 @@ Work on the parent instead?`;
       await this.qataJalsa(previousSession, identifier);
     }
 
-    /** Step 2: WIP commit if dirty */
     const huwaWasikh = await this.#hayula.mudtarib();
     if (huwaWasikh && previousActive) {
       await logger.akhbar("dispatcher", `Working directory dirty, creating WIP commit for ${previousActive}`);
@@ -959,7 +828,6 @@ Work on the parent instead?`;
       await this.ablaghaJalsaSabiqa(previousSession, wipCommitted);
     }
 
-    /** Step 4: Checkout target branch (creates if doesn't exist for new murshidun) */
     const intaqalaIlaSuccess = await this.#hayula.dakhala(session.far);
     if (!intaqalaIlaSuccess) {
       if (previousSession) {
@@ -1012,15 +880,11 @@ Work on the parent instead?`;
     await logger.akhbar("dispatcher", `Control switched to ${identifier}`);
 
     return { tuulija: true };
-
     } finally {
       this.mudirJalasat.wadaaQuflGit(false);
     }
   }
 
-  /**
-   * Start murshid for a ticket entity (ticket/epic/project)
-   */
   async #badaaMurshidLiKiyan(
     _msg: RisalaWarida,
     entity: NonNullable<NiyyaMuhallala["kiyan"]>
@@ -1034,7 +898,6 @@ Work on the parent instead?`;
 
 Use \`mun_iqra_wasfa\` to read it in full and begin.`;
 
-    /** Map naw kiyan to naw murshid */
     const nawMurshid: "epic" | "chore" =
       entity.naw === "malhamat"
         ? "epic"
@@ -1048,12 +911,6 @@ Use \`mun_iqra_wasfa\` to read it in full and begin.`;
     });
   }
 
-  /**
-   * Light a murshid on a named waṣfa.
-   *
-   * Routes through the full intiqāl so the molten is frozen, the vessel is
-   * entered and any interruption lands, in that order.
-   */
   async faaalLiWasfa(
     huwiyya: string,
     unwan: string,
@@ -1074,9 +931,6 @@ then draft your khuṭṭa.`;
     });
   }
 
-  /**
-   * Handle sandbox/brainstorm intent - freeform work without tickets
-   */
   async aalajNiyyaWarsha(msg: RisalaWarida, intent: Niyya): Promise<NatijaIrsal> {
     const sandboxName = intent.ismWarsha;
 
@@ -1108,12 +962,6 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
     });
   }
 
-  /**
-   * Handle a direct question — no entity, no ticket, just words for the nest.
-   * One scholar's sid per dispatch thread, kept across turns: the cell
-   * rehydrates prior words through resume, so follow-ups remember.
-   * Nothing is inscribed; the thread itself is the memory.
-   */
   #sidSual: string | null = null;
 
   async aalajSualMubashir(msg: RisalaWarida, resolved: NiyyaMuhallala): Promise<NatijaIrsal> {
@@ -1143,9 +991,6 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
     return { tuulija: true, radd: resolved.khata ?? "Could not find the entity you're referring to." };
   }
 
-  /**
-   * Handle basic message (fallback when intent resolver returns needs_llm)
-   */
   async aalajRisalaAsasiyya(msg: RisalaWarida, intent: Niyya): Promise<NatijaIrsal> {
     const { huwiyya, naw } = intent;
     let targetId: string | null = huwiyya;
@@ -1183,9 +1028,6 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
     return this.wajjahIlaJalsa(session, msg);
   }
 
-  /**
-   * Route message to murshid session
-   */
   async wajjahIlaJalsa(
     session: JalsatMurshid,
     msg: RisalaWarida
@@ -1209,9 +1051,6 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
     return { tuulija: true, khata: `Failed to send message to ${session.huwiyya}.` };
   }
 
-  /**
-   * Queue an operation for later execution
-   */
   async ajjalAmaliyya(huwiyya: string, msg: RisalaWarida): Promise<NatijaIrsal> {
     const op: AmaliyyaMuajjala = {
       huwiyya,
@@ -1234,7 +1073,6 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
     };
   }
 
-
   wadaaJalsaFaila(identifier: string | null): void {
     this.huwiyyaFaaila = identifier;
     this.faailMundhu = identifier ? new Date() : null;
@@ -1246,11 +1084,6 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
     return this.huwiyyaFaaila;
   }
 
-  /**
-   * Restore the murshid at the flame when al-Khadim wakes.
-   * Uses the centralized #naffadhaTahwilMurshid to ensure branch intaqalaIla,
-   * notification, and all other switchover logic happens.
-   */
   async istarjaaIndaNashaat(): Promise<void> {
     const activeId = this.mudirJalasat.wajadaMurshidFaailId();
     if (!activeId) {
@@ -1269,11 +1102,6 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
     await this.#naffadhaTahwilMurshid(activeId, session, null, false);
   }
 
-  /**
-   * Manual switch command handler. Validates target exists, delegates to
-   * #naffadhaTahwilMurshid for the full switch protocol (interrupt,
-   * WIP commit, branch intaqalaIla, activation, queue drain, notification).
-   */
   async baddalJalsaFaila(epicId: string, _source: InboundSource): Promise<NatijaIrsal> {
     const tarjalabJalsa = this.mudirJalasat.jalabMurshid(epicId);
 
@@ -1290,7 +1118,6 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
       };
     }
 
-    /** Execute the core switchover logic (handles notification, queue, and dispatch) */
     const switchResult = await this.#naffadhaTahwilMurshid(
       epicId,
       tarjalabJalsa,
@@ -1305,9 +1132,6 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
     return { tuulija: true, radd: `Active: **${epicId}**` };
   }
 
-  /**
-   * Send INTERRUPT to previous murshid and all its sanis
-   */
   async qataJalsa(session: JalsatMurshid, newActiveId: string): Promise<void> {
     const interruptMsg = `🛑 INTERRUPT: Control is being transferred to ${newActiveId}.
 
@@ -1322,9 +1146,6 @@ You will be notified when you are IDLE.`;
     await new Promise((r) => setTimeout(r, 500));
   }
 
-  /**
-   * Notify previous session that it's now IDLE
-   */
   async ablaghaJalsaSabiqa(session: JalsatMurshid, wipCommitted: boolean): Promise<void> {
     const msg = `CONTROL TRANSFERRED: You are now IDLE.
 
@@ -1337,9 +1158,6 @@ Use \`pm_demand_control\` when you have actionable work.`;
     await this.mudirJalasat.arsalaIlaMurshidById(session.huwiyya, msg);
   }
 
-  /**
-   * Notify new session that it's now ACTIVE
-   */
   async ablaghaJalsaJadida(session: JalsatMurshid, previousId: string | null): Promise<void> {
     const msg = `✅ CONTROL GRANTED: You are now ACTIVE.
 
@@ -1370,7 +1188,6 @@ The matter is yours again.`;
     }
   }
 
-
   jalabHala(): NatijaIrsal {
     const active = this.huwiyyaFaaila;
     const queueLen = this.tabur.length;
@@ -1394,7 +1211,6 @@ The matter is yours again.`;
     radd += `Murshidun: ${murshidun.length}\n`;
     radd += `Queue: ${queueLen} operation(s)\n`;
 
-    /** List other murshidun (if any) */
     const others = murshidun.filter((o) => o.huwiyya !== active);
     if (others.length > 0) {
       radd += `\n**Other murshidun (idle):**\n`;
@@ -1425,7 +1241,6 @@ The matter is yours again.`;
   #jalabJalsasStatus(): NatijaIrsal {
     const murshidun = this.mudirJalasat.wajadaJalasatMurshid();
 
-    /** Build response with switch buttons for idle sessions */
     let radd = "**Sessions**\n\n";
 
     if (murshidun.length === 0) {
@@ -1443,7 +1258,6 @@ The matter is yours again.`;
       }
     }
 
-    /** Build buttons for idle sessions */
     const idleSessions = murshidun.filter((o) => o.huwiyya !== this.huwiyyaFaaila);
     const buttons = idleSessions.map((o) => ({
       text: `Switch to ${o.huwiyya}`,
@@ -1486,7 +1300,6 @@ The matter is yours again.`;
       radd += `[${i + 1}] ${o.huwiyya} - ${escapeMarkdown(o.unwan)}\n`;
     }
 
-    /** Build buttons */
     const buttons = idleSessions.map((o, i) => ({
       text: `[${i + 1}] ${o.huwiyya}`,
       data: `switch:${o.huwiyya}`,
@@ -1495,9 +1308,7 @@ The matter is yours again.`;
 
     return { tuulija: true, radd, buttons };
   }
-
 }
-
 
 export function istadaaMunadi(deps: MunadiDeps): Munadi {
   return new Munadi(deps);

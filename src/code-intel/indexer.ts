@@ -68,9 +68,6 @@ async function extractFile(filePath: string, repoPath: string): Promise<FileEntr
   }
 }
 
-/**
- * Build or incrementally update the code intelligence index.
- */
 export async function buildIndex(repoPath: string): Promise<CodeIndex> {
   const indexPath = getIndexPath();
   let existing: CodeIndex | null = null;
@@ -134,9 +131,6 @@ export async function buildIndex(repoPath: string): Promise<CodeIndex> {
   return index;
 }
 
-/**
- * Load the persisted index, or null if not found.
- */
 export async function loadIndex(): Promise<CodeIndex | null> {
   const indexPath = getIndexPath();
   try {
@@ -147,9 +141,6 @@ export async function loadIndex(): Promise<CodeIndex | null> {
   }
 }
 
-/**
- * Check how stale the index is (hours since last build).
- */
 export function indexAge(index: CodeIndex): number {
   const built = new Date(index.builtAt).getTime();
   return (Date.now() - built) / (1000 * 60 * 60);

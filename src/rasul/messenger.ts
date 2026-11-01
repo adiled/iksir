@@ -25,30 +25,22 @@ import {
 } from "../../db/db.ts";
 import type { Rasul, RisalaDakhila, QanatRisala, KhiyarTafauli } from "../types.ts";
 
-/** Re-export for convenience */
 export { jalabaQanat, jalabaQanatsForSession, jalabJalsaByChannel } from "../../db/db.ts";
 
-/** The provider name used in the qanawat (channels) table */
 export const MUQADDIM = "telegram";
-
 
 export class TelegramMessenger implements Rasul {
   #telegram: TelegramClient;
 
-  /** In-memory cache: provider:channelId → sessionIdentifier (reverse lookup) */
   #channelCache: Map<string, string> = new Map();
 
-  /** In-memory cache: sessionIdentifier → Record<provider, channelId> */
   #sessionChannels: Map<string, Record<string, string>> = new Map();
 
-  /** Normalized inbound message handler */
   #mualij: ((risala: RisalaDakhila) => Promise<void>) | null = null;
 
   constructor(telegram: TelegramClient) {
     this.#telegram = telegram;
   }
-
-  // ─── Rasul: inbound lifecycle ──────────────────────────────────────────────
 
   indaRisala(handler: (risala: RisalaDakhila) => Promise<void>): void {
     this.#mualij = handler;
@@ -71,8 +63,6 @@ export class TelegramMessenger implements Rasul {
     return await this.#telegram.tahaqqaqToken();
   }
 
-  // ─── Rasul: outbound ───────────────────────────────────────────────────────
-
   mumakkan(): boolean {
     return this.#telegram.mumakkan();
   }
@@ -90,7 +80,6 @@ export class TelegramMessenger implements Rasul {
       return;
     }
 
-    /** { murshid: id } */
     const topicId = this.#resolveMurshidTopic(channel.murshid);
     if (topicId !== null) {
       await this.#telegram.arsalaIlaMurshidTopic(topicId, text);
@@ -112,7 +101,6 @@ export class TelegramMessenger implements Rasul {
       return;
     }
 
-    /** { murshid: id } */
     const topicId = this.#resolveMurshidTopic(channel.murshid);
     if (topicId !== null) {
       await this.#telegram.arsalaIlaMurshidTopic(topicId, text, { parseMode: "Markdown" });
@@ -120,8 +108,6 @@ export class TelegramMessenger implements Rasul {
       await this.#telegram.sendToDispatch(`[${channel.murshid}] ${text}`, { parseMode: "Markdown" });
     }
   }
-
-  // ─── Rasul: interactive ────────────────────────────────────────────────────
 
   async arsalaSualBiKhiyarat(
     channel: QanatRisala,
@@ -150,7 +136,6 @@ export class TelegramMessenger implements Rasul {
       });
     }
 
-    /** { murshid: id } */
     const topicId = this.#resolveMurshidTopic(channel.murshid);
     if (topicId !== null) {
       return await this.#telegram.arsalaIlaMurshidTopic(topicId, nass, {
@@ -164,8 +149,6 @@ export class TelegramMessenger implements Rasul {
       keyboard,
     });
   }
-
-  // ─── Channel management ────────────────────────────────────────────────────
 
   async khalaqaQanatMurshid(identifier: string, title: string): Promise<string | null> {
     if (!this.#telegram.isGroupMode()) {
@@ -196,7 +179,6 @@ export class TelegramMessenger implements Rasul {
   }
 
   yamlikQanatMurshid(identifier: string): boolean {
-    /** Check cache first, then DB */
     const cached = this.#sessionChannels.get(identifier);
     if (cached && cached[MUQADDIM]) return true;
 
@@ -230,12 +212,6 @@ export class TelegramMessenger implements Rasul {
     return null;
   }
 
-  // ─── Inbound routing (Telegram → RisalaDakhila) ───────────────────────────
-
-  /**
-   * Wire up Telegram onMessage / onCallback to emit normalized events.
-   * This is the logic that used to live in main.ts addaMualijatTelegram().
-   */
   #rabatMualijat(): void {
     this.#telegram.onMessage(async (message) => {
       await this.iqraRisala(message);
@@ -246,11 +222,6 @@ export class TelegramMessenger implements Rasul {
     });
   }
 
-  /**
-   * Read one wire message aloud as normalized events.
-   * Public so the saail hive's Sijill rows drain through the same tongue
-   * the live wire speaks — one normalization, two doors.
-   */
   async iqraRisala(message: TelegramMessage): Promise<void> {
       if (!message.text || !this.#mualij) return;
 
@@ -267,7 +238,6 @@ export class TelegramMessenger implements Rasul {
         isDispatchTopic,
       });
 
-      /** Private chat → khass */
       if (isPrivateMessage) {
         await this.#mualij({ naw: "khass" });
         return;
@@ -278,7 +248,6 @@ export class TelegramMessenger implements Rasul {
         return;
       }
 
-      /** Dispatch topic → irsal or amr */
       if (isDispatchTopic) {
         if (text.startsWith("/")) {
           const [command, ...args] = text.slice(1).split(" ");
@@ -288,7 +257,6 @@ export class TelegramMessenger implements Rasul {
         }
         return;
       }
-      /** Murshid topic → murshid message; General (no thread, or thread 1) → nudge */
       if (topicId && topicId !== 1) {
         const huwiyya = this.hallJalsaBilQanat(MUQADDIM, String(topicId));
         if (huwiyya) {
@@ -313,10 +281,6 @@ export class TelegramMessenger implements Rasul {
       await logger.haDHHir("messenger", "Group message without topic ID");
   }
 
-  /**
-   * Read one wire callback aloud as normalized events.
-   * Public twin of iqraRisala — same tongue, Sijill rows.
-   */
   async iqraIstijaba(query: TelegramCallbackQuery): Promise<void> {
     if (!this.#mualij) return;
       if (!query.data) {
@@ -326,7 +290,6 @@ export class TelegramMessenger implements Rasul {
 
       await logger.akhbar("messenger", `Callback: ${query.data}`);
 
-      /** Munadi buttons (select/parent/switch/cancel) */
       if (
         query.data.startsWith("select:") ||
         query.data.startsWith("parent:") ||
@@ -343,10 +306,7 @@ export class TelegramMessenger implements Rasul {
       await this.#telegram.answerCallback(query.id, "Received!");
   }
 
-  // ─── Private helpers ───────────────────────────────────────────────────────
-
   #resolveMurshidTopic(identifier: string): number | null {
-    /** Check cache */
     const cached = this.#sessionChannels.get(identifier);
     if (cached?.[MUQADDIM]) {
       return parseInt(cached[MUQADDIM], 10);
@@ -362,7 +322,6 @@ export class TelegramMessenger implements Rasul {
   }
 
   #cacheChannel(identifier: string, provider: string, channelId: string): void {
-    /** Update session → channels cache */
     const existing = this.#sessionChannels.get(identifier) ?? {};
     existing[provider] = channelId;
     this.#sessionChannels.set(identifier, existing);
@@ -371,9 +330,6 @@ export class TelegramMessenger implements Rasul {
   }
 }
 
-/**
- * Create a TelegramMessenger instance.
- */
 export function anshaaTelegramRasul(telegram: TelegramClient): TelegramMessenger {
   return new TelegramMessenger(telegram);
 }

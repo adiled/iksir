@@ -130,11 +130,6 @@ function extractSymbolsRegex(content: string): CodeSymbol[] {
   return symbols;
 }
 
-/**
- * Extract symbols from a Python file.
- *
- * Tries python3 AST parsing first, falls back to regex.
- */
 export async function extractPython(filePath: string, repoPath: string): Promise<FileEntry | null> {
   let content: string;
   try {
@@ -147,7 +142,6 @@ export async function extractPython(filePath: string, repoPath: string): Promise
   let symbols: CodeSymbol[];
   let imports: string[];
 
-  /** Try python3 AST */
   const tmpDir = mkdtempSync(join(tmpdir(), "py-ast-"));
   const tmpScript = join(tmpDir, "ast.py");
   try {
@@ -165,7 +159,7 @@ export async function extractPython(filePath: string, repoPath: string): Promise
     symbols = extractSymbolsRegex(content);
     imports = extractImportsRegex(content);
   } finally {
-    try { rmSync(tmpDir, { recursive: true, force: true }); } catch { /* ignore */ }
+    try { rmSync(tmpDir, { recursive: true, force: true }); } catch {  }
   }
 
   const relativePath = filePath.startsWith(repoPath)

@@ -36,11 +36,6 @@ function minSijill(huwiyya: string) {
   return jalabaKullJalasat().find((s) => s.huwiyya === huwiyya);
 }
 
-/**
- * A message the murshid was sent is a thing that happened. If it lives only in
- * memory until some unrelated event saves, a daemon killed between those events
- * wakes believing it last spoke hours before it did.
- */
 test("a sent message reaches the sijill without waiting for another event", async () => {
   await withTestDb(async () => {
     const k = katib();
@@ -58,11 +53,6 @@ test("a sent message reaches the sijill without waiting for another event", asyn
   });
 });
 
-/**
- * jaddad_fi is stamped on every write. Saving every vessel to record a change
- * in one gives the others a timestamp they did not earn, and the sijill can no
- * longer say which one moved.
- */
 test("recording one vessel does not restamp the others", async () => {
   await withTestDb(async () => {
     const k = katib();

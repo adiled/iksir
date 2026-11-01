@@ -1,8 +1,6 @@
 import { test, assertEquals } from "../ikhtibar.ts";
 import { wallidIsmFar } from "./katib.ts";
 
-
-
 test("generateBranchName: epic with explicit slug", () => {
   assertEquals(
     wallidIsmFar("TEAM-100", "epic", "abra-cadabra"),
@@ -27,7 +25,6 @@ test("generateBranchName: epic title slug strips special chars", () => {
 test("generateBranchName: epic title slug truncates at 30 chars", () => {
   const longTitle = "This is an extremely long title that should be truncated";
   const branch = wallidIsmFar("TEAM-1", "epic", undefined, longTitle);
-  /** Slug portion should be at most 30 chars */
   const slug = branch.replace("epic/team-1-", "");
   assertEquals(slug.length <= 30, true);
 });
@@ -45,7 +42,6 @@ test("generateBranchName: epic identifier is lowercased", () => {
     "epic/team-100-test",
   );
 });
-
 
 test("generateBranchName: chore uses IKSIR_GIT_USER prefix", () => {
   const prev = process.env.IKSIR_GIT_USER;
@@ -87,7 +83,6 @@ test("generateBranchName: chore preserves identifier case", () => {
     else delete process.env.IKSIR_GIT_USER;
   }
 });
-
 
 test("generateBranchName: sandbox with explicit slug", () => {
   assertEquals(

@@ -4,7 +4,6 @@ import { Wasila, type NahlaHum } from "./wasila.ts";
 import { AlatAlIksir } from "../alat/alat-al-iksir.ts";
 import { withTestDb } from "../test-helpers.ts";
 
-/** A humd in a teacup: what the bee sent, and a hand to sound tones back. */
 class NahlaWahm implements NahlaHum {
   id = "bee_wahm";
   mursal: Tone[] = [];

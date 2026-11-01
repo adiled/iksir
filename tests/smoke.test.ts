@@ -22,7 +22,6 @@ import { MudirJalasat } from "../src/khuddam/katib.ts";
 import { Munadi } from "../src/khuddam/munadi.ts";
 import type { NiyyaMuhallala } from "../src/khuddam/arraf.ts";
 
-
 function buildContext() {
   const config = makeConfig();
   const amil = mockWasila();
@@ -46,10 +45,8 @@ function buildContext() {
     namatWasfa: config.wasfat?.namatWasfa,
   });
 
-
   return { config, amil, telegram, messenger, sessionManager, dispatcher, intentResolver, hayula };
 }
-
 
 test("smoke: /status with no sessions returns empty status", async () => {
   await withTestRepo(async () => {
@@ -65,7 +62,6 @@ test("smoke: /status with no sessions returns empty status", async () => {
     assertStringIncludes(result.radd!, "none");
   });
 });
-
 
 test("smoke: activateForTicketUrl creates session + topic", async () => {
   await withTestRepo(async () => {
@@ -84,7 +80,6 @@ test("smoke: activateForTicketUrl creates session + topic", async () => {
     assertEquals(amil._calls.khalaqaJalsa.length, 1);
     assertStringIncludes(amil._calls.khalaqaJalsa[0].title, "TEAM-1000");
 
-    /** Session manager should track the session */
     const sessions = sessionManager.wajadaJalasatMurshid();
     assertEquals(sessions.length, 1);
     assertEquals(sessions[0].huwiyya, "TEAM-1000");
@@ -93,12 +88,10 @@ test("smoke: activateForTicketUrl creates session + topic", async () => {
     assertEquals(telegram._calls.createForumTopic.length, 1);
     assertStringIncludes(telegram._calls.createForumTopic[0].name, "TEAM-1000");
 
-    /** Init message should have been sent to murshid via sendPromptAsync */
     const promptCalls = amil._calls.sendPromptAsync;
     assertEquals(promptCalls.length >= 1, true);
   });
 });
-
 
 test("smoke: message routed to active murshid via sendPromptAsync", async () => {
   await withTestRepo(async () => {
@@ -109,10 +102,8 @@ test("smoke: message routed to active murshid via sendPromptAsync", async () => 
       "Alf Layla Migration"
     );
 
-    /** Clear the init prompt calls so we can track the next one */
     const initPromptCount = amil._calls.sendPromptAsync.length;
 
-    /** Step 2: Send a message to the active murshid */
     const session = sessionManager.wajadaJalasatMurshid()[0];
     const success = await sessionManager.arsalaIlaMurshidById(
       session.huwiyya,
@@ -128,7 +119,6 @@ test("smoke: message routed to active murshid via sendPromptAsync", async () => 
   });
 });
 
-
 test("smoke: /status with active session shows identifier", async () => {
   await withTestRepo(async () => {
     const { dispatcher } = buildContext();
@@ -138,7 +128,6 @@ test("smoke: /status with active session shows identifier", async () => {
       "Qasr Al Hikma"
     );
 
-    /** Now check status */
     const result = await dispatcher.aalajRisalaIrsal({
       source: "telegram",
       text: "/status",
@@ -149,7 +138,6 @@ test("smoke: /status with active session shows identifier", async () => {
     assertStringIncludes(result.radd!, "TEAM-3000");
   });
 });
-
 
 test("smoke: dispatch message uses intent resolver for natural language", async () => {
   await withTestRepo(async () => {
@@ -183,7 +171,6 @@ test("smoke: dispatch message uses intent resolver for natural language", async 
   });
 });
 
-
 test("smoke: murshid topic message routes to correct session", async () => {
   await withTestRepo(async () => {
     const { dispatcher, amil, sessionManager } = buildContext();
@@ -200,12 +187,10 @@ test("smoke: murshid topic message routes to correct session", async () => {
     const topicId = session.channels["telegram"];
     assertExists(topicId);
 
-    /** Step 3: Simulate main.ts topic routing */
     const resolvedMurshid = sessionManager.wajadaMurshidBiQanat("telegram", topicId);
     assertExists(resolvedMurshid);
     assertEquals(resolvedMurshid!.huwiyya, "TEAM-5000");
 
-    /** Step 4: Route the message */
     const initPromptCount = amil._calls.sendPromptAsync.length;
     const success = await sessionManager.arsalaIlaMurshidById(
       resolvedMurshid!.huwiyya,
@@ -214,14 +199,12 @@ test("smoke: murshid topic message routes to correct session", async () => {
 
     assertEquals(success, true);
 
-    /** Step 5: Verify the message reached the right vessel */
     const lastPrompt = amil._calls.sendPromptAsync[amil._calls.sendPromptAsync.length - 1];
     assertEquals(lastPrompt.sessionId, session.id);
     assertStringIncludes(lastPrompt.prompt, "GET /users");
     assertEquals(amil._calls.sendPromptAsync.length, initPromptCount + 1);
   });
 });
-
 
 test("smoke: second murshid activation switches active session", async () => {
   await withTestRepo(async () => {
@@ -237,10 +220,8 @@ test("smoke: second murshid activation switches active session", async () => {
   });
 });
 
-
 test("smoke: vessels survive a restart, carrying their nestId", async () => {
   await withTestRepo(async () => {
-    /** First life — light a vessel and let the worker name its handle. */
     const first = buildContext();
     await first.dispatcher.faaalLiWasfa("TEAM-9001", "Rihla Baqiya");
 
@@ -249,10 +230,6 @@ test("smoke: vessels survive a restart, carrying their nestId", async () => {
     first.amil._reportNestId(lit!.id, "nest-handle-9001");
     await first.sessionManager.hafizaHala();
 
-    /**
-     * Second life — a fresh amil that has never heard of this vessel, which
-     * is exactly the state after a restart. The sijill is the only witness.
-     */
     const second = buildContext();
     assertEquals(second.sessionManager.wajadaJalasatMurshid().length, 0);
 
@@ -263,7 +240,6 @@ test("smoke: vessels survive a restart, carrying their nestId", async () => {
     assertEquals(restored!.id, lit!.id);
     assertEquals(restored!.far, lit!.far);
 
-    /** The amil must be able to resume, or the murshid wakes with no memory. */
     assertEquals(second.amil.huwiyyatUsh(lit!.id), "nest-handle-9001");
   });
 });

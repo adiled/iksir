@@ -9,8 +9,6 @@ import {
   TEST_PROXY_URL 
 } from "./constants.ts";
 
-
-/** Env vars we might set during tests — saved/istarjaad around each test */
 const ENV_KEYS = [
   "IKSIR_CONFIG_DIR",
   "IKSIR_HUM_MODEL",
@@ -31,7 +29,6 @@ async function withTestConfig(
 ): Promise<void> {
   const tempDir = mkdtempSync(join(tmpdir(), "iksir-config-test-"));
 
-  /** Save existing env vars */
   const saved: Record<string, string | undefined> = {};
   for (const key of ENV_KEYS) {
     saved[key] = process.env[key];
@@ -62,7 +59,6 @@ async function withTestConfig(
   }
 }
 
-
 test("config: defaults when no config file exists", async () => {
   await withTestConfig(null, {}, (config) => {
     assertEquals(config.hum.namudhaj, undefined);
@@ -77,7 +73,6 @@ test("config: defaults when no config file exists", async () => {
     assertEquals(config.isharat.ntfy.mufattah, false);
   });
 });
-
 
 test("config: loads values from JSON", async () => {
   const json = JSON.stringify({
@@ -98,7 +93,6 @@ test("config: loads values from JSON", async () => {
     assertEquals(config.istiftaa.fajwatZamaniyya, 300000);
   });
 });
-
 
 test("config: IKSIR_HUM_MODEL env override", async () => {
   await withTestConfig(null, { IKSIR_HUM_MODEL: TEST_HUM_MODEL }, (config) => {
@@ -140,7 +134,6 @@ test("config: env overrides take precedence over JSON", async () => {
     assertEquals(config.hum.namudhaj, TEST_HUM_MODEL_ALT);
   });
 });
-
 
 test("config: deep merge preserves nested defaults", async () => {
   const json = JSON.stringify({

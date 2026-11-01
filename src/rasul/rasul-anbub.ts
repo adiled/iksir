@@ -103,8 +103,6 @@ export class RasulUnbub implements Rasul {
     }
   }
 
-  // ── Speaking ──────────────────────────────────────────────────────
-
   async send(qanat: QanatRisala, nass: string): Promise<void> {
     const masar = this.#masarQanat(qanat);
     const waqt = new Date().toISOString();
@@ -112,8 +110,6 @@ export class RasulUnbub implements Rasul {
   }
 
   arsalaMunassaq(qanat: QanatRisala, nass: string): Promise<void> {
-    // The scroll is already plain. Markdown is left as written — a reader
-    // who wants it rendered has better tools than Iksīr.
     return this.send(qanat, nass);
   }
 
@@ -126,8 +122,6 @@ export class RasulUnbub implements Rasul {
     await this.send(qanat, `${nass}\n\n${masrud}\n\nAnswer with:  = <key>`);
     return null;
   }
-
-  // ── Qanawāt ───────────────────────────────────────────────────────
 
   async khalaqaQanatMurshid(huwiyya: string, unwan: string): Promise<string | null> {
     const masar = join(this.masarFam, huwiyya);
@@ -154,13 +148,10 @@ export class RasulUnbub implements Rasul {
     return jalabJalsaByChannel(muqaddim, huwiyatQanat);
   }
 
-  // ── Listening ─────────────────────────────────────────────────────
-
   indaRisala(mualij: (risala: RisalaDakhila) => Promise<void>): void {
     this.#mualij = mualij;
   }
 
-  /** One line from the ear becomes one utterance. */
   async #hallSatr(satr: string): Promise<void> {
     const nass = satr.trim();
     if (!nass || !this.#mualij) return;
@@ -184,15 +175,6 @@ export class RasulUnbub implements Rasul {
     await this.#mualij({ naw: "irsal", nass: qawl });
   }
 
-  /**
-   * The ear is held open for both reading and writing at once.
-   *
-   * A fifo opened only to read blocks until someone speaks — and it blocks
-   * the whole workshop, not just the listener, so Iksīr could not even
-   * start the process that was going to speak to it. Holding it open both
-   * ways never blocks, and because Iksīr is itself a writer the ear never
-   * falls to EOF when a speaker departs.
-   */
   async baddaa(): Promise<void> {
     await this.#udhnMawjuda();
     this.#yastami = true;
@@ -223,35 +205,26 @@ export class RasulUnbub implements Rasul {
           }
         }
       } catch {
-        // The ear was shut under us. Nothing more will be heard.
       } finally {
         try {
           qari.destroy();
         } catch {
-          // Already shut.
         }
         this.#milaf = null;
       }
     })();
   }
 
-  /**
-   * A read already waiting on the ear will not end merely because the ear
-   * is shut. So Iksīr speaks one empty word into its own ear: the listener
-   * wakes, finds that listening is over, and lets go.
-   */
   awqaf(): void {
     if (!this.#yastami) return;
     this.#yastami = false;
     try {
       appendFileSync(this.masarUdhn, "\n");
     } catch {
-      // The ear is already gone; the listener will unwind on its own.
     }
     try {
       this.#milaf?.destroy();
     } catch {
-      // Already shut.
     }
     this.#milaf = null;
   }

@@ -14,11 +14,6 @@ import { test, assertEquals } from "../ikhtibar.ts";
 import { mockWasila, writeTempFile } from "../test-helpers.ts";
 import { mayyazaTanbih } from "./mumayyiz.ts";
 
-
-/**
- * The mumayyiz has a module-level cache: once AGENTS.md is loaded, it persists.
- * We set IKSIR_AGENTS_MD_PATH to a temp fixture so loadAgentsMd() finds content.
- */
 let fixtureFile: string | null = null;
 
 async function ensureFixture(): Promise<void> {
@@ -26,9 +21,6 @@ async function ensureFixture(): Promise<void> {
   fixtureFile = await writeTempFile("# Test AGENTS.md\nGuidelines for testing.", "agents-md-");
   process.env.IKSIR_AGENTS_MD_PATH = fixtureFile;
 }
-
-
-
 
 test("mayyazaTanbih: DHAHAB response parsed correctly", async () => {
   await ensureFixture();

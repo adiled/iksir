@@ -22,7 +22,6 @@ import {
   mahaqaMatlabMuallaq,
 } from "../db/db.ts";
 
-
 async function withTestDb(fn: () => Promise<void> | void): Promise<void> {
   const tempDir = mkdtempSync(join(tmpdir(), "iksir-test-"));
   process.env.IKSIR_STATE_DIR = tempDir;
@@ -35,7 +34,6 @@ async function withTestDb(fn: () => Promise<void> | void): Promise<void> {
     rmSync(tempDir, { recursive: true, force: true });
   }
 }
-
 
 test("sessions: upsert and retrieve", async () => {
   await withTestDb(() => {
@@ -94,7 +92,6 @@ test("sessions: upsert updates existing", async () => {
     assertEquals(sessions[0].illa, "Missing specs");
   });
 });
-
 
 test("channels: upsert and get", async () => {
   await withTestDb(() => {
@@ -170,7 +167,6 @@ test("channels: uniqueness per session+provider", async () => {
   });
 });
 
-
 test("events: insert and retrieve unprocessed", async () => {
   await withTestDb(() => {
     adkhalaHadath("pm", "mun_create_branch", { branch: "epic/test" }, "orch-1");
@@ -226,10 +222,6 @@ test("events: ordering is by creation time", async () => {
   });
 });
 
-
-
-
-
 test("diary: add and query decisions", async () => {
   await withTestDb(() => {
     adhafaQararSijill({
@@ -248,7 +240,6 @@ test("diary: add and query decisions", async () => {
 
     const all = jalabaQararatSijill({ huwiyyatMurshid: "TEAM-200" });
     assertEquals(all.length, 2);
-    /** Both decisions present (order may vary when timestamps are identical) */
     const types = all.map(d => d.type).sort();
     assertEquals(types, ["architecture", "planning"]);
   });
@@ -332,7 +323,6 @@ test("diary: collective query (no huwiyyatMurshid filter)", async () => {
   });
 });
 
-
 test("demands: upsert and retrieve", async () => {
   await withTestDb(() => {
     haddathaAwAdkhalaMatlabMuallaq("TEAM-200", "Need control for PR", "normal");
@@ -378,7 +368,6 @@ test("demands: mahaqaMatlabMuallaq", async () => {
     assertEquals(jalabaMatalebMuallaq().length, 0);
   });
 });
-
 
 test("baddaaQaidatBayanat: idempotent — safe to call twice", async () => {
   await withTestDb(async () => {

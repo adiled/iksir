@@ -14,12 +14,6 @@ import { execCommand } from "./utils/exec.ts";
 import type { RasulKharij, QanatRisala, JalsatMurshid, } from "./types.ts";
 import type { Hayula } from "./hayula/hayula.ts";
 
-
-
-/**
- * Run a test function with an isolated temp SQLite DB.
- * Sets IKSIR_STATE_DIR, tahyias DB, runs fn, then cleans up.
- */
 export async function withTestDb(fn: () => Promise<void> | void): Promise<void> {
   const tempDir = mkdtempSync(join(tmpdir(), "iksir-test-"));
   process.env.IKSIR_STATE_DIR = tempDir;
@@ -33,14 +27,6 @@ export async function withTestDb(fn: () => Promise<void> | void): Promise<void> 
   }
 }
 
-/**
- * Run a test function with both an isolated DB and an isolated git repo.
- * Creates a temp dir with `git init`, sets IKSIR_REPO_PATH + IKSIR_STATE_DIR,
- * tahyias DB, runs fn, then cleans up everything.
- *
- * Use this for tests that exercise code paths involving git operations
- * (e.g. dispatcher → session-manager → git intaqalaIla).
- */
 export async function withTestRepo(fn: () => Promise<void> | void): Promise<void> {
   const tempDir = mkdtempSync(join(tmpdir(), "iksir-repo-test-"));
   const prevRepo = process.env.IKSIR_REPO_PATH;
@@ -60,8 +46,6 @@ export async function withTestRepo(fn: () => Promise<void> | void): Promise<void
   }
 }
 
-
-/** Minimal session shape returned by the nest mock */
 interface MockJalsatHum {
   id: string;
   title: string;
@@ -82,7 +66,6 @@ export interface MockWasila {
   listSessions(): Promise<Array<{ id: string; title: string; createdAt: Date; lastMessageAt: Date }>>;
   istaadaJalsa(jalsa: MockJalsatHum, nestId?: string): void;
   huwiyyatUsh(sessionId: string): string | undefined;
-  /** Stand in for the worker reporting its handle on chi:"session-ready". */
   _reportNestId(sessionId: string, nestId: string): void;
 
   _calls: {
@@ -94,10 +77,6 @@ export interface MockWasila {
   _sessions: Map<string, MockJalsatHum>;
 }
 
-/**
- * Create a mock AmilHum. Override specific methods via the overrides param.
- * Includes session management (khalaqaJalsa, jalabJalsa) for integration tests.
- */
 export function mockWasila(overrides?: {
   mayyaza?: (prompt: string) => Promise<{ success: boolean; response?: string; error?: string }>;
   sendPromptAsync?: (sessionId: string, prompt: string) => Promise<boolean>;
@@ -226,7 +205,6 @@ export function mockWasila(overrides?: {
   };
 }
 
-
 export interface MockTelegramClient {
   mumakkan(): boolean;
   isGroupMode(): boolean;
@@ -256,9 +234,6 @@ export interface MockTelegramClient {
   };
 }
 
-/**
- * Create a mock TelegramClient.
- */
 export function mockTelegramClient(overrides?: {
   mumakkan?: boolean;
   isGroupMode?: boolean;
@@ -311,7 +286,6 @@ export function mockTelegramClient(overrides?: {
   };
 }
 
-
 export interface MockMessenger extends RasulKharij {
   _calls: {
     send: Array<{ channel: QanatRisala; text: string }>;
@@ -323,9 +297,6 @@ export interface MockMessenger extends RasulKharij {
   };
 }
 
-/**
- * Create a mock RasulKharij.
- */
 export function mockMessenger(overrides?: {
   mumakkan?: boolean;
   khalaqaQanatMurshid?: (id: string, title: string) => Promise<string | null>;
@@ -383,15 +354,11 @@ export function mockMessenger(overrides?: {
   };
 }
 
-
 export interface MockMudirJalasat {
   wajadaJalasatMurshid(): JalsatMurshid[];
   _sessions: JalsatMurshid[];
 }
 
-/**
- * Create a mock MudirJalasat with a fixed set of sessions.
- */
 export function mockMudirJalasat(sessions: JalsatMurshid[] = []): MockMudirJalasat {
   return {
     _sessions: sessions,
@@ -401,10 +368,6 @@ export function mockMudirJalasat(sessions: JalsatMurshid[] = []): MockMudirJalas
   };
 }
 
-
-/**
- * Create a minimal JalsatMurshid for testing.
- */
 export function makeSession(overrides?: Partial<JalsatMurshid>): JalsatMurshid {
   return {
     id: "session-001",
@@ -420,10 +383,6 @@ export function makeSession(overrides?: Partial<JalsatMurshid>): JalsatMurshid {
   };
 }
 
-/**
- * Insert a session row in the DB (satisfies FK constraints for questions table).
- * Call inside withTestDb() before inserting questions.
- */
 export function seedSession(overrides?: Partial<JalsatMurshid>): void {
   const s = makeSession(overrides);
   haddathaAwAdkhalaJalsa({
@@ -439,17 +398,12 @@ export function seedSession(overrides?: Partial<JalsatMurshid>): void {
   });
 }
 
-/**
- * Create a temp file with given content, return its path.
- * Caller is responsible for cleanup.
- */
 export async function writeTempFile(content: string, prefix = "iksir-fixture-"): Promise<string> {
   const tdir = mkdtempSync(join(tmpdir(), prefix));
   const path = join(tdir, "fixture");
   writeFileSync(path, content);
   return path;
 }
-
 
 import type { NiyyaMuhallala } from "./khuddam/arraf.ts";
 
@@ -459,11 +413,6 @@ export interface MockArraf {
   _nextResult: NiyyaMuhallala | null;
 }
 
-/**
- * Create a mock Arraf.
- * Set `_nextResult` to control what resolve() returns.
- * Default: returns "not_found".
- */
 export function mockArraf(): MockArraf {
   const calls: MockArraf["_calls"] = [];
   return {
@@ -486,13 +435,8 @@ export function mockArraf(): MockArraf {
   };
 }
 
-
 import type { TasmimIksir } from "./types.ts";
 
-/**
- * Create a minimal TasmimIksir for testing.
- * Nothing outward is touched.
- */
 export function makeConfig(overrides?: Partial<TasmimIksir>): TasmimIksir {
   return {
     hum: {},
@@ -519,13 +463,6 @@ export function makeConfig(overrides?: Partial<TasmimIksir>): TasmimIksir {
   } as TasmimIksir;
 }
 
-
-/**
- * A hayūlā of nothing in particular.
- *
- * Core is handed matter and never asks what kind, so a test may hand it
- * matter that is not there at all.
- */
 export function mockHayula(): Hayula & { _amal: string[] } {
   const amal: string[] = [];
   let waqif = "codex";

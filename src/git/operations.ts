@@ -12,19 +12,12 @@ function masarAlMakhzan(): string {
   return process.env.IKSIR_REPO_PATH ?? ".";
 }
 
-/** Cached default branch name (detected once per process) */
 let _defaultBranch: string | null = null;
 
-/**
- * Execute a git command in the repo directory
- */
 export function exec(args: string[]): Promise<ExecResult> {
   return execCommand("git", args, { cwd: masarAlMakhzan() });
 }
 
-/**
- * Check if working directory is dirty
- */
 export async function huwaWasikh(): Promise<boolean> {
   const result = await exec(["status", "--porcelain"]);
   if (!result.success) {
@@ -34,9 +27,6 @@ export async function huwaWasikh(): Promise<boolean> {
   return result.stdout.trim().length > 0;
 }
 
-/**
- * Get current branch name
- */
 export async function farAlHali(): Promise<string | null> {
   const result = await exec(["rev-parse", "--abbrev-ref", "HEAD"]);
   if (!result.success) {
@@ -46,19 +36,13 @@ export async function farAlHali(): Promise<string | null> {
   return result.stdout.trim();
 }
 
-/**
- * Create a WIP commit with all changes
- * Returns true if commit was created, false if nothing to commit or error
- */
 export async function khalaqaIltizamMuaqqat(identifier: string): Promise<boolean> {
-  /** Stage all changes */
   const addResult = await exec(["add", "-A"]);
   if (!addResult.success) {
     await logger.sajjalKhata("git", "Failed to stage changes", { stderr: addResult.stderr });
     return false;
   }
 
-  /** Create commit */
   const commitResult = await exec(["commit", "-m", `[WIP] ${identifier}`]);
   if (!commitResult.success) {
     if (commitResult.stdout.includes("nothing to commit")) {
@@ -72,12 +56,7 @@ export async function khalaqaIltizamMuaqqat(identifier: string): Promise<boolean
   return true;
 }
 
-/**
- * Checkout a branch
- * Creates the branch if it doesn't exist
- */
 export async function intaqalaIla(branch: string): Promise<boolean> {
-  /** Try to intaqalaIla existing branch */
   let result = await exec(["checkout", branch]);
   
   if (!result.success) {
@@ -100,10 +79,6 @@ export async function intaqalaIla(branch: string): Promise<boolean> {
   return true;
 }
 
-/**
- * Pull latest changes from origin
- * Returns true if successful (even if no changes)
- */
 export async function pull(branch: string): Promise<boolean> {
   const result = await exec(["pull", "origin", branch, "--ff-only"]);
   
@@ -119,9 +94,6 @@ export async function pull(branch: string): Promise<boolean> {
   return true;
 }
 
-/**
- * Push branch to origin
- */
 export async function push(branch: string, setUpstream = false): Promise<boolean> {
   const args = ["push"];
   if (setUpstream) {
@@ -140,9 +112,6 @@ export async function push(branch: string, setUpstream = false): Promise<boolean
   return true;
 }
 
-/**
- * Stage files for commit
- */
 export async function gitAdd(files: string[]): Promise<{ success: boolean; error?: string }> {
   const result = await exec(["add", ...files]);
   if (!result.success) {
@@ -152,10 +121,6 @@ export async function gitAdd(files: string[]): Promise<{ success: boolean; error
   return { success: true };
 }
 
-/**
- * Create a commit with the given message.
- * Optionally stages specific files first.
- */
 export async function commit(
   message: string,
   files?: string[],
@@ -176,7 +141,6 @@ export async function commit(
     return { success: false, error: result.stderr };
   }
 
-  /** Parse commit hash from output */
   const hashMatch = result.stdout.match(/\[[\w/-]+ ([a-f0-9]+)\]/);
   const hash = hashMatch ? hashMatch[1] : undefined;
 
@@ -184,9 +148,6 @@ export async function commit(
   return { success: true, hash };
 }
 
-/**
- * Fetch from origin
- */
 export async function fetch(remote = "origin"): Promise<boolean> {
   const result = await exec(["fetch", remote]);
   if (!result.success) {
@@ -196,10 +157,6 @@ export async function fetch(remote = "origin"): Promise<boolean> {
   return true;
 }
 
-/**
- * Check if branch is behind origin's default branch
- * Returns number of commits behind, or -1 on error
- */
 export async function commitsBehindMain(branch: string): Promise<number> {
   const defaultBranch = await farAlAsasi();
   const result = await exec(["rev-list", "--count", `${branch}..origin/${defaultBranch}`]);
@@ -217,14 +174,9 @@ interface MergeResult {
   message: string;
 }
 
-/**
- * Attempt to merge origin's default branch into current branch
- * Returns conflict information if merge fails
- */
 export async function mergeMain(): Promise<MergeResult> {
   const defaultBranch = await farAlAsasi();
 
-  /** First try the merge */
   const mergeResult = await exec(["merge", `origin/${defaultBranch}`, "--no-edit"]);
   
   if (mergeResult.success) {
@@ -237,7 +189,6 @@ export async function mergeMain(): Promise<MergeResult> {
   }
   
   if (mergeResult.stderr.includes("CONFLICT") || mergeResult.stdout.includes("CONFLICT")) {
-    /** Get list of conflicted files */
     const statusResult = await exec(["diff", "--name-only", "--diff-filter=U"]);
     const conflicts = statusResult.success 
       ? statusResult.stdout.trim().split("\n").filter(f => f)
@@ -261,18 +212,11 @@ export async function mergeMain(): Promise<MergeResult> {
   };
 }
 
-
-/**
- * Get the default branch name (master or main).
- * Detected from origin/HEAD. Cached for the process lifetime.
- */
 export async function farAlAsasi(): Promise<string> {
   if (_defaultBranch) return _defaultBranch;
 
-  /** Try origin/HEAD (set by git clone) */
   const result = await exec(["symbolic-ref", "refs/remotes/origin/HEAD", "--short"]);
   if (result.success) {
-    /** Returns "origin/master" or "origin/main" */
     const branch = result.stdout.trim().replace("origin/", "");
     if (branch) {
       _defaultBranch = branch;
@@ -280,7 +224,6 @@ export async function farAlAsasi(): Promise<string> {
     }
   }
 
-  /** Fallback: check if origin/master exists */
   const masterCheck = await exec(["rev-parse", "--verify", "origin/master"]);
   if (masterCheck.success) {
     _defaultBranch = "master";
@@ -290,5 +233,4 @@ export async function farAlAsasi(): Promise<string> {
   _defaultBranch = "main";
   return "main";
 }
-
 

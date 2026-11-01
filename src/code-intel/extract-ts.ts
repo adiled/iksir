@@ -17,7 +17,6 @@ async function fileHash(content: string): Promise<string> {
 
 function extractImports(content: string): string[] {
   const imports: string[] = [];
-  /** Match: import ... from "..."  and  import "..."  and  export ... from "..." */
   const re = /(?:import|export)\s+.*?from\s+["']([^"']+)["']|import\s+["']([^"']+)["']/g;
   let m;
   while ((m = re.exec(content)) !== null) {
@@ -26,12 +25,6 @@ function extractImports(content: string): string[] {
   return imports;
 }
 
-
-/**
- * Extract symbols from a TypeScript file.
- *
- * Regex for exports, imports, and top-level declarations.
- */
 export async function extractTypeScript(filePath: string, repoPath: string): Promise<FileEntry | null> {
   let content: string;
   try {
@@ -44,13 +37,11 @@ export async function extractTypeScript(filePath: string, repoPath: string): Pro
   const imports = extractImports(content);
   const symbols: CodeSymbol[] = [];
 
-  /** Regex fallback for non-exported top-level declarations */
   const lines = content.split("\n");
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const lineNum = i + 1;
 
-    /** Skip if already captured as export */
     const isExported = line.trimStart().startsWith("export ");
 
     if (line.match(/^(?:export\s+)?(?:async\s+)?function\s+(\w+)/)) {

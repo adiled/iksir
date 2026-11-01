@@ -4,7 +4,6 @@
  * Type definitions for the Iksir autonomous agent tansiq system.
  */
 
-
 export interface TasmimIksir {
   istiftaa: TasmimIstiftaa;
   saatSukun: TasmimSaatSukun;
@@ -18,7 +17,6 @@ export interface TasmimIksir {
 
 export interface TasmimIstiftaa {
   fajwatZamaniyya: number;
-  /** Minimum interval between polls of the same PR (ms). Default: 60000 */
   fajwatRaqabaRisala: number;
 }
 
@@ -28,7 +26,6 @@ export interface TasmimSaatSukun {
   nihaya: string;
   mintaqaZamaniyya: string;
   tanaqqulMasdud: boolean;
-  /** How many minutes before quiet hours end to run maintenance. Default: 60 */
   daqaiqNafizhaSeyana: number;
 }
 
@@ -47,58 +44,36 @@ export interface TasmimTelegram {
   mufattah: boolean;
   ramzBot: string;
   huwiyyatMuhadatha: string;
-  /** Forum-enabled supergroup for Iksir operations */
   huwiyyatMajmuua?: string;
-  /** Dispatch topic ID in the group (for spawning murshids) */
   huwiyyatMawduuIrsal?: number;
-  /** SOCKS5 proxy URL (e.g., "socks5://localhost:1080") */
   proxy?: string;
 }
 
 export interface TasmimWasfat {
-  /** The mark a minted waṣfa name carries. Default: "W" */
   sabiqa?: string;
-  /** How a waṣfa name is recognised in an utterance. Default: "[A-Z]+-\\d+" */
   namatWasfa?: string;
 }
 
-
 export type NawKiyan = "wasfa" | "malhamat" | "majhul";
 
-/** Who al-Kimyawī is, so their own words are known as theirs. */
 export interface TasmimKimyawi {
   ism: string;
 }
 
-/**
- * Madda (مادة) — where the matter and its trials are summoned from.
- *
- * Iksīr names no contrivance. al-Kimyawī says which one, and where.
- */
 export interface TasmimMadda {
-  /** The hayūlā worked upon. */
   hayula: string;
-  /** Where a jawhar is set down for examination. */
   fasl?: string;
-  /** The fire a waṣfa is put to. */
   safa?: string;
-  /** Handed to whichever is summoned. */
   masar?: string;
 }
 
 export interface TasmimHum {
-  /**
-   * The model to name on each prompt. Left unset, the nest decides —
-   * which is the point. Iksir has no opinion on what burns in the furnace.
-   */
   namudhaj?: string;
 }
 
 export interface TasmimHaththat {
-  /** Path to tanbih tamyiz prompt template */
   mayyazaTanbih?: string;
 }
-
 
 export type AwwaliyyatIshara = "min" | "low" | "default" | "high" | "urgent";
 
@@ -128,10 +103,8 @@ export interface FiilIshara {
   url?: string;
 }
 
-
 export interface TaaliqMuraja {
   id: string;
-  /** The waṣfa whose jawhar was spoken of. */
   huwiyyatWasfa: string;
   author: string;
   body: string;
@@ -148,7 +121,6 @@ export interface TaqyimTaaliq {
   confidence: number;
   reasoning: string;
 }
-
 
 export type MustawaSijill = "debug" | "info" | "warn" | "error";
 
@@ -176,7 +148,6 @@ export interface MudkhalTaghyirKhariji extends MudkhalSijill {
   impact: string;
 }
 
-
 export interface JalsatHum {
   id: string;
   projectId: string;
@@ -194,15 +165,6 @@ export interface HadathHum {
   timestamp: Date;
 }
 
-
-
-
-/**
- * Nida made by murshids through the instruments.
- * These are worked by Munaffidh.
- */
-
-/** Create a new ticket */
 export interface NidaKhalqWasfa {
   tool: "mun_khalaq_wasfa";
   huwiyyatMurshid: string;
@@ -214,7 +176,6 @@ export interface NidaKhalqWasfa {
   huwiyyatAb?: string;
 }
 
-/** Update an existing ticket */
 export interface NidaTajdidWasfa {
   tool: "mun_jaddid_wasfa";
   huwiyyatMurshid: string;
@@ -227,7 +188,6 @@ export interface NidaTajdidWasfa {
   };
 }
 
-/** Set blocking relations between tickets */
 export interface NidaWadaaAlaqat {
   tool: "mun_wadaa_alaqat";
   huwiyyatMurshid: string;
@@ -236,14 +196,12 @@ export interface NidaWadaaAlaqat {
   mahjoubBi?: string[];
 }
 
-/** Read any issue tracker URL — returns enriched info with context */
 export interface NidaQiraatWasfa {
   tool: "mun_iqra_wasfa";
   huwiyyatMurshid: string;
   huwiyya: string;
 }
 
-/** Create a draft PR */
 export interface NidaKhalqRisala {
   tool: "mun_khalaq_risala";
   huwiyyatMurshid: string;
@@ -254,32 +212,26 @@ export interface NidaKhalqRisala {
   ras: string;
 }
 
-/** Check branch status (ahead/behind) */
 export interface NidaFahasFar {
   tool: "mun_fahas_far";
   huwiyyatMurshid: string;
   far: string;
 }
 
-/** Send a notification to al-Kimyawi */
 export interface NidaTabligh {
   tool: "mun_balligh";
-  /** Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator) */
   huwiyyatMurshid: string;
   risala: string;
   awwaliyya: "min" | "low" | "default" | "high" | "urgent";
   afaal?: Array<{ label: string; action: string }>;
 }
 
-/** Send a conversational response to al-Kimyawi (for answering questions) */
 export interface NidaRadd {
   tool: "mun_radd";
-  /** Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator) */
   huwiyyatMurshid: string;
   risala: string;
 }
 
-/** Log a decision to the diary */
 export interface NidaSajjalQarar {
   tool: "mun_sajjal_qarar";
   huwiyyatMurshid: string;
@@ -289,23 +241,16 @@ export interface NidaSajjalQarar {
   bayyanat?: Record<string, unknown>;
 }
 
-/** Query the collective diary for past decisions and context */
 export interface NidaIqraMudawwana {
   tool: "mun_iqra_mudawwana";
   huwiyyatMurshid: string;
-  /** Filter by murshid ID (omit for collective pool) */
   murshidMuhaddad?: string;
-  /** Filter by decision type */
   naw?: "tadbir" | "tanfidh" | "tanfidh" | "hall" | "risala";
-  /** Free-text search in decision + reasoning */
   bahth?: string;
-  /** Max results (default 20) */
   hadd?: number;
-  /** Only decisions since this ISO date */
   mundhu?: string;
 }
 
-/** Yield control voluntarily (when blocked or waiting) */
 export interface NidaTanazal {
   tool: "mun_tanazal";
   huwiyyatMurshid: string;
@@ -314,7 +259,6 @@ export interface NidaTanazal {
   iqtarahTali?: string;
 }
 
-/** Demand control back (when unblocked and have actionable work) */
 export interface NidaTalabTahakkum {
   tool: "mun_talab_tahakkum";
   huwiyyatMurshid: string;
@@ -322,7 +266,6 @@ export interface NidaTalabTahakkum {
   awwaliyya: "normal" | "urgent";
 }
 
-/** Create branch for murshid (called once when starting work) */
 export interface NidaKhalqFar {
   tool: "mun_khalaq_far";
   huwiyyatMurshid: string;
@@ -331,7 +274,6 @@ export interface NidaKhalqFar {
   kunya?: string;
 }
 
-/** Commit staged changes */
 export interface NidaIltazim {
   tool: "mun_iltazim";
   huwiyyatMurshid: string;
@@ -339,21 +281,17 @@ export interface NidaIltazim {
   ahjar?: string[];
 }
 
-/** Git add files */
 export interface NidaRattib {
   tool: "mun_rattib";
   huwiyyatMurshid: string;
   ahjar: string[];
 }
 
-/** Git push current branch */
 export interface NidaIdfa {
   tool: "mun_idfa";
   huwiyyatMurshid: string;
 }
 
-
-/** Extract files from forge for artifact creation */
 export interface NidaIstikhlas {
   tool: "mun_istikhlas";
   huwiyyatMurshid: string;
@@ -361,7 +299,6 @@ export interface NidaIstikhlas {
   ahjar: string[];
 }
 
-/** Test extraction for missing dependencies and coupling */
 export interface NidaTalaum {
   tool: "mun_talaum";
   huwiyyatMurshid: string;
@@ -369,7 +306,6 @@ export interface NidaTalaum {
   ahjar: string[];
 }
 
-/** Craft artifact from extracted files */
 export interface NidaIstihal {
   tool: "mun_istihal";
   huwiyyatMurshid: string;
@@ -377,7 +313,6 @@ export interface NidaIstihal {
   ahjar: string[];
 }
 
-/** Craft stacked artifact (builds on parent) */
 export interface NidaIstihalMutabaqq {
   tool: "mun_istihal_mutabaqq";
   huwiyyatMurshid: string;
@@ -386,7 +321,6 @@ export interface NidaIstihalMutabaqq {
   ahjar: string[];
 }
 
-/** Unveil artifact by creating PR */
 export interface NidaFasl {
   tool: "mun_fasl";
   huwiyyatMurshid: string;
@@ -396,7 +330,6 @@ export interface NidaFasl {
   musawwada?: boolean;
 }
 
-/** Ṣafāʾ (صفاء): put the matter to the fire the waṣfa declared */
 export interface NidaSafa {
   tool: "mun_safa";
   huwiyyatMurshid: string;
@@ -427,8 +360,6 @@ export type MunToolCall =
   | NidaFasl
   | NidaSafa;
 
-
-/** One instrument's taarif — the shape humd advertises and routes by. */
 export interface TaarifAla {
   name: string;
   description: string;
@@ -439,34 +370,21 @@ export interface TaarifAla {
   };
 }
 
-/** The hand that works one instrument. */
 export type MuaallijAla = (args: Record<string, unknown>) => Promise<string> | string;
 
-/**
- * The sijill of instruments — every ala is core, none are plugins.
- *
- * AlatAlIksir advertises and dispatches through this registry.
- */
 export interface SijillAlat {
-  /** Register a tool definition + its handler */
   sajjil(tool: TaarifAla, handler: MuaallijAla): void;
 
-  /** Get all registered tool definitions (for tools/list) */
   adawat(): TaarifAla[];
 
-  /** Get a specific handler by name (for tools/call) */
   muaallijLi(name: string): MuaallijAla | undefined;
 
-  /** Validate required args and execute by name (forager dispatch) */
   naffidh(ism: string, hujaj: Record<string, unknown>): Promise<string>;
 
-  /** Check if a tool name is registered */
   yujad(name: string): boolean;
 
-  /** The forwarder that carries a nida to al-Khadim */
   muwassil(): (call: MunToolCall) => void;
 }
-
 
 export interface QararSijill {
   waqt: string;
@@ -498,44 +416,27 @@ export interface SijillMurshid {
   halatTanfidh: Record<string, HalatTanfidhSijill>;
 }
 
-
-/** Where a message should be routed */
 export type QanatRisala =
   | "dispatch"
   | "kimyawi"
   | { murshid: string };
 
-/** Outbound messaging — what the khuddam depend on */
 export interface RasulKharij {
-  /** Is the messenger operational? */
   mumakkan(): boolean;
 
-  /** Send a plain text message to a channel */
   send(channel: QanatRisala, text: string): Promise<void>;
 
-  /** Send with markdown formatting (falls back to plain if unsupported) */
   arsalaMunassaq(channel: QanatRisala, text: string): Promise<void>;
 
-  /** Create a dedicated channel for an murshid (e.g., Telegram topic, Slack channel) */
   khalaqaQanatMurshid(identifier: string, title: string): Promise<string | null>;
 
-  /** Check if an murshid has a dedicated channel */
   yamlikQanatMurshid(identifier: string): boolean;
 
-  /** Load all channels for a session from persistence into cache. Returns the channels record. */
   hammalQanawatLilJalsa(identifier: string): Record<string, string>;
 
-  /** Reverse lookup: find murshid identifier by provider + channelId. */
   hallJalsaBilQanat(provider: string, channelId: string): string | null;
 }
 
-
-// ─── Inbound transport abstraction ────────────────────────────────────────────
-
-/**
- * Normalized inbound message — what the transport emits after
- * converting provider-specific events (Telegram messages, CLI input, etc.).
- */
 export type RisalaDakhila =
   | { naw: "murshid"; huwiyya: string; nass: string }
   | { naw: "irsal"; nass: string; huwiyyatRisala?: number }
@@ -543,89 +444,41 @@ export type RisalaDakhila =
   | { naw: "ikhtiyar_munadi"; miftah: string }
   | { naw: "khass" };
 
-/**
- * Abstract interactive option — the transport renders these
- * in its native format (Telegram inline keyboard, CLI numbered list, etc.).
- */
 export interface KhiyarTafauli {
-  /** Display text */
   nass: string;
-  /** Callback key returned on selection */
   miftah: string;
 }
 
-/**
- * Full messenger interface — extends RasulKharij with inbound lifecycle
- * and interactive rendering. This is what main.ts depends on.
- */
 export interface Rasul extends RasulKharij {
-  /** Start listening for inbound messages */
   baddaa(): Promise<void>;
 
-  /** Stop listening */
   awqaf(): void;
 
-  /** Register handler for normalized inbound messages */
   indaRisala(handler: (risala: RisalaDakhila) => Promise<void>): void;
 
-  /**
-   * Send a question with interactive options.
-   * Returns a provider message ID for later reference (editing, etc.), or null.
-   */
   arsalaSualBiKhiyarat(
     channel: QanatRisala,
     nass: string,
     khiyarat: KhiyarTafauli[],
   ): Promise<number | null>;
 
-  /** Validate connectivity (token check, health probe, etc.) */
   tahaqqaq(): Promise<boolean>;
 }
 
-
-/** Murshid status for control handover */
 export type HalatMurshid = "sakin" | "fail" | "masdud" | "muntazir";
 
-/** Murshid type */
 export type NawMurshid = "epic" | "chore" | "sandbox";
 
-/**
- * Murshid session
- * 
- * - Epic: Multi-ticket work with sub-tickets and blocking relations
- *   Branch: epic/{identifier}-{slug}
- * 
- * - Chore: Single standalone task, no sub-tickets
- *   Branch: {IKSIR_GIT_USER}/{identifier}
- */
 export interface JalsatMurshid {
   id: string;
-  /** The waṣfa this belongs to */
   huwiyya: string;
   unwan: string;
-  /** Epic = multi-ticket work, Chore = standalone task */
   naw: NawMurshid;
-  /** Primary branch for this murshid */
   far: string;
-  /** Control status: idle/active/blocked/waiting */
   hala: HalatMurshid;
-  /** Reason if blocked or waiting */
   illa?: string;
   unshiaFi: string;
   akhirRisalaFi: string;
-  /**
-   * Risālāt created via istihal for tracking.
-   * Hayāt monitors these for:
-   * - Merge detection (paves way for next risāla cycle)
-   * - Comment interpretation (conditional action per command protocol)
-   */
-  /**
-   * Messaging channel IDs keyed by provider.
-   * e.g., { telegram: "12345", slack: "C07ABC" }
-   * Persisted in the `channels` table, hydrated on session load.
-   */
   channels: Record<string, string>;
 }
-
-
 

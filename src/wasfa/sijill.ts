@@ -34,10 +34,6 @@ const AMUDA = "huwiyya, unwan, matn, hala, wasm, ab, qadr, mayayir";
 export class SijillWasfatMahalli implements SijillWasfat {
   #sabiqa: string;
 
-  /**
-   * @param sabiqa the mark a minted huwiyya carries. A workshop names its
-   *   own formulae.
-   */
   constructor(sabiqa = "W") {
     this.#sabiqa = sabiqa;
   }
@@ -70,7 +66,6 @@ export class SijillWasfatMahalli implements SijillWasfat {
     return Promise.resolve(sufuf.map(minSaf));
   }
 
-  /** Mint the next huwiyya in sequence — W-1, W-2, and so on. */
   #huwiyyaJadida(): string {
     const saf = jalabSijill()
       .prepare("SELECT COUNT(*) AS adad FROM wasfat")

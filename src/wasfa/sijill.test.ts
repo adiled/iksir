@@ -71,7 +71,6 @@ test("wasfat: a binding is seen from both ends", async () => {
     await sijill.khalaq({ unwan: "sounds" });
     await sijill.khalaq({ unwan: "words" });
 
-    /** The sounds must be settled before anything is built on them. */
     await sijill.rabt("W-1", ["W-2"]);
 
     assertEquals((await sijill.alaqat("W-1")).yamnaa, ["W-2"]);

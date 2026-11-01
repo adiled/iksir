@@ -20,7 +20,6 @@ import { join } from "node:path";
 import { mkdirSync } from "node:fs";
 import { logger } from "../src/logging/logger.ts";
 
-
 function masarHalatSijill(): string {
   return process.env.IKSIR_STATE_DIR ??
     join(process.env.XDG_DATA_HOME ?? join(process.env.HOME ?? "/root", ".local", "share"), "iksir");
@@ -35,12 +34,6 @@ export function jalabSijill(): Database {
   return db;
 }
 
-
-/**
- * Initialize the SQLite sijill, create tables if needed, enable WAL mode.
- * Must be called once at startup before any other sijill function.
- * Fully idempotent — safe to call on every restart.
- */
 export async function baddaaQaidatBayanat(): Promise<void> {
   const masarHala = masarHalatSijill();
   const masarSijill = join(masarHala, "iksir.sqlite");
@@ -58,10 +51,6 @@ export async function baddaaQaidatBayanat(): Promise<void> {
   await logger.akhbar("sijill", `SQLite tahyiad at ${masarSijill}`);
 }
 
-/**
- * Create all tables and indexes. Every statement is idempotent
- * (IF NOT EXISTS), so this is safe on first run and every restart.
- */
 function tatbiqSchema(d: Database): void {
   d.exec(`
     CREATE TABLE IF NOT EXISTS schema_version (
@@ -70,7 +59,6 @@ function tatbiqSchema(d: Database): void {
     )
   `);
 
-  /** جلسات — murshid vessels */
   d.exec(`
     CREATE TABLE IF NOT EXISTS jalasat (
       id TEXT PRIMARY KEY,
@@ -87,7 +75,6 @@ function tatbiqSchema(d: Database): void {
     )
   `);
 
-  /** قنوات — messaging conduits */
   d.exec(`
     CREATE TABLE IF NOT EXISTS qanawat (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -99,7 +86,6 @@ function tatbiqSchema(d: Database): void {
     )
   `);
 
-  /** أحداث — IPC event log */
   d.exec(`
     CREATE TABLE IF NOT EXISTS ahdath (
       id TEXT PRIMARY KEY,
@@ -112,8 +98,6 @@ function tatbiqSchema(d: Database): void {
     )
   `);
 
-
-  /** قرارات — decisions inscribed in the mudawwana */
   d.exec(`
     CREATE TABLE IF NOT EXISTS qararat (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -126,7 +110,6 @@ function tatbiqSchema(d: Database): void {
     )
   `);
 
-  /** أحوال التنفيذ — implementation states per wasfa */
   d.exec(`
     CREATE TABLE IF NOT EXISTS ahwal_tanfidh (
       huwiyat_wasfa TEXT PRIMARY KEY,
@@ -138,7 +121,6 @@ function tatbiqSchema(d: Database): void {
     )
   `);
 
-  /** المطالب المعلّقة — pending demands (one per murshid) */
   d.exec(`
     CREATE TABLE IF NOT EXISTS matalib_muallaq (
       huwiyat_murshid TEXT PRIMARY KEY,
@@ -148,7 +130,6 @@ function tatbiqSchema(d: Database): void {
     )
   `);
 
-  /** وصفات — the formulae themselves */
   d.exec(`
     CREATE TABLE IF NOT EXISTS wasfat (
       huwiyya TEXT PRIMARY KEY,
@@ -164,7 +145,6 @@ function tatbiqSchema(d: Database): void {
     )
   `);
 
-  /** علاقات الوصفات — what waits on what */
   d.exec(`
     CREATE TABLE IF NOT EXISTS alaqat_wasfat (
       yamnaa TEXT NOT NULL,
@@ -194,9 +174,6 @@ function tatbiqSchema(d: Database): void {
   );
 }
 
-/**
- * Close the sijill connection. Call during ighlaaq.
- */
 export function aghlaaqQaidatBayanat(): void {
   if (db) {
     db.close();
@@ -204,11 +181,6 @@ export function aghlaaqQaidatBayanat(): void {
   }
 }
 
-
-/**
- * Insert an IPC hadath into the ahdath table.
- * Used by the instruments to forward their nida to the daemon.
- */
 export function adkhalaHadath(
   naw: "pm",
   adaIsm: string,
@@ -224,9 +196,6 @@ export function adkhalaHadath(
   ).run(id, naw, adaIsm, JSON.stringify(humulat), huwiyyatMurshid ?? null, now);
 }
 
-/**
- * Get all unprocessed ahdath for a given naw, ordered by creation time.
- */
 export function jalabaAhdathGhairMuaalaja(
   naw: "pm",
 ): Array<{ id: number; payload: string }> {
@@ -241,14 +210,10 @@ export function jalabaAhdathGhairMuaalaja(
   return rows as unknown as Array<{ id: number; payload: string }>;
 }
 
-/**
- * Mark a hadath as muaalaj by its id.
- */
 export function allamaHadathMuaalaj(hadathId: number | string): void {
   const d = jalabSijill();
   d.prepare("UPDATE ahdath SET muaalaj = 1 WHERE id = ?").run(String(hadathId));
 }
-
 
 interface HujajIdkhalJalsa {
   id: string;
@@ -263,9 +228,6 @@ interface HujajIdkhalJalsa {
   halaMufassala: Record<string, unknown>;
 }
 
-/**
- * Upsert a murshid jalsa. Creates or updates by primary key (id).
- */
 export function haddathaAwAdkhalaJalsa(args: HujajIdkhalJalsa): void {
   const d = jalabSijill();
   d.prepare(`
@@ -305,15 +267,11 @@ interface JalsaSijill {
   far: string | null;
   illa: string | null;
   unshia_fi: string;
-  /** When this vessel last moved. Stamped on every write. */
   jaddad_fi: string;
   akhir_risala_fi: string | null;
   hala_mufassala: string | null;
 }
 
-/**
- * Get all murshid jalasat from the sijill.
- */
 export function jalabaKullJalasat(): JalsaSijill[] {
   const d = jalabSijill();
   return d.prepare(
@@ -321,10 +279,6 @@ export function jalabaKullJalasat(): JalsaSijill[] {
   ).all() as JalsaSijill[];
 }
 
-
-/**
- * Upsert a qanat for a murshid. One qanat per muqaddim per jalsa.
- */
 export function haddathaAwAdkhalaQanat(
   huwiyatJalsa: string,
   muqaddim: string,
@@ -344,9 +298,6 @@ export function haddathaAwAdkhalaQanat(
   );
 }
 
-/**
- * Get qanat ID for a murshid + muqaddim, or null if none.
- */
 export function jalabaQanat(
   huwiyatJalsa: string,
   muqaddim: string,
@@ -358,9 +309,6 @@ export function jalabaQanat(
   return row?.huwiyat_qanat ?? null;
 }
 
-/**
- * Get all qanawat for a murshid as a Record<muqaddim, huwiyatQanat>.
- */
 export function jalabaQanatsForSession(
   huwiyatJalsa: string,
 ): Record<string, string> {
@@ -376,10 +324,6 @@ export function jalabaQanatsForSession(
   return natija;
 }
 
-/**
- * Reverse lookup: find jalsa huwiyya by muqaddim + qanat ID.
- * Used for inbound message routing (Telegram topic → murshid).
- */
 export function jalabJalsaByChannel(
   muqaddim: string,
   huwiyatQanat: string,
@@ -391,9 +335,6 @@ export function jalabJalsaByChannel(
   return row?.huwiyat_jalsa ?? null;
 }
 
-/**
- * Delete a qanat for a murshid.
- */
 export function mahaqaQanat(
   huwiyatJalsa: string,
   muqaddim: string,
@@ -403,9 +344,6 @@ export function mahaqaQanat(
     .run(huwiyatJalsa, muqaddim);
 }
 
-
-
-
 interface HujajIdkhalQarar {
   huwiyyatMurshid: string;
   type: string;
@@ -414,9 +352,6 @@ interface HujajIdkhalQarar {
   metadata?: Record<string, unknown>;
 }
 
-/**
- * Inscribe a qarar into the mudawwana.
- */
 export function adhafaQararSijill(args: HujajIdkhalQarar): void {
   const d = jalabSijill();
   d.prepare(`
@@ -431,7 +366,6 @@ export function adhafaQararSijill(args: HujajIdkhalQarar): void {
     new Date().toISOString(),
   );
 }
-
 
 interface KhiyaratJalabQararatSijill {
   huwiyyatMurshid?: string;
@@ -451,10 +385,6 @@ interface QararSijillMukhraja {
   created_at: string;
 }
 
-/**
- * Query qararat. Returns most recent first.
- * Supports filtering by murshid, naw, and free-text search.
- */
 export function jalabaQararatSijill(opts: KhiyaratJalabQararatSijill = {}): QararSijillMukhraja[] {
   const d = jalabSijill();
   const shuroot: string[] = [];
@@ -490,7 +420,6 @@ export function jalabaQararatSijill(opts: KhiyaratJalabQararatSijill = {}): Qara
   ).all(...mutathabirat) as QararSijillMukhraja[];
 }
 
-
 interface HujajIdkhalHalaTanfidh {
   huwiyyatWasfa: string;
   huwiyyatMurshid: string;
@@ -498,9 +427,6 @@ interface HujajIdkhalHalaTanfidh {
   summary?: string;
 }
 
-/**
- * Upsert tanfidh hala for a wasfa.
- */
 export function naqshStatus(args: HujajIdkhalHalaTanfidh): void {
   const d = jalabSijill();
   const now = new Date().toISOString();
@@ -528,9 +454,6 @@ interface HalatTanfidhSijill {
   summary: string | null;
 }
 
-/**
- * Get tanfidh hala for a wasfa, or null if not found.
- */
 export function qiraStatus(huwiyyatWasfa: string): HalatTanfidhSijill | null {
   const d = jalabSijill();
   const row = d
@@ -542,7 +465,6 @@ export function qiraStatus(huwiyyatWasfa: string): HalatTanfidhSijill | null {
   return row ?? null;
 }
 
-
 interface MatlabMuallaq {
   huwiyat_murshid: string;
   reason: string;
@@ -550,9 +472,6 @@ interface MatlabMuallaq {
   demanded_at: string;
 }
 
-/**
- * Upsert a matlab muallaq (one per murshid).
- */
 export function haddathaAwAdkhalaMatlabMuallaq(
   huwiyyatMurshid: string,
   sabab: string,
@@ -569,17 +488,11 @@ export function haddathaAwAdkhalaMatlabMuallaq(
   `).run(huwiyyatMurshid, sabab, awwaliyya, new Date().toISOString());
 }
 
-/**
- * Remove a matlab muallaq (after fulfilled).
- */
 export function mahaqaMatlabMuallaq(huwiyyatMurshid: string): void {
   const d = jalabSijill();
   d.prepare("DELETE FROM matalib_muallaq WHERE huwiyat_murshid = ?").run(huwiyyatMurshid);
 }
 
-/**
- * Get all matalib muallaqa, sorted by awwaliyya (urgent first) then time.
- */
 export function jalabaMatalebMuallaq(): MatlabMuallaq[] {
   const d = jalabSijill();
   return d.prepare(

@@ -47,11 +47,6 @@ import { istadaaRaqib } from "./khuddam/raqib.ts";
 import type { TasmimIksir, Rasul, RisalaDakhila, TaaliqMuraja, JalsatMurshid } from "./types.ts";
 import type { SijillWasfat } from "./wasfa/sijill-wasfat.ts";
 
-/**
- * A fire that burns nothing, for a workshop that has declared none. It
- * refuses rather than passing — an unassayed jawhar must not reach faṣl by
- * accident.
- */
 function safaSakita(): Safa {
   return {
     naw: "sakita",
@@ -64,7 +59,6 @@ function safaSakita(): Safa {
   };
 }
 
-/** No matter named. It says so rather than pretending. */
 function hayulaSakita(): Hayula {
   const la = () => Promise.resolve(false);
   return {
@@ -80,7 +74,6 @@ function hayulaSakita(): Hayula {
   };
 }
 
-/** Nowhere to set a jawhar down. It says so rather than pretending. */
 function faslSakit(): Fasl {
   return {
     naw: "sakit",
@@ -213,9 +206,6 @@ async function addaIsharat(ctx: SiyaqKhadim): Promise<void> {
   process.on("SIGTERM", () => handleSignal("SIGTERM"));
 }
 
-/**
- * Drain the ahdath the amil raises from the thrum: curations go to Katib.
- */
 async function ishtarakAhdath(ctx: SiyaqKhadim): Promise<void> {
   await logger.akhbar("ahdath", "Draining ahdath from the thrum");
 
@@ -258,7 +248,6 @@ async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
   await logger.akhbar("main", `Iksir v${VERSION} starting`);
   await logger.akhbar("main", `Config loaded from ${masarMilafAlTasmim()}`);
 
-  /** Nestle at the humd. Without this the hello never lands and no ada routes. */
   try {
     await ctx.amil.ittasil();
   } catch (error) {
@@ -273,7 +262,6 @@ async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
 
   await addaIsharat(ctx);
 
-  /** Wire inbound message routing and start the messenger */
   rabatRisalaDakhila(ctx);
   if (ctx.rasul instanceof TelegramMessenger) {
     istahlakTelegram(ctx, ctx.mutahakkimIlgha.signal).catch(async (error) => {
@@ -308,16 +296,6 @@ async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
   }
 }
 
-/**
- * Wire inbound message routing — ctx.rasul.indaRisala() → business logic.
- * The Rasul adapter (messenger.ts) handles transport-specific parsing and
- * emits normalized RisalaDakhila events.
- */
-/**
- * Drain the telegram wire rows the saail hive writes.
- * Each row is read aloud through the messenger's own tongue —
- * one normalization, two doors — then marked.
- */
 async function istahlakTelegram(ctx: SiyaqKhadim, signal: AbortSignal): Promise<void> {
   const rasul = ctx.rasul;
   if (!(rasul instanceof TelegramMessenger)) return;
@@ -350,11 +328,8 @@ function rabatRisalaDakhila(ctx: SiyaqKhadim): void {
   ctx.rasul.indaRisala(async (risala: RisalaDakhila) => {
     switch (risala.naw) {
       case "murshid": {
-        /** Message from a murshid topic */
         const { huwiyya, nass } = risala;
 
-
-        /** Route to murshid session */
         await logger.akhbar("inbound", `Routing to murshid ${huwiyya}`);
         const success = await ctx.mudirJalasat.arsalaIlaMurshidById(huwiyya, nass);
         if (!success) {
@@ -364,11 +339,8 @@ function rabatRisalaDakhila(ctx: SiyaqKhadim): void {
       }
 
       case "irsal": {
-        /** Dispatch topic message — ticket URL or free text */
         const { nass, huwiyyatRisala } = risala;
 
-
-        /** Route to dispatcher for intent resolution */
         const result = await ctx.munadi.aalajRisalaIrsal({
           source: "telegram",
           text: nass,
@@ -392,13 +364,11 @@ function rabatRisalaDakhila(ctx: SiyaqKhadim): void {
       }
 
       case "amr": {
-        /** Slash command from dispatch topic */
         await aalajAmrDakhil(ctx, risala.amr, risala.wusut);
         break;
       }
 
       case "ikhtiyar_munadi": {
-        /** Munadi button (select/parent/switch/cancel) */
         const result = await ctx.munadi.aalajIstijabaZirr("telegram", risala.miftah);
         if (result.tuulija) {
           if (result.buttons) {
@@ -415,15 +385,12 @@ function rabatRisalaDakhila(ctx: SiyaqKhadim): void {
       }
 
       case "khass": {
-        /** Private chat — show sessions overview */
         await aalajRisalaKhassa(ctx);
         break;
       }
     }
   });
 }
-
-
 
 async function aalajAmrAlKimyawi(
   ctx: SiyaqKhadim,
@@ -465,10 +432,6 @@ async function aalajTaaliqatJadida(
   );
 }
 
-
-/**
- * Handle private chat messages - list sessions overview
- */
 async function aalajRisalaKhassa(ctx: SiyaqKhadim): Promise<void> {
   const sessions = ctx.mudirJalasat.wajadaJalasatMurshid();
 
@@ -501,9 +464,6 @@ async function aalajRisalaKhassa(ctx: SiyaqKhadim): Promise<void> {
   await ctx.rasul.send("kimyawi", response);
 }
 
-/**
- * Handle slash commands from dispatch topic
- */
 async function aalajAmrDakhil(ctx: SiyaqKhadim, amr: string, wusut: string[]): Promise<void> {
   switch (amr.toLowerCase()) {
     case "start":
@@ -531,13 +491,6 @@ async function aalajAmrDakhil(ctx: SiyaqKhadim, amr: string, wusut: string[]): P
     }
 
     case "naqsh": {
-      /**
-       * Naqsh (نقش) — inscription into the codex.
-       *
-       * al-Kimyawi's act, and no one else's. The murshid guides the work to
-       * the point where it may be inscribed; whether it enters the canon is
-       * not a thing it may decide, so it holds no instrument for this.
-       */
       if (wusut.length === 0) {
         await ctx.rasul.send("dispatch", "**Usage:** /naqsh <wasfa>");
         break;
@@ -555,10 +508,6 @@ async function aalajAmrDakhil(ctx: SiyaqKhadim, amr: string, wusut: string[]): P
         );
         break;
       }
-      /**
-       * The vessel, not the waṣfa. A murshid works in an ināʾ whose name
-       * the katib chose, and it is that which enters the codex.
-       */
       const jalsa = ctx.mudirJalasat.jalabMurshid(huwiyya);
       const ina = jalsa?.far || huwiyya;
 
@@ -604,7 +553,6 @@ async function dawraHayat(ctx: SiyaqKhadim): Promise<void> {
 }
 
 async function aalajTalabSeyana(ctx: SiyaqKhadim): Promise<boolean> {
-  /** Check if any murshid is active */
   const activeId = ctx.munadi.hawiyyaFaila();
 
   if (activeId) {
@@ -630,7 +578,6 @@ async function aalajIktimalSeyana(
     conflicts: results.filter((r) => r.fil === "taarudat").length,
   });
 
-  /** Build summary */
   const merged = results.filter((r) => r.fil === "udmija");
   const upToDate = results.filter((r) => r.fil === "muhaddath");
   const conflicts = results.filter((r) => r.fil === "taarudat");
@@ -673,7 +620,6 @@ async function aalajIktimalSeyana(
   }
 
   if (ctx.rasul.mumakkan()) {
-    /** Shorter version for messenger */
     let msg = "🌙 Overnight Maintenance\n\n";
     if (merged.length > 0) msg += `✅ Merged: ${merged.length} branches\n`;
     if (upToDate.length > 0) msg += `✓ Up-to-date: ${upToDate.length}\n`;
@@ -704,29 +650,15 @@ ${(r.taarudat ?? []).map((f) => `- \`${f}\``).join("\n")}
   }
 }
 
-
-
-
-
 export const VERSION = "0.2.0";
 
 export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   await logger.baddaa();
 
-  /** Load configuration */
   const config = await hammalaAlTasmim();
 
   await baddaaQaidatBayanat();
 
-  /**
-   * Initialize clients. The amil carries the mun_* adawat into its hello —
-   * humd routes a nida by name to whichever hive's manifest declares it,
-   * so an unannounced ada is an unreachable one.
-   */
-  /**
-   * The matter, and the fire, and the place a jawhar is set down. Iksīr is
-   * handed all three and asks nothing of what they are made from.
-   */
   const siyaqMadda = {
     tasmim: config,
     warsha: process.env.IKSIR_REPO_PATH,
@@ -740,7 +672,6 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     ? await istadaa<Safa>(config.madda.safa, siyaqMadda, AMAL_SAFA)
     : safaSakita();
 
-  /** The formulae live in the sijill. */
   const wasfat = anshaaSijillWasfat(config.wasfat?.sabiqa);
 
   const alat = new AlatAlIksir(wasfat);
@@ -752,10 +683,6 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     await logger.sajjalKhata("mirata", "mirror backfill failed", { error: String(error) });
   });
   const ntfy = anshaaNtfyAmil(config);
-  /**
-   * How al-Kimyawī is reached. Telegram when it is configured, and
-   * otherwise a pipe on this machine — which owes nothing to anyone.
-   */
   const telegram = anshaaTelegramAmil(config);
   const messenger: Rasul = config.isharat.telegram.mufattah
     ? anshaaTelegramRasul(telegram)
@@ -766,11 +693,9 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     : faslSakit();
   const abortController = new AbortController();
 
-  /** Initialize session manager and istarjaa persisted state */
   const sessionManager = istadaaKatib({ tasmim: config, amil, rasul: messenger });
   await sessionManager.hammalaHala();
 
-  /** Initialize IPC processor and istarjaa persisted state */
   const ipcProcessor = istadaaMunaffidh({
     tasmim: config,
     wasfat,
@@ -784,10 +709,8 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   });
   await ipcProcessor.hammalaHala();
 
-  /** Initialize intent resolver */
   const intentResolver = istadaaArraf({ wasfat, amil });
 
-  /** Initialize dispatcher */
   const dispatcher = istadaaMunadi({
     mudirJalasat: sessionManager,
     arraf: intentResolver,
@@ -801,14 +724,12 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
 
   await dispatcher.istarjaaIndaNashaat();
 
-  /** Initialize health monitor (session stuck detection + auto-compaction) */
   const healthMonitor = istadaaRaqib({
     amil,
     rasul: messenger,
     mudirJalasat: sessionManager,
   });
 
-  /** Create context (partial, keepAlive added after) */
   const ctx: SiyaqKhadim = {
     tasmim: config,
     amil,
@@ -824,11 +745,6 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     mutahakkimIlgha: abortController,
   };
 
-  /**
-   * Initialize keep-alive loop (Proactive Game)
-   * Listens at decanted jawahir for what al-Kimyawi has said of them, and
-   * performs the night rites.
-   */
   const keepAlive = awqadaHayat(
     {
       tasmim: config,

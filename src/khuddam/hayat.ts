@@ -28,9 +28,6 @@ import type {
 } from "../types.ts";
 import type { MudirJalasat } from "./katib.ts";
 
-/**
- * NatijaSeyana — what became of a single branch after the night rites
- */
 export interface NatijaSeyana {
   far: string;
   huwiyya: string;
@@ -41,32 +38,23 @@ export interface NatijaSeyana {
   nass: string;
 }
 
-/**
- * IstijabatHayat — the signals Hayat sends when it witnesses change.
- * al-Khadim receives these and acts.
- */
 interface IstijabatHayat {
-  /** Al-Kimyawi has spoken upon a jawhar — a command to obey */
   indaAmrAlKimyawi: (
     session: JalsatMurshid,
     huwiyyatWasfa: string,
     comment: TaaliqMuraja
   ) => Promise<void>;
 
-  /** Others have spoken upon a jawhar — for al-Kimyawi's consideration */
   indaTaaliqatJadida: (
     session: JalsatMurshid,
     huwiyyatWasfa: string,
     comments: TaaliqMuraja[]
   ) => Promise<void>;
 
-  /** Request seyana — all must be still */
   utlubWadaSeyana: () => Promise<boolean>;
 
-  /** Release seyana — Iksīr may breathe again */
   harrarWadaSeyana: () => Promise<void>;
 
-  /** Seyana is complete — report what was done */
   indaIktimalSeyana: (results: NatijaSeyana[]) => Promise<void>;
 }
 
@@ -74,7 +62,6 @@ interface MutatallabatHayat {
   tasmim: TasmimIksir;
   mudirJalasat: MudirJalasat;
   fasl: Fasl;
-  /** The matter tended through the night rites. */
   hayula: Hayula;
   wasfat: SijillWasfat;
 }
@@ -88,7 +75,6 @@ export class DawratHayat {
   #tarikhAkhirSeyana: string | null = null;
   #seyanaJariya = false;
   #wasfat: SijillWasfat;
-  /** When each decanted jawhar was last listened at. */
   #akhirIstimaa: Map<string, string> = new Map();
 
   constructor(deps: MutatallabatHayat, callbacks: IstijabatHayat) {
@@ -100,10 +86,6 @@ export class DawratHayat {
     this.#istijabat = callbacks;
   }
 
-  /**
-   * A single breath. Listen at each decanted jawhar, and if the hour is
-   * right, perform the night rites.
-   */
   async dawra(): Promise<void> {
     const mafsula = await this.#wasfat.bihala("mafsul", 50);
 
@@ -121,12 +103,6 @@ export class DawratHayat {
     await logger.tatbeeq("hayat", "Breath complete");
   }
 
-  /**
-   * Listen at a decanted jawhar for what al-Kimyawī has said of it.
-   *
-   * Nothing here asks whether the jawhar was accepted. Naqsh is an act
-   * al-Kimyawī performs, not a state to be discovered by polling.
-   */
   async raqabJawhar(huwiyya: string): Promise<void> {
     const session = this.#mudirJalasat.jalabMurshid(huwiyya);
     if (!session) return;
@@ -170,14 +146,12 @@ export class DawratHayat {
     }
   }
 
-  /** Are we in the saat al-sukun — the quiet hours? */
   fiSaatHudu(): boolean {
     if (!this.#tasmim.saatSukun.mufattah) return false;
     const { mintaqaZamaniyya, bidaya, nihaya } = this.#tasmim.saatSukun;
     return fiNitaqAlWaqt(mintaqaZamaniyya, bidaya, nihaya);
   }
 
-  /** Are we in the final watch — the seyana window before dawn? */
   fiAkhirSaatHudu(): boolean {
     if (!this.fiSaatHudu()) return false;
     const { mintaqaZamaniyya, nihaya, daqaiqNafizhaSeyana } = this.#tasmim.saatSukun;
@@ -185,18 +159,11 @@ export class DawratHayat {
     return remaining <= daqaiqNafizhaSeyana && remaining > 0;
   }
 
-  /**
-   * The night rites — seyana.
-   *
-   * Draw the codex in beneath each murshid's vessel, and report what was
-   * found. If taarudat arise, do not resolve them — only report.
-   */
   async naffadhSeyana(): Promise<void> {
     if (!this.fiAkhirSaatHudu()) {
       return;
     }
 
-    /** The rites are performed once per dawn */
     const today = todayInTz(this.#tasmim.saatSukun.mintaqaZamaniyya);
     if (this.#tarikhAkhirSeyana === today) {
       return;
@@ -209,7 +176,6 @@ export class DawratHayat {
     await logger.akhbar("keepalive", "Starting overnight maintenance");
     this.#seyanaJariya = true;
 
-    /** Request stillness — no murshid may transmute during seyana */
     const granted = await this.#istijabat.utlubWadaSeyana();
     if (!granted) {
       await logger.haDHHir("keepalive", "Maintenance mode denied - murshid active");
@@ -223,9 +189,7 @@ export class DawratHayat {
       const results: NatijaSeyana[] = [];
       const sessions = this.#mudirJalasat.wajadaJalasatMurshid();
 
-      /** Remember where we stood */
       const originalBranch = await this.#hayula.waqif();
-
 
       for (const session of sessions) {
         const result = await this.sayanFar(session);
@@ -257,7 +221,6 @@ export class DawratHayat {
     }
   }
 
-  /** Seyana of a single far — merge main into it */
   async sayanFar(session: JalsatMurshid): Promise<NatijaSeyana> {
     const far = session.far;
     const huwiyya = session.huwiyya;
@@ -265,7 +228,6 @@ export class DawratHayat {
     await logger.akhbar("keepalive", `Maintaining branch ${far}`);
 
     try {
-      /** Enter the far */
       const checkedOut = await this.#hayula.dakhala(far);
       if (!checkedOut) {
         return {
@@ -277,7 +239,6 @@ export class DawratHayat {
         };
       }
 
-      /** How far has the river of main flowed past this far? */
       const behind = await this.#hayula.masafa(far);
       if (behind === 0) {
         return {
@@ -290,7 +251,6 @@ export class DawratHayat {
         };
       }
 
-      /** Attempt the merging of waters */
       const mergeResult = await this.#hayula.sahaba();
 
       if (mergeResult.najah) {
@@ -327,7 +287,6 @@ export class DawratHayat {
   }
 }
 
-/** Summon Hayat — breathe life into Iksīr */
 export function awqadaHayat(
   deps: MutatallabatHayat,
   callbacks: IstijabatHayat

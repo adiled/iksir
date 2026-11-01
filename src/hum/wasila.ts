@@ -15,7 +15,6 @@ interface DawrTawaqquf {
   zaman: number;
 }
 
-/** The face of hum's client that Wasila leans on; a test may hand in its own. */
 export type NahlaHum = Pick<Bee, "on" | "onSid" | "offSid" | "onAny" | "onNestled" | "onAstray" | "onAdvisory" | "start" | "send" | "close" | "id">;
 
 export class Wasila {
@@ -166,7 +165,6 @@ export class Wasila {
     return nass || undefined;
   }
 
-  /** Every tone of a sigil comes to its follower: the bloom, the cell's life, and the reaches of our own tools. */
   #tabaa(sid: string): void {
     this.#nahla.onSid(sid, (t) => {
       switch (t.chi) {

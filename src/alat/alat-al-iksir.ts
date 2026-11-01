@@ -89,14 +89,6 @@ export class AlatAlIksir {
   #sijillAlat: SijillAlat;
   #wasfat?: SijillWasfat;
 
-  /**
-   * @param wasfat the register, for instruments that only read.
-   *
-   * A read has no reason to travel. It once did — the daemon could not
-   * answer a tool call inline, so every instrument returned an
-   * acknowledgement and the answer arrived later as a message. The murshid
-   * would ask for a waṣfa and be told that reading had begun.
-   */
   constructor(wasfat?: SijillWasfat) {
     this.#wasfat = wasfat;
     this.#sijillAlat = new MunadiSijillAlat((call) => this.#hawwilLiKhadim(call));
@@ -105,24 +97,14 @@ export class AlatAlIksir {
     this.#sajjilAlatKimiya();
   }
 
-  /** The sijill of instruments. */
   get sijill(): SijillAlat {
     return this.#sijillAlat;
   }
 
-  /** Every taarif, as the hello advertises them. */
   adawat(): TaarifAla[] {
     return this.#sijillAlat.adawat();
   }
 
-  /**
-   * Work one instrument.
-   *
-   * Returns the natija as text — what travels back on chi:"tool-result"
-   * to un-park the cell. A refused or broken instrument returns its
-   * complaint in the same channel; the murshid must be told either way,
-   * and a cell left parked is worse than a cell told no.
-   */
   async naffidh(name: string, args: Record<string, unknown>): Promise<string> {
     try {
       this.#tahaqqaqHujaj(name, args);
@@ -136,10 +118,6 @@ export class AlatAlIksir {
     }
   }
 
-  /**
-   * Validate required arguments are present and non-null.
-   * Throws with a clear message if validation fails.
-   */
   #tahaqqaqHujaj(
     toolName: string,
     args: Record<string, unknown>,
@@ -159,9 +137,6 @@ export class AlatAlIksir {
     }
   }
 
-  /**
-   * Register the core instruments.
-   */
   #sajjilAlatAsasiyya(): void {
     this.#sijillAlat.sajjil(
       {
@@ -300,7 +275,6 @@ it has begun.`,
       },
       (args) => this.#aalajaQiraaatWasfa(args),
     );
-
 
     this.#sijillAlat.sajjil(
       {
@@ -668,7 +642,6 @@ You should only call this once per murshid, at the start.`,
       },
       (args) => this.#aalijIdfa(args),
     );
-
   }
 
   #sajjilAlatKimiya(): void {
@@ -1039,7 +1012,6 @@ ${call.risala}`;
       bayyanat: args.metadata as Record<string, unknown> | undefined,
     };
 
-    /** Log to diary directly */
     const decision: QararSijill = {
       waqt: new Date().toISOString(),
       naw: call.naw,
@@ -1244,10 +1216,6 @@ Daemon will push current branch to origin.`;
   }
 
   async #aalijIstikhlas(args: Record<string, unknown>): Promise<string> {
-    /**
-     * For now, extraction is just validation and planning
-     * The actual file operations happen in mun_istihal
-     */
     const huwiyyatWasfa = args.huwiyyatWasfa as string;
     const files = args.files as string[];
 
@@ -1261,10 +1229,6 @@ Next steps:
 2. Use mun_istihal to crystallize into essence`;
   }
 
-  /**
-   * The matter answers this, not Iksīr. Munaffidh puts the question to the
-   * hayūlā and returns what it says.
-   */
   #aalijTalaum(args: Record<string, unknown>): string {
     const call: NidaTalaum = {
       tool: "mun_talaum",
@@ -1347,7 +1311,6 @@ Note: CI may fail if parent PR is unmerged. This is expected for incremental rev
     adkhalaHadath("pm", call.tool, call as unknown as Record<string, unknown>, huwiyyatMurshid);
   }
 
-  /** Append a qarar to the mudawwana. */
   #adhifQararSijill(decision: QararSijill, huwiyyatMurshid: string = "unknown"): void {
     adhafaQararSijill({
       huwiyyatMurshid,
@@ -1373,5 +1336,4 @@ Note: CI may fail if parent PR is unmerged. This is expected for incremental rev
     return `The jawhar of ${call.huwiyyatWasfa} goes to be set down.\n\n` +
       `It will be refused if the matter has not withstood its fire.`;
   }
-
 }

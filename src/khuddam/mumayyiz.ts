@@ -32,11 +32,6 @@ function masarAlMakhzan(): string {
   return process.env.IKSIR_REPO_PATH ?? ".";
 }
 
-
-/**
- * Cached scrolls — loaded once, held in memory.
- * The teachings of al-Kimyawi, and the two tamyiz incantations.
- */
 let muhtawaWakala: string | null = null;
 let qalibTanbih: string | null = null;
 
@@ -77,7 +72,6 @@ function sayyarQalib(template: string, vars: Record<string, string>): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? "");
 }
 
-
 const QALID_IHTIYATI_TANBIH = `You are a gatekeeper protecting the intibah al-Kimyawi.
 
 Al-Kimyawi handles:
@@ -113,17 +107,12 @@ If KHABATH, provide a terse rejection (1-2 sentences) with specific guidance. Re
 Respond ONLY with valid JSON (no markdown, no explanation):
 {"tamyiz": "DHAHAB" or "KHABATH", "reason": "brief explanation", "rejection": "terse guidance if KHABATH, null if DHAHAB"}`;
 
-
 interface NatijaTamyizTanbih {
   dhahab: boolean;
   sabab: string;
   radd: string | null;
 }
 
-/**
- * Assay an ishara — is it dhahab worthy of al-Kimyawi's gaze,
- * or khabath to be returned to the murshid?
- */
 export async function mayyazaTanbih(
   amil: Wasila,
   message: string,
@@ -169,33 +158,14 @@ export async function mayyazaTanbih(
   }
 }
 
-
-
-/** Wipe the cached scrolls — for fahs only */
 export function _masahaDhakira(): void {
   muhtawaWakala = null;
   qalibTanbih = null;
 }
 
-
-/**
- * Tamyīz of a word said about a decanted jawhar.
- *
- * Whether a thing said is an instruction is Iksīr's judgement, not the
- * forge's, and it is made here.
- *
- * Deterministic, and deliberately so — no model is spent to learn that a
- * sentence begins with "fix".
- */
 export function mayyazaTaaliq(nass: string, minAlKimyawi: boolean): TaqyimTaaliq {
   const lowerBody = nass.toLowerCase().trim();
 
-  /**
-   * Check for command patterns — applies to ALL comments including al-Kimyawi's.
-   * Al-Kimyawi leaves PR commands that murshids must execute.
-   * The `minAlKimyawi` flag on TaaliqMuraja tells consumers WHO wrote it;
-   * the assessment tells them WHAT was written.
-   */
   const commandPatterns = [
     /^(fix|update|change|remove|add|refactor|revert)\s/i,
     /^please\s+(fix|update|change|remove|add)/i,
@@ -233,7 +203,6 @@ export function mayyazaTaaliq(nass: string, minAlKimyawi: boolean): TaqyimTaaliq
     };
   }
 
-  /** Check for praise */
   const praisePatterns = [/\b(lgtm|looks good|nice|great|awesome|perfect)\b/i];
   if (praisePatterns.some((p) => p.test(lowerBody))) {
     return {
@@ -244,7 +213,6 @@ export function mayyazaTaaliq(nass: string, minAlKimyawi: boolean): TaqyimTaaliq
     };
   }
 
-  /** Check for concern */
   const concernPatterns = [
     /\b(concern|worried|issue|problem|bug|wrong|incorrect)\b/i,
     /\bwhat\s+if\b/i,
@@ -258,7 +226,6 @@ export function mayyazaTaaliq(nass: string, minAlKimyawi: boolean): TaqyimTaaliq
     };
   }
 
-  /** Check for suggestion */
   const suggestionPatterns = [
     /\b(consider|maybe|could|might|suggest|what\s+about)\b/i,
     /\bhow\s+about\b/i,

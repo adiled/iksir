@@ -117,9 +117,6 @@ function deepMerge(target: TasmimIksir, source: Partial<TasmimIksir>): TasmimIks
 function tahaqqaqConfig(config: TasmimIksir): string[] {
   const errors: string[] = [];
 
-  // Nothing to require of hum: the socket is discovered, and the model is
-  // al-Kimyawi's to choose by kindling a hive — not Iksir's to demand.
-
   if (config.isharat.telegram.mufattah) {
     if (!config.isharat.telegram.ramzBot) {
       errors.push("telegram.botToken is required when Telegram is enabled");
@@ -161,7 +158,6 @@ export async function hammalaAlTasmim(): Promise<TasmimIksir> {
     await logger.haDHHir("config", `Config file not found at ${configPath}, using defaults`);
   }
 
-  /** Override with environment variables */
   const envOverrides: Partial<TasmimIksir> = {};
 
   if (process.env.IKSIR_HUM_MODEL) {

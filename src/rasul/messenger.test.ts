@@ -16,7 +16,6 @@ import { withTestDb, mockTelegramClient } from "../test-helpers.ts";
 import { TelegramMessenger } from "./messenger.ts";
 import { haddathaAwAdkhalaQanat } from "../../db/db.ts";
 
-
 test("send: dispatch channel -> sendToDispatch", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
@@ -85,7 +84,6 @@ test("send: disabled messenger -> no calls", async () => {
   });
 });
 
-
 test("arsalaMunassaq: dispatch -> sendToDispatch with Markdown", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
@@ -137,7 +135,6 @@ test("arsalaMunassaq: murshid fallback -> dispatch with prefix + Markdown", asyn
   });
 });
 
-
 test("mumakkan: delegates to TelegramClient", async () => {
   const tcEnabled = mockTelegramClient({ mumakkan: true });
   const mEnabled = new TelegramMessenger(tcEnabled as never);
@@ -147,7 +144,6 @@ test("mumakkan: delegates to TelegramClient", async () => {
   const mDisabled = new TelegramMessenger(tcDisabled as never);
   assertEquals(mDisabled.mumakkan(), false);
 });
-
 
 test("khalaqaQanatMurshid: creates topic, persists to DB, returns channelId", async () => {
   await withTestDb(async () => {
@@ -191,7 +187,6 @@ test("khalaqaQanatMurshid: returns null when createForumTopic fails", async () =
   });
 });
 
-
 test("yamlikQanatMurshid: cache hit returns true", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
@@ -224,7 +219,6 @@ test("yamlikQanatMurshid: full miss returns false", async () => {
   });
 });
 
-
 test("hammalQanawatLilJalsa: returns channels from DB and caches", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
@@ -242,7 +236,6 @@ test("hammalQanawatLilJalsa: returns channels from DB and caches", async () => {
   });
 });
 
-
 test("hallJalsaBilQanat: DB hit returns identifier and caches", async () => {
   await withTestDb(async () => {
     const tc = mockTelegramClient();
@@ -250,14 +243,9 @@ test("hallJalsaBilQanat: DB hit returns identifier and caches", async () => {
 
     haddathaAwAdkhalaQanat("TEAM-800", "telegram", "888");
 
-    /** First call: DB hit */
     const result1 = m.hallJalsaBilQanat("telegram", "888");
     assertEquals(result1, "TEAM-800");
 
-    /**
-     * Second call should use cache (we can't directly verify cache hit,
-     * but it shouldn't error and should return same result)
-     */
     const result2 = m.hallJalsaBilQanat("telegram", "888");
     assertEquals(result2, "TEAM-800");
   });

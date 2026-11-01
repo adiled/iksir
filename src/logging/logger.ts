@@ -93,7 +93,6 @@ class Musjil {
     await this.adhifIlaMilaf(file, this.nassiqLiMilaf(entry));
   }
 
-  /** Main logger methods */
   async tatbeeq(category: string, message: string, context?: Record<string, unknown>): Promise<void> {
     await this.uktubQayd("main", {
       timestamp: new Date(),
@@ -134,7 +133,6 @@ class Musjil {
     });
   }
 
-  /** Decision audit log */
   async sajjalQarar(entry: Omit<DecisionMudkhalSijill, "timestamp" | "level" | "category">): Promise<void> {
     const fullEntry: DecisionMudkhalSijill = {
       ...entry,
@@ -153,7 +151,6 @@ class Musjil {
     await this.adhifIlaMilaf("decisions", this.nassiqLiMilaf(fullEntry));
   }
 
-  /** External changes log */
   async sajjalTaghyirKhariji(
     entry: Omit<MudkhalTaghyirKhariji, "timestamp" | "level" | "category" | "message">
   ): Promise<void> {
@@ -200,7 +197,6 @@ class Musjil {
     }
   }
 
-  /** Read recent logs (for /log command) */
   async iqraAkhiran(file: MilafSijill = "main", lines = 50): Promise<MudkhalSijill[]> {
     if (!this.tahyiad) await this.baddaa();
     const path = join(masarSijillAhdaq(), LOG_FILES[file]);
@@ -231,5 +227,4 @@ class Musjil {
   }
 }
 
-/** Singleton instance */
 export const logger = new Musjil();

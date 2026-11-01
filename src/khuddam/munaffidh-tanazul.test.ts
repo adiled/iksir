@@ -10,10 +10,6 @@ import {
 } from "../test-helpers.ts";
 import type { JalsatMurshid } from "../types.ts";
 
-/**
- * A Munadi that holds the flame wherever the test puts it, and records any
- * switchover it is asked for.
- */
 function munadiStub(faila: string | null) {
   const tahwilat: string[] = [];
   return {
@@ -78,12 +74,6 @@ const nida = (sabab: string, tafasil: string) => ({
 const halaSijill = (huwiyya: string) =>
   jalabaKullJalasat().find((s) => s.huwiyya === huwiyya)?.hala;
 
-/**
- * A murshid that kept working after the flame moved on still finishes. How its
- * work ended is its own to say, and the sijill must hear it — otherwise the
- * record keeps whatever the last accepted yield said, and is wrong with no
- * event to contradict it.
- */
 test("a murshid without the flame still records how its work ended", async () => {
   await withTestDb(async () => {
     const { munaffidh } = await mashhad(null);
@@ -95,10 +85,6 @@ test("a murshid without the flame still records how its work ended", async () =>
   });
 });
 
-/**
- * Recording is not passing the flame on. Only the murshid holding it may say
- * where it goes next.
- */
 test("a murshid without the flame does not move control", async () => {
   await withTestDb(async () => {
     const { munaffidh, munadi } = await mashhad("LUGHA-1");
@@ -110,9 +96,6 @@ test("a murshid without the flame does not move control", async () => {
   });
 });
 
-/**
- * The murshid holding the flame yields as it always did.
- */
 test("the murshid holding the flame still yields it", async () => {
   await withTestDb(async () => {
     const { munaffidh, munadi } = await mashhad("LUGHA-2");
@@ -124,9 +107,6 @@ test("the murshid holding the flame still yields it", async () => {
   });
 });
 
-/**
- * A yield from something holding no vessel is refused, and writes nothing.
- */
 test("a yield from no vessel is refused", async () => {
   await withTestDb(async () => {
     const { munaffidh } = await mashhad(null);

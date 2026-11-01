@@ -4,10 +4,8 @@ import { join, relative } from "node:path";
 
 const JIDHR = new URL("../..", import.meta.url).pathname;
 
-/** Where Iksīr speaks kimiya and nothing else. */
 const QALB = ["src/khuddam", "src/kimiya", "src/alat", "src/hum"];
 
-/** Contrivances core may no longer name. */
 const KALIMAT_NATINA = [
   "git/",
   "github/",
@@ -73,10 +71,6 @@ test("hudud: core names nothing of the natn", async () => {
 });
 
 test("hudud: Iksir names no contrivance anywhere", async () => {
-  /**
-   * Not core alone. The whole repository. There is no adapter left in it to
-   * import, and nothing here should reach for one by path either.
-   */
   const mukhalafat: string[] = [];
   for (const masar of jamaaMilafat(JIDHR).filter((m) => !m.includes(".git") && !m.includes("node_modules"))) {
     const entry = { path: masar };
