@@ -1,0 +1,25 @@
+name: Furnace
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: iksir
+      - name: hum, beside it
+        run: git clone --depth 1 https://github.com/adiled/hum hum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: The furnace must parse and prove itself
+        working-directory: iksir
+        run: ./build

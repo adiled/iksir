@@ -2,7 +2,8 @@ name: Release
 
 on:
   push:
-    tags: ["v*"]
+    tags:
+      - "v*"
 
 permissions:
   contents: write
@@ -12,22 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-
-      - name: Create GitHub Release
-        run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          PREV=$(git tag --sort=-v:refname | grep -v "^${TAG}$" | head -1)
-          if [ -n "$PREV" ]; then
-            BODY=$(git log --pretty=format:"- %s" "${PREV}..${TAG}" | grep -v "^- chore: bump to ")
-          else
-            BODY=$(git log --pretty=format:"- %s" "${TAG}" | grep -v "^- chore: bump to ")
-          fi
-          [ -n "$(echo "$BODY" | tr -d '[:space:]')" ] || BODY="Release $TAG"
-          gh release create "$TAG" \
-            --title "$TAG" \
-            --notes "$BODY"
+      - name: Create GitHub release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes
