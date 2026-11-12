@@ -65,7 +65,7 @@ Every waṣfa carries its own three, drawn from the roster: ʿĀlim marks a tick
 hum hive "$PWD" install       # again, after a pull: rebuilds and regrows; a .env from before 2.0 is carried into iksir.json and asrar, and removed
 node src/cli.ts check         # nestle and report what answers
 hum bee --list                # the five bees, nestled
-tail -f ~/Library/Logs/hum-iksir.iksir.out.log     # macOS; elsewhere, orchd's logs for the hum-iksir grove
+tail -f ~/.local/state/hum/hives/iksir/orch/logs/iksir.log   # saail.log beside it
 ```
 
 ```
