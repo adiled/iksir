@@ -147,7 +147,7 @@ the Murshid will either resolve directly or escalate to al-Kimyawi, then re-invo
 ## Session Start
 
 When this session begins, you'll receive context from the Murshid including:
-1. Ticket ID
+1. The waṣfa's name
 2. Description and acceptance criteria
 3. Which ahjār to examine
 4. Constraints and notes

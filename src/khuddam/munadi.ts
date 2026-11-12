@@ -164,7 +164,7 @@ const ANMAT_ISM_WARSHA = [
   /["']([a-z0-9][-a-z0-9_]*)["']/i,
 ];
 
-function hallalNiyyaAsasiyya(text: string, ticketPattern: RegExp): Niyya {
+function hallalNiyyaAsasiyya(text: string, namatHuwiyya: RegExp): Niyya {
   const trimmed = text.trim();
 
   const commandMatch = trimmed.match(NAMAT_AMR);
@@ -174,7 +174,7 @@ function hallalNiyyaAsasiyya(text: string, ticketPattern: RegExp): Niyya {
 
     let huwiyya: string | null = null;
     for (const arg of args) {
-      const idMatch = arg.match(ticketPattern);
+      const idMatch = arg.match(namatHuwiyya);
       if (idMatch) {
         huwiyya = idMatch[1].toUpperCase();
         break;
@@ -192,7 +192,7 @@ function hallalNiyyaAsasiyya(text: string, ticketPattern: RegExp): Niyya {
   }
 
   let huwiyya: string | null = null;
-  const idMatch = trimmed.match(ticketPattern);
+  const idMatch = trimmed.match(namatHuwiyya);
   if (idMatch) {
     huwiyya = idMatch[1].toUpperCase();
   }
@@ -652,24 +652,24 @@ export class Munadi {
 
   async badaaIqtirahAb(
     msg: RisalaWarida,
-    ticket: NonNullable<NiyyaMuhallala["kiyan"]>,
+    wasfa: NonNullable<NiyyaMuhallala["kiyan"]>,
     parent: NonNullable<NiyyaMuhallala["kitabAb"]>
   ): Promise<NatijaIrsal> {
     this.iqtirahAbMuallaq = {
       source: msg.source,
-      wasfa: ticket,
+      wasfa,
       ab: parent,
       abHuwaMalhamat: false,
       expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     };
 
-    const radd = `${ticket.huwiyya} has parent ${parent.huwiyya} (${escapeMarkdown(parent.unwan)}).
+    const radd = `${wasfa.huwiyya} has parent ${parent.huwiyya} (${escapeMarkdown(parent.unwan)}).
 
 Work on the parent instead?`;
 
     const buttons = [
       { text: `Yes, work on ${parent.huwiyya}`, data: "parent:yes" },
-      { text: `No, just ${ticket.huwiyya}`, data: "parent:no" },
+      { text: `No, just ${wasfa.huwiyya}`, data: "parent:no" },
     ];
 
     return { tuulija: true, radd, buttons };
@@ -909,14 +909,14 @@ then draft your khuṭṭa.`;
 
     const initMessage = `A sandbox session has been started for you.
 
-**Mode**: Sandbox (no ticket)
+**Mode**: Sandbox (no waṣfa)
 **Name**: ${sandboxName}
 **Branch**: \`sandbox/${sandboxName}\`
 **Original request**: "${msg.text}"
 
-This is freeform work - no ticket tracking, no PR requirements. Brainstorm, prototype, experiment freely.
+This is freeform work - no waṣfa, no PR requirements. Brainstorm, prototype, experiment freely.
 
-When you want to formalize this work into tickets, let al-Kimyawi know.`;
+When you want to formalize this work into waṣfāt, let al-Kimyawi know.`;
 
     return this.#khalaqaWaFailaMurshid({
       huwiyya,

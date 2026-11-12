@@ -18,7 +18,7 @@ test("a wasfa is inscribed with its fire, the moment the instrument is used", as
       huwiyyatMurshid: "dispatch",
       huwiyya: "GH-9",
       title: "a nurse for the on-device model",
-      description: "from the ticket",
+      description: "from the issue",
       labels: ["github"],
       status: "backlog",
       mayayir: ["cargo test -p apple-fm", "./build"],

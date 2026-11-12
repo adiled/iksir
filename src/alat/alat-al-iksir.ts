@@ -267,7 +267,7 @@ export class AlatAlIksir {
       {
         name: "mun_wadaa_alaqat",
         description:
-          "Set blocking relations between tickets. Primary mechanism for guiding execution order.",
+          "Bind waṣfāt: which waits on which. The way to order the work.",
         inputSchema: {
           type: "object",
           properties: {
@@ -277,17 +277,17 @@ export class AlatAlIksir {
             },
             huwiyyatWasfa: {
               type: "string",
-              description: "Ticket identifier",
+              description: "The waṣfa's name",
             },
             blocks: {
               type: "array",
               items: { type: "string" },
-              description: "Tickets that this ticket blocks",
+              description: "Waṣfāt this one blocks",
             },
             blockedBy: {
               type: "array",
               items: { type: "string" },
-              description: "Tickets that block this ticket",
+              description: "Waṣfāt that block this one",
             },
           },
           required: ["huwiyyatMurshid", "huwiyyatWasfa"],
@@ -421,7 +421,7 @@ it has begun.`,
             },
             metadata: {
               type: "object",
-              description: "Additional structured data (tickets created, etc.)",
+              description: "Additional structured data (waṣfāt inscribed, etc.)",
             },
           },
           required: ["huwiyyatMurshid", "type", "decision", "reasoning"],
@@ -631,7 +631,7 @@ judged — it is set before al-Kimyawī having already survived its fire.`,
             },
             huwiyyatWasfa: {
               type: "string",
-              description: "Ticket the PR implements",
+              description: "The waṣfa the PR decants",
             },
             title: {
               type: "string",
@@ -722,11 +722,11 @@ judged — it is set before al-Kimyawī having already survived its fire.`,
 
     return `The binding is carried to al-Khadim.
 
-Ticket: ${call.huwiyyatWasfa}
+Waṣfa: ${call.huwiyyatWasfa}
 ${blocksList}
 ${blockedByList}
 
-Relations control execution order: blocked tickets wait for blockers to complete.`;
+Relations order the work: a blocked waṣfa waits for its blockers.`;
   }
 
   async #aalajaQiraaatWasfa(args: Record<string, unknown>): Promise<string> {

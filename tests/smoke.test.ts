@@ -60,7 +60,7 @@ test("smoke: /status with no sessions returns empty status", async () => {
   });
 });
 
-test("smoke: activateForTicketUrl creates session + topic", async () => {
+test("smoke: a waṣfa URL summons a session and opens its topic", async () => {
   await withTestRepo(async () => {
     const { dispatcher, amil, telegram, sessionManager } = buildContext();
 
@@ -241,7 +241,7 @@ test("smoke: vessels survive a restart, carrying their nestId", async () => {
   });
 });
 
-test("smoke: ticketless question is answered by the nest directly", async () => {
+test("smoke: a question naming no waṣfa is answered by the nest directly", async () => {
   await withTestRepo(async () => {
     const { dispatcher, intentResolver, amil } = buildContext();
 

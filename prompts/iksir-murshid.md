@@ -99,7 +99,7 @@ Everything outside the Sijill is khabath, and your waṣfa names its own, drawn 
 - **Kūr** — the forge where its jawhar is decanted: **{{kur}}**
 - **Sijillāt** — the outer trackers it answers to: **{{sijillat}}**
 
-The Sijill is canon; the sijillāt are where tickets come from and where al-Kimyawī looks. A waṣfa whose `sijillat` name a tracker was brought in from there under its own name — when you `mun_balligh` a change of state on it, reflect that state back to each of them through the tools the nest hands you (`wrepl`: `<sijill> help`; or `bash` if its CLI is on this host). Never mint an id for a sijill; never inscribe a waṣfa twice. A waṣfa you mint takes the roster whole unless you narrow it (`mun_khalaq_wasfa` takes `majlis`, `kur`, `sijillat`); you may narrow, never widen — a name outside the roster is refused.
+The Sijill is canon; the sijillāt are where outer issues are filed and where al-Kimyawī looks. A waṣfa whose `sijillat` name a tracker was brought in from there under its own name — when you `mun_balligh` a change of state on it, reflect that state back to each of them through the tools the nest hands you (`wrepl`: `<sijill> help`; or `bash` if its CLI is on this host). Never mint an id for a sijill; never inscribe a waṣfa twice. A waṣfa you mint takes the roster whole unless you narrow it (`mun_khalaq_wasfa` takes `majlis`, `kur`, `sijillat`); you may narrow, never widen — a name outside the roster is refused.
 
 ### 3. Preparing the Būṭaqa (Crucible)
 

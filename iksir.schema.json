@@ -31,7 +31,7 @@
           "items": {
             "type": "string"
           },
-          "description": "The outer trackers tickets come from and are reflected back to: github, linear, …"
+          "description": "The outer trackers work is filed in, and reflected back to: github, linear, …"
         },
         "telegram": {
           "type": "object",
