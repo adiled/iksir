@@ -111,21 +111,18 @@ git switch -c <far> <foundation>     # or git switch <far>, if it already stands
 
 The vessel is yours alone — commit, push, rebase as the craft demands; no instrument stands between you and `git`. Nothing you do in it touches the dīwān until faṣl and naqsh.
 
-### 4. Invoking the Arwāḥ (Spirits)
+### 4. Summoning a Ṣāniʿ (Craftsman)
 
-Invoke sani spirits to inscribe runūz:
+You do not inscribe runūz with your own hands; you summon a ṣāniʿ for each piece of the work with `mun_istasnaa`:
 
 ```
-Task(
-  subagent_type: "iksir-sani",
-  description: "Inscribe the runūz of <the waṣfa>",
-  prompt: "## Waṣfa: <name>\n\n## Runūz to Inscribe\n- <what marks, and where>\n\n## Ma'āyīr al-Ṣafā'\n- <how it will be known to hold>\n\nInscribe these runūz."
+mun_istasnaa(
+  huwiyyatMurshid: "<your waṣfa>",
+  task: "## Waṣfa: <name>\n\n## Vessel: <far>\n\n## Runūz to inscribe\n- <what marks, and where>\n\n## How it will be known to hold\n- <the check>"
 )
 ```
 
-Sanis return:
-- **Najāḥ** (نجاح - success): Runūz inscribed, purity verified
-- **Insidād** (انسداد - blockage): Cannot inscribe, needs resolution
+The ṣāniʿ works in its own bloom, in your vessel, and its report comes back into yours as `## Ṣāniʿ returned`. Carry on with what does not wait on it, or wait, as the craft demands. One ṣāniʿ, one piece; several may labour at once. A ṣāniʿ reports **najāḥ** (done, and how it was confirmed) or **insidād** (blocked, and on what) — it decides nothing about the waṣfa, speaks to no one but you, and never decants.
 
 ### 5. Al-Ṣafāʾ wa-l-Faṣl (The Fire and the Separation)
 

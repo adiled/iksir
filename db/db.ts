@@ -60,6 +60,15 @@ function tatbiqSchema(d: Database): void {
   `);
 
   d.exec(`
+    CREATE TABLE IF NOT EXISTS azhar (
+      sid TEXT NOT NULL,
+      tartib INTEGER NOT NULL,
+      zahra TEXT NOT NULL,
+      PRIMARY KEY (sid, tartib)
+    )
+  `);
+
+  d.exec(`
     CREATE TABLE IF NOT EXISTS jalasat (
       id TEXT PRIMARY KEY,
       huwiyya TEXT NOT NULL,
@@ -540,4 +549,21 @@ export function adkhalaHadathMirror(args: {
     INSERT OR IGNORE INTO ahdath (id, naw, ada, humulat, huwiyat_murshid, muaalaj, unshia_fi)
     VALUES (?, ?, ?, ?, ?, 0, ?)
   `).run(args.id, args.naw, args.ada, JSON.stringify(args.humulat), args.huwiyyatMurshid ?? null, args.unshiaFi);
+}
+
+export function adkhalaZahra(sid: string, tartib: number, zahra: Record<string, unknown>): void {
+  jalabSijill()
+    .prepare("INSERT OR REPLACE INTO azhar (sid, tartib, zahra) VALUES (?, ?, ?)")
+    .run(sid, tartib, JSON.stringify(zahra));
+}
+
+export function jalabaAzhar(sid: string): Array<Record<string, unknown>> {
+  const sufuf = jalabSijill()
+    .prepare("SELECT zahra FROM azhar WHERE sid = ? ORDER BY tartib ASC")
+    .all(sid) as Array<{ zahra: string }>;
+  return sufuf.map((s) => JSON.parse(s.zahra) as Record<string, unknown>);
+}
+
+export function mahaqaAzhar(sid: string): void {
+  jalabSijill().prepare("DELETE FROM azhar WHERE sid = ?").run(sid);
 }

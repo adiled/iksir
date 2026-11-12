@@ -17,14 +17,17 @@ class NahlaWahm implements NahlaHum {
   offSid(sid: string) { this.#bySid.delete(sid); return this; }
   onAny() { return this; }
   onNestled(fn: () => unknown) { this.#nestled.push(fn); return this; }
-  onAstray() { return this; }
+  #astray: Array<() => unknown> = [];
+  onAstray(fn: () => unknown) { this.#astray.push(fn); return this; }
+  dhalla() { for (const fn of this.#astray) fn(); }
+  tanaffas() { this.sawt({ chi: "breath", sigils: {}, protoVersion: "0.8.0", models: [{ id: "claude-opus-5-5", hive: "claude-cli" }], tools: [{ name: "wasfa_iqra" }] }); }
   onAdvisory() { return this; }
   #badaa = false;
   async start() {
     if (this.#badaa) throw new Error("this bee has already started");
     this.#badaa = true;
     for (const fn of this.#nestled) fn();
-    this.sawt({ chi: "breath", sigils: {}, protoVersion: "0.8.0", tools: [{ name: "wasfa_iqra" }] });
+    this.tanaffas();
   }
   send(t: Tone) { this.mursal.push(t); }
   async close() {}
@@ -217,5 +220,54 @@ test("khuddam: a vessel's trail keeps what it said and what it reached for, whol
   assertEquals(wasila.athar(sid)[2].slice(9), "half said");
   await wasila.mahaqaJalsa(sid);
   assertEquals(wasila.athar(sid), []);
+  wasila.qaf();
+});
+
+test("khuddam: the nest's models are read from the breath", async () => {
+  const { wasila } = qim();
+  await wasila.ittasil();
+  assertEquals(wasila.namadhij(), ["claude-opus-5-5"]);
+  wasila.qaf();
+});
+
+test("forager: after humd goes astray and breathes again, every vessel is attached anew", async () => {
+  const { nahla, wasila } = qim();
+  await wasila.ittasil();
+  const a = (await wasila.khalaqaJalsa("GH-1", "a"))!;
+  const b = (await wasila.khalaqaJalsa("GH-2", "b"))!;
+  assertEquals(nahla.mursal.filter((t) => t.chi === "attach").length, 0);
+  nahla.dhalla();
+  nahla.tanaffas();
+  assertEquals(nahla.mursal.filter((t) => t.chi === "attach").map((t) => t.sid).sort(), [a.id, b.id].sort());
+  wasila.istaadaJalsa({ id: "old-sid", projectId: "iksir", huwiyyatWasfa: "GH-3", title: "c", status: "sakin", createdAt: new Date(), lastMessageAt: new Date() }, "cell-3");
+  assertEquals(nahla.mursal.filter((t) => t.chi === "attach" && t.sid === "old-sid").length, 1);
+  wasila.qaf();
+});
+
+test("forager: each prompt carries the blooms before it as a graft, with what grew; warmth and seed when asked", async () => {
+  const { nahla, wasila } = qim();
+  await wasila.ittasil();
+  const jalsa = (await wasila.khalaqaJalsa("GH-7", "t"))!;
+  const sid = jalsa.id;
+  await wasila.sendPromptAsync(sid, "first");
+  nahla.sawt({ chi: "unfurl", sid, petal: 1, kind: "text", text: "I looked.", closed: true });
+  nahla.sawt({ chi: "unfurl", sid, petal: 2, kind: "tendril", callId: "c1", name: "bash", sap: '{"command":"ls"}', closed: true });
+  nahla.sawt({ chi: "unfurl", sid, petal: 3, kind: "grasp", callId: "c1", result: "a b", closed: true });
+  nahla.sawt({ chi: "wilt", sid, reason: "done" });
+  const awwal = nahla.mursal.filter((t) => t.chi === "prompt")[0] as Tone<"prompt">;
+  assertEquals(awwal.graft, undefined);
+
+  await wasila.sendPromptAsync(sid, "second", { harara: 0, badhra: 7 });
+  const thani = nahla.mursal.filter((t) => t.chi === "prompt")[1] as Tone<"prompt">;
+  assertEquals(thani.temperature, 0);
+  assertEquals(thani.seed, 7);
+  const graft = thani.graft as Array<{ content: Array<{ text?: string }>; grew: Array<{ kind: string; name?: string; args?: unknown; result?: unknown }> }>;
+  assertEquals(graft.length, 1);
+  assertEquals(graft[0].content[0].text, "first");
+  assertEquals(graft[0].grew.map((p) => p.kind), ["text", "tendril", "grasp"]);
+  assertEquals(graft[0].grew[1].name, "bash");
+  assertEquals(graft[0].grew[1].args, { command: "ls" });
+  assertEquals(graft[0].grew[2].result, "a b");
+  assertEquals(wasila.azhar(sid).length, 2);
   wasila.qaf();
 });

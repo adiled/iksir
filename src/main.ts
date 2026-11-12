@@ -38,6 +38,7 @@ import { istadaaKatib } from "./khuddam/katib.ts";
 import { istadaaMunaffidh } from "./khuddam/munaffidh.ts";
 import { istadaaMunadi } from "./khuddam/munadi.ts";
 import { Sayrafi } from "./khuddam/sayrafi.ts";
+import { sajjilIstisnaa } from "./khuddam/sani.ts";
 import { VERSION } from "./version.ts";
 import { istadaaRaqib } from "./khuddam/raqib.ts";
 import type { Rasul, RisalaDakhila } from "./types.ts";
@@ -115,7 +116,10 @@ async function naffadhFahs(ctx: SiyaqKhadim): Promise<void> {
   const kh = ctx.tasmim.khabath();
   console.log("\nConfiguration:");
   console.log(`  Bee hid: ${ctx.amil.huwiyya}`);
-  console.log(`  Model: ${ctx.tasmim.namudhaj() ?? "(the nest decides)"}`);
+  const namudhaj = ctx.tasmim.namudhaj();
+  const namadhij = ctx.amil.namadhij();
+  const hukmNamudhaj = !namudhaj ? "" : namadhij.length === 0 ? " (the nest names no models)" : namadhij.includes(namudhaj) ? " ✓ advertised by the nest" : ` ✗ not advertised; the nest has ${namadhij.join(", ")}`;
+  console.log(`  Model: ${namudhaj ?? "(the nest decides)"}${hukmNamudhaj}`);
   console.log(`  Majlis: ${kh.majlis.join(", ") || "(none)"}`);
   console.log(`  Kūr: ${kh.kur.join(", ") || "(none)"}`);
   console.log(`  Sijillāt: ${kh.sijillat.join(", ") || "(none)"}`);
@@ -218,6 +222,11 @@ async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
 
   const version = await ctx.amil.getVersion();
   await logger.akhbar("main", `Nestled as ${ctx.amil.huwiyya} (thrum v${version ?? "?"})`);
+  const namudhaj = ctx.tasmim.namudhaj();
+  const namadhij = ctx.amil.namadhij();
+  if (namudhaj && namadhij.length && !namadhij.includes(namudhaj)) {
+    await logger.haDHHir("main", `hum.namudhaj is ${namudhaj}, which no nurse advertises; the nest has ${namadhij.join(", ")}`);
+  }
 
   await addaIsharat(ctx);
 
@@ -372,6 +381,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
 
   const sessionManager = istadaaKatib({ tasmim, amil, rasul: messenger, wasfat });
   await sessionManager.hammalaHala();
+  sajjilIstisnaa(alat, amil, sessionManager);
 
   const ipcProcessor = istadaaMunaffidh({
     tasmim,

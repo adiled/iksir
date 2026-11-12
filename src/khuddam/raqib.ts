@@ -274,6 +274,8 @@ export class Raqib {
       const jawab = await this.#amil.sendPrompt(qadi.id, "Rule on this trail.", {
         agent: "iksir-raqib",
         adawat: [],
+        harara: 0,
+        badhra: 7,
         timeoutMs: 90_000,
         kalimat: {
           huwiyya: jalsa.huwiyya,

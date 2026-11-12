@@ -119,7 +119,7 @@ Athanor (أثانور - The Sacred Furnace)
 
 The Khuddām are Iksīr's own flesh. The Murshidūn are not — they burn in the athanor al-Kimyawi has kindled. Iksīr summons them, guards the single flame among them, and carries their words to you; what they are made of was never Iksīr's to decide.
 
-The **Ālāt al-Iksīr** (آلات الإكسير - instruments of the Elixir) are what a murshid may do by name: inscribe and alter a waṣfa, bind one to another, speak to you, record a decision, yield or demand the flame, call for the fire, and decant. Its hands in the vessel are its own.
+The **Ālāt al-Iksīr** (آلات الإكسير - instruments of the Elixir) are what a murshid may do by name: inscribe and alter a waṣfa, bind one to another, summon a ṣāniʿ, speak to you, record a decision, yield or demand the flame, call for the fire, and decant. Its hands in the vessel are its own.
 
 ## The Sacred Laws
 
