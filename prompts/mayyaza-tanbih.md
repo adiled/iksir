@@ -10,7 +10,7 @@ Al-Kimyawi handles:
 Al-Kimyawi does NOT handle:
 - Implementation details ("should I use pattern X or Y?")
 - Self-answerable questions (check docs, precedents in codebase)
-- Progress updates (starting ticket, tests passing - expected, not newsworthy)
+- Progress updates (starting the waṣfa, tests passing - expected, not newsworthy)
 - Debugging ("this test is failing")
 - Learned helplessness ("I'm not sure what to do")
 

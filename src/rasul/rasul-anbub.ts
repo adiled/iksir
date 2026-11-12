@@ -43,7 +43,6 @@ import {
   jalabJalsaByChannel,
 } from "../../db/db.ts";
 import type {
-  KhiyarTafauli,
   QanatRisala,
   Rasul,
   RisalaDakhila,
@@ -114,16 +113,6 @@ export class RasulUnbub implements Rasul {
     return this.send(qanat, nass);
   }
 
-  async arsalaSualBiKhiyarat(
-    qanat: QanatRisala,
-    nass: string,
-    khiyarat: KhiyarTafauli[],
-  ): Promise<number | null> {
-    const masrud = khiyarat.map((k) => `  = ${k.miftah}   ${k.nass}`).join("\n");
-    await this.send(qanat, `${nass}\n\n${masrud}\n\nAnswer with:  = <key>`);
-    return null;
-  }
-
   async khalaqaQanatMurshid(huwiyya: string, unwan: string): Promise<string | null> {
     const masar = join(this.masarFam, huwiyya);
     appendFileSync(masar, `# ${huwiyya} — ${unwan}\n`);
@@ -163,12 +152,6 @@ export class RasulUnbub implements Rasul {
       if (huwiyya && qawl) {
         await this.#mualij({ naw: "murshid", huwiyya, nass: qawl });
       }
-      return;
-    }
-
-    if (nass.startsWith("/")) {
-      const [amr, ...wusut] = nass.slice(1).split(/\s+/);
-      await this.#mualij({ naw: "amr", amr: amr.toLowerCase(), wusut });
       return;
     }
 

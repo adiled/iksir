@@ -6,6 +6,8 @@ import type { Tasmim } from "../config.ts";
 import { kalimatKhabath } from "../wasfa/khabath.ts";
 import { DEFAULT_TIMEOUT_MS } from "../constants.ts";
 import { logger } from "../logging/logger.ts";
+import { truncate } from "../utils/strings.ts";
+import { adkhalaZahra, jalabaAzhar, mahaqaAzhar } from "../../db/db.ts";
 import { VERSION } from "../version.ts";
 
 const ASAS = "iksir";
@@ -16,8 +18,28 @@ export interface KhiyaratHathth {
   system?: string;
   adawat?: string[];
   kalimat?: Record<string, string>;
+  harara?: number;
+  badhra?: number;
 }
-export const KHUDDAM = ["munadi", "arraf", "murshid", "mumayyiz", "sayrafi"] as const;
+
+export interface Batala {
+  kind: string;
+  text?: string;
+  callId?: string;
+  name?: string;
+  args?: unknown;
+  result?: unknown;
+  isError?: boolean;
+}
+
+export interface Zahra {
+  content: Batala[];
+  grew: Batala[];
+}
+export const KHUDDAM = ["munadi", "murshid", "mumayyiz", "sayrafi", "raqib"] as const;
+const HADD_ATHAR = 60;
+const HADD_AZHAR = 40;
+const HADD_NASS_BATALA = 8000;
 const LISAN = "munadi";
 
 type JawabDawr = { success: boolean; response?: string; error?: string };
@@ -35,6 +57,7 @@ interface Nahl {
   nahla: NahlaHum;
   muttasil: boolean;
   wasfThrum: string | null;
+  namadhij: string[];
   bidaya: Promise<void> | null;
 }
 
@@ -50,6 +73,9 @@ export class Wasila {
   #jalasat = new Map<string, JalsatHum>();
   #adwar = new Map<string, DawrTawaqquf>();
   #adwarAkhira = new Map<string, { zaman: number; usage?: unknown; khata?: string }>();
+  #athar = new Map<string, string[]>();
+  #azhar = new Map<string, Zahra[]>();
+  #batalatMuallaqa = new Map<string, { ism?: string; nass: string }>();
   #asmas = 0;
   #muntazir: Array<(h: HadathThrum) => void> = [];
   #hawadith: HadathThrum[] = [];
@@ -69,7 +95,7 @@ export class Wasila {
         version: VERSION,
         builds: true,
         propensity: { statefulness: "convention-stateful", richness: "medium", wire: `${ASAS}/${khadim}` },
-        chis: ["hello", "breath", "prompt", "cancel", "cleanup", "curate", "unfurl", "wilt", "error", "pulse", "tendril-reach", "tendril-result", "log", "backfill", "backfill-event"],
+        chis: ["hello", "breath", "prompt", "cancel", "cleanup", "curate", "attach", "unfurl", "wilt", "error", "pulse", "tendril-reach", "tendril-result", "log", "backfill", "backfill-event"],
         source: "https://github.com/adiled/iksir",
       },
     }));
@@ -78,11 +104,13 @@ export class Wasila {
   #nahl(khadim: string): Nahl {
     const mawjud = this.#nuhul.get(khadim);
     if (mawjud) return mawjud;
-    const nahl: Nahl = { khadim, nahla: this.#sanaa(khadim), muttasil: false, wasfThrum: null, bidaya: null };
+    const nahl: Nahl = { khadim, nahla: this.#sanaa(khadim), muttasil: false, wasfThrum: null, namadhij: [], bidaya: null };
     this.#nuhul.set(khadim, nahl);
     nahl.nahla.on(Chi.breath, (t) => {
       nahl.muttasil = true;
       nahl.wasfThrum = t.protoVersion ?? null;
+      nahl.namadhij = [...(t.models ?? []), ...(t.scents ?? [])].map((m) => m.id);
+      for (const [sid, k] of this.#khadimJalsa) if (k === khadim) this.#ilhaq(nahl, sid);
     });
     nahl.nahla.onAstray(() => {
       nahl.muttasil = false;
@@ -108,6 +136,15 @@ export class Wasila {
 
   #lisan(): Nahl {
     return this.#nahl(LISAN);
+  }
+
+  #ilhaq(nahl: Nahl, sid: string): void {
+    nahl.nahla.send({ chi: Chi.attach, sid });
+    void logger.akhbar("wasila", `${nahl.khadim}: attached ${sid}`);
+  }
+
+  namadhij(): string[] {
+    return [...this.#lisan().namadhij];
   }
 
   #nahlJalsa(sid: string): Nahl {
@@ -196,6 +233,9 @@ export class Wasila {
     this.#jalasat.delete(sid);
     this.#khadimJalsa.delete(sid);
     this.#adwarAkhira.delete(sid);
+    this.#athar.delete(sid);
+    this.#azhar.delete(sid);
+    try { mahaqaAzhar(sid); } catch { void 0; }
     this.#inthaDawr(sid, { success: false, error: "session dismissed" });
     return wasJalsa;
   }
@@ -255,7 +295,12 @@ export class Wasila {
     const jalsa = this.#jalasat.get(sid);
     const namudhaj = options?.model?.modelID ?? this.#tasmim?.namudhaj();
     const nizam = options?.system ?? (options?.agent ? this.#ruqya(options.agent, options.kalimat) : undefined);
-    const adawat = (this.#sijill?.adawat() ?? []).filter((a) => !options?.adawat || options.adawat.includes(a.name));
+    const khadim = this.#nahlJalsa(sid).khadim;
+    const adawat = (this.#sijill?.adawat() ?? [])
+      .filter((a) => (!a.khass || a.khass === khadim) && (!options?.adawat || options.adawat.includes(a.name)))
+      .map(({ khass: _khass, ...a }) => a);
+    const sabiqa = this.#azhar.get(sid) ?? [];
+    this.#azhar.set(sid, [...sabiqa, { content: [{ kind: PetalKind.text, text: prompt }], grew: [] }].slice(-HADD_AZHAR));
     return {
       chi: Chi.prompt,
       sid,
@@ -264,6 +309,9 @@ export class Wasila {
       ...(nizam ? { systemPrompt: nizam } : {}),
       ...(jalsa?.nestId ? { resume: jalsa.nestId } : {}),
       ...(adawat.length > 0 ? { tools: adawat } : {}),
+      ...(sabiqa.length > 0 ? { graft: sabiqa } : {}),
+      ...(options?.harara !== undefined ? { temperature: options.harara } : {}),
+      ...(options?.badhra !== undefined ? { seed: options.badhra } : {}),
     };
   }
 
@@ -331,7 +379,14 @@ export class Wasila {
     if (this.#jalasat.has(jalsa.id)) return;
     const mustaadda = { ...jalsa, nestId };
     this.#jalasat.set(jalsa.id, mustaadda);
+    try { this.#azhar.set(jalsa.id, jalabaAzhar(jalsa.id) as unknown as Zahra[]); } catch { void 0; }
     this.#tabaa(mustaadda);
+    const nahl = this.#nahlJalsa(jalsa.id);
+    if (nahl.muttasil) this.#ilhaq(nahl, jalsa.id);
+  }
+
+  azhar(sid: string): Zahra[] {
+    return (this.#azhar.get(sid) ?? []).map((z) => ({ content: [...z.content], grew: [...z.grew] }));
   }
 
   huwiyyatUsh(sid: string): string | undefined {
@@ -390,7 +445,7 @@ export class Wasila {
       return { success: false, error: "failed to create mumayyiz session" };
     }
     try {
-      return await this.sendPrompt(jalsa.id, prompt);
+      return await this.sendPrompt(jalsa.id, prompt, { harara: 0, badhra: 7 });
     } finally {
       await this.mahaqaJalsa(jalsa.id);
     }
@@ -451,11 +506,66 @@ export class Wasila {
     const sid = t.sid as string;
     const dawr = this.#adwar.get(sid);
     if (t.kind === PetalKind.text && t.text && !t.closed && dawr) dawr.qataa.push(t.text);
+    this.#tatabbaAthar(sid, t);
     this.nasharHadath("unfurl", t as unknown as Record<string, unknown>);
+  }
+
+  #tatabbaAthar(sid: string, t: Tone<"unfurl">): void {
+    if (t.kind === PetalKind.grasp && t.closed) {
+      const g = t as unknown as { callId?: string; result?: unknown; isError?: boolean };
+      this.#numu(sid, { kind: PetalKind.grasp, callId: g.callId, result: g.result, isError: g.isError });
+      return;
+    }
+    if (t.kind !== PetalKind.text && t.kind !== PetalKind.tendril) return;
+    const miftah = `${sid}:${t.kind}:${t.callId ?? t.petal}`;
+    const batala = this.#batalatMuallaqa.get(miftah) ?? { nass: "" };
+    if (t.name) batala.ism = t.name;
+    if (t.text) batala.nass += t.text;
+    if (t.sap) batala.nass += t.sap;
+    this.#batalatMuallaqa.set(miftah, batala);
+    if (t.closed) this.#khatamBatala(sid, miftah);
+  }
+
+  #khatamBatala(sid: string, miftah: string): void {
+    const batala = this.#batalatMuallaqa.get(miftah);
+    this.#batalatMuallaqa.delete(miftah);
+    if (!batala) return;
+    const tendril = miftah.split(":")[1] === PetalKind.tendril;
+    if (tendril) this.#numu(sid, { kind: PetalKind.tendril, callId: miftah.split(":")[2], name: batala.ism, args: this.#hallSap(batala.nass) });
+    else if (batala.nass) this.#numu(sid, { kind: PetalKind.text, text: truncate(batala.nass, HADD_NASS_BATALA) });
+    const satr = (tendril ? `→ ${batala.ism ?? "?"} ${batala.nass}` : batala.nass).replace(/\s+/g, " ").trim();
+    if (!satr) return;
+    const athar = this.#athar.get(sid) ?? [];
+    athar.push(`${new Date().toISOString().slice(11, 19)} ${truncate(satr, 400)}`);
+    if (athar.length > HADD_ATHAR) athar.splice(0, athar.length - HADD_ATHAR);
+    this.#athar.set(sid, athar);
+  }
+
+  athar(sid: string): string[] {
+    return [...(this.#athar.get(sid) ?? [])];
+  }
+
+  #numu(sid: string, batala: Batala): void {
+    const azhar = this.#azhar.get(sid);
+    const akhira = azhar?.[azhar.length - 1];
+    if (akhira) akhira.grew.push(batala);
+  }
+
+  #hallSap(sap: string): unknown {
+    try {
+      return sap ? JSON.parse(sap) : undefined;
+    } catch {
+      return sap;
+    }
   }
 
   #ikmalDawr(t: Tone<"wilt"> | Tone<"error">): void {
     const sid = t.sid as string;
+    for (const miftah of [...this.#batalatMuallaqa.keys()]) if (miftah.startsWith(`${sid}:`)) this.#khatamBatala(sid, miftah);
+    const azhar = this.#azhar.get(sid);
+    if (azhar?.length) {
+      try { adkhalaZahra(sid, azhar.length - 1, azhar[azhar.length - 1] as unknown as Record<string, unknown>); } catch { void 0; }
+    }
     const khata = t.chi === Chi.error;
     const dawr = this.#adwar.get(sid);
 

@@ -31,7 +31,7 @@
           "items": {
             "type": "string"
           },
-          "description": "The outer trackers tickets come from and are reflected back to: github, linear, …"
+          "description": "The outer trackers work is filed in, and reflected back to: github, linear, …"
         },
         "telegram": {
           "type": "object",
@@ -83,10 +83,6 @@
         "sabiqa": {
           "type": "string",
           "description": "The mark minted waṣfa names carry: W gives W-1, W-2, … Default W."
-        },
-        "namatWasfa": {
-          "type": "string",
-          "description": "A regex that recognises a waṣfa name in al-Kimyawī's words, when the default (PREFIX-123) does not fit."
         }
       },
       "additionalProperties": false

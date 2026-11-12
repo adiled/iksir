@@ -273,7 +273,7 @@ Awaiting direction from al-Kimyawi...`
 - **ID**: ${session.huwiyya}
 - **Title**: ${session.unwan}
 
-This is a standalone task (chore), not an epic. No sub-tickets needed.
+This is a standalone task (chore), not an epic. No sub-waṣfāt needed.
 
 Read the waṣfa with \`mun_iqra_wasfa\`, then work the matter in your vessel.
 When done, call for the fire with \`mun_safa\`; when it stands, \`mun_fasl\`.

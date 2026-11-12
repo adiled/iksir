@@ -37,8 +37,8 @@ import { anshaaSijillWasfat } from "./wasfa/sijill.ts";
 import { istadaaKatib } from "./khuddam/katib.ts";
 import { istadaaMunaffidh } from "./khuddam/munaffidh.ts";
 import { istadaaMunadi } from "./khuddam/munadi.ts";
-import { istadaaArraf } from "./khuddam/arraf.ts";
 import { Sayrafi } from "./khuddam/sayrafi.ts";
+import { sajjilIstisnaa } from "./khuddam/sani.ts";
 import { VERSION } from "./version.ts";
 import { istadaaRaqib } from "./khuddam/raqib.ts";
 import type { Rasul, RisalaDakhila } from "./types.ts";
@@ -116,7 +116,10 @@ async function naffadhFahs(ctx: SiyaqKhadim): Promise<void> {
   const kh = ctx.tasmim.khabath();
   console.log("\nConfiguration:");
   console.log(`  Bee hid: ${ctx.amil.huwiyya}`);
-  console.log(`  Model: ${ctx.tasmim.namudhaj() ?? "(the nest decides)"}`);
+  const namudhaj = ctx.tasmim.namudhaj();
+  const namadhij = ctx.amil.namadhij();
+  const hukmNamudhaj = !namudhaj ? "" : namadhij.length === 0 ? " (the nest names no models)" : namadhij.includes(namudhaj) ? " ✓ advertised by the nest" : ` ✗ not advertised; the nest has ${namadhij.join(", ")}`;
+  console.log(`  Model: ${namudhaj ?? "(the nest decides)"}${hukmNamudhaj}`);
   console.log(`  Majlis: ${kh.majlis.join(", ") || "(none)"}`);
   console.log(`  Kūr: ${kh.kur.join(", ") || "(none)"}`);
   console.log(`  Sijillāt: ${kh.sijillat.join(", ") || "(none)"}`);
@@ -219,6 +222,11 @@ async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
 
   const version = await ctx.amil.getVersion();
   await logger.akhbar("main", `Nestled as ${ctx.amil.huwiyya} (thrum v${version ?? "?"})`);
+  const namudhaj = ctx.tasmim.namudhaj();
+  const namadhij = ctx.amil.namadhij();
+  if (namudhaj && namadhij.length && !namadhij.includes(namudhaj)) {
+    await logger.haDHHir("main", `hum.namudhaj is ${namudhaj}, which no nurse advertises; the nest has ${namadhij.join(", ")}`);
+  }
 
   await addaIsharat(ctx);
 
@@ -294,48 +302,13 @@ function rabatRisalaDakhila(ctx: SiyaqKhadim): void {
       }
 
       case "irsal": {
-        const { nass, huwiyyatRisala } = risala;
-
         const result = await ctx.munadi.aalajRisalaIrsal({
           source: "telegram",
-          text: nass,
-          messageId: huwiyyatRisala,
+          text: risala.nass,
+          messageId: risala.huwiyyatRisala,
         });
-
-        if (result.tuulija) {
-          if (result.buttons) {
-            const khiyarat = result.buttons.map((b) => ({ nass: b.text, miftah: b.data }));
-            await ctx.rasul.arsalaSualBiKhiyarat("dispatch", result.radd ?? "Choose:", khiyarat);
-          } else if (result.radd) {
-            await ctx.rasul.send("dispatch", result.radd);
-          }
-          if (result.khata) {
-            await ctx.rasul.send("dispatch", `Error: ${result.khata}`);
-          }
-        } else {
-          await ctx.rasul.send("dispatch", "Send a ticket URL to spawn a murshid, or use /help for commands.");
-        }
-        break;
-      }
-
-      case "amr": {
-        await aalajAmrDakhil(ctx, risala.amr, risala.wusut);
-        break;
-      }
-
-      case "ikhtiyar_munadi": {
-        const result = await ctx.munadi.aalajIstijabaZirr("telegram", risala.miftah);
-        if (result.tuulija) {
-          if (result.buttons) {
-            const khiyarat = result.buttons.map((b) => ({ nass: b.text, miftah: b.data }));
-            await ctx.rasul.arsalaSualBiKhiyarat("dispatch", result.radd ?? "Choose:", khiyarat);
-          } else if (result.radd) {
-            await ctx.rasul.send("dispatch", result.radd);
-          }
-          if (result.khata) {
-            await ctx.rasul.send("dispatch", `Error: ${result.khata}`);
-          }
-        }
+        if (result.radd) await ctx.rasul.send("dispatch", result.radd);
+        if (result.khata) await ctx.rasul.send("dispatch", result.khata);
         break;
       }
 
@@ -379,73 +352,6 @@ async function aalajRisalaKhassa(ctx: SiyaqKhadim): Promise<void> {
   await ctx.rasul.send("kimyawi", response);
 }
 
-async function aalajAmrDakhil(ctx: SiyaqKhadim, amr: string, wusut: string[]): Promise<void> {
-  switch (amr.toLowerCase()) {
-    case "start":
-      if (wusut.length === 0) {
-        await ctx.rasul.send("dispatch", "**Usage:** /start <wasfa>\n\nName a wasfa from the register.");
-      } else {
-        const natija = await ctx.munadi.aalajRisalaIrsal({
-          source: "cli",
-          text: wusut.join(" "),
-        });
-        await ctx.rasul.send("dispatch", natija.radd ?? "…");
-      }
-      break;
-
-    case "status":
-    case "sessions": {
-      const result = await ctx.munadi.aalajRisalaIrsal({
-        source: "telegram",
-        text: `/${amr}`,
-      });
-      if (result.radd) {
-        await ctx.rasul.send("dispatch", result.radd);
-      }
-      break;
-    }
-
-    case "naqsh": {
-      if (wusut.length === 0) {
-        await ctx.rasul.send("dispatch", "**Usage:** /naqsh <wasfa>");
-        break;
-      }
-      const huwiyya = wusut[0];
-      const wasfa = await ctx.wasfat.iqra(huwiyya);
-      if (!wasfa) {
-        await ctx.rasul.send("dispatch", `No wasfa by that name: ${huwiyya}`);
-        break;
-      }
-      if (wasfa.hala !== "mafsul") {
-        await ctx.rasul.send(
-          "dispatch",
-          `${huwiyya} has not been decanted. It stands at: ${wasfa.hala ?? "khaam"}`,
-        );
-        break;
-      }
-      const jalsa = ctx.mudirJalasat.jalabMurshid(huwiyya);
-      await ctx.rasul.send("dispatch", await ctx.sayrafi.naqasha(wasfa, jalsa?.far));
-      break;
-    }
-
-    case "help":
-      await ctx.rasul.send("dispatch", `**Commands**
-
-/start <wasfa> - light a murshid on a wasfa
-/naqsh <wasfa> - inscribe a decanted jawhar into the codex
-/status - what stands at the flame
-/sessions - every vessel
-/help - this
-
-Name a wasfa to begin. Each murshid keeps its own channel.
-`);
-      break;
-
-    default:
-      await ctx.rasul.send("dispatch", `Unknown command: /${amr}\n\nType /help for available commands.`);
-  }
-}
-
 export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   await logger.baddaa();
 
@@ -456,7 +362,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
 
   const wasfat = anshaaSijillWasfat(() => tasmim.now().wasfat.sabiqa);
 
-  const alat = new AlatAlIksir(wasfat);
+  const alat = new AlatAlIksir(wasfat, tasmim);
 
   const amil = new Wasila({ tasmim, sijill: alat.sijill });
   await amil.ittasil();
@@ -475,6 +381,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
 
   const sessionManager = istadaaKatib({ tasmim, amil, rasul: messenger, wasfat });
   await sessionManager.hammalaHala();
+  sajjilIstisnaa(alat, amil, sessionManager);
 
   const ipcProcessor = istadaaMunaffidh({
     tasmim,
@@ -487,17 +394,19 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   });
   await ipcProcessor.hammalaHala();
 
-  const intentResolver = istadaaArraf({ wasfat, amil });
-
   const dispatcher = istadaaMunadi({
     mudirJalasat: sessionManager,
-    arraf: intentResolver,
     rasul: messenger,
     amil,
-    namatWasfa: () => tasmim.now().wasfat.namatWasfa,
+    alat,
+    wasfat,
+    sayrafi,
   });
 
   ipcProcessor.wadaaMunadi(dispatcher);
+  alat.indaNaqsh((wasfa, min) => {
+    if (!min || min === "dispatch") dispatcher.rakkiz(wasfa);
+  });
 
   await dispatcher.istarjaaIndaNashaat();
 
@@ -505,6 +414,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     amil,
     rasul: messenger,
     mudirJalasat: sessionManager,
+    wasfat,
   });
 
   const ctx: SiyaqKhadim = {

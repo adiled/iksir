@@ -234,7 +234,7 @@ test("diary: add and query decisions", async () => {
     adhafaQararSijill({
       huwiyyatMurshid: "TEAM-200",
       type: "planning",
-      decision: "Split into 3 tickets",
+      decision: "Split into 3 waṣfāt",
       reasoning: "Each screen is independent",
     });
 

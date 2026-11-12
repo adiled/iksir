@@ -1,1275 +1,357 @@
 /**
- * Munadi (منادي) — The Caller
+ * Al-Munādī (المنادي) — the Herald at the Gate
  *
- * One of the sacred Khuddām (خدّام) of Iksīr.
+ * One of the Khuddām. Every word spoken in Dispatch is his to hear and his to
+ * answer, in his own voice: each message goes into his one session on the
+ * munadi bee with a short ledger of the house — what is in focus, who holds
+ * the flame, who else labours — and comes back as speech. His hands are
+ * instruments of his own: divine the waṣfa behind words (mun_arrif), summon
+ * a murshid (mun_istadi), pass the flame (mun_hawwil), whisper to a murshid
+ * (mun_ablagh_murshid), see who labours (mun_man_yaamal), read a decanted
+ * codex (mun_naqsh). Inscribing he shares with the murshidūn.
  *
- * Like a muezzin whose voice carries across the rooftops, Munadi
- * receives each utterance from al-Kimyawi and determines its niyya.
- * Is it a command? A query? A reference to a wasfa? A summons
- * to begin new work?
- *
- * Munadi consults the Arraf for divination when the intent is unclear,
- * resolves ambiguity through tamyiz (presenting candidates to
- * al-Kimyawi), and directs each resolved niyya to its vessel.
- *
- * Only one Murshid may transmute at a time. Munadi guards this law —
- * performing the sacred intaqala (switchover) when al-Kimyawi turns
- * from one vessel to another, preserving the state of the dormant
- * and awakening the chosen.
+ * Only one murshid holds the flame at a time. Al-Munādī keeps that law: when
+ * it passes, the one who held it is told to stop and waits idle in its
+ * vessel; the one who takes it is told the matter is its own.
  */
 
 import { logger } from "../logging/logger.ts";
-import { escapeMarkdown } from "../utils/strings.ts";
-import { MudirJalasat } from "./katib.ts";
-import {
-  Arraf,
-  type NiyyaMuhallala,
-  type NawKiyan,
-} from "./arraf.ts";
+import type { MudirJalasat } from "./katib.ts";
 import type { Wasila } from "../hum/wasila.ts";
-import type { JalsatMurshid, RasulKharij } from "../types.ts";
+import type { AlatAlIksir } from "../alat/alat-al-iksir.ts";
+import type { Sayrafi } from "./sayrafi.ts";
+import type { SijillWasfat } from "../wasfa/sijill-wasfat.ts";
+import type { JalsatMurshid, NawMurshid, RasulKharij } from "../types.ts";
 
-type NawNiyya = "query" | "operation" | "command" | "sandbox";
 export type InboundSource = "telegram" | "cli" | "pr_comment";
 
-interface Niyya {
-  huwiyya: string | null;
-  naw: NawNiyya;
-  thiqqa: number;
-  nassKham: string;
-  amr?: string;
-  hujajAmr?: string[];
-  ismWarsha?: string;
-}
-
-interface RisalaWarida {
+export interface RisalaWarida {
   source: InboundSource;
   text: string;
   messageId?: string | number;
   katib?: string;
 }
 
-interface AmaliyyaMuajjala {
-  huwiyya: string;
-  risala: string;
-  saaffFi: Date;
-  source: InboundSource;
-  messageId?: string | number;
-}
-
-interface NatijaIrsal {
+export interface NatijaIrsal {
   tuulija: boolean;
   radd?: string;
-  buttons?: Array<{ text: string; data: string }>;
-  fiTtabur?: boolean;
   khata?: string;
 }
 
-interface TamyizMuallaq {
-  source: InboundSource;
-  murashshahun: NonNullable<NiyyaMuhallala["murashshahun"]>;
-  nassAsli: string;
-  expiresAt: Date;
-}
-
-interface IqtirahAbMuallaq {
-  source: InboundSource;
-  wasfa: NonNullable<NiyyaMuhallala["kiyan"]>;
-  ab: NonNullable<NiyyaMuhallala["kitabAb"]>;
-  abHuwaMalhamat: boolean;
-  expiresAt: Date;
-}
-
-interface RisalaMuhadatha {
-  text: string;
-  timestamp: Date;
-  muhallala?: NiyyaMuhallala;
-  radd?: string;
-}
-
-export interface SiyaqMuhadatha {
-  recentMessages: RisalaMuhadatha[];
-
-  focusEntity?: {
-    naw: NawKiyan;
-    huwiyya: string;
-    unwan: string;
-    resolvedAt: Date;
-  };
+interface Tarkiz {
+  huwiyya: string;
+  unwan: string;
+  mundhu: Date;
 }
 
 interface MunadiDeps {
   mudirJalasat: MudirJalasat;
-  arraf: Arraf;
   rasul: RasulKharij;
   amil: Wasila;
-  namatWasfa?: string | (() => string | undefined);
+  alat: AlatAlIksir;
+  wasfat: SijillWasfat;
+  sayrafi?: Sayrafi;
 }
 
-interface MuatayatKhalqMurshid {
-  huwiyya: string;
-  unwan: string;
-  type: "epic" | "chore" | "sandbox";
-  initMessage: string;
-}
-
-const NAMAT_AMR = /^\/(\w+)(?:\s+(.*))?$/;
-
-const NAMAT_WASFA_IFTIRADHI = "[A-Z]+-\\d+";
-
-function banaNamatWasfa(configPattern?: string): RegExp {
-  const pattern = configPattern ?? NAMAT_WASFA_IFTIRADHI;
-  return new RegExp(`\\b(${pattern})\\b`, "i");
-}
-
-const ANMAT_ISTIFSAR = [
-  /^what('s| is)/i,
-  /^how('s| is| are)/i,
-  /^show\s+(me\s+)?/i,
-  /^status\b/i,
-  /^check\s+(on\s+)?/i,
-  /\?$/,
-  /^where\b/i,
-  /^which\b/i,
-  /^list\b/i,
-];
-
-const ANMAT_AMALIYYA = [
-  /^start\s+(implementing|working)/i,
-  /^implement\b/i,
-  /^create\s+(ticket|pr|branch)/i,
-  /^invoke\s+implement/i,
-  /^make\s+(a\s+)?pr/i,
-  /^slice\b/i,
-  /^push\b/i,
-  /^commit\b/i,
-  /^merge\b/i,
-  /^work\s+on/i,
-];
-
-const ANMAT_WARSHA_HURRA = [
-  /without\s+(creating\s+)?(a\s+)?tickets?/i,
-  /no\s+tickets?/i,
-  /brainstorm/i,
-  /prototype/i,
-  /sandbox/i,
-  /ad[\s-]?hoc/i,
-  /freeform/i,
-  /experiment/i,
-  /spike/i,
-];
-
-const ANMAT_ISM_WARSHA = [
-  /(?:epic|project|name|call(?:ed)?|named)\s+(?:would\s+be\s+|is\s+|it\s+)?["']?([a-z0-9][-a-z0-9_]*)/i,
-  /["']([a-z0-9][-a-z0-9_]*)["']/i,
-];
-
-function hallalNiyyaAsasiyya(text: string, ticketPattern: RegExp): Niyya {
-  const trimmed = text.trim();
-
-  const commandMatch = trimmed.match(NAMAT_AMR);
-  if (commandMatch) {
-    const [, command, argsStr] = commandMatch;
-    const args = argsStr?.split(/\s+/).filter(Boolean) ?? [];
-
-    let huwiyya: string | null = null;
-    for (const arg of args) {
-      const idMatch = arg.match(ticketPattern);
-      if (idMatch) {
-        huwiyya = idMatch[1].toUpperCase();
-        break;
-      }
-    }
-
-    return {
-      huwiyya,
-      naw: "command",
-      thiqqa: 1.0,
-      nassKham: trimmed,
-      amr: command.toLowerCase(),
-      hujajAmr: args,
-    };
-  }
-
-  let huwiyya: string | null = null;
-  const idMatch = trimmed.match(ticketPattern);
-  if (idMatch) {
-    huwiyya = idMatch[1].toUpperCase();
-  }
-
-  let isSandbox = false;
-  let ismWarsha: string | undefined;
-
-  for (const pattern of ANMAT_WARSHA_HURRA) {
-    if (pattern.test(trimmed)) {
-      isSandbox = true;
-      break;
-    }
-  }
-
-  if (isSandbox) {
-    for (const pattern of ANMAT_ISM_WARSHA) {
-      const match = trimmed.match(pattern);
-      if (match) {
-        ismWarsha = match[1].toLowerCase();
-        break;
-      }
-    }
-
-    return {
-      huwiyya,
-      naw: "sandbox",
-      thiqqa: 0.9,
-      nassKham: trimmed,
-      ismWarsha,
-    };
-  }
-
-  let naw: NawNiyya = "query";
-  let thiqqa = 0.5;
-
-  for (const pattern of ANMAT_ISTIFSAR) {
-    if (pattern.test(trimmed)) {
-      naw = "query";
-      thiqqa = 0.8;
-      break;
-    }
-  }
-
-  for (const pattern of ANMAT_AMALIYYA) {
-    if (pattern.test(trimmed)) {
-      naw = "operation";
-      thiqqa = 0.85;
-      break;
-    }
-  }
-
-  return { huwiyya, naw, thiqqa, nassKham: trimmed };
-}
+const JALSAT_MAJLIS = "iksir-munadi";
+const UMR_TARKIZ_MS = 30 * 60 * 1000;
+const NAMAT_ISM = /^[A-Z]+-[A-Za-z0-9_-]+$/i;
 
 export class Munadi {
-  mudirJalasat: MudirJalasat;
-  arraf: Arraf;
-  rasul: RasulKharij;
-  amil: Wasila;
-  namatWasfa: () => RegExp;
+  readonly mudirJalasat: MudirJalasat;
+  readonly rasul: RasulKharij;
+  readonly amil: Wasila;
+  readonly #alat: AlatAlIksir;
+  readonly #wasfat: SijillWasfat;
+  readonly #sayrafi?: Sayrafi;
 
   huwiyyaFaaila: string | null = null;
   faailMundhu: Date | null = null;
-
-  quflIrsal: Promise<void> = Promise.resolve();
-
-  yuaalijTabur = false;
-
-  tabur: AmaliyyaMuajjala[] = [];
-
-  tamyizMuallaq: TamyizMuallaq | null = null;
-  iqtirahAbMuallaq: IqtirahAbMuallaq | null = null;
-
-  siyaq: SiyaqMuhadatha = {
-    recentMessages: [],
-    focusEntity: undefined,
-  };
-
-  static readonly AQSA_RASAAIL_SIYAQ = 10;
+  #tarkiz: Tarkiz | null = null;
+  #sidMajlis: string | null = null;
+  #qufl: Promise<void> = Promise.resolve();
 
   constructor(deps: MunadiDeps) {
     this.mudirJalasat = deps.mudirJalasat;
-    this.arraf = deps.arraf;
     this.rasul = deps.rasul;
     this.amil = deps.amil;
-    const namat = deps.namatWasfa;
-    this.namatWasfa = typeof namat === "function" ? () => banaNamatWasfa(namat()) : () => banaNamatWasfa(namat);
+    this.#alat = deps.alat;
+    this.#wasfat = deps.wasfat;
+    this.#sayrafi = deps.sayrafi;
+    this.#sajjilAlat();
   }
 
-  async maQuflIrsal<T>(fn: () => Promise<T>): Promise<T> {
-    let release: () => void;
-    const prev = this.quflIrsal;
-    this.quflIrsal = new Promise<void>((r) => { release = r; });
-    await prev;
-    try {
-      return await fn();
-    } finally {
-      release!();
-    }
-  }
-
-  async aalajMuqaddima(msg: RisalaWarida, label: string): Promise<NatijaIrsal | { intent: Niyya }> {
-    if (this.tamyizMuallaq) {
-      const result = await this.aalajRaddTamyiz(msg);
-      if (result.tuulija) {
-        this.tatabbaRisala(msg.text, result.radd);
-        return result;
-      }
-    }
-
-    if (this.iqtirahAbMuallaq) {
-      const result = await this.aalajRaddIqtirahAb(msg);
-      if (result.tuulija) {
-        this.tatabbaRisala(msg.text, result.radd);
-        return result;
-      }
-    }
-
-    const basicIntent = hallalNiyyaAsasiyya(msg.text, this.namatWasfa());
-    await logger.akhbar("dispatcher", `${label} intent: type=${basicIntent.naw}, epic=${basicIntent.huwiyya ?? "none"}`);
-
-    if (basicIntent.naw === "command") {
-      const result = await this.aalajAmr(msg, basicIntent);
-      this.tatabbaRisala(msg.text, result.radd);
-      return result;
-    }
-
-    if (basicIntent.naw === "sandbox") {
-      const result = await this.aalajNiyyaWarsha(msg, basicIntent);
-      this.tatabbaRisala(msg.text, result.radd);
-      return result;
-    }
-
-    return { intent: basicIntent };
-  }
-
-  async aalajRisalaIrsal(msg: RisalaWarida): Promise<NatijaIrsal> {
-    return this.maQuflIrsal(async () => {
-      const preamble = await this.aalajMuqaddima(msg, "Dispatch");
-      if ("tuulija" in preamble) return preamble;
-
-      const result = await this.aalajBiArraf(msg, preamble.intent);
-      this.tatabbaRisala(msg.text, result.radd);
-      return result;
-    });
-  }
-
-  async aalajWarid(msg: RisalaWarida): Promise<NatijaIrsal> {
-    const preamble = await this.aalajMuqaddima(msg, "Basic");
-    if ("tuulija" in preamble) return preamble;
-
-    const basicIntent = preamble.intent;
-
-    if (this.huwiyyaFaaila && !basicIntent.huwiyya) {
-      const session = this.mudirJalasat.wajadaJalasatMurshid().find(
-        (s) => s.huwiyya === this.huwiyyaFaaila
-      );
-      if (session) {
-        await logger.akhbar("dispatcher", `Routing to active murshid: ${this.huwiyyaFaaila}`);
-        const result = await this.wajjahIlaJalsa(session, msg);
-        this.tatabbaRisala(msg.text, result.radd);
-        return result;
-      }
-    }
-
-    const result = await this.aalajBiArraf(msg, basicIntent);
-    this.tatabbaRisala(msg.text, result.radd);
-    return result;
-  }
-
-  tatabbaRisala(text: string, radd?: string): void {
-    this.siyaq.recentMessages.push({
-      text,
-      timestamp: new Date(),
-      radd,
-    });
-
-    if (this.siyaq.recentMessages.length > Munadi.AQSA_RASAAIL_SIYAQ) {
-      this.siyaq.recentMessages = this.siyaq.recentMessages.slice(-Munadi.AQSA_RASAAIL_SIYAQ);
-    }
-  }
-
-  wadaKiyanMurakkazAlayh(entity: NonNullable<NiyyaMuhallala["kiyan"]>): void {
-    this.siyaq.focusEntity = {
-      ...entity,
-      resolvedAt: new Date(),
-    };
-  }
-
-  masahRasaailAkhira(): void {
-    this.siyaq.recentMessages = [];
-  }
-
-  async aalajIstijabaZirr(source: InboundSource, data: string): Promise<NatijaIrsal> {
-    return this.maQuflIrsal(async () => {
-      const [action, ...valueParts] = data.split(":");
-      const value = valueParts.join(":");
-
-      switch (action) {
-        case "select":
-          return this.aalajIkhtiyarTamyiz(source, value);
-
-        case "parent":
-          return this.aalajIkhtiyarAb(source, value === "yes");
-
-        case "switch":
-          return this.baddalJalsaFaila(value, source);
-
-        case "cancel":
-          return { tuulija: true, radd: "Cancelled." };
-
-        default:
-          return { tuulija: false };
-      }
-    });
-  }
-
-  async aalajAmr(msg: RisalaWarida, intent: Niyya): Promise<NatijaIrsal> {
-    const { amr, hujajAmr } = intent;
-
-    switch (amr) {
-      case "switch": {
-        const epicId = hujajAmr?.[0]?.toUpperCase();
-        if (!epicId) {
-          return this.aradhMuntaqiTahwil();
-        }
-        return this.baddalJalsaFaila(epicId, msg.source);
-      }
-
-      case "status":
-        return this.jalabHala();
-
-      case "queue":
-        return this.jalabHalaTabur();
-
-      case "sessions":
-        return this.#jalabJalsasStatus();
-
-      case "fail": {
-        const activeId = this.huwiyyaFaaila;
-        if (activeId) {
-          return {
-            tuulija: true,
-            radd: `Active session: ${activeId} (since ${this.faailMundhu?.toISOString()})`,
-          };
-        }
-        return { tuulija: true, radd: "No active session." };
-      }
-
-      case "cancel":
-        this.tamyizMuallaq = null;
-        this.iqtirahAbMuallaq = null;
-        return { tuulija: true, radd: "Cancelled pending selection." };
-
-      default:
-        return { tuulija: true, radd: `Unknown command: /${amr}. Try /status, /switch, /queue, /sessions, /active, /cancel.` };
-    }
-  }
-
-  async aalajBiArraf(
-    msg: RisalaWarida,
-    basicIntent: Niyya
-  ): Promise<NatijaIrsal> {
-    if (this.siyaq.focusEntity) {
-      const age = Date.now() - this.siyaq.focusEntity.resolvedAt.getTime();
-      if (age > 30 * 60 * 1000) {
-        this.siyaq.focusEntity = undefined;
-      }
-    }
-
-    const resolved = await this.arraf.halla(msg.text, this.siyaq);
-
-    await logger.akhbar("dispatcher", `Intent resolved: status=${resolved.hala}, method=${resolved.tariqa}`);
-
-    switch (resolved.hala) {
-      case "muhallala":
-        return this.aalajNiyyaMuhallala(msg, resolved, basicIntent);
-
-      case "qaima":
-        return this.aalajNatijaQaima(resolved);
-
-      case "tahtajuTawdih":
-        return this.badaaTamyiz(msg, resolved);
-
-      case "lam_tujad":
-        return this.aalajSualMubashir(msg, resolved);
-
-      case "khata":
-        return {
-          tuulija: true,
-          khata: resolved.khata ?? "Failed to resolve intent.",
-        };
-
-      case "tahtajuTafkir":
-        return this.aalajRisalaAsasiyya(msg, basicIntent);
-    }
-  }
-
-  aalajNatijaQaima(resolved: NiyyaMuhallala): NatijaIrsal {
-    const murashshahun = resolved.murashshahun ?? [];
-
-    if (murashshahun.length === 0) {
-      return {
-        tuulija: true,
-        radd: "No tickets found matching your filters.",
-      };
-    }
-
-    const lines = [`Found ${murashshahun.length} ticket(s):\n`];
-
-    for (const c of murashshahun) {
-      lines.push(`• ${c.huwiyya}: ${escapeMarkdown(c.unwan)}`);
-    }
-
-    return {
-      tuulija: true,
-      radd: lines.join("\n"),
-    };
-  }
-
-  async aalajNiyyaMuhallala(
-    msg: RisalaWarida,
-    resolved: NiyyaMuhallala,
-    basicIntent: Niyya
-  ): Promise<NatijaIrsal> {
-    const entity = resolved.kiyan!;
-
-    this.wadaKiyanMurakkazAlayh(entity);
-
-    const epicId = entity.huwiyya;
-
-    const existingSession = this.mudirJalasat.wajadaJalasatMurshid().find(
-      (s) => s.huwiyya === epicId
-    );
-
-    if (existingSession) {
-      return this.wajjahIlaJalsa(existingSession, msg);
-    }
-
-    if (resolved.kitabAb) {
-      const parentId = resolved.kitabAb.huwiyya;
-      const parentSession = this.mudirJalasat.wajadaJalasatMurshid().find(
-        (s) => s.huwiyya === parentId
-      );
-
-      if (parentSession) {
-        await logger.akhbar("dispatcher", `Routing to parent murshid: ${parentId}`);
-        return this.wajjahIlaJalsa(parentSession, msg);
-      }
-
-      if (entity.naw === "wasfa") {
-        return this.badaaIqtirahAb(msg, entity, resolved.kitabAb);
-      }
-    }
-
-    const isProceeding = resolved.fil === "taqaddam";
-
-    if (basicIntent.naw === "query" && !isProceeding) {
-      return {
-        tuulija: true,
-        radd: `Found ${entity.naw}: ${escapeMarkdown(entity.unwan)}\n\nNo murshid running for this. Say "work on ${epicId}" to start one.`,
-      };
-    }
-
-    return this.#badaaMurshidLiKiyan(msg, entity);
-  }
-
-  async badaaTamyiz(
-    msg: RisalaWarida,
-    resolved: NiyyaMuhallala
-  ): Promise<NatijaIrsal> {
-    const murashshahun = resolved.murashshahun!;
-
-    this.tamyizMuallaq = {
-      source: msg.source,
-      murashshahun,
-      nassAsli: msg.text,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
-    };
-
-    const lines = ["Found multiple matches. Which one did you mean?\n"];
-
-    const buttons: Array<{ text: string; data: string }> = [];
-
-    for (let i = 0; i < murashshahun.length; i++) {
-      const c = murashshahun[i];
-      const label = c.huwiyya ? `${c.huwiyya}: ${escapeMarkdown(c.unwan)}` : escapeMarkdown(c.unwan);
-      lines.push(`${i + 1}. [${c.naw}] ${label}`);
-      buttons.push({
-        text: `${i + 1}. ${c.unwan.slice(0, 20)}`,
-        data: `select:${i}`,
-      });
-    }
-
-    buttons.push({ text: "Cancel", data: "select:cancel" });
-
-    return {
-      tuulija: true,
-      radd: lines.join("\n"),
-      buttons,
-    };
-  }
-
-  async aalajRaddTamyiz(msg: RisalaWarida): Promise<NatijaIrsal> {
-    const pending = this.tamyizMuallaq!;
-
-    if (new Date() > pending.expiresAt) {
-      this.tamyizMuallaq = null;
-      return { tuulija: false };
-    }
-
-    const numMatch = msg.text.match(/^(\d+)$/);
-    if (numMatch) {
-      const index = parseInt(numMatch[1], 10) - 1;
-      return this.aalajIkhtiyarTamyiz(msg.source, String(index));
-    }
-
-    if (msg.text.toLowerCase() === "cancel") {
-      this.tamyizMuallaq = null;
-      return { tuulija: true, radd: "Cancelled." };
-    }
-
-    return { tuulija: false };
-  }
-
-  async aalajIkhtiyarTamyiz(
-    source: InboundSource,
-    value: string
-  ): Promise<NatijaIrsal> {
-    const pending = this.tamyizMuallaq;
-    if (!pending) {
-      return { tuulija: true, radd: "No pending selection." };
-    }
-
-    this.tamyizMuallaq = null;
-
-    if (value === "cancel") {
-      return { tuulija: true, radd: "Cancelled." };
-    }
-
-    const index = parseInt(value, 10);
-    if (isNaN(index) || index < 0 || index >= pending.murashshahun.length) {
-      return { tuulija: true, radd: "Invalid selection." };
-    }
-
-    const selected = pending.murashshahun[index];
-
-    return this.#badaaMurshidLiKiyan(
-      { source, text: pending.nassAsli },
-      {
-        naw: selected.naw,
-        huwiyya: selected.huwiyya,
-        unwan: selected.unwan,
-      }
-    );
-  }
-
-  async badaaIqtirahAb(
-    msg: RisalaWarida,
-    ticket: NonNullable<NiyyaMuhallala["kiyan"]>,
-    parent: NonNullable<NiyyaMuhallala["kitabAb"]>
-  ): Promise<NatijaIrsal> {
-    this.iqtirahAbMuallaq = {
-      source: msg.source,
-      wasfa: ticket,
-      ab: parent,
-      abHuwaMalhamat: false,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
-    };
-
-    const radd = `${ticket.huwiyya} has parent ${parent.huwiyya} (${escapeMarkdown(parent.unwan)}).
-
-Work on the parent instead?`;
-
-    const buttons = [
-      { text: `Yes, work on ${parent.huwiyya}`, data: "parent:yes" },
-      { text: `No, just ${ticket.huwiyya}`, data: "parent:no" },
-    ];
-
-    return { tuulija: true, radd, buttons };
-  }
-
-  async aalajRaddIqtirahAb(msg: RisalaWarida): Promise<NatijaIrsal> {
-    const pending = this.iqtirahAbMuallaq!;
-
-    if (new Date() > pending.expiresAt) {
-      this.iqtirahAbMuallaq = null;
-      return { tuulija: false };
-    }
-
-    const lower = msg.text.toLowerCase();
-
-    if (lower === "yes" || lower === "y" || lower.includes("parent")) {
-      return this.aalajIkhtiyarAb(msg.source, true);
-    }
-
-    if (lower === "no" || lower === "n" || lower.includes("just")) {
-      return this.aalajIkhtiyarAb(msg.source, false);
-    }
-
-    return { tuulija: false };
-  }
-
-  async aalajIkhtiyarAb(source: InboundSource, useParent: boolean): Promise<NatijaIrsal> {
-    const pending = this.iqtirahAbMuallaq;
-    if (!pending) {
-      return { tuulija: true, radd: "No pending selection." };
-    }
-
-    this.iqtirahAbMuallaq = null;
-
-    const entity = useParent
-      ? {
-          naw: "wasfa" as NawKiyan,
-          huwiyya: pending.ab.huwiyya,
-          unwan: pending.ab.unwan,
-        }
-      : pending.wasfa;
-
-    return this.#badaaMurshidLiKiyan({ source, text: "" }, entity);
-  }
-
-  async #khalaqaWaFailaMurshid(
-    params: MuatayatKhalqMurshid
-  ): Promise<NatijaIrsal> {
-    const { huwiyya, unwan, type, initMessage } = params;
-
-    await logger.akhbar("dispatcher", `Creating/activating murshid: ${huwiyya}`, { naw: type, unwan });
-
-    const result = await this.mudirJalasat.wajadaAwKhalaqa(huwiyya, unwan, type);
-
-    if (!result) {
-      return {
-        tuulija: true,
-        khata: "Failed to create murshid session.",
-      };
-    }
-
-    const { session, jadida, mustarjaa, faailSabiq } = result;
-
-    const switchResult = await this.#naffadhaTahwilMurshid(
-      huwiyya,
-      session,
-      faailSabiq,
-      jadida
-    );
-
-    if (switchResult.khata) {
-      return switchResult;
-    }
-
-    this.masahRasaailAkhira();
-
-    if (jadida) {
-      await this.mudirJalasat.arsalaIlaMurshid(initMessage);
-    } else if (mustarjaa) {
-      await this.mudirJalasat.arsalaIlaMurshid(
-        `Resuming session. You were previously working on: ${unwan}`
-      );
-    }
-
-    let radd: string;
-
-    if (jadida) {
-      radd = `**New murshid started for ${huwiyya}**\n\n`;
-      radd += `Title: ${escapeMarkdown(unwan)}\n`;
-      radd += `Branch: \`${session.far}\`\n`;
-      radd += `Session: \`${session.id.slice(0, 16)}...\`\n`;
-    } else if (mustarjaa) {
-      radd = `**Resumed murshid for ${huwiyya}**\n\n`;
-      radd += `Title: ${escapeMarkdown(unwan)}\n`;
-      radd += `Branch: \`${session.far}\`\n`;
-      radd += `Session: \`${session.id.slice(0, 16)}...\` (existing)\n`;
-      radd += `Last active: ${session.akhirRisalaFi}\n`;
-    } else {
-      radd = `Murshid active for ${huwiyya}`;
-    }
-
-    if (faailSabiq && faailSabiq !== huwiyya) {
-      radd += `\n⚠️ Switched from ${faailSabiq}`;
-    }
-
-    radd += `\n\n✅ Active session: ${huwiyya}`;
-
-    if (Object.keys(session.channels).length > 0) {
-      radd += `\n\nUse the dedicated topic/channel for conversation.`;
-    }
-
-    return {
-      tuulija: true,
-      radd,
-    };
-  }
-
-  async #naffadhaTahwilMurshid(
-    identifier: string,
-    session: JalsatMurshid,
-    previousActive: string | null,
-    _isNew: boolean
-  ): Promise<NatijaIrsal> {
-    const previousSession = previousActive
-      ? this.mudirJalasat.jalabMurshid(previousActive)
-      : null;
-
-    if (previousActive === identifier) {
-      this.wadaaJalsaFaila(identifier);
-      return { tuulija: true };
-    }
-
-    await logger.akhbar("dispatcher", `Executing switchover: ${previousActive ?? "none"} → ${identifier}`);
-
-    if (previousSession) {
-      await this.qataJalsa(previousSession, identifier);
-      await this.mudirJalasat.jaddadaḤalatMurshid(previousActive!, "sakin");
-      await this.ablaghaJalsaSabiqa(previousSession);
-    }
-
-    try {
-      await this.mudirJalasat.jaddadaḤalatMurshid(identifier, "fail");
-      this.mudirJalasat.wadaaMurshidFaail(identifier);
-      this.huwiyyaFaaila = identifier;
-      this.faailMundhu = new Date();
-    } catch (err) {
-      void logger.sajjalKhata("dispatcher", `Failed to activate ${identifier}, rolling back`, { error: String(err) });
-      if (previousSession) {
-        await this.mudirJalasat.jaddadaḤalatMurshid(previousActive!, "fail").catch(() => {});
-        this.mudirJalasat.wadaaMurshidFaail(previousActive);
-      }
-      this.huwiyyaFaaila = previousActive;
-      this.faailMundhu = previousActive ? new Date() : null;
-      return { tuulija: true, khata: `Failed to activate ${identifier}: ${err}` };
-    }
-
-    try {
-      await this.ablaghaJalsaJadida(session, previousActive);
-    } catch (err) {
-      void logger.sajjalKhata("dispatcher", `Failed to notify new session ${identifier}`, { error: String(err) });
-    }
-
-    try {
-      await this.naffadhTaburLiKitab(identifier);
-    } catch (err) {
-      void logger.sajjalKhata("dispatcher", `Failed to drain queue for ${identifier}`, { error: String(err) });
-    }
-
-    try {
-      await this.rasul.arsalaMunassaq("dispatch", `Active: **${identifier}**`);
-    } catch (err) {
-      void logger.sajjalKhata("dispatcher", `Failed to send dispatch notification`, { error: String(err) });
-    }
-
-    await logger.akhbar("dispatcher", `Control switched to ${identifier}`);
-
-    return { tuulija: true };
-  }
-
-  async #badaaMurshidLiKiyan(
-    _msg: RisalaWarida,
-    entity: NonNullable<NiyyaMuhallala["kiyan"]>
-  ): Promise<NatijaIrsal> {
-    const huwiyya = entity.huwiyya;
-
-    const initMessage = `You have been assigned you to work on:
-
-**${entity.naw.toUpperCase()}**: ${entity.unwan}
-**Name**: ${huwiyya}
-
-Use \`mun_iqra_wasfa\` to read it in full and begin.`;
-
-    const nawMurshid: "epic" | "chore" =
-      entity.naw === "malhamat"
-        ? "epic"
-        : "chore";
-
-    return this.#khalaqaWaFailaMurshid({
-      huwiyya: huwiyya,
-      unwan: entity.unwan,
-      type: nawMurshid,
-      initMessage,
-    });
-  }
-
-  async faaalLiWasfa(
-    huwiyya: string,
-    unwan: string,
-    siyaqZaid?: string,
-  ): Promise<NatijaIrsal> {
-    const zaid = siyaqZaid ? `\n\n${siyaqZaid}` : "";
-
-    const initMessage = `You are set to work on **${huwiyya}** — ${unwan}.${zaid}
-
-Read it with \`mun_iqra_wasfa\`, learn what the matter is before you touch it,
-then draft your khuṭṭa.`;
-
-    return this.#khalaqaWaFailaMurshid({
-      huwiyya,
-      unwan,
-      type: "epic",
-      initMessage,
-    });
-  }
-
-  async aalajNiyyaWarsha(msg: RisalaWarida, intent: Niyya): Promise<NatijaIrsal> {
-    const sandboxName = intent.ismWarsha;
-
-    if (!sandboxName) {
-      return {
-        tuulija: true,
-        radd: "What would you like to call this sandbox? (e.g., `sandbox pos-simulator`)",
-      };
-    }
-
-    const huwiyya = `SANDBOX-${sandboxName}`;
-
-    const initMessage = `A sandbox session has been started for you.
-
-**Mode**: Sandbox (no ticket)
-**Name**: ${sandboxName}
-**Branch**: \`sandbox/${sandboxName}\`
-**Original request**: "${msg.text}"
-
-This is freeform work - no ticket tracking, no PR requirements. Brainstorm, prototype, experiment freely.
-
-When you want to formalize this work into tickets, let al-Kimyawi know.`;
-
-    return this.#khalaqaWaFailaMurshid({
-      huwiyya,
-      unwan: `Sandbox: ${sandboxName}`,
-      type: "sandbox",
-      initMessage,
-    });
-  }
-
-  #sidSual: string | null = null;
-
-  async aalajSualMubashir(msg: RisalaWarida, resolved: NiyyaMuhallala): Promise<NatijaIrsal> {
-    const nass = msg.text.trim();
-    if (!nass) {
-      return { tuulija: true, radd: resolved.khata ?? "Could not find the entity you're referring to." };
-    }
-    if (!this.#sidSual) {
-      const jalsa = await this.amil.khalaqaJalsa("iksir-munadi", "Iksir Sual");
-      if (!jalsa) {
-        return { tuulija: true, khata: "The nest did not answer." };
-      }
-      this.#sidSual = jalsa.id;
-    }
-    let jawab = await this.amil.sendPrompt(this.#sidSual, nass, { agent: "iksir-alim", timeoutMs: 120_000 });
-    if (!jawab.success) {
-      const jalsa = await this.amil.khalaqaJalsa("iksir-munadi", "Iksir Sual");
-      if (!jalsa) {
-        return { tuulija: true, khata: "The nest did not answer." };
-      }
-      this.#sidSual = jalsa.id;
-      jawab = await this.amil.sendPrompt(this.#sidSual, nass, { agent: "iksir-alim", timeoutMs: 120_000 });
-    }
-    if (jawab.success && jawab.response) {
-      return { tuulija: true, radd: jawab.response };
-    }
-    return { tuulija: true, radd: resolved.khata ?? "Could not find the entity you're referring to." };
-  }
-
-  async aalajRisalaAsasiyya(msg: RisalaWarida, intent: Niyya): Promise<NatijaIrsal> {
-    const { huwiyya, naw } = intent;
-    let targetId: string | null = huwiyya;
-
-    if (!targetId) {
-      targetId = this.huwiyyaFaaila;
-
-      if (!targetId) {
-        return {
-          tuulija: true,
-          radd: "No active session. Mention a ticket ID or send a ticket URL to start one.",
-        };
-      }
-    }
-
-    const session = this.mudirJalasat.wajadaJalasatMurshid().find(
-      (s) => s.huwiyya === targetId
-    );
-
-    if (!session) {
-      return {
-        tuulija: true,
-        radd: `No murshid for ${targetId}. Send a ticket URL to start one.`,
-      };
-    }
-
-    if (naw === "query") {
-      return this.wajjahIlaJalsa(session, msg);
-    }
-
-    if (this.huwiyyaFaaila !== targetId) {
-      return this.ajjalAmaliyya(targetId, msg);
-    }
-
-    return this.wajjahIlaJalsa(session, msg);
-  }
-
-  async wajjahIlaJalsa(
-    session: JalsatMurshid,
-    msg: RisalaWarida
-  ): Promise<NatijaIrsal> {
-    const prefix = msg.source === "pr_comment"
-      ? `PR Comment from @${msg.katib}:\n\n`
-      : "Al-Kimyawi says:\n\n";
-
-    const success = await this.mudirJalasat.arsalaIlaMurshidById(
-      session.huwiyya,
-      `${prefix}${msg.text}`
-    );
-
-    if (success) {
-      return {
-        tuulija: true,
-        radd: msg.source === "cli" ? undefined : `Message sent to ${session.huwiyya}.`,
-      };
-    }
-
-    return { tuulija: true, khata: `Failed to send message to ${session.huwiyya}.` };
-  }
-
-  async ajjalAmaliyya(huwiyya: string, msg: RisalaWarida): Promise<NatijaIrsal> {
-    const op: AmaliyyaMuajjala = {
-      huwiyya,
-      risala: msg.text,
-      saaffFi: new Date(),
-      source: msg.source,
-      messageId: msg.messageId,
-    };
-
-    this.tabur.push(op);
-
-    await logger.akhbar("dispatcher", `Queued operation for ${huwiyya}`, {
-      queueLength: this.tabur.length,
-    });
-
-    return {
-      tuulija: true,
-      fiTtabur: true,
-      radd: `Queued. ${this.huwiyyaFaaila} is currently active. Will notify when ${huwiyya} becomes active.`,
-    };
-  }
-
-  wadaaJalsaFaila(identifier: string | null): void {
-    this.huwiyyaFaaila = identifier;
-    this.faailMundhu = identifier ? new Date() : null;
-    this.mudirJalasat.wadaaMurshidFaail(identifier);
-    void logger.akhbar("dispatcher", `Active session set to ${identifier ?? "none"}`);
+  rakkiz(wasfa: { huwiyya: string; unwan: string }): void {
+    this.#tarkiz = { huwiyya: wasfa.huwiyya, unwan: wasfa.unwan, mundhu: new Date() };
   }
 
   hawiyyaFaila(): string | null {
     return this.huwiyyaFaaila;
   }
 
-  async istarjaaIndaNashaat(): Promise<void> {
-    const activeId = this.mudirJalasat.wajadaMurshidFaailId();
-    if (!activeId) {
-      await logger.akhbar("dispatcher", "No active murshid on startup");
-      return;
-    }
-
-    const session = this.mudirJalasat.jalabMurshid(activeId);
-    if (!session) {
-      await logger.haDHHir("dispatcher", `Active murshid ${activeId} not found in session manager`);
-      return;
-    }
-
-    await logger.akhbar("dispatcher", `Restoring active murshid on startup: ${activeId}`);
-
-    await this.#naffadhaTahwilMurshid(activeId, session, null, false);
+  wadaaJalsaFaila(huwiyya: string | null): void {
+    this.huwiyyaFaaila = huwiyya;
+    this.faailMundhu = huwiyya ? new Date() : null;
+    this.mudirJalasat.wadaaMurshidFaail(huwiyya);
+    void logger.akhbar("munadi", `The flame is with ${huwiyya ?? "no one"}`);
   }
 
-  async baddalJalsaFaila(epicId: string, _source: InboundSource): Promise<NatijaIrsal> {
-    const tarjalabJalsa = this.mudirJalasat.jalabMurshid(epicId);
+  async aalajRisalaIrsal(msg: RisalaWarida): Promise<NatijaIrsal> {
+    return this.#tahtaQufl(async () => {
+      const nass = msg.text.trim();
+      if (!nass) return { tuulija: true };
+      const jawab = await this.#qul(`${this.#daftar()}\n\nAl-Kimyawī says:\n${nass}`);
+      return jawab ? { tuulija: true, radd: jawab } : { tuulija: true, khata: "The nest did not answer." };
+    });
+  }
 
-    if (!tarjalabJalsa) {
-      return { tuulija: true, radd: `No murshid for ${epicId}. Start one first.` };
+  async #tahtaQufl<T>(fn: () => Promise<T>): Promise<T> {
+    let iftah: () => void = () => {};
+    const sabiq = this.#qufl;
+    this.#qufl = new Promise<void>((r) => { iftah = r; });
+    await sabiq;
+    try {
+      return await fn();
+    } finally {
+      iftah();
     }
+  }
 
-    const previousEpicId = this.huwiyyaFaaila;
-
-    if (previousEpicId === epicId) {
-      return {
-        tuulija: true,
-        radd: `✅ Already active: ${epicId}\n\nBranch: ${tarjalabJalsa.far}\nSession: ${tarjalabJalsa.id.slice(0, 16)}...`,
-      };
+  #daftar(): string {
+    const sutur = ["## The house, now"];
+    if (this.#tarkiz && Date.now() - this.#tarkiz.mundhu.getTime() < UMR_TARKIZ_MS) {
+      sutur.push(`In focus: ${this.#tarkiz.huwiyya} — ${this.#tarkiz.unwan}`);
+    } else {
+      this.#tarkiz = null;
+      sutur.push("In focus: nothing yet");
     }
+    const murshidun = this.mudirJalasat.wajadaJalasatMurshid();
+    sutur.push(this.huwiyyaFaaila ? `The flame: ${this.huwiyyaFaaila}` : "The flame: no one holds it");
+    if (murshidun.length === 0) sutur.push("Murshidūn: none labour");
+    else for (const m of murshidun) sutur.push(`- ${m.huwiyya} — ${m.unwan} (${m.hala}${m.huwiyya === this.huwiyyaFaaila ? ", the flame" : ""}) in ${m.far}`);
+    return sutur.join("\n");
+  }
 
-    const switchResult = await this.#naffadhaTahwilMurshid(
-      epicId,
-      tarjalabJalsa,
-      previousEpicId,
-      false
+  async #qul(nass: string): Promise<string | null> {
+    for (let marra = 0; marra < 2; marra++) {
+      if (!this.#sidMajlis) {
+        const jalsa = await this.amil.khalaqaJalsa(JALSAT_MAJLIS, "Iksir Majlis");
+        if (!jalsa) return null;
+        this.#sidMajlis = jalsa.id;
+      }
+      const jawab = await this.amil.sendPrompt(this.#sidMajlis, nass, { agent: "iksir-munadi", timeoutMs: 120_000 });
+      if (jawab.success && jawab.response) return jawab.response;
+      this.#sidMajlis = null;
+    }
+    return null;
+  }
+
+  #sajjilAlat(): void {
+    const sijill = this.#alat.sijill;
+    const khass = "munadi";
+
+    sijill.sajjil(
+      {
+        name: "mun_arrif",
+        khass,
+        description: "Divine the waṣfa behind words: search the Sijill by name or by what it says. Use it before saying nothing exists.",
+        inputSchema: { type: "object", properties: { kalimat: { type: "string", description: "A name (W-13, GH-9) or words from the title or statement" } }, required: ["kalimat"] },
+      },
+      (args) => this.#arrif(String(args.kalimat)),
     );
 
-    if (switchResult.khata) {
-      return switchResult;
+    sijill.sajjil(
+      {
+        name: "mun_istadi",
+        khass,
+        description: "Summon a murshid for a waṣfa and hand it the flame; or open a sandbox for freeform work. The answer is the deed.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            huwiyya: { type: "string", description: "The waṣfa's name in the Sijill" },
+            warsha: { type: "string", description: "Instead of a waṣfa: a sandbox name, letters, digits and dashes" },
+          },
+        },
+      },
+      (args) => this.#istadi(args.huwiyya as string | undefined, args.warsha as string | undefined),
+    );
+
+    sijill.sajjil(
+      {
+        name: "mun_hawwil",
+        khass,
+        description: "Pass the flame to a murshid that already labours. The one holding it is told to stop and waits.",
+        inputSchema: { type: "object", properties: { huwiyya: { type: "string", description: "The murshid's waṣfa" } }, required: ["huwiyya"] },
+      },
+      async (args) => {
+        const natija = await this.hawwil(String(args.huwiyya));
+        return natija.khata ?? natija.radd ?? `The flame is with ${args.huwiyya}.`;
+      },
+    );
+
+    sijill.sajjil(
+      {
+        name: "mun_ablagh_murshid",
+        khass,
+        description: "Carry al-Kimyawī's words to a murshid, in its own vessel. One that does not hold the flame still hears, and may ask for it.",
+        inputSchema: {
+          type: "object",
+          properties: { huwiyya: { type: "string", description: "The murshid's waṣfa" }, kalimat: { type: "string", description: "What to tell it" } },
+          required: ["huwiyya", "kalimat"],
+        },
+      },
+      async (args) => {
+        const huwiyya = String(args.huwiyya);
+        const wasal = await this.mudirJalasat.arsalaIlaMurshidById(huwiyya, `Al-Kimyawī says:\n\n${String(args.kalimat)}`);
+        return wasal ? `Told ${huwiyya}.` : `No murshid labours on ${huwiyya}.`;
+      },
+    );
+
+    sijill.sajjil(
+      {
+        name: "mun_man_yaamal",
+        khass,
+        description: "Who labours: every murshid, its waṣfa, its condition, its vessel, and who holds the flame.",
+        inputSchema: { type: "object", properties: {} },
+      },
+      () => this.#manYaamal(),
+    );
+
+    sijill.sajjil(
+      {
+        name: "mun_naqsh",
+        khass,
+        description: "Read the codex al-Ṣayrafī inscribed for a decanted waṣfa.",
+        inputSchema: { type: "object", properties: { huwiyya: { type: "string", description: "The waṣfa's name" } }, required: ["huwiyya"] },
+      },
+      (args) => this.#naqsh(String(args.huwiyya)),
+    );
+  }
+
+  async #arrif(kalimat: string): Promise<string> {
+    const nass = kalimat.trim();
+    const bilIsm = NAMAT_ISM.test(nass) ? await this.#wasfat.iqra(nass.toUpperCase()) : null;
+    const wasfat = bilIsm ? [bilIsm] : await this.#wasfat.bahath(nass, 10);
+    if (wasfat.length === 0) return `The Sijill holds nothing for "${nass}".`;
+    return wasfat
+      .map((w) => {
+        const murshid = this.mudirJalasat.jalabMurshid(w.huwiyya);
+        const yaamal = murshid ? ` · a murshid labours on it (${murshid.hala}${w.huwiyya === this.huwiyyaFaaila ? ", holds the flame" : ""})` : "";
+        return `${w.huwiyya} — ${w.unwan} (${w.hala ?? "khaam"})${yaamal}`;
+      })
+      .join("\n");
+  }
+
+  async #istadi(huwiyya?: string, warsha?: string): Promise<string> {
+    if (warsha) {
+      const ism = warsha.toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+      const natija = await this.#khalaqaWaFailaMurshid(`SANDBOX-${ism}`, `Sandbox: ${ism}`, "sandbox",
+        `A sandbox is open for you: **${ism}**, vessel \`sandbox/${ism}\`. Freeform work — no waṣfa, no PR demanded. Brainstorm, prototype, experiment. When it should become waṣfāt, tell al-Kimyawī.`);
+      return natija.khata ?? natija.radd ?? "";
+    }
+    if (!huwiyya) return "Name a waṣfa, or a sandbox.";
+    const wasfa = await this.#wasfat.iqra(huwiyya.toUpperCase());
+    if (!wasfa) return `No waṣfa named ${huwiyya} in the Sijill; inscribe it first.`;
+    this.rakkiz(wasfa);
+    const natija = await this.faaalLiWasfa(wasfa.huwiyya, wasfa.unwan);
+    return natija.khata ?? natija.radd ?? "";
+  }
+
+  #manYaamal(): string {
+    const murshidun = this.mudirJalasat.wajadaJalasatMurshid();
+    if (murshidun.length === 0) return "No murshid labours; the flame is with no one.";
+    return murshidun
+      .map((m) => `${m.huwiyya} — ${m.unwan} (${m.hala}${m.huwiyya === this.huwiyyaFaaila ? ", holds the flame" : ""}) in ${m.far}`)
+      .join("\n");
+  }
+
+  async #naqsh(huwiyya: string): Promise<string> {
+    const wasfa = await this.#wasfat.iqra(huwiyya.toUpperCase());
+    if (!wasfa) return `No waṣfa named ${huwiyya} in the Sijill.`;
+    if (wasfa.hala !== "mafsul") return `${wasfa.huwiyya} has not been decanted; it stands at ${wasfa.hala ?? "khaam"}.`;
+    if (!this.#sayrafi) return "Al-Ṣayrafī is not at hand.";
+    return this.#sayrafi.naqasha(wasfa, this.mudirJalasat.jalabMurshid(wasfa.huwiyya)?.far);
+  }
+
+  async faaalLiWasfa(huwiyya: string, unwan: string, siyaqZaid?: string): Promise<NatijaIrsal> {
+    const zaid = siyaqZaid ? `\n\n${siyaqZaid}` : "";
+    return this.#khalaqaWaFailaMurshid(huwiyya, unwan, "epic",
+      `You are set to work on **${huwiyya}** — ${unwan}.${zaid}\n\nRead it with \`mun_iqra_wasfa\`, learn what the matter is before you touch it,\nthen draft your khuṭṭa.`);
+  }
+
+  async #khalaqaWaFailaMurshid(huwiyya: string, unwan: string, naw: NawMurshid, tasis: string): Promise<NatijaIrsal> {
+    await logger.akhbar("munadi", `Summoning a murshid for ${huwiyya}`, { naw, unwan });
+    const natija = await this.mudirJalasat.wajadaAwKhalaqa(huwiyya, unwan, naw);
+    if (!natija) return { tuulija: true, khata: `The nest would not open a vessel for ${huwiyya}.` };
+
+    const { session, jadida, mustarjaa, faailSabiq } = natija;
+    const tahwil = await this.#naffadhaTahwil(huwiyya, session, faailSabiq);
+    if (tahwil.khata) return tahwil;
+
+    if (jadida) await this.mudirJalasat.arsalaIlaMurshid(tasis);
+    else if (mustarjaa) await this.mudirJalasat.arsalaIlaMurshid(`Resuming. You were at work on: ${unwan}`);
+
+    const fil = jadida ? "summoned" : mustarjaa ? "woken" : "already at work";
+    const tahwilNass = faailSabiq && faailSabiq !== huwiyya ? ` The flame passed from ${faailSabiq}.` : "";
+    return { tuulija: true, radd: `Murshid ${fil} for ${huwiyya} — ${unwan}; vessel \`${session.far}\`; the flame is its own.${tahwilNass}` };
+  }
+
+  async hawwil(huwiyya: string): Promise<NatijaIrsal> {
+    const jalsa = this.mudirJalasat.jalabMurshid(huwiyya);
+    if (!jalsa) return { tuulija: true, khata: `No murshid labours on ${huwiyya}.` };
+    if (this.huwiyyaFaaila === huwiyya) return { tuulija: true, radd: `${huwiyya} already holds the flame.` };
+    const tahwil = await this.#naffadhaTahwil(huwiyya, jalsa, this.huwiyyaFaaila);
+    if (tahwil.khata) return tahwil;
+    return { tuulija: true, radd: `The flame passes to ${huwiyya}.` };
+  }
+
+  async istarjaaIndaNashaat(): Promise<void> {
+    const huwiyya = this.mudirJalasat.wajadaMurshidFaailId();
+    if (!huwiyya) {
+      await logger.akhbar("munadi", "No murshid held the flame when we last slept");
+      return;
+    }
+    const jalsa = this.mudirJalasat.jalabMurshid(huwiyya);
+    if (!jalsa) {
+      await logger.haDHHir("munadi", `${huwiyya} held the flame but has no vessel`);
+      return;
+    }
+    await logger.akhbar("munadi", `Restoring the flame to ${huwiyya}`);
+    await this.#naffadhaTahwil(huwiyya, jalsa, null);
+  }
+
+  async #naffadhaTahwil(huwiyya: string, jalsa: JalsatMurshid, sabiq: string | null): Promise<NatijaIrsal> {
+    if (sabiq === huwiyya) {
+      this.wadaaJalsaFaila(huwiyya);
+      return { tuulija: true };
+    }
+    const jalsaSabiqa = sabiq ? this.mudirJalasat.jalabMurshid(sabiq) : null;
+    await logger.akhbar("munadi", `The flame passes: ${sabiq ?? "no one"} → ${huwiyya}`);
+
+    if (jalsaSabiqa) {
+      await this.mudirJalasat.arsalaIlaMurshidById(jalsaSabiqa.huwiyya,
+        `🛑 INTERRUPT: the flame passes to ${huwiyya}.\n\nStop all operations now. Do not touch the matter further. Do not invoke any more sanis.\n\nYou will be told when you are idle.`);
+      await new Promise((r) => setTimeout(r, 500));
+      await this.mudirJalasat.jaddadaḤalatMurshid(sabiq!, "sakin");
+      await this.mudirJalasat.arsalaIlaMurshidById(jalsaSabiqa.huwiyya,
+        `You are now IDLE.\n\nVessel: ${jalsaSabiqa.far} (still yours; no one else enters it)\n\nWhispers will still reach you. Use \`mun_talab_tahakkum\` when you have actionable work.`);
     }
 
-    return { tuulija: true, radd: `Active: **${epicId}**` };
-  }
-
-  async qataJalsa(session: JalsatMurshid, newActiveId: string): Promise<void> {
-    const interruptMsg = `🛑 INTERRUPT: Control is being transferred to ${newActiveId}.
-
-STOP all operations immediately.
-Do NOT touch the matter further.
-Do NOT invoke any more sanis.
-
-You will be notified when you are IDLE.`;
-
-    await this.mudirJalasat.arsalaIlaMurshidById(session.huwiyya, interruptMsg);
-
-    await new Promise((r) => setTimeout(r, 500));
-  }
-
-  async ablaghaJalsaSabiqa(session: JalsatMurshid): Promise<void> {
-    const msg = `CONTROL TRANSFERRED: You are now IDLE.
-
-Vessel: ${session.far} (still yours; no one else enters it)
-
-Whispers will still reach you.
-Use \`mun_talab_tahakkum\` when you have actionable work.`;
-
-    await this.mudirJalasat.arsalaIlaMurshidById(session.huwiyya, msg);
-  }
-
-  async ablaghaJalsaJadida(session: JalsatMurshid, previousId: string | null): Promise<void> {
-    const msg = `✅ CONTROL GRANTED: You are now ACTIVE.
-
-Vessel: ${session.far} — raise it in the workshop if it is not yet there
-Previous active: ${previousId ?? "none"}
-
-The matter is yours again.`;
-
-    await this.mudirJalasat.arsalaIlaMurshidById(session.huwiyya, msg);
-  }
-
-  async naffadhTaburLiKitab(epicId: string): Promise<void> {
-    if (this.yuaalijTabur) return;
-    this.yuaalijTabur = true;
     try {
-      const opsForEpic = this.tabur.filter((op) => op.huwiyya === epicId);
-      this.tabur = this.tabur.filter((op) => op.huwiyya !== epicId);
-
-      for (const op of opsForEpic) {
-        await this.aalajWarid({
-          source: op.source,
-          text: op.risala,
-          messageId: op.messageId,
-        });
-      }
-    } finally {
-      this.yuaalijTabur = false;
-    }
-  }
-
-  jalabHala(): NatijaIrsal {
-    const active = this.huwiyyaFaaila;
-    const queueLen = this.tabur.length;
-    const murshidun = this.mudirJalasat.wajadaJalasatMurshid();
-
-    let radd = "**Status**\n\n";
-
-    if (active) {
-      const activeSession = murshidun.find((o) => o.huwiyya === active);
-      radd += `✅ **Active: ${active}**\n`;
-      if (activeSession) {
-        radd += `   Session: ${activeSession.id.slice(0, 16)}...\n`;
-        radd += `   Since: ${this.faailMundhu?.toISOString()}\n`;
-      }
-    } else {
-      radd += `⚪ **Active: none**\n`;
+      await this.mudirJalasat.jaddadaḤalatMurshid(huwiyya, "fail");
+      this.wadaaJalsaFaila(huwiyya);
+    } catch (khata) {
+      void logger.sajjalKhata("munadi", `Could not hand the flame to ${huwiyya}; it stays where it was`, { error: String(khata) });
+      if (jalsaSabiqa) await this.mudirJalasat.jaddadaḤalatMurshid(sabiq!, "fail").catch(() => {});
+      this.wadaaJalsaFaila(sabiq);
+      return { tuulija: true, khata: `Could not hand the flame to ${huwiyya}: ${khata}` };
     }
 
-    radd += `\n`;
+    await this.mudirJalasat.arsalaIlaMurshidById(huwiyya,
+      `✅ You hold the flame.\n\nVessel: ${jalsa.far} — raise it in the workshop if it is not yet there\nBefore you: ${sabiq ?? "no one"}\n\nThe matter is yours.`).catch(() => {});
 
-    radd += `Murshidun: ${murshidun.length}\n`;
-    radd += `Queue: ${queueLen} operation(s)\n`;
-
-    const others = murshidun.filter((o) => o.huwiyya !== active);
-    if (others.length > 0) {
-      radd += `\n**Other murshidun (idle):**\n`;
-      for (const o of others) {
-        radd += `  - ${o.huwiyya}\n`;
-      }
-    }
-
-    return { tuulija: true, radd };
-  }
-
-  jalabHalaTabur(): NatijaIrsal {
-    if (this.tabur.length === 0) {
-      return { tuulija: true, radd: "Operation queue is empty." };
-    }
-
-    let radd = "**Operation Queue**\n\n";
-
-    for (let i = 0; i < this.tabur.length; i++) {
-      const op = this.tabur[i];
-      const age = Math.round((Date.now() - op.saaffFi.getTime()) / 1000 / 60);
-      radd += `${i + 1}. ${op.huwiyya}: "${op.risala.slice(0, 50)}..." (${age}m ago)\n`;
-    }
-
-    return { tuulija: true, radd };
-  }
-
-  #jalabJalsasStatus(): NatijaIrsal {
-    const murshidun = this.mudirJalasat.wajadaJalasatMurshid();
-
-    let radd = "**Sessions**\n\n";
-
-    if (murshidun.length === 0) {
-      radd += "No murshidun.\n";
-    } else {
-      for (const o of murshidun) {
-        const yakunuFaail = o.huwiyya === this.huwiyyaFaaila;
-        if (yakunuFaail) {
-          radd += `→ **${o.huwiyya}** (active)\n`;
-          radd += `  ${escapeMarkdown(o.unwan)}\n\n`;
-        } else {
-          radd += `  ${o.huwiyya} (idle)\n`;
-          radd += `  ${escapeMarkdown(o.unwan)}\n\n`;
-        }
-      }
-    }
-
-    const idleSessions = murshidun.filter((o) => o.huwiyya !== this.huwiyyaFaaila);
-    const buttons = idleSessions.map((o) => ({
-      text: `Switch to ${o.huwiyya}`,
-      data: `switch:${o.huwiyya}`,
-    }));
-
-    return { tuulija: true, radd, buttons: buttons.length > 0 ? buttons : undefined };
-  }
-
-  aradhMuntaqiTahwil(): NatijaIrsal {
-    const murshidun = this.mudirJalasat.wajadaJalasatMurshid();
-    const idleSessions = murshidun.filter((o) => o.huwiyya !== this.huwiyyaFaaila);
-
-    if (murshidun.length === 0) {
-      return { tuulija: true, radd: "No murshidun to switch to." };
-    }
-
-    if (idleSessions.length === 0) {
-      const active = this.huwiyyaFaaila;
-      return {
-        tuulija: true,
-        radd: `Only one murshid exists: ${active} (already active)`,
-      };
-    }
-
-    let radd = "**Switch Active Session**\n\n";
-
-    if (this.huwiyyaFaaila) {
-      const activeSession = murshidun.find((o) => o.huwiyya === this.huwiyyaFaaila);
-      radd += `Current: **${this.huwiyyaFaaila}**\n`;
-      if (activeSession) {
-        radd += `${escapeMarkdown(activeSession.unwan)}\n`;
-      }
-      radd += "\n";
-    }
-
-    radd += "Choose:\n";
-    for (let i = 0; i < idleSessions.length; i++) {
-      const o = idleSessions[i];
-      radd += `[${i + 1}] ${o.huwiyya} - ${escapeMarkdown(o.unwan)}\n`;
-    }
-
-    const buttons = idleSessions.map((o, i) => ({
-      text: `[${i + 1}] ${o.huwiyya}`,
-      data: `switch:${o.huwiyya}`,
-    }));
-    buttons.push({ text: "Cancel", data: "cancel" });
-
-    return { tuulija: true, radd, buttons };
+    if (jalsaSabiqa) await this.rasul.arsalaMunassaq("dispatch", `The flame passes from ${sabiq} to **${huwiyya}**.`).catch(() => {});
+    return { tuulija: true };
   }
 }
 

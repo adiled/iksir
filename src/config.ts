@@ -14,7 +14,7 @@
  * Khabath (خبث) is every outer thing iksir touches, named by role:
  *   majlis    where al-Kimyawī speaks            (telegram)
  *   kur       the forge where jawhar is decanted  (github, gitlab, …)
- *   sijillat  outer trackers tickets come from    (github, linear, …)
+ *   sijillat  outer trackers work is filed in     (github, linear, …)
  * Each role is a list; a waṣfa carries its own three, drawn from these.
  */
 

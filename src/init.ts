@@ -221,7 +221,7 @@ async function stepKhabath(state: InitState): Promise<void> {
 
   state.kur = qaima(await prompt("Kūr — the forge where jawhar is decanted", "github"));
   if (state.kur.length) ok(`Kūr: ${bold(state.kur.join(", "))}`);
-  state.sijillat = qaima(await prompt("Sijillāt — outer trackers your tickets live in", "github"));
+  state.sijillat = qaima(await prompt("Sijillāt — outer trackers work is filed in (github, linear)", "github"));
   if (state.sijillat.length) ok(`Sijillāt: ${bold(state.sijillat.join(", "))}`);
   state.sabiqaWasfa = await prompt("Mark that minted waṣfa names carry", "W");
   ok(`Waṣfāt iksir mints are named ${bold(`${state.sabiqaWasfa}-1`)}, ${state.sabiqaWasfa}-2, …`);

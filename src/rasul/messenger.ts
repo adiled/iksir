@@ -6,7 +6,6 @@
  *
  * Inbound: Telegram messages/callbacks → normalized RisalaDakhila events.
  * Outbound: QanatRisala channels → TelegramClient calls + channel DB.
- * Interactive: KhiyarTafauli[] → Telegram inline keyboards.
  *
  * Channel resolution:
  *   "dispatch"         → TelegramClient.sendToDispatch()
@@ -23,7 +22,7 @@ import {
   jalabaQanatsForSession,
   jalabJalsaByChannel,
 } from "../../db/db.ts";
-import type { Rasul, RisalaDakhila, QanatRisala, KhiyarTafauli } from "../types.ts";
+import type { Rasul, RisalaDakhila, QanatRisala } from "../types.ts";
 
 export { jalabaQanat, jalabaQanatsForSession, jalabJalsaByChannel } from "../../db/db.ts";
 
@@ -91,47 +90,6 @@ export class TelegramMessenger implements Rasul {
       ? await this.#telegram.arsalaIlaMurshidTopic(topicId, text, { parseMode })
       : await this.#telegram.sendToDispatch(`[${channel.murshid}] ${text}`, { parseMode });
     return raqm !== null;
-  }
-
-  async arsalaSualBiKhiyarat(
-    channel: QanatRisala,
-    nass: string,
-    khiyarat: KhiyarTafauli[],
-  ): Promise<number | null> {
-    if (!this.mumakkan()) return null;
-
-    const keyboard = {
-      inline_keyboard: khiyarat.map((k) => [
-        { text: k.nass, callback_data: k.miftah },
-      ]),
-    };
-
-    if (channel === "dispatch") {
-      return await this.#telegram.sendToDispatch(nass, {
-        parseMode: "Markdown",
-        keyboard,
-      });
-    }
-
-    if (channel === "kimyawi") {
-      return await this.#telegram.arsalaRisala(nass, {
-        parseMode: "Markdown",
-        keyboard,
-      });
-    }
-
-    const topicId = this.#resolveMurshidTopic(channel.murshid);
-    if (topicId !== null) {
-      return await this.#telegram.arsalaIlaMurshidTopic(topicId, nass, {
-        parseMode: "Markdown",
-        keyboard,
-      });
-    }
-
-    return await this.#telegram.sendToDispatch(`[${channel.murshid}] ${nass}`, {
-      parseMode: "Markdown",
-      keyboard,
-    });
   }
 
   async khalaqaQanatMurshid(identifier: string, title: string): Promise<string | null> {
@@ -233,12 +191,7 @@ export class TelegramMessenger implements Rasul {
       }
 
       if (isDispatchTopic) {
-        if (text.startsWith("/")) {
-          const [command, ...args] = text.slice(1).split(" ");
-          await this.#mualij({ naw: "amr", amr: command.toLowerCase(), wusut: args });
-        } else {
-          await this.#mualij({ naw: "irsal", nass: text, huwiyyatRisala: message.message_id });
-        }
+        await this.#mualij({ naw: "irsal", nass: text, huwiyyatRisala: message.message_id });
         return;
       }
       if (topicId && topicId !== 1) {
@@ -273,20 +226,6 @@ export class TelegramMessenger implements Rasul {
       }
 
       await logger.akhbar("messenger", `Callback: ${query.data}`);
-
-      if (
-        query.data.startsWith("select:") ||
-        query.data.startsWith("parent:") ||
-        query.data.startsWith("switch:") ||
-        query.data === "cancel"
-      ) {
-        if (this.#mualij) {
-          await this.#mualij({ naw: "ikhtiyar_munadi", miftah: query.data });
-        }
-        await this.#telegram.answerCallback(query.id, "Received!");
-        return;
-      }
-
       await this.#telegram.answerCallback(query.id, "Received!");
   }
 

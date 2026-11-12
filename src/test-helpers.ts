@@ -66,10 +66,12 @@ export interface MockWasila {
   _calls: {
     mayyaza: string[];
     sendPromptAsync: Array<{ sessionId: string; prompt: string }>;
-    sendPrompt: Array<{ sessionId: string; prompt: string }>;
+    sendPrompt: Array<{ sessionId: string; prompt: string; options?: unknown }>;
     khalaqaJalsa: Array<{ huwiyyatWasfa: string; title: string }>;
   };
   _sessions: Map<string, MockJalsatHum>;
+  _athar: Record<string, string[]>;
+  athar(sid: string): string[];
 }
 
 export function mockWasila(overrides?: {
@@ -89,9 +91,16 @@ export function mockWasila(overrides?: {
   const nestIds = new Map<string, string>();
   let sessionCounter = 0;
 
+  const athar: Record<string, string[]> = {};
+
   return {
     _calls: calls,
     _sessions: sessions,
+    _athar: athar,
+
+    athar(sid) {
+      return athar[sid] ?? [];
+    },
 
     async mayyaza(prompt: string) {
       calls.mayyaza.push(prompt);
@@ -105,9 +114,9 @@ export function mockWasila(overrides?: {
       return true;
     },
 
-    async sendPrompt(sessionId, prompt) {
-      calls.sendPrompt.push({ sessionId, prompt });
-      if (overrides?.sendPrompt) return overrides.sendPrompt(sessionId, prompt);
+    async sendPrompt(sessionId, prompt, options) {
+      calls.sendPrompt.push({ sessionId, prompt, options });
+      if (overrides?.sendPrompt) return overrides.sendPrompt(sessionId, prompt, options);
       return { success: true, response: "ok" };
     },
 
@@ -395,36 +404,6 @@ export function seedSession(overrides?: Partial<JalsatMurshid>): void {
   });
 }
 
-
-import type { NiyyaMuhallala } from "./khuddam/arraf.ts";
-
-export interface MockArraf {
-  halla(text: string, context?: unknown): Promise<NiyyaMuhallala>;
-  _calls: Array<{ text: string; context?: unknown }>;
-  _nextResult: NiyyaMuhallala | null;
-}
-
-export function mockArraf(): MockArraf {
-  const calls: MockArraf["_calls"] = [];
-  return {
-    _calls: calls,
-    _nextResult: null,
-
-    async halla(text, context) {
-      calls.push({ text, context });
-      if (this._nextResult) {
-        const result = this._nextResult;
-        this._nextResult = null;
-        return result;
-      }
-      return {
-        hala: "lam_tujad",
-        nassKham: text,
-        tariqa: "bahth_hatmi",
-      };
-    },
-  };
-}
 
 import { Tasmim } from "./config.ts";
 

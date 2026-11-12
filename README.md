@@ -55,11 +55,11 @@ The whole of `~/.config/iksir/iksir.json`:
 
 - **majlis** — where al-Kimyawī speaks. Telegram.
 - **kūr** — the forges where jawhar is decanted and inscribed: `github`, `gitlab`, …
-- **sijillāt** — the outer trackers tickets come from and are reflected back to: `github`, `linear`, …
+- **sijillāt** — the outer trackers work is filed in, and reflected back to: `github`, `linear`, …
 
-Every waṣfa carries its own three, drawn from the roster: ʿĀlim marks a ticket with the sijill it came from, a murshid may narrow a waṣfa to one forge, and nothing outside the roster is ever a forge, a hall or a tracker for any waṣfa — `linear-server` cannot be mistaken for a forge, because it is not in `kur`. Say "what's issue 9 about" in Dispatch and ʿĀlim reads it with `gh`, inscribes it as `GH-9` answering to `github`, and asks whether to summon a murshid. Say "go".
+Every waṣfa carries its own three, drawn from the roster: al-Munādī marks an issue he brings in with the sijill it came from, a murshid may narrow a waṣfa to one forge, and nothing outside the roster is ever a forge, a hall or a tracker for any waṣfa — `linear-server` cannot be mistaken for a forge, because it is not in `kur`. Say what the work is in Dispatch and al-Munādī inscribes it on the spot — `Inscribed W-13 — <your words>. Say go.` — no name asked, no ID begged. Say "what's issue 9 about" and he reads it with `gh` and inscribes it as `GH-9` answering to `github`. Either way, "go" summons a murshid for the waṣfa just inscribed.
 
-**The workshop** is the host. There is no enclosure: the `bash` hive lends the murshidūn the builder's whole reach, their shell opens at home, and the waṣfa, the ticket it came from, and your Ta'lim tell them where the furnace stands. Lend a host you mean to lend.
+**The workshop** is the host. There is no enclosure: the `bash` hive lends the murshidūn the builder's whole reach, their shell opens at home, and the waṣfa, the issue it came from, and your Ta'lim tell them where the furnace stands. Lend a host you mean to lend.
 
 ```bash
 hum hive "$PWD" install       # again, after a pull: rebuilds and regrows; a .env from before 2.0 is carried into iksir.json and asrar, and removed
@@ -84,7 +84,7 @@ Iksīr transmutes raw **waṣfāt** (وصفات - formulae) into perfected **dha
 
 - **Inā'** (إناء - Vessels): Each murshid works in its own vessel, on its own branch, in the one workshop
 - **Al-Ṣafāʾ** (الصفاء - The Fire): A waṣfa declares its maʿāyīr before the work; the jawhar withstands them or it does not, and no murshid grades its own
-- **Al-Khabath** (الخبث - The Outer): Your tickets, your forge and your hall stay where they are; a roster of names and the khuddam fetch, inscribe, decant and speak
+- **Al-Khabath** (الخبث - The Outer): Your trackers, your forge and your hall stay where they are; a roster of names and the khuddam fetch, inscribe, decant and speak
 - **Hakim, not Mubtadi** (حكيم، لا مبتدئ): You are summoned for **wahy** (revelation), not permission to grind powders
 
 ## The Sacred Hierarchy
@@ -97,14 +97,12 @@ Iksīr (إكسير - The Elixir)
   |- Khuddām (خدّام - Sacred Servants)
   |    Eternal, bound to the workshop. One of each. They are Iksīr.
   |
-  |    |- Munadi     منادي  - calls forth, and keeps the one flame
-  |    |- Arraf      عرّاف  - divines intent from your words
-  |    |- Alim       عالم   - answers at the gate
+  |    |- Munadi     منادي  - stands at the gate: hears, inscribes, summons, keeps the one flame
   |    |- Mumayyiz   مميّز  - separates dhahab from khabath
   |    |- Sayrafi    صيرفي  - assays the jawhar by fire
   |    |- Katib      كاتب   - inscribes who labours where
   |    |- Munaffidh  منفذ   - turns word into deed
-  |    |- Raqib      رقيب   - guards against fasad
+  |    |- Raqib      رقيب   - watches every vessel: the stuck, the bloated, the one going in circles
   |    '- Saail      سائل   - carries your words within
   |
   '- Murshidun (مرشدون - The Guides)
@@ -121,7 +119,7 @@ Athanor (أثانور - The Sacred Furnace)
 
 The Khuddām are Iksīr's own flesh. The Murshidūn are not — they burn in the athanor al-Kimyawi has kindled. Iksīr summons them, guards the single flame among them, and carries their words to you; what they are made of was never Iksīr's to decide.
 
-The **Ālāt al-Iksīr** (آلات الإكسير - instruments of the Elixir) are what a murshid may do by name: inscribe and alter a waṣfa, bind one to another, speak to you, record a decision, yield or demand the flame, call for the fire, and decant. Its hands in the vessel are its own.
+The **Ālāt al-Iksīr** (آلات الإكسير - instruments of the Elixir) are what a murshid may do by name: inscribe and alter a waṣfa, bind one to another, summon a ṣāniʿ, speak to you, record a decision, yield or demand the flame, call for the fire, and decant. Its hands in the vessel are its own.
 
 ## The Sacred Laws
 
@@ -136,7 +134,7 @@ The **Ālāt al-Iksīr** (آلات الإكسير - instruments of the Elixir) a
 Iksīr provides the workshop, but the recipes are yours:
 
 - **Ta'lim** (تعليم): `~/.config/iksir/AGENTS.md` — what your alchemists must know of your materials and methods
-- **Ruqya** (رقية): the incantations in `prompts/` — Murshid, Sani, ʿĀlim, Ṣayrafī, the oracle
+- **Ruqya** (رقية): the incantations in `prompts/` — Munādī, Murshid, Sani, Ṣayrafī, the mumayyiz
 - **Khabath** (خبث): the roster — your halls, your forges, your trackers
 - **Namūdhaj** (نموذج): the model you name, and the nurse that answers to it
 

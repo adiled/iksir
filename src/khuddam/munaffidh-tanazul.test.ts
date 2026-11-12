@@ -18,8 +18,8 @@ function munadiStub(faila: string | null) {
     wadaaJalsaFaila: (id: string | null) => {
       faila = id;
     },
-    aalajIstijabaZirr: (_masdar: string, amr: string) => {
-      tahwilat.push(amr);
+    hawwil: (huwiyya: string) => {
+      tahwilat.push(`switch:${huwiyya}`);
       return Promise.resolve({ tuulija: true });
     },
   };

@@ -17,14 +17,17 @@ class NahlaWahm implements NahlaHum {
   offSid(sid: string) { this.#bySid.delete(sid); return this; }
   onAny() { return this; }
   onNestled(fn: () => unknown) { this.#nestled.push(fn); return this; }
-  onAstray() { return this; }
+  #astray: Array<() => unknown> = [];
+  onAstray(fn: () => unknown) { this.#astray.push(fn); return this; }
+  dhalla() { for (const fn of this.#astray) fn(); }
+  tanaffas() { this.sawt({ chi: "breath", sigils: {}, protoVersion: "0.8.0", models: [{ id: "claude-opus-5-5", hive: "claude-cli" }], tools: [{ name: "wasfa_iqra" }] }); }
   onAdvisory() { return this; }
   #badaa = false;
   async start() {
     if (this.#badaa) throw new Error("this bee has already started");
     this.#badaa = true;
     for (const fn of this.#nestled) fn();
-    this.sawt({ chi: "breath", sigils: {}, protoVersion: "0.8.0", tools: [{ name: "wasfa_iqra" }] });
+    this.tanaffas();
   }
   send(t: Tone) { this.mursal.push(t); }
   async close() {}
@@ -123,7 +126,6 @@ test("forager: ittasil twice starts each bee once", async () => {
 });
 
 test("khuddam: a vessel named for its wasfa is the murshid's; the khuddam are themselves", () => {
-  assertEquals(khadimMin("iksir-arraf"), "arraf");
   assertEquals(khadimMin("iksir-sayrafi"), "sayrafi");
   assertEquals(khadimMin("iksir-munadi"), "munadi");
   assertEquals(khadimMin("iksir-mumayyiz"), "mumayyiz");
@@ -147,13 +149,13 @@ test("khuddam: one bee per khadim, and a jalsa speaks through its own", async ()
   const { nuhul, wasila } = qim();
   await wasila.ittasil();
   assertEquals([...nuhul.keys()].sort(), [...KHUDDAM].sort());
-  assertEquals(wasila.huwiyya.includes("arraf=bee_arraf"), true);
-  const oracle = (await wasila.khalaqaJalsa("iksir-arraf", "t"))!;
-  await wasila.sendPromptAsync(oracle.id, "divine");
-  assertEquals(nuhul.get("arraf")!.mursal.filter((t) => t.chi === "prompt").length, 1);
+  assertEquals(wasila.huwiyya.includes("sayrafi=bee_sayrafi"), true);
+  const sayrafi = (await wasila.khalaqaJalsa("iksir-sayrafi", "t"))!;
+  await wasila.sendPromptAsync(sayrafi.id, "assay");
+  assertEquals(nuhul.get("sayrafi")!.mursal.filter((t) => t.chi === "prompt").length, 1);
   assertEquals(nuhul.get("murshid")!.mursal.filter((t) => t.chi === "prompt").length, 0);
-  nuhul.get("arraf")!.sawt({ chi: "tendril-reach", sid: oracle.id, callId: "c9", name: "mun_ghayr_mawjod", args: {} });
-  await intazir(() => nuhul.get("arraf")!.nataij().length === 1);
+  nuhul.get("sayrafi")!.sawt({ chi: "tendril-reach", sid: sayrafi.id, callId: "c9", name: "mun_ghayr_mawjod", args: {} });
+  await intazir(() => nuhul.get("sayrafi")!.nataij().length === 1);
   wasila.bassaLog("info", "kalima");
   assertEquals(nuhul.get("munadi")!.mursal.some((t) => t.chi === "log"), true);
   wasila.qaf();
@@ -178,5 +180,94 @@ test("forager: a ruqya is rendered per prompt — the roster's words, overridden
   assertEquals(awwal.systemPrompt?.includes("kūr is **github, gitlab**"), true);
   assertEquals(thani.systemPrompt?.includes("kūr is **gitlab**"), true);
   assertEquals(thani.systemPrompt?.includes("{{"), false);
+  wasila.qaf();
+});
+
+test("khuddam: an instrument marked khass reaches only its own khadim, and the mark never rides the wire", async () => {
+  const { nuhul, wasila } = qim();
+  const alat = new AlatAlIksir();
+  alat.sijill.sajjil({ name: "mun_sirri", khass: "munadi", description: "his", inputSchema: { type: "object", properties: {} } }, () => "ok");
+  const w = new Wasila({ sijill: alat.sijill, sanaaNahla: (k) => { const n = nuhul.get(k) ?? new NahlaWahm(k); nuhul.set(k, n); return n; } });
+  await w.ittasil();
+  const majlis = (await w.khalaqaJalsa("iksir-munadi", "t"))!;
+  const murshid = (await w.khalaqaJalsa("GH-1", "t"))!;
+  await w.sendPromptAsync(majlis.id, "a");
+  await w.sendPromptAsync(murshid.id, "b");
+  const liMunadi = nuhul.get("munadi")!.mursal.find((t) => t.chi === "prompt") as Tone<"prompt">;
+  const liMurshid = nuhul.get("murshid")!.mursal.find((t) => t.chi === "prompt") as Tone<"prompt">;
+  assertEquals((liMunadi.tools as Array<{ name: string; khass?: string }>).some((t) => t.name === "mun_sirri"), true);
+  assertEquals((liMunadi.tools as Array<{ khass?: string }>).every((t) => t.khass === undefined), true);
+  assertEquals((liMurshid.tools as Array<{ name: string }>).some((t) => t.name === "mun_sirri"), false);
+  w.qaf();
+  void wasila;
+});
+
+test("khuddam: a vessel's trail keeps what it said and what it reached for, whole petals only", async () => {
+  const { nahla, wasila } = qim();
+  await wasila.ittasil();
+  const jalsa = (await wasila.khalaqaJalsa("GH-9", "t"))!;
+  await wasila.sendPromptAsync(jalsa.id, "ibda");
+  const sid = jalsa.id;
+  nahla.sawt({ chi: "unfurl", sid, petal: 1, kind: "text", text: "I will run " });
+  nahla.sawt({ chi: "unfurl", sid, petal: 1, kind: "text", text: "the tests.", closed: true });
+  nahla.sawt({ chi: "unfurl", sid, petal: 2, kind: "tendril", callId: "c1", name: "bash", sap: '{"command":' });
+  nahla.sawt({ chi: "unfurl", sid, petal: 2, kind: "tendril", callId: "c1", sap: '"npm test"}', closed: true });
+  nahla.sawt({ chi: "unfurl", sid, petal: 3, kind: "grasp", callId: "c1", result: "ok", closed: true });
+  nahla.sawt({ chi: "unfurl", sid, petal: 4, kind: "text", text: "half said" });
+  assertEquals(wasila.athar(sid).map((s) => s.slice(9)), ["I will run the tests.", '→ bash {"command":"npm test"}']);
+  nahla.sawt({ chi: "wilt", sid, reason: "done" });
+  assertEquals(wasila.athar(sid).length, 3);
+  assertEquals(wasila.athar(sid)[2].slice(9), "half said");
+  await wasila.mahaqaJalsa(sid);
+  assertEquals(wasila.athar(sid), []);
+  wasila.qaf();
+});
+
+test("khuddam: the nest's models are read from the breath", async () => {
+  const { wasila } = qim();
+  await wasila.ittasil();
+  assertEquals(wasila.namadhij(), ["claude-opus-5-5"]);
+  wasila.qaf();
+});
+
+test("forager: after humd goes astray and breathes again, every vessel is attached anew", async () => {
+  const { nahla, wasila } = qim();
+  await wasila.ittasil();
+  const a = (await wasila.khalaqaJalsa("GH-1", "a"))!;
+  const b = (await wasila.khalaqaJalsa("GH-2", "b"))!;
+  assertEquals(nahla.mursal.filter((t) => t.chi === "attach").length, 0);
+  nahla.dhalla();
+  nahla.tanaffas();
+  assertEquals(nahla.mursal.filter((t) => t.chi === "attach").map((t) => t.sid).sort(), [a.id, b.id].sort());
+  wasila.istaadaJalsa({ id: "old-sid", projectId: "iksir", huwiyyatWasfa: "GH-3", title: "c", status: "sakin", createdAt: new Date(), lastMessageAt: new Date() }, "cell-3");
+  assertEquals(nahla.mursal.filter((t) => t.chi === "attach" && t.sid === "old-sid").length, 1);
+  wasila.qaf();
+});
+
+test("forager: each prompt carries the blooms before it as a graft, with what grew; warmth and seed when asked", async () => {
+  const { nahla, wasila } = qim();
+  await wasila.ittasil();
+  const jalsa = (await wasila.khalaqaJalsa("GH-7", "t"))!;
+  const sid = jalsa.id;
+  await wasila.sendPromptAsync(sid, "first");
+  nahla.sawt({ chi: "unfurl", sid, petal: 1, kind: "text", text: "I looked.", closed: true });
+  nahla.sawt({ chi: "unfurl", sid, petal: 2, kind: "tendril", callId: "c1", name: "bash", sap: '{"command":"ls"}', closed: true });
+  nahla.sawt({ chi: "unfurl", sid, petal: 3, kind: "grasp", callId: "c1", result: "a b", closed: true });
+  nahla.sawt({ chi: "wilt", sid, reason: "done" });
+  const awwal = nahla.mursal.filter((t) => t.chi === "prompt")[0] as Tone<"prompt">;
+  assertEquals(awwal.graft, undefined);
+
+  await wasila.sendPromptAsync(sid, "second", { harara: 0, badhra: 7 });
+  const thani = nahla.mursal.filter((t) => t.chi === "prompt")[1] as Tone<"prompt">;
+  assertEquals(thani.temperature, 0);
+  assertEquals(thani.seed, 7);
+  const graft = thani.graft as Array<{ content: Array<{ text?: string }>; grew: Array<{ kind: string; name?: string; args?: unknown; result?: unknown }> }>;
+  assertEquals(graft.length, 1);
+  assertEquals(graft[0].content[0].text, "first");
+  assertEquals(graft[0].grew.map((p) => p.kind), ["text", "tendril", "grasp"]);
+  assertEquals(graft[0].grew[1].name, "bash");
+  assertEquals(graft[0].grew[1].args, { command: "ls" });
+  assertEquals(graft[0].grew[2].result, "a b");
+  assertEquals(wasila.azhar(sid).length, 2);
   wasila.qaf();
 });

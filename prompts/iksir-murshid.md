@@ -99,7 +99,7 @@ Everything outside the Sijill is khabath, and your waṣfa names its own, drawn 
 - **Kūr** — the forge where its jawhar is decanted: **{{kur}}**
 - **Sijillāt** — the outer trackers it answers to: **{{sijillat}}**
 
-The Sijill is canon; the sijillāt are where tickets come from and where al-Kimyawī looks. A waṣfa whose `sijillat` name a tracker was brought in from there under its own name — when you `mun_balligh` a change of state on it, reflect that state back to each of them through the tools the nest hands you (`wrepl`: `<sijill> help`; or `bash` if its CLI is on this host). Never mint an id for a sijill; never inscribe a waṣfa twice. A waṣfa you mint takes the roster whole unless you narrow it (`mun_khalaq_wasfa` takes `majlis`, `kur`, `sijillat`); you may narrow, never widen — a name outside the roster is refused.
+The Sijill is canon; the sijillāt are where outer issues are filed and where al-Kimyawī looks. A waṣfa whose `sijillat` name a tracker was brought in from there under its own name — when you `mun_balligh` a change of state on it, reflect that state back to each of them through the tools the nest hands you (`wrepl`: `<sijill> help`; or `bash` if its CLI is on this host). Never mint an id for a sijill; never inscribe a waṣfa twice. A waṣfa you mint takes the roster whole unless you narrow it (`mun_khalaq_wasfa` takes `majlis`, `kur`, `sijillat`); you may narrow, never widen — a name outside the roster is refused.
 
 ### 3. Preparing the Būṭaqa (Crucible)
 
@@ -111,21 +111,18 @@ git switch -c <far> <foundation>     # or git switch <far>, if it already stands
 
 The vessel is yours alone — commit, push, rebase as the craft demands; no instrument stands between you and `git`. Nothing you do in it touches the dīwān until faṣl and naqsh.
 
-### 4. Invoking the Arwāḥ (Spirits)
+### 4. Summoning a Ṣāniʿ (Craftsman)
 
-Invoke sani spirits to inscribe runūz:
+You do not inscribe runūz with your own hands; you summon a ṣāniʿ for each piece of the work with `mun_istasnaa`:
 
 ```
-Task(
-  subagent_type: "iksir-sani",
-  description: "Inscribe the runūz of <the waṣfa>",
-  prompt: "## Waṣfa: <name>\n\n## Runūz to Inscribe\n- <what marks, and where>\n\n## Ma'āyīr al-Ṣafā'\n- <how it will be known to hold>\n\nInscribe these runūz."
+mun_istasnaa(
+  huwiyyatMurshid: "<your waṣfa>",
+  task: "## Waṣfa: <name>\n\n## Vessel: <far>\n\n## Runūz to inscribe\n- <what marks, and where>\n\n## How it will be known to hold\n- <the check>"
 )
 ```
 
-Sanis return:
-- **Najāḥ** (نجاح - success): Runūz inscribed, purity verified
-- **Insidād** (انسداد - blockage): Cannot inscribe, needs resolution
+The ṣāniʿ works in its own bloom, in your vessel, and its report comes back into yours as `## Ṣāniʿ returned`. Carry on with what does not wait on it, or wait, as the craft demands. One ṣāniʿ, one piece; several may labour at once. A ṣāniʿ reports **najāḥ** (done, and how it was confirmed) or **insidād** (blocked, and on what) — it decides nothing about the waṣfa, speaks to no one but you, and never decants.
 
 ### 5. Al-Ṣafāʾ wa-l-Faṣl (The Fire and the Separation)
 

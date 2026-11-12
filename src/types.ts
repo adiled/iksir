@@ -40,14 +40,11 @@ export interface TasmimTelegram {
 
 export interface TasmimWasfat {
   sabiqa?: string;
-  namatWasfa?: string;
 }
 
 export interface TasmimAhdaq {
   mustawa?: MustawaSijill;
 }
-
-export type NawKiyan = "wasfa" | "malhamat" | "majhul";
 
 export interface TasmimHum {
   namudhaj?: string;
@@ -133,7 +130,7 @@ export interface HadathHum {
 
 export interface NidaKhalqWasfa {
   tool: "mun_khalaq_wasfa";
-  huwiyyatMurshid: string;
+  huwiyyatMurshid?: string;
   huwiyya?: string;
   unwan: string;
   wasf?: string;
@@ -149,7 +146,7 @@ export interface NidaKhalqWasfa {
 
 export interface NidaTajdidWasfa {
   tool: "mun_jaddid_wasfa";
-  huwiyyatMurshid: string;
+  huwiyyatMurshid?: string;
   huwiyyatWasfa: string;
   updates: {
     unwan?: string;
@@ -278,6 +275,7 @@ export type MunToolCall =
 
 export interface TaarifAla {
   name: string;
+  khass?: string;
   description: string;
   inputSchema: {
     type: "object";
@@ -356,14 +354,7 @@ export interface RasulKharij {
 export type RisalaDakhila =
   | { naw: "murshid"; huwiyya: string; nass: string }
   | { naw: "irsal"; nass: string; huwiyyatRisala?: number }
-  | { naw: "amr"; amr: string; wusut: string[] }
-  | { naw: "ikhtiyar_munadi"; miftah: string }
   | { naw: "khass" };
-
-export interface KhiyarTafauli {
-  nass: string;
-  miftah: string;
-}
 
 export interface Rasul extends RasulKharij {
   baddaa(): Promise<void>;
@@ -371,12 +362,6 @@ export interface Rasul extends RasulKharij {
   awqaf(): void;
 
   indaRisala(handler: (risala: RisalaDakhila) => Promise<void>): void;
-
-  arsalaSualBiKhiyarat(
-    channel: QanatRisala,
-    nass: string,
-    khiyarat: KhiyarTafauli[],
-  ): Promise<number | null>;
 
   tahaqqaq(): Promise<boolean>;
 }
