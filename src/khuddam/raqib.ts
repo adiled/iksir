@@ -1,31 +1,34 @@
 /**
- * Raqib (رقيب) — The Watcher
+ * Al-Raqīb (الرقيب) — the Watcher
  *
- * One of the sacred Khuddām (خدّام) of Iksīr.
+ * One of the Khuddām, and a bee of his own. Once a minute he looks at every
+ * vessel in which a murshid dwells. Two ailments he sees by counting:
  *
- * Raqib never blinks. On a steady heartbeat — once a minute — Raqib
- * examines every vessel in which a Murshid dwells. Has the Murshid
- * fallen silent? Is the vessel swelling with too many risālāt?
- * Has fasād crept in?
+ *   al-ʿĀliq  (the stuck)   — a turn five minutes old with no tokens out;
+ *                             al-Kimyawī is told, then the turn is cut
+ *   al-Takhma (the bloated) — fifty messages; the vessel is compacted
  *
- * Three ailments Raqib watches for:
- *   I.   Al-'Aliq (العالق) — the stuck: the Murshid called upon a tool
- *        that never returned. Minutes pass. No tokens flow. Raqib alerts
- *        al-Kimyawi, then mercifully aborts the stalled invocation.
- *   II.  Al-Takhma (التخمة) — the bloated: too many messages have
- *        accumulated. The vessel grows heavy, the Murshid incoherent.
- *        Raqib compacts — distills the history into essence.
- *   III. Al-Takrar (التكرار) — the loop: the Murshid retries endlessly.
- *        Raqib sees the pattern and intervenes.
+ * The third needs judgment, so for it he thinks: every five minutes, when
+ * the flame holder's trail has grown, he reads that trail — what it said,
+ * what it reached for — against the waṣfa, in a fresh session he keeps no
+ * memory of, and rules:
  *
- * Raqib does not heal. Raqib watches, alerts, and when necessary,
- * cuts the thread.
+ *   yataqaddam — progressing; nothing is said
+ *   yadur      — going in circles; a word is put in the vessel, and twice
+ *                running al-Kimyawī hears of it
+ *   yahid      — strayed from the waṣfa; a word is put in the vessel
+ *   yastaghith — blocked on something only al-Kimyawī can give; he is told
+ *
+ * Al-Raqīb does not heal. He watches, speaks once, and when he must, cuts.
  */
 
 import { logger } from "../logging/logger.ts";
 import type { Wasila } from "../hum/wasila.ts";
 import type { RasulKharij } from "../types.ts";
 import type { MudirJalasat } from "./katib.ts";
+import type { SijillWasfat } from "../wasfa/sijill-wasfat.ts";
+import type { JalsatMurshid } from "../types.ts";
+import { nazzifJson } from "../utils/strings.ts";
 
 const HADD_ALIQ_MS = 5 * 60 * 1000;
 
@@ -35,10 +38,21 @@ const TABREED_DAMJ_MS = 30 * 60 * 1000;
 
 const FATRA_NAQRA_MS = 60 * 1000;
 
+const HADD_HUKM_MS = 5 * 60 * 1000;
+
+const AQALL_ATHAR = 3;
+
+interface Hukm {
+  hukm: "yataqaddam" | "yadur" | "yahid" | "yastaghith";
+  sabab?: string;
+  kalima?: string | null;
+}
+
 interface RaqibDeps {
   amil: Wasila;
   rasul: RasulKharij;
   mudirJalasat: MudirJalasat;
+  wasfat?: SijillWasfat;
 }
 
 interface HalatSihhJalsa {
@@ -47,12 +61,16 @@ interface HalatSihhJalsa {
   ublighaAnDamjAqim: boolean;
   ublighaAnAliq: boolean;
   ulghiya: boolean;
+  akhirHukmFi: number;
+  adadAtharHukm: number;
+  adadYadur: number;
 }
 
 export class Raqib {
   #amil: Wasila;
   #messenger: RasulKharij;
   #sessionManager: MudirJalasat;
+  #wasfat?: SijillWasfat;
 
   #sihhJalasat: Map<string, HalatSihhJalsa> = new Map();
   #muwaqqitNaqra: ReturnType<typeof setInterval> | null = null;
@@ -61,15 +79,16 @@ export class Raqib {
     this.#amil = deps.amil;
     this.#messenger = deps.rasul;
     this.#sessionManager = deps.mudirJalasat;
+    this.#wasfat = deps.wasfat;
   }
 
   badaa(signal: AbortSignal): void {
     if (this.#muwaqqitNaqra) return;
 
-    void logger.akhbar("health-monitor", "Starting health monitor");
+    void logger.akhbar("raqib", "Starting health monitor");
 
     this.naqra().catch(async (e) =>
-      await logger.sajjalKhata("health-monitor", "Tick error", { error: String(e) })
+      await logger.sajjalKhata("raqib", "Tick error", { error: String(e) })
     );
 
     this.#muwaqqitNaqra = setInterval(() => {
@@ -78,7 +97,7 @@ export class Raqib {
         return;
       }
       this.naqra().catch(async (e) =>
-        await logger.sajjalKhata("health-monitor", "Tick error", { error: String(e) })
+        await logger.sajjalKhata("raqib", "Tick error", { error: String(e) })
       );
     }, FATRA_NAQRA_MS);
 
@@ -89,7 +108,7 @@ export class Raqib {
     if (this.#muwaqqitNaqra) {
       clearInterval(this.#muwaqqitNaqra);
       this.#muwaqqitNaqra = null;
-      void logger.akhbar("health-monitor", "Stopped health monitor");
+      void logger.akhbar("raqib", "Stopped health monitor");
     }
   }
 
@@ -104,6 +123,7 @@ export class Raqib {
         if (!status) continue;
 
         await this.fahasJalsa(orch.id, orch.huwiyya, status);
+        if (orch.hala === "fail") await this.hakama(orch);
       }
 
       const allSessionIds = new Set(
@@ -115,7 +135,7 @@ export class Raqib {
         }
       }
     } catch (error) {
-      await logger.sajjalKhata("health-monitor", "Tick failed", { error: String(error) });
+      await logger.sajjalKhata("raqib", "Tick failed", { error: String(error) });
     }
   }
 
@@ -145,7 +165,7 @@ export class Raqib {
       const stuckMinutes = Math.round((now - lastMsg.createdAt) / 60000);
 
       if (!state.ublighaAnAliq) {
-        await logger.haDHHir("health-monitor", `Session ${identifier} appears stuck`, {
+        await logger.haDHHir("raqib", `Session ${identifier} appears stuck`, {
           sessionId,
           stuckMinutes,
           lastMsgTokensOut: lastMsg.tokensOutput,
@@ -162,7 +182,7 @@ export class Raqib {
       }
 
       if (state.ublighaAnAliq && !state.ulghiya) {
-        await logger.haDHHir("health-monitor", `Auto-aborting stuck session ${identifier}`, {
+        await logger.haDHHir("raqib", `Auto-aborting stuck session ${identifier}`, {
           sessionId,
           stuckMinutes,
         });
@@ -208,7 +228,7 @@ export class Raqib {
         state.ublighaAnDamjAqim = false;
       } else if (!state.ublighaAnDamjAqim && now - state.akhirDamjFi >= TABREED_DAMJ_MS) {
         state.ublighaAnDamjAqim = true;
-        await logger.haDHHir("health-monitor", `Damj had no effect on ${identifier}`, {
+        await logger.haDHHir("raqib", `Damj had no effect on ${identifier}`, {
           sessionId,
           qabl: state.adadQablaDamj,
           baad: counts.total,
@@ -226,7 +246,7 @@ export class Raqib {
     }
 
     if (counts.total >= HADD_DAMJ) {
-      await logger.akhbar("health-monitor", `Session ${identifier} has ${counts.total} messages, requesting damj`, {
+      await logger.akhbar("raqib", `Session ${identifier} has ${counts.total} messages, requesting damj`, {
         sessionId,
         threshold: HADD_DAMJ,
       });
@@ -235,6 +255,72 @@ export class Raqib {
       state.akhirDamjFi = now;
       state.adadQablaDamj = counts.total;
       state.ublighaAnDamjAqim = false;
+    }
+  }
+
+  async hakama(jalsa: JalsatMurshid): Promise<Hukm | null> {
+    const state = this.wajadaAwKhalaqaHala(jalsa.id);
+    const athar = this.#amil.athar(jalsa.id);
+    const now = Date.now();
+    if (athar.length === state.adadAtharHukm || now - state.akhirHukmFi < HADD_HUKM_MS) return null;
+    state.akhirHukmFi = now;
+    state.adadAtharHukm = athar.length;
+    if (athar.length < AQALL_ATHAR) return null;
+
+    const wasfa = await this.#wasfat?.iqra(jalsa.huwiyya);
+    const qadi = await this.#amil.khalaqaJalsa("iksir-raqib", `Raqīb ${jalsa.huwiyya}`);
+    if (!qadi) return null;
+    try {
+      const jawab = await this.#amil.sendPrompt(qadi.id, "Rule on this trail.", {
+        agent: "iksir-raqib",
+        adawat: [],
+        timeoutMs: 90_000,
+        kalimat: {
+          huwiyya: jalsa.huwiyya,
+          unwan: wasfa?.unwan ?? jalsa.unwan,
+          matn: wasfa?.matn ?? "",
+          athar: athar.join("\n"),
+        },
+      });
+      if (!jawab.success || !jawab.response) {
+        await logger.haDHHir("raqib", `No verdict on ${jalsa.huwiyya}`, { error: jawab.error });
+        return null;
+      }
+      const hukm = JSON.parse(nazzifJson(jawab.response)) as Hukm;
+      await this.#naffidhHukm(jalsa, hukm, state);
+      return hukm;
+    } catch (khata) {
+      await logger.haDHHir("raqib", `The verdict on ${jalsa.huwiyya} could not be read`, { error: String(khata) });
+      return null;
+    } finally {
+      await this.#amil.mahaqaJalsa(qadi.id);
+    }
+  }
+
+  async #naffidhHukm(jalsa: JalsatMurshid, hukm: Hukm, state: HalatSihhJalsa): Promise<void> {
+    const sabab = hukm.sabab ?? "";
+    switch (hukm.hukm) {
+      case "yataqaddam":
+        state.adadYadur = 0;
+        await logger.tatbeeq("raqib", `${jalsa.huwiyya} progresses`, { sabab });
+        return;
+      case "yadur":
+      case "yahid": {
+        state.adadYadur = hukm.hukm === "yadur" ? state.adadYadur + 1 : 0;
+        await logger.haDHHir("raqib", `${jalsa.huwiyya} ${hukm.hukm}: ${sabab}`);
+        if (hukm.kalima) await this.#sessionManager.arsalaIlaMurshidById(jalsa.huwiyya, `Al-Raqīb watches: ${hukm.kalima}`);
+        if (state.adadYadur >= 2) {
+          await this.#messenger.arsalaMunassaq({ murshid: jalsa.huwiyya }, `Al-Raqīb: ${jalsa.huwiyya} is going in circles — ${sabab}`);
+        }
+        return;
+      }
+      case "yastaghith":
+        await logger.haDHHir("raqib", `${jalsa.huwiyya} yastaghith: ${sabab}`);
+        await this.#messenger.arsalaMunassaq({ murshid: jalsa.huwiyya }, `Al-Raqīb: ${jalsa.huwiyya} needs you — ${sabab}`);
+        await this.#messenger.arsalaMunassaq("dispatch", `${jalsa.huwiyya} needs al-Kimyawī — ${sabab}`);
+        return;
+      default:
+        await logger.haDHHir("raqib", `${jalsa.huwiyya}: a verdict I do not know`, { hukm });
     }
   }
 
@@ -247,6 +333,9 @@ export class Raqib {
         ublighaAnDamjAqim: false,
         ublighaAnAliq: false,
         ulghiya: false,
+        akhirHukmFi: 0,
+        adadAtharHukm: -1,
+        adadYadur: 0,
       };
       this.#sihhJalasat.set(sessionId, state);
     }

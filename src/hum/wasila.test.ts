@@ -198,3 +198,24 @@ test("khuddam: an instrument marked khass reaches only its own khadim, and the m
   w.qaf();
   void wasila;
 });
+
+test("khuddam: a vessel's trail keeps what it said and what it reached for, whole petals only", async () => {
+  const { nahla, wasila } = qim();
+  await wasila.ittasil();
+  const jalsa = (await wasila.khalaqaJalsa("GH-9", "t"))!;
+  await wasila.sendPromptAsync(jalsa.id, "ibda");
+  const sid = jalsa.id;
+  nahla.sawt({ chi: "unfurl", sid, petal: 1, kind: "text", text: "I will run " });
+  nahla.sawt({ chi: "unfurl", sid, petal: 1, kind: "text", text: "the tests.", closed: true });
+  nahla.sawt({ chi: "unfurl", sid, petal: 2, kind: "tendril", callId: "c1", name: "bash", sap: '{"command":' });
+  nahla.sawt({ chi: "unfurl", sid, petal: 2, kind: "tendril", callId: "c1", sap: '"npm test"}', closed: true });
+  nahla.sawt({ chi: "unfurl", sid, petal: 3, kind: "grasp", callId: "c1", result: "ok", closed: true });
+  nahla.sawt({ chi: "unfurl", sid, petal: 4, kind: "text", text: "half said" });
+  assertEquals(wasila.athar(sid).map((s) => s.slice(9)), ["I will run the tests.", '→ bash {"command":"npm test"}']);
+  nahla.sawt({ chi: "wilt", sid, reason: "done" });
+  assertEquals(wasila.athar(sid).length, 3);
+  assertEquals(wasila.athar(sid)[2].slice(9), "half said");
+  await wasila.mahaqaJalsa(sid);
+  assertEquals(wasila.athar(sid), []);
+  wasila.qaf();
+});

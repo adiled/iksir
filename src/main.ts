@@ -404,6 +404,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     amil,
     rasul: messenger,
     mudirJalasat: sessionManager,
+    wasfat,
   });
 
   const ctx: SiyaqKhadim = {

@@ -6,6 +6,7 @@ import type { Tasmim } from "../config.ts";
 import { kalimatKhabath } from "../wasfa/khabath.ts";
 import { DEFAULT_TIMEOUT_MS } from "../constants.ts";
 import { logger } from "../logging/logger.ts";
+import { truncate } from "../utils/strings.ts";
 import { VERSION } from "../version.ts";
 
 const ASAS = "iksir";
@@ -17,7 +18,8 @@ export interface KhiyaratHathth {
   adawat?: string[];
   kalimat?: Record<string, string>;
 }
-export const KHUDDAM = ["munadi", "murshid", "mumayyiz", "sayrafi"] as const;
+export const KHUDDAM = ["munadi", "murshid", "mumayyiz", "sayrafi", "raqib"] as const;
+const HADD_ATHAR = 60;
 const LISAN = "munadi";
 
 type JawabDawr = { success: boolean; response?: string; error?: string };
@@ -50,6 +52,8 @@ export class Wasila {
   #jalasat = new Map<string, JalsatHum>();
   #adwar = new Map<string, DawrTawaqquf>();
   #adwarAkhira = new Map<string, { zaman: number; usage?: unknown; khata?: string }>();
+  #athar = new Map<string, string[]>();
+  #batalatMuallaqa = new Map<string, { ism?: string; nass: string }>();
   #asmas = 0;
   #muntazir: Array<(h: HadathThrum) => void> = [];
   #hawadith: HadathThrum[] = [];
@@ -196,6 +200,7 @@ export class Wasila {
     this.#jalasat.delete(sid);
     this.#khadimJalsa.delete(sid);
     this.#adwarAkhira.delete(sid);
+    this.#athar.delete(sid);
     this.#inthaDawr(sid, { success: false, error: "session dismissed" });
     return wasJalsa;
   }
@@ -454,11 +459,41 @@ export class Wasila {
     const sid = t.sid as string;
     const dawr = this.#adwar.get(sid);
     if (t.kind === PetalKind.text && t.text && !t.closed && dawr) dawr.qataa.push(t.text);
+    this.#tatabbaAthar(sid, t);
     this.nasharHadath("unfurl", t as unknown as Record<string, unknown>);
+  }
+
+  #tatabbaAthar(sid: string, t: Tone<"unfurl">): void {
+    if (t.kind !== PetalKind.text && t.kind !== PetalKind.tendril) return;
+    const miftah = `${sid}:${t.kind}:${t.callId ?? t.petal}`;
+    const batala = this.#batalatMuallaqa.get(miftah) ?? { nass: "" };
+    if (t.name) batala.ism = t.name;
+    if (t.text) batala.nass += t.text;
+    if (t.sap) batala.nass += t.sap;
+    this.#batalatMuallaqa.set(miftah, batala);
+    if (t.closed) this.#khatamBatala(sid, miftah);
+  }
+
+  #khatamBatala(sid: string, miftah: string): void {
+    const batala = this.#batalatMuallaqa.get(miftah);
+    this.#batalatMuallaqa.delete(miftah);
+    if (!batala) return;
+    const tendril = miftah.split(":")[1] === PetalKind.tendril;
+    const satr = (tendril ? `→ ${batala.ism ?? "?"} ${batala.nass}` : batala.nass).replace(/\s+/g, " ").trim();
+    if (!satr) return;
+    const athar = this.#athar.get(sid) ?? [];
+    athar.push(`${new Date().toISOString().slice(11, 19)} ${truncate(satr, 400)}`);
+    if (athar.length > HADD_ATHAR) athar.splice(0, athar.length - HADD_ATHAR);
+    this.#athar.set(sid, athar);
+  }
+
+  athar(sid: string): string[] {
+    return [...(this.#athar.get(sid) ?? [])];
   }
 
   #ikmalDawr(t: Tone<"wilt"> | Tone<"error">): void {
     const sid = t.sid as string;
+    for (const miftah of [...this.#batalatMuallaqa.keys()]) if (miftah.startsWith(`${sid}:`)) this.#khatamBatala(sid, miftah);
     const khata = t.chi === Chi.error;
     const dawr = this.#adwar.get(sid);
 

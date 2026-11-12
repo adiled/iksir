@@ -64,7 +64,7 @@ Every waṣfa carries its own three, drawn from the roster: al-Munādī marks an
 ```bash
 hum hive "$PWD" install       # again, after a pull: rebuilds and regrows; a .env from before 2.0 is carried into iksir.json and asrar, and removed
 node src/cli.ts check         # nestle and report what answers
-hum bee --list                # the four bees, nestled
+hum bee --list                # the five bees, nestled
 tail -f ~/.local/state/hum/hives/iksir/orch/logs/iksir.log   # saail.log beside it
 ```
 
@@ -102,7 +102,7 @@ Iksīr (إكسير - The Elixir)
   |    |- Sayrafi    صيرفي  - assays the jawhar by fire
   |    |- Katib      كاتب   - inscribes who labours where
   |    |- Munaffidh  منفذ   - turns word into deed
-  |    |- Raqib      رقيب   - guards against fasad
+  |    |- Raqib      رقيب   - watches every vessel: the stuck, the bloated, the one going in circles
   |    '- Saail      سائل   - carries your words within
   |
   '- Murshidun (مرشدون - The Guides)
