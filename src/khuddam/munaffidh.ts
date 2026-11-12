@@ -26,10 +26,7 @@ import {
   jalabaMatalebMuallaq,
 } from "../../db/db.ts";
 import type {
-  ThulathiKhabath,
   MunToolCall,
-  NidaKhalqWasfa,
-  NidaTajdidWasfa,
   NidaWadaaAlaqat,
   NidaTabligh,
   NidaRadd,
@@ -41,7 +38,6 @@ import type {
 } from "../types.ts";
 import { mayyazaTanbih } from "./mumayyiz.ts";
 import type { Tasmim } from "../config.ts";
-import { ikhtar, KhabathGharib } from "../wasfa/khabath.ts";
 import type { MudirJalasat } from "./katib.ts";
 import type { Munadi } from "./munadi.ts";
 import type { Sayrafi } from "./sayrafi.ts";
@@ -141,12 +137,6 @@ export class Munaffidh {
 
     try {
       switch (event.tool) {
-        case "mun_khalaq_wasfa":
-          result = await this.#aalajaKhalqWasfa(event);
-          break;
-        case "mun_jaddid_wasfa":
-          result = await this.#aalajaTajdidWasfa(event);
-          break;
         case "mun_wadaa_alaqat":
           result = await this.aalajAlaqat(event);
           break;
@@ -198,69 +188,6 @@ export class Munaffidh {
         await this.#sessionManager.arsalaIlaMurshid(`## Tool Error: ${event.tool}\n\n${errorMsg}`);
       }
     }
-  }
-
-  async #aalajaKhalqWasfa(call: NidaKhalqWasfa): Promise<string> {
-    let thulathi: ThulathiKhabath;
-    try {
-      thulathi = ikhtar(this.#tasmim.khabath(), { majlis: call.majlis, kur: call.kur, sijillat: call.sijillat });
-    } catch (khata) {
-      if (khata instanceof KhabathGharib) return `Not inscribed: ${khata.message}.`;
-      throw khata;
-    }
-    const wasfa = await this.#wasfat.khalaq({
-      huwiyya: call.huwiyya,
-      unwan: call.unwan,
-      matn: call.wasf,
-      qadr: call.taqdir,
-      hala: call.hala,
-      wasm: call.wasamat,
-      ab: call.huwiyyatAb,
-      mayayir: call.mayayir,
-      ...thulathi,
-    });
-
-    return `Wasfa inscribed.
-
-**Name:** ${wasfa.huwiyya}
-**Says:** ${wasfa.unwan}
-**Condition:** ${wasfa.hala ?? "khaam"}
-**Fire:** ${wasfa.mayayir?.length ? `${wasfa.mayayir.length} maʿāyīr` : "none declared — mun_safa cannot assay it until mun_jaddid_wasfa gives it one"}
-**Majlis:** ${thulathi.majlis.join(", ") || "none"} · **Kūr:** ${thulathi.kur.join(", ") || "none"} · **Sijillāt:** ${thulathi.sijillat.join(", ") || "none"}
-
-Bind it to others with mun_wadaa_alaqat.`;
-  }
-
-  async #aalajaTajdidWasfa(call: NidaTajdidWasfa): Promise<string> {
-    const issue = await this.#wasfat.iqra(call.huwiyyatWasfa);
-    if (!issue) {
-      return `Ticket not found: ${call.huwiyyatWasfa}`;
-    }
-
-    const taghyir: Partial<Omit<Wasfa, "huwiyya">> = {};
-    if (call.updates.unwan) taghyir.unwan = call.updates.unwan;
-    if (call.updates.wasf) taghyir.matn = call.updates.wasf;
-    if (call.updates.taqdir) taghyir.qadr = call.updates.taqdir;
-    if (call.updates.hala) taghyir.hala = call.updates.hala;
-    if (call.updates.mayayir) taghyir.mayayir = call.updates.mayayir;
-    if (call.updates.majlis || call.updates.kur || call.updates.sijillat) {
-      try {
-        Object.assign(taghyir, ikhtar(this.#tasmim.khabath(), {
-          majlis: call.updates.majlis,
-          kur: call.updates.kur,
-          sijillat: call.updates.sijillat,
-        }, issue));
-      } catch (khata) {
-        if (khata instanceof KhabathGharib) return `Not altered: ${khata.message}.`;
-        throw khata;
-      }
-    }
-
-    await this.#wasfat.jaddid(issue.huwiyya, taghyir);
-
-    return `Wasfa altered: ${call.huwiyyatWasfa}
-
-Updated fields: ${Object.entries(call.updates).filter(([, v]) => v !== undefined).map(([k]) => k).join(", ")}`;
   }
 
   async aalajAlaqat(call: NidaWadaaAlaqat): Promise<string> {

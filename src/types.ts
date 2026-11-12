@@ -133,7 +133,7 @@ export interface HadathHum {
 
 export interface NidaKhalqWasfa {
   tool: "mun_khalaq_wasfa";
-  huwiyyatMurshid: string;
+  huwiyyatMurshid?: string;
   huwiyya?: string;
   unwan: string;
   wasf?: string;
@@ -149,7 +149,7 @@ export interface NidaKhalqWasfa {
 
 export interface NidaTajdidWasfa {
   tool: "mun_jaddid_wasfa";
-  huwiyyatMurshid: string;
+  huwiyyatMurshid?: string;
   huwiyyatWasfa: string;
   updates: {
     unwan?: string;

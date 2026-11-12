@@ -57,7 +57,7 @@ The whole of `~/.config/iksir/iksir.json`:
 - **kūr** — the forges where jawhar is decanted and inscribed: `github`, `gitlab`, …
 - **sijillāt** — the outer trackers tickets come from and are reflected back to: `github`, `linear`, …
 
-Every waṣfa carries its own three, drawn from the roster: ʿĀlim marks a ticket with the sijill it came from, a murshid may narrow a waṣfa to one forge, and nothing outside the roster is ever a forge, a hall or a tracker for any waṣfa — `linear-server` cannot be mistaken for a forge, because it is not in `kur`. Say "what's issue 9 about" in Dispatch and ʿĀlim reads it with `gh`, inscribes it as `GH-9` answering to `github`, and asks whether to summon a murshid. Say "go".
+Every waṣfa carries its own three, drawn from the roster: ʿĀlim marks a ticket with the sijill it came from, a murshid may narrow a waṣfa to one forge, and nothing outside the roster is ever a forge, a hall or a tracker for any waṣfa — `linear-server` cannot be mistaken for a forge, because it is not in `kur`. Say what the work is in Dispatch and ʿĀlim inscribes it on the spot — `Inscribed W-13 — <your words>. Say go.` — no name asked, no ID begged. Say "what's issue 9 about" and ʿĀlim reads it with `gh` and inscribes it as `GH-9` answering to `github`. Either way, "go" summons a murshid for the waṣfa just inscribed.
 
 **The workshop** is the host. There is no enclosure: the `bash` hive lends the murshidūn the builder's whole reach, their shell opens at home, and the waṣfa, the ticket it came from, and your Ta'lim tell them where the furnace stands. Lend a host you mean to lend.
 

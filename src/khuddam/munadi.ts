@@ -497,11 +497,11 @@ export class Munadi {
     if (murashshahun.length === 0) {
       return {
         tuulija: true,
-        radd: "No tickets found matching your filters.",
+        radd: "No waṣfāt match.",
       };
     }
 
-    const lines = [`Found ${murashshahun.length} ticket(s):\n`];
+    const lines = [`Found ${murashshahun.length} waṣfāt:\n`];
 
     for (const c of murashshahun) {
       lines.push(`• ${c.huwiyya}: ${escapeMarkdown(c.unwan)}`);
@@ -965,7 +965,7 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
       if (!targetId) {
         return {
           tuulija: true,
-          radd: "No active session. Mention a ticket ID or send a ticket URL to start one.",
+          radd: "No murshid is at work. Name a waṣfa, or say what the work is.",
         };
       }
     }
@@ -977,7 +977,7 @@ When you want to formalize this work into tickets, let al-Kimyawi know.`;
     if (!session) {
       return {
         tuulija: true,
-        radd: `No murshid for ${targetId}. Send a ticket URL to start one.`,
+        radd: `No murshid for ${targetId}. Say "work on ${targetId}" to summon one.`,
       };
     }
 

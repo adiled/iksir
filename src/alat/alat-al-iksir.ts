@@ -33,7 +33,9 @@ import type {
   SijillAlat,
   TaarifAla,
 } from "../types.ts";
-import type { SijillWasfat } from "../wasfa/sijill-wasfat.ts";
+import type { SijillWasfat, Wasfa } from "../wasfa/sijill-wasfat.ts";
+import type { Tasmim } from "../config.ts";
+import { inqush, addil } from "../wasfa/naqsh.ts";
 
 import { adhafaQararSijill, adkhalaHadath, jalabaQararatSijill, qiraStatus } from "../../db/db.ts";
 
@@ -81,9 +83,12 @@ class MunadiSijillAlat implements SijillAlat {
 export class AlatAlIksir {
   #sijillAlat: SijillAlat;
   #wasfat?: SijillWasfat;
+  #tasmim?: Tasmim;
+  #shuhudNaqsh: Array<(wasfa: Wasfa, min: string | undefined) => void> = [];
 
-  constructor(wasfat?: SijillWasfat) {
+  constructor(wasfat?: SijillWasfat, tasmim?: Tasmim) {
     this.#wasfat = wasfat;
+    this.#tasmim = tasmim;
     this.#sijillAlat = new MunadiSijillAlat((call) => this.#hawwilLiKhadim(call));
 
     this.#sajjilAlatAsasiyya();
@@ -92,6 +97,10 @@ export class AlatAlIksir {
 
   get sijill(): SijillAlat {
     return this.#sijillAlat;
+  }
+
+  indaNaqsh(shahid: (wasfa: Wasfa, min: string | undefined) => void): void {
+    this.#shuhudNaqsh.push(shahid);
   }
 
   adawat(): TaarifAla[] {
@@ -135,21 +144,21 @@ export class AlatAlIksir {
       {
         name: "mun_khalaq_wasfa",
         description:
-          "Create a new wasfa (وصفة) - a formula for transformation. Each wasfa describes work to be transmuted.",
+          "Inscribe a waṣfa (وصفة) in the Sijill — work to be done, named by the Sijill the moment you call. The answer is the deed: it names the waṣfa.",
         inputSchema: {
           type: "object",
           properties: {
             huwiyyatMurshid: {
               type: "string",
-              description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
+              description: "Who speaks: a murshid gives its waṣfa's name; ʿĀlim at Dispatch gives dispatch, or leaves it out",
             },
             huwiyya: {
               type: "string",
-              description: "Its name, when it already has one in the outer tracker (e.g. ENG-123); left out, the Sijill mints one",
+              description: "Its name, only when it already has one in an outer tracker (GH-9, ENG-123); left out, the Sijill mints one",
             },
             title: {
               type: "string",
-              description: "Ticket title (concise, action-oriented)",
+              description: "What it says — a plain title, from al-Kimyawī's words",
             },
             description: {
               type: "string",
@@ -171,7 +180,7 @@ export class AlatAlIksir {
             },
             parentId: {
               type: "string",
-              description: "Parent ticket ID (use sparingly, prefer relations)",
+              description: "The malhamat it sits under (use sparingly, prefer relations)",
             },
             mayayir: {
               type: "array",
@@ -192,10 +201,10 @@ export class AlatAlIksir {
             sijillat: {
               type: "array",
               items: { type: "string" },
-              description: "The outer trackers it answers to — one or more of the sijillat in the roster. A ticket brought in from one names that one.",
+              description: "The outer trackers it answers to — one or more of the sijillat in the roster. One brought in from a sijill names that sijill.",
             },
           },
-          required: ["huwiyyatMurshid", "title"],
+          required: ["title"],
         },
       },
       (args) => this.#aalajaKhalqWasfa(args),
@@ -205,17 +214,17 @@ export class AlatAlIksir {
       {
         name: "mun_jaddid_wasfa",
         description:
-          "Update an existing ticket. Use for grooming, refining estimates, or changing status.",
+          "Alter a waṣfa in the Sijill — its words, condition, estimate, fire or khabath. Done the moment you call.",
         inputSchema: {
           type: "object",
           properties: {
             huwiyyatMurshid: {
               type: "string",
-              description: "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator)",
+              description: "Who speaks: a murshid gives its waṣfa's name; ʿĀlim at Dispatch gives dispatch, or leaves it out",
             },
             huwiyyatWasfa: {
               type: "string",
-              description: "Ticket identifier (e.g., TEAM-200)",
+              description: "The waṣfa's name (W-12, GH-9)",
             },
             updates: {
               type: "object",
@@ -242,13 +251,13 @@ export class AlatAlIksir {
                 sijillat: {
                   type: "array",
                   items: { type: "string" },
-                  description: "The outer trackers it answers to — one or more of the sijillat in the roster. A ticket brought in from one names that one.",
+                  description: "The outer trackers it answers to — one or more of the sijillat in the roster. One brought in from a sijill names that sijill.",
                 },
               },
               description: "Fields to update",
             },
           },
-          required: ["huwiyyatMurshid", "huwiyyatWasfa", "updates"],
+          required: ["huwiyyatWasfa", "updates"],
         },
       },
       (args) => this.#aalajaTajdidWasfa(args),
@@ -655,9 +664,10 @@ judged — it is set before al-Kimyawī having already survived its fire.`,
   }
 
   async #aalajaKhalqWasfa(args: Record<string, unknown>): Promise<string> {
+    if (!this.#wasfat || !this.#tasmim) return "The Sijill is not at hand; nothing inscribed.";
     const call: NidaKhalqWasfa = {
       tool: "mun_khalaq_wasfa",
-      huwiyyatMurshid: args.huwiyyatMurshid as string,
+      huwiyyatMurshid: args.huwiyyatMurshid as string | undefined,
       huwiyya: args.huwiyya as string | undefined,
       unwan: args.title as string,
       wasf: args.description as string | undefined,
@@ -670,23 +680,17 @@ judged — it is set before al-Kimyawī having already survived its fire.`,
       kur: args.kur as string[] | undefined,
       sijillat: args.sijillat as string[] | undefined,
     };
-
-    this.#hawwilLiKhadim(call);
-
-    return `The inscription of a wasfa is carried to al-Khadim.
-
-Title: ${call.unwan}
-Status: ${call.hala ?? "backlog"}
-Estimate: ${call.taqdir ?? "unestimated"}
-
-Daemon will create the ticket and return the ticket ID.`;
+    const naqsh = await inqush(this.#wasfat, this.#tasmim, call);
+    if (naqsh.wasfa) for (const shahid of this.#shuhudNaqsh) shahid(naqsh.wasfa, call.huwiyyatMurshid);
+    return naqsh.nass;
   }
 
   async #aalajaTajdidWasfa(args: Record<string, unknown>): Promise<string> {
+    if (!this.#wasfat || !this.#tasmim) return "The Sijill is not at hand; nothing altered.";
     const tahdith = (args.updates ?? {}) as Record<string, unknown>;
     const call: NidaTajdidWasfa = {
       tool: "mun_jaddid_wasfa",
-      huwiyyatMurshid: args.huwiyyatMurshid as string,
+      huwiyyatMurshid: args.huwiyyatMurshid as string | undefined,
       huwiyyatWasfa: args.huwiyyatWasfa as string,
       updates: {
         unwan: tahdith.title as string | undefined,
@@ -699,19 +703,7 @@ Daemon will create the ticket and return the ticket ID.`;
         sijillat: tahdith.sijillat as string[] | undefined,
       },
     };
-
-    this.#hawwilLiKhadim(call);
-
-    const updatesList = Object.entries(call.updates)
-      .filter(([, v]) => v !== undefined)
-      .map(([k, v]) => `  ${k}: ${v}`)
-      .join("\n");
-
-    return `The alteration is carried to al-Khadim.
-
-Ticket: ${call.huwiyyatWasfa}
-Updates:
-${updatesList}`;
+    return addil(this.#wasfat, this.#tasmim, call);
   }
 
   async #aalijWadaaAlaqat(args: Record<string, unknown>): Promise<string> {

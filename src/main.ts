@@ -313,7 +313,7 @@ function rabatRisalaDakhila(ctx: SiyaqKhadim): void {
             await ctx.rasul.send("dispatch", `Error: ${result.khata}`);
           }
         } else {
-          await ctx.rasul.send("dispatch", "Send a ticket URL to spawn a murshid, or use /help for commands.");
+          await ctx.rasul.send("dispatch", "Say what the work is, or name a waṣfa. /help lists the commands.");
         }
         break;
       }
@@ -456,7 +456,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
 
   const wasfat = anshaaSijillWasfat(() => tasmim.now().wasfat.sabiqa);
 
-  const alat = new AlatAlIksir(wasfat);
+  const alat = new AlatAlIksir(wasfat, tasmim);
 
   const amil = new Wasila({ tasmim, sijill: alat.sijill });
   await amil.ittasil();
@@ -498,6 +498,9 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   });
 
   ipcProcessor.wadaaMunadi(dispatcher);
+  alat.indaNaqsh((wasfa, min) => {
+    if (!min || min === "dispatch") dispatcher.wadaKiyanMurakkazAlayh({ naw: "wasfa", huwiyya: wasfa.huwiyya, unwan: wasfa.unwan });
+  });
 
   await dispatcher.istarjaaIndaNashaat();
 
