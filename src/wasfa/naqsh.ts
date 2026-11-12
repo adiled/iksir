@@ -3,7 +3,7 @@
  *
  * The Sijill is at hand, so this happens the moment the instrument is used,
  * and the instrument's answer is the deed itself — never a promise that
- * someone else will do it later. Whoever speaks — a murshid or ʿĀlim at
+ * someone else will do it later. Whoever speaks — a murshid or al-Munādī at
  * Dispatch — the three khabath are held to the roster: taken whole when
  * unsaid, narrowed when said, never widened.
  */

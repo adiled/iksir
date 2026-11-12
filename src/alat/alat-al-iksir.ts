@@ -150,7 +150,7 @@ export class AlatAlIksir {
           properties: {
             huwiyyatMurshid: {
               type: "string",
-              description: "Who speaks: a murshid gives its waṣfa's name; ʿĀlim at Dispatch gives dispatch, or leaves it out",
+              description: "Who speaks: a murshid gives its waṣfa's name; al-Munādī at Dispatch gives dispatch, or leaves it out",
             },
             huwiyya: {
               type: "string",
@@ -220,7 +220,7 @@ export class AlatAlIksir {
           properties: {
             huwiyyatMurshid: {
               type: "string",
-              description: "Who speaks: a murshid gives its waṣfa's name; ʿĀlim at Dispatch gives dispatch, or leaves it out",
+              description: "Who speaks: a murshid gives its waṣfa's name; al-Munādī at Dispatch gives dispatch, or leaves it out",
             },
             huwiyyatWasfa: {
               type: "string",
@@ -310,14 +310,14 @@ it has begun.`,
           properties: {
             huwiyyatMurshid: {
               type: "string",
-              description: "Your murshid name",
+              description: "Who speaks: a murshid gives its waṣfa's name; al-Munādī gives dispatch, or leaves it out",
             },
             huwiyya: {
               type: "string",
               description: "The name of the wasfa to read",
             },
           },
-          required: ["huwiyyatMurshid", "huwiyya"],
+          required: ["huwiyya"],
         },
       },
       (args) => this.#aalajaQiraaatWasfa(args),
@@ -469,7 +469,7 @@ The diary is a shared knowledge pool across all murshidun. Use it to:
               description: "Only return decisions since this ISO date (e.g., 2026-03-01T00:00:00Z)",
             },
           },
-          required: ["huwiyyatMurshid"],
+          required: [],
         },
       },
       (args) => this.#aalijQiraatMudawwana(args),

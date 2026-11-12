@@ -17,7 +17,7 @@ export interface KhiyaratHathth {
   adawat?: string[];
   kalimat?: Record<string, string>;
 }
-export const KHUDDAM = ["munadi", "arraf", "murshid", "mumayyiz", "sayrafi"] as const;
+export const KHUDDAM = ["munadi", "murshid", "mumayyiz", "sayrafi"] as const;
 const LISAN = "munadi";
 
 type JawabDawr = { success: boolean; response?: string; error?: string };
@@ -255,7 +255,10 @@ export class Wasila {
     const jalsa = this.#jalasat.get(sid);
     const namudhaj = options?.model?.modelID ?? this.#tasmim?.namudhaj();
     const nizam = options?.system ?? (options?.agent ? this.#ruqya(options.agent, options.kalimat) : undefined);
-    const adawat = (this.#sijill?.adawat() ?? []).filter((a) => !options?.adawat || options.adawat.includes(a.name));
+    const khadim = this.#nahlJalsa(sid).khadim;
+    const adawat = (this.#sijill?.adawat() ?? [])
+      .filter((a) => (!a.khass || a.khass === khadim) && (!options?.adawat || options.adawat.includes(a.name)))
+      .map(({ khass: _khass, ...a }) => a);
     return {
       chi: Chi.prompt,
       sid,

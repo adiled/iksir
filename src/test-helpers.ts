@@ -396,36 +396,6 @@ export function seedSession(overrides?: Partial<JalsatMurshid>): void {
 }
 
 
-import type { NiyyaMuhallala } from "./khuddam/arraf.ts";
-
-export interface MockArraf {
-  halla(text: string, context?: unknown): Promise<NiyyaMuhallala>;
-  _calls: Array<{ text: string; context?: unknown }>;
-  _nextResult: NiyyaMuhallala | null;
-}
-
-export function mockArraf(): MockArraf {
-  const calls: MockArraf["_calls"] = [];
-  return {
-    _calls: calls,
-    _nextResult: null,
-
-    async halla(text, context) {
-      calls.push({ text, context });
-      if (this._nextResult) {
-        const result = this._nextResult;
-        this._nextResult = null;
-        return result;
-      }
-      return {
-        hala: "lam_tujad",
-        nassKham: text,
-        tariqa: "bahth_hatmi",
-      };
-    },
-  };
-}
-
 import { Tasmim } from "./config.ts";
 
 export function makeConfig(kham?: Record<string, unknown>): Tasmim {

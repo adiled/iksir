@@ -335,8 +335,8 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
         reason: demand.reason,
       });
 
-      const switchResult = await this.#iksir.aalajIstijabaZirr("cli", `switch:${demand.huwiyat_murshid}`);
-      if (switchResult.tuulija) {
+      const switchResult = await this.#iksir.hawwil(demand.huwiyat_murshid);
+      if (!switchResult.khata) {
         return `Yielded control. Switching to ${demand.huwiyat_murshid} (pending demand: ${demand.reason}).`;
       }
     }
@@ -345,7 +345,7 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
       const murshidun = this.#sessionManager.wajadaJalasatMurshid();
       const suggested = murshidun.find((o) => o.huwiyya === call.iqtarahTali);
       if (suggested && suggested.hala === "sakin") {
-        await this.#iksir.aalajIstijabaZirr("cli", `switch:${call.iqtarahTali}`);
+        await this.#iksir.hawwil(call.iqtarahTali);
         return `Yielded control. Switching to suggested: ${call.iqtarahTali}.`;
       }
     }
@@ -358,7 +358,7 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
     if (idleSessions.length > 0) {
       const msg = `${yielderId} yielded (${call.sabab}). ${idleSessions.length} idle session(s) available:\n${idleSessions.map(s => `• ${s.huwiyya}`).join("\n")}`;
       await this.#messenger.send("dispatch", msg);
-      return `Yielded control. ${idleSessions.length} idle session(s) available. Al-Kimyawi can /switch to one.`;
+      return `Yielded control. ${idleSessions.length} idle session(s) available. Al-Kimyawī can pass the flame to one.`;
     }
 
     this.#iksir.wadaaJalsaFaila(null);
@@ -389,8 +389,8 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
     });
 
     if (!activeEpicId) {
-      const result = await this.#iksir.aalajIstijabaZirr("cli", `switch:${demanderId}`);
-      if (result.tuulija) {
+      const result = await this.#iksir.hawwil(demanderId);
+      if (!result.khata) {
         return `Control granted immediately. You are now ACTIVE.\n\nReason: ${call.sabab}`;
       }
       return "Failed to grant control.";
@@ -402,8 +402,8 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
 
     const currentActive = this.#sessionManager.jalabMurshid(activeEpicId);
     if (currentActive && (currentActive.hala === "masdud" || currentActive.hala === "muntazir")) {
-      const result = await this.#iksir.aalajIstijabaZirr("cli", `switch:${demanderId}`);
-      if (result.tuulija) {
+      const result = await this.#iksir.hawwil(demanderId);
+      if (!result.khata) {
         return `Control granted (${activeEpicId} was ${currentActive.hala}). You are now ACTIVE.\n\nReason: ${call.sabab}`;
       }
       return "Failed to grant control.";

@@ -55,9 +55,9 @@ test("unbub: the tongue routes each shape", async () => {
     await hatta(() => samia.length >= 1);
     assertEquals(samia[0], { naw: "murshid", huwiyya: "TEAM-1", nass: "make it longer" });
 
-    await qala(rasul, "/status");
+    await qala(rasul, "what stands at the flame");
     await hatta(() => samia.length >= 2);
-    assertEquals(samia[1], { naw: "amr", amr: "status", wusut: [] });
+    assertEquals(samia[1], { naw: "irsal", nass: "what stands at the flame" });
   });
 });
 

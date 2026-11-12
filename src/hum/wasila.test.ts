@@ -123,7 +123,6 @@ test("forager: ittasil twice starts each bee once", async () => {
 });
 
 test("khuddam: a vessel named for its wasfa is the murshid's; the khuddam are themselves", () => {
-  assertEquals(khadimMin("iksir-arraf"), "arraf");
   assertEquals(khadimMin("iksir-sayrafi"), "sayrafi");
   assertEquals(khadimMin("iksir-munadi"), "munadi");
   assertEquals(khadimMin("iksir-mumayyiz"), "mumayyiz");
@@ -147,13 +146,13 @@ test("khuddam: one bee per khadim, and a jalsa speaks through its own", async ()
   const { nuhul, wasila } = qim();
   await wasila.ittasil();
   assertEquals([...nuhul.keys()].sort(), [...KHUDDAM].sort());
-  assertEquals(wasila.huwiyya.includes("arraf=bee_arraf"), true);
-  const oracle = (await wasila.khalaqaJalsa("iksir-arraf", "t"))!;
-  await wasila.sendPromptAsync(oracle.id, "divine");
-  assertEquals(nuhul.get("arraf")!.mursal.filter((t) => t.chi === "prompt").length, 1);
+  assertEquals(wasila.huwiyya.includes("sayrafi=bee_sayrafi"), true);
+  const sayrafi = (await wasila.khalaqaJalsa("iksir-sayrafi", "t"))!;
+  await wasila.sendPromptAsync(sayrafi.id, "assay");
+  assertEquals(nuhul.get("sayrafi")!.mursal.filter((t) => t.chi === "prompt").length, 1);
   assertEquals(nuhul.get("murshid")!.mursal.filter((t) => t.chi === "prompt").length, 0);
-  nuhul.get("arraf")!.sawt({ chi: "tendril-reach", sid: oracle.id, callId: "c9", name: "mun_ghayr_mawjod", args: {} });
-  await intazir(() => nuhul.get("arraf")!.nataij().length === 1);
+  nuhul.get("sayrafi")!.sawt({ chi: "tendril-reach", sid: sayrafi.id, callId: "c9", name: "mun_ghayr_mawjod", args: {} });
+  await intazir(() => nuhul.get("sayrafi")!.nataij().length === 1);
   wasila.bassaLog("info", "kalima");
   assertEquals(nuhul.get("munadi")!.mursal.some((t) => t.chi === "log"), true);
   wasila.qaf();
@@ -179,4 +178,23 @@ test("forager: a ruqya is rendered per prompt — the roster's words, overridden
   assertEquals(thani.systemPrompt?.includes("kūr is **gitlab**"), true);
   assertEquals(thani.systemPrompt?.includes("{{"), false);
   wasila.qaf();
+});
+
+test("khuddam: an instrument marked khass reaches only its own khadim, and the mark never rides the wire", async () => {
+  const { nuhul, wasila } = qim();
+  const alat = new AlatAlIksir();
+  alat.sijill.sajjil({ name: "mun_sirri", khass: "munadi", description: "his", inputSchema: { type: "object", properties: {} } }, () => "ok");
+  const w = new Wasila({ sijill: alat.sijill, sanaaNahla: (k) => { const n = nuhul.get(k) ?? new NahlaWahm(k); nuhul.set(k, n); return n; } });
+  await w.ittasil();
+  const majlis = (await w.khalaqaJalsa("iksir-munadi", "t"))!;
+  const murshid = (await w.khalaqaJalsa("GH-1", "t"))!;
+  await w.sendPromptAsync(majlis.id, "a");
+  await w.sendPromptAsync(murshid.id, "b");
+  const liMunadi = nuhul.get("munadi")!.mursal.find((t) => t.chi === "prompt") as Tone<"prompt">;
+  const liMurshid = nuhul.get("murshid")!.mursal.find((t) => t.chi === "prompt") as Tone<"prompt">;
+  assertEquals((liMunadi.tools as Array<{ name: string; khass?: string }>).some((t) => t.name === "mun_sirri"), true);
+  assertEquals((liMunadi.tools as Array<{ khass?: string }>).every((t) => t.khass === undefined), true);
+  assertEquals((liMurshid.tools as Array<{ name: string }>).some((t) => t.name === "mun_sirri"), false);
+  w.qaf();
+  void wasila;
 });

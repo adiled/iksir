@@ -57,14 +57,14 @@ The whole of `~/.config/iksir/iksir.json`:
 - **kūr** — the forges where jawhar is decanted and inscribed: `github`, `gitlab`, …
 - **sijillāt** — the outer trackers work is filed in, and reflected back to: `github`, `linear`, …
 
-Every waṣfa carries its own three, drawn from the roster: ʿĀlim marks an issue it brings in with the sijill it came from, a murshid may narrow a waṣfa to one forge, and nothing outside the roster is ever a forge, a hall or a tracker for any waṣfa — `linear-server` cannot be mistaken for a forge, because it is not in `kur`. Say what the work is in Dispatch and ʿĀlim inscribes it on the spot — `Inscribed W-13 — <your words>. Say go.` — no name asked, no ID begged. Say "what's issue 9 about" and ʿĀlim reads it with `gh` and inscribes it as `GH-9` answering to `github`. Either way, "go" summons a murshid for the waṣfa just inscribed.
+Every waṣfa carries its own three, drawn from the roster: al-Munādī marks an issue he brings in with the sijill it came from, a murshid may narrow a waṣfa to one forge, and nothing outside the roster is ever a forge, a hall or a tracker for any waṣfa — `linear-server` cannot be mistaken for a forge, because it is not in `kur`. Say what the work is in Dispatch and al-Munādī inscribes it on the spot — `Inscribed W-13 — <your words>. Say go.` — no name asked, no ID begged. Say "what's issue 9 about" and he reads it with `gh` and inscribes it as `GH-9` answering to `github`. Either way, "go" summons a murshid for the waṣfa just inscribed.
 
 **The workshop** is the host. There is no enclosure: the `bash` hive lends the murshidūn the builder's whole reach, their shell opens at home, and the waṣfa, the issue it came from, and your Ta'lim tell them where the furnace stands. Lend a host you mean to lend.
 
 ```bash
 hum hive "$PWD" install       # again, after a pull: rebuilds and regrows; a .env from before 2.0 is carried into iksir.json and asrar, and removed
 node src/cli.ts check         # nestle and report what answers
-hum bee --list                # the five bees, nestled
+hum bee --list                # the four bees, nestled
 tail -f ~/.local/state/hum/hives/iksir/orch/logs/iksir.log   # saail.log beside it
 ```
 
@@ -97,9 +97,7 @@ Iksīr (إكسير - The Elixir)
   |- Khuddām (خدّام - Sacred Servants)
   |    Eternal, bound to the workshop. One of each. They are Iksīr.
   |
-  |    |- Munadi     منادي  - calls forth, and keeps the one flame
-  |    |- Arraf      عرّاف  - divines intent from your words
-  |    |- Alim       عالم   - answers at the gate
+  |    |- Munadi     منادي  - stands at the gate: hears, inscribes, summons, keeps the one flame
   |    |- Mumayyiz   مميّز  - separates dhahab from khabath
   |    |- Sayrafi    صيرفي  - assays the jawhar by fire
   |    |- Katib      كاتب   - inscribes who labours where
@@ -136,7 +134,7 @@ The **Ālāt al-Iksīr** (آلات الإكسير - instruments of the Elixir) a
 Iksīr provides the workshop, but the recipes are yours:
 
 - **Ta'lim** (تعليم): `~/.config/iksir/AGENTS.md` — what your alchemists must know of your materials and methods
-- **Ruqya** (رقية): the incantations in `prompts/` — Murshid, Sani, ʿĀlim, Ṣayrafī, the oracle
+- **Ruqya** (رقية): the incantations in `prompts/` — Munādī, Murshid, Sani, Ṣayrafī, the mumayyiz
 - **Khabath** (خبث): the roster — your halls, your forges, your trackers
 - **Namūdhaj** (نموذج): the model you name, and the nurse that answers to it
 
