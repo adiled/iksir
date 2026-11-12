@@ -16,47 +16,60 @@ The modern world has forgotten the scent of real alchemy - the sharp bite of sul
 
 ## Al-Takwīn — Setting Up
 
-Iksīr is a [hum](https://github.com/adiled/hum) hive. It speaks thrum through hum's own client, so hum's source sits beside it. Prerequisites: Node 22+, a running `humd`, the `bash` hive (the murshidūn's hands), and a nurse advertising the model you will name.
+Iksīr is a [hum](https://github.com/adiled/hum) hive. It speaks thrum through hum's own client, so hum's source sits beside it. Prerequisites: Node 22+ (no npm — nothing is installed), hum 0.35 or later with its `humd` running, the `bash` hive (the murshidūn's hands), and a nurse advertising the model you will name.
 
 ```bash
 git clone --depth 1 https://github.com/adiled/hum
 git clone https://github.com/adiled/iksir
 cd iksir
-node src/cli.ts init          # Telegram, the register, the nest — writes .env and ~/.config/iksir/iksir.json
+node src/cli.ts init          # the majlis, the roster, the nest — sets ~/.config/iksir/{iksir.json,asrar}
 hum hive "$PWD" install       # build, test, and hand the daemon and saail to orchd
 ```
 
-`init` walks you through a Telegram bot (BotFather), your direct chat, and a forum group with a **Dispatch** topic; the bot must be an admin there, since it opens a topic for every murshid. Secrets ride `.env`, never the config:
+`init` walks you through a Telegram bot (BotFather), your direct chat, and a forum group with a **Dispatch** topic; the bot must be an admin there, since it opens a topic for every murshid. It sets only what it asks; whatever else the files hold stands.
 
-```
-TELEGRAM_BOT_TOKEN=            # the bot
-TELEGRAM_CHAT_ID=              # you
-TELEGRAM_GROUP_ID=             # the hall
-TELEGRAM_DISPATCH_TOPIC_ID=    # where you command
-IKSIR_REPO_PATH=               # the workshop — the repository the murshidūn work on
-IKSIR_HUM_MODEL=               # optional; overrides hum.namudhaj
+**Settings and secrets are two files, read again the moment they change.** Nothing is read from the environment, nothing restarts:
+
+```bash
+iksir config                                  # as the daemon sees it now
+iksir config set khabath.kur github,gitlab    # the daemon uses it on its next act
+iksir config set hum.namudhaj claude-opus-5-5
+iksir secret set telegram.ramz                # from stdin or a hidden prompt, never argv; kept 0600
 ```
 
 The whole of `~/.config/iksir/iksir.json`:
 
 ```json
 {
-  "wasfat": { "khabath": "github" },
+  "khabath": {
+    "majlis":   ["telegram"],
+    "kur":      ["github"],
+    "sijillat": ["github"],
+    "telegram": { "muhadatha": "…", "majmuua": "…", "mawduuIrsal": 2 }
+  },
   "hum": { "namudhaj": "claude-opus-5-5" }
 }
 ```
 
-`khabath` is the one word that tells the khuddam where your tickets live outside the Sijill — `github`, `linear`, whatever your host CLI or [web2](https://github.com/adiled/hum/tree/main/hives/web2) calls it. Say "what's issue 9 about" in Dispatch and ʿĀlim reads it with `gh`, inscribes it as `GH-9`, and asks whether to summon a murshid. Say "go".
+**Khabath** (خبث) is everything outside the Sijill, named by role, as your host CLI or [web2](https://github.com/adiled/hum/tree/main/hives/web2) calls it — a roster, each role one or more:
+
+- **majlis** — where al-Kimyawī speaks. Telegram.
+- **kūr** — the forges where jawhar is decanted and inscribed: `github`, `gitlab`, …
+- **sijillāt** — the outer trackers tickets come from and are reflected back to: `github`, `linear`, …
+
+Every waṣfa carries its own three, drawn from the roster: ʿĀlim marks a ticket with the sijill it came from, a murshid may narrow a waṣfa to one forge, and nothing outside the roster is ever a forge, a hall or a tracker for any waṣfa — `linear-server` cannot be mistaken for a forge, because it is not in `kur`. Say "what's issue 9 about" in Dispatch and ʿĀlim reads it with `gh`, inscribes it as `GH-9` answering to `github`, and asks whether to summon a murshid. Say "go".
+
+**The workshop** is the host. There is no enclosure: the `bash` hive lends the murshidūn the builder's whole reach, their shell opens at home, and the waṣfa, the ticket it came from, and your Ta'lim tell them where the furnace stands. Lend a host you mean to lend.
 
 ```bash
-hum hive "$PWD" install       # again, after a pull: rebuilds and regrows
+hum hive "$PWD" install       # again, after a pull: rebuilds and regrows; a .env from before 2.0 is carried into iksir.json and asrar, and removed
 node src/cli.ts check         # nestle and report what answers
 hum bee --list                # the five bees, nestled
-tail -f ~/Library/Logs/hum-iksir.iksir.out.log     # macOS; elsewhere, orchd's logs for the hum-iksir namespace
+tail -f ~/Library/Logs/hum-iksir.iksir.out.log     # macOS; elsewhere, orchd's logs for the hum-iksir grove
 ```
 
 ```
-~/.config/iksir/iksir.json     three lines of configuration; AGENTS.md beside it, if you have one
+~/.config/iksir/iksir.json     settings; asrar (0600) and AGENTS.md beside it
 ~/.local/share/iksir/          Sijill — the register (SQLite)
 ~/.local/state/iksir/          the scrolls of observation (logs)
 ```
@@ -71,7 +84,7 @@ Iksīr transmutes raw **waṣfāt** (وصفات - formulae) into perfected **dha
 
 - **Inā'** (إناء - Vessels): Each murshid works in its own vessel, on its own branch, in the one workshop
 - **Al-Ṣafāʾ** (الصفاء - The Fire): A waṣfa declares its maʿāyīr before the work; the jawhar withstands them or it does not, and no murshid grades its own
-- **Al-Khabath** (الخبث - The Outer Tracker): Your tickets stay where they are; one word of config and the khuddam fetch and inscribe them
+- **Al-Khabath** (الخبث - The Outer): Your tickets, your forge and your hall stay where they are; a roster of names and the khuddam fetch, inscribe, decant and speak
 - **Hakim, not Mubtadi** (حكيم، لا مبتدئ): You are summoned for **wahy** (revelation), not permission to grind powders
 
 ## The Sacred Hierarchy
@@ -124,7 +137,7 @@ Iksīr provides the workshop, but the recipes are yours:
 
 - **Ta'lim** (تعليم): `~/.config/iksir/AGENTS.md` — what your alchemists must know of your materials and methods
 - **Ruqya** (رقية): the incantations in `prompts/` — Murshid, Sani, ʿĀlim, Ṣayrafī, the oracle
-- **Khabath** (خبث): the one word naming your outer tracker
+- **Khabath** (خبث): the roster — your halls, your forges, your trackers
 - **Namūdhaj** (نموذج): the model you name, and the nurse that answers to it
 
 ## Alchemy
@@ -135,7 +148,7 @@ A **Jawhar** (جوهر - essence) is what you distill from the crucible. Pure, c
 
 **Ṣafāʾ** (صفاء - purity) is the fire. The waṣfa declares its **maʿāyīr** — commands, exit 0 withstands — and the Ṣayrafī puts the jawhar to them. There is no opinion in it.
 
-**Faṣl** (فصل - decanting) sets the essence that stood before eyes not the murshid's own — a pull request at the forge your khabath names.
+**Faṣl** (فصل - decanting) sets the essence that stood before eyes not the murshid's own — a pull request at the waṣfa's own kūr.
 
 **Naqsh** (نقش - inscription) is al-Kimyawī's word: the proven formula enters the codex and becomes canon.
 

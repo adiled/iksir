@@ -19,7 +19,7 @@
  */
 
 import { logger } from "./logging/logger.ts";
-import { hammalaAlTasmim, masarMilafAlTasmim } from "./config.ts";
+import { Tasmim, tahaqqaq } from "./config.ts";
 import { 
   INITIAL_BACKOFF_MS, 
   MAX_BACKOFF_MS
@@ -41,11 +41,11 @@ import { istadaaArraf } from "./khuddam/arraf.ts";
 import { Sayrafi } from "./khuddam/sayrafi.ts";
 import { VERSION } from "./version.ts";
 import { istadaaRaqib } from "./khuddam/raqib.ts";
-import type { TasmimIksir, Rasul, RisalaDakhila } from "./types.ts";
+import type { Rasul, RisalaDakhila } from "./types.ts";
 import type { SijillWasfat } from "./wasfa/sijill-wasfat.ts";
 
 interface SiyaqKhadim {
-  tasmim: TasmimIksir;
+  tasmim: Tasmim;
   amil: Wasila;
   ntfy: ReturnType<typeof anshaaNtfyAmil>;
   rasul: Rasul;
@@ -86,10 +86,11 @@ async function tahaqqaqIttisaal(ctx: SiyaqKhadim): Promise<boolean> {
     console.log("  Messenger... (disabled)");
   }
 
-  if (ctx.tasmim.isharat.ntfy.mufattah) {
+  const ntfy = ctx.tasmim.ntfy();
+  if (ntfy) {
     process.stdout.write("  ntfy server... ");
     try {
-      const response = await fetch(ctx.tasmim.isharat.ntfy.server);
+      const response = await fetch(ntfy.server);
       if (response.ok) {
         console.log("✓");
       } else {
@@ -110,11 +111,17 @@ async function tahaqqaqIttisaal(ctx: SiyaqKhadim): Promise<boolean> {
 
 async function naffadhFahs(ctx: SiyaqKhadim): Promise<void> {
   console.log(`\nIksir v${VERSION} - Configuration Check\n`);
-  console.log(`Config file: ${masarMilafAlTasmim()}`);
+  console.log(`Config file: ${ctx.tasmim.masar}`);
 
+  const kh = ctx.tasmim.khabath();
   console.log("\nConfiguration:");
   console.log(`  Bee hid: ${ctx.amil.huwiyya}`);
-  console.log(`  Model: ${ctx.tasmim.hum?.namudhaj ?? "(the nest decides)"}`);
+  console.log(`  Model: ${ctx.tasmim.namudhaj() ?? "(the nest decides)"}`);
+  console.log(`  Majlis: ${kh.majlis.join(", ") || "(none)"}`);
+  console.log(`  Kūr: ${kh.kur.join(", ") || "(none)"}`);
+  console.log(`  Sijillāt: ${kh.sijillat.join(", ") || "(none)"}`);
+  console.log(`  Secrets: ${ctx.tasmim.asmaAsrar().join(", ") || "(none)"}`);
+  for (const shakwa of tahaqqaq(ctx.tasmim.now())) console.log(`  ! ${shakwa}`);
 
   const allGood = await tahaqqaqIttisaal(ctx);
 
@@ -198,7 +205,8 @@ async function ishtarakAhdath(ctx: SiyaqKhadim): Promise<void> {
 
 async function awqadKhadim(ctx: SiyaqKhadim): Promise<void> {
   await logger.akhbar("main", `Iksir v${VERSION} starting`);
-  await logger.akhbar("main", `Config loaded from ${masarMilafAlTasmim()}`);
+  await logger.akhbar("main", `Config at ${ctx.tasmim.masar}${ctx.tasmim.mawjud() ? "" : " (absent; defaults)"}`);
+  for (const shakwa of tahaqqaq(ctx.tasmim.now())) await logger.haDHHir("config", shakwa);
 
   try {
     await ctx.amil.ittasil();
@@ -441,40 +449,35 @@ Name a wasfa to begin. Each murshid keeps its own channel.
 export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   await logger.baddaa();
 
-  const config = await hammalaAlTasmim();
+  const tasmim = new Tasmim();
+  logger.ittabi(() => tasmim.mustawaAhdaq());
 
   await baddaaQaidatBayanat();
 
-  const warsha = process.env.IKSIR_REPO_PATH || undefined;
-  const wasfat = anshaaSijillWasfat(config.wasfat?.sabiqa);
+  const wasfat = anshaaSijillWasfat(() => tasmim.now().wasfat.sabiqa);
 
   const alat = new AlatAlIksir(wasfat);
 
-  const amil = new Wasila({
-    namudhaj: config.hum.namudhaj,
-    warsha,
-    mutaghayyirat: { khabath: config.wasfat.khabath ?? "", warsha: warsha ?? "" },
-    sijill: alat.sijill,
-  });
+  const amil = new Wasila({ tasmim, sijill: alat.sijill });
   await amil.ittasil();
-  const sayrafi = new Sayrafi(amil);
+  const sayrafi = new Sayrafi(amil, tasmim);
 
   istarjaaMirata(amil).catch(async (error) => {
     await logger.sajjalKhata("mirata", "mirror backfill failed", { error: String(error) });
   });
-  const ntfy = anshaaNtfyAmil(config);
-  const telegram = anshaaTelegramAmil(config);
-  const messenger: Rasul = config.isharat.telegram.mufattah
+  const ntfy = anshaaNtfyAmil(tasmim);
+  const telegram = anshaaTelegramAmil(tasmim);
+  const messenger: Rasul = tasmim.khabath().majlis.includes("telegram")
     ? anshaaTelegramRasul(telegram)
     : anshaaRasulUnbub();
 
   const abortController = new AbortController();
 
-  const sessionManager = istadaaKatib({ tasmim: config, amil, rasul: messenger });
+  const sessionManager = istadaaKatib({ tasmim, amil, rasul: messenger, wasfat });
   await sessionManager.hammalaHala();
 
   const ipcProcessor = istadaaMunaffidh({
-    tasmim: config,
+    tasmim,
     wasfat,
     rasul: messenger,
     ntfy,
@@ -491,7 +494,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     arraf: intentResolver,
     rasul: messenger,
     amil,
-    namatWasfa: config.wasfat?.namatWasfa,
+    namatWasfa: () => tasmim.now().wasfat.namatWasfa,
   });
 
   ipcProcessor.wadaaMunadi(dispatcher);
@@ -505,7 +508,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   });
 
   const ctx: SiyaqKhadim = {
-    tasmim: config,
+    tasmim,
     amil,
     ntfy,
     rasul: messenger,

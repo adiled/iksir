@@ -261,3 +261,20 @@ test("hallJalsaBilQanat: miss returns null", async () => {
   });
 });
 
+
+test("send: a refused message is reported as not delivered", async () => {
+  await withTestDb(async () => {
+    const tc = mockTelegramClient({ sendToDispatch: async () => null });
+    const m = new TelegramMessenger(tc as never);
+
+    assertEquals(await m.send("dispatch", "lost"), false);
+    assertEquals(await m.arsalaMunassaq("dispatch", "lost"), false);
+  });
+});
+
+test("send: an accepted message is reported as delivered", async () => {
+  await withTestDb(async () => {
+    const m = new TelegramMessenger(mockTelegramClient() as never);
+    assertEquals(await m.send("dispatch", "heard"), true);
+  });
+});

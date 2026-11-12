@@ -11,6 +11,8 @@
 
 import type { Wasila } from "../hum/wasila.ts";
 import type { Wasfa } from "../wasfa/sijill-wasfat.ts";
+import type { Tasmim } from "../config.ts";
+import { kalimatKhabath, thulathiMin } from "../wasfa/khabath.ts";
 import { logger } from "../logging/logger.ts";
 
 const RUQYA = "iksir-sayrafi";
@@ -18,10 +20,12 @@ const ADAWAT = ["mun_shahada"];
 
 export class Sayrafi {
   #amil: Wasila;
+  #tasmim: Tasmim;
   #jalasat = new Map<string, string>();
 
-  constructor(amil: Wasila) {
+  constructor(amil: Wasila, tasmim: Tasmim) {
     this.#amil = amil;
+    this.#tasmim = tasmim;
   }
 
   async assa(wasfa: Wasfa, far?: string): Promise<string> {
@@ -81,7 +85,8 @@ export class Sayrafi {
     const jalsa = await this.#amil.khalaqaJalsa(`iksir-sayrafi`, `Ṣayrafī ${wasfa.huwiyya}`);
     if (!jalsa) return false;
     this.#jalasat.set(wasfa.huwiyya, jalsa.id);
-    const buitha = await this.#amil.sendPromptAsync(jalsa.id, nass, { agent: RUQYA, adawat: ADAWAT });
+    const kalimat = kalimatKhabath(thulathiMin(wasfa, this.#tasmim.khabath()));
+    const buitha = await this.#amil.sendPromptAsync(jalsa.id, nass, { agent: RUQYA, adawat: ADAWAT, kalimat });
     await logger.akhbar("sayrafi", `${wajib} ${wasfa.huwiyya}`, { sid: jalsa.id, buitha });
     return buitha;
   }

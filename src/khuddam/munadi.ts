@@ -103,7 +103,7 @@ interface MunadiDeps {
   arraf: Arraf;
   rasul: RasulKharij;
   amil: Wasila;
-  namatWasfa?: string;
+  namatWasfa?: string | (() => string | undefined);
 }
 
 interface MuatayatKhalqMurshid {
@@ -252,7 +252,7 @@ export class Munadi {
   arraf: Arraf;
   rasul: RasulKharij;
   amil: Wasila;
-  namatWasfa: RegExp;
+  namatWasfa: () => RegExp;
 
   huwiyyaFaaila: string | null = null;
   faailMundhu: Date | null = null;
@@ -278,7 +278,8 @@ export class Munadi {
     this.arraf = deps.arraf;
     this.rasul = deps.rasul;
     this.amil = deps.amil;
-    this.namatWasfa = banaNamatWasfa(deps.namatWasfa);
+    const namat = deps.namatWasfa;
+    this.namatWasfa = typeof namat === "function" ? () => banaNamatWasfa(namat()) : () => banaNamatWasfa(namat);
   }
 
   async maQuflIrsal<T>(fn: () => Promise<T>): Promise<T> {
@@ -310,7 +311,7 @@ export class Munadi {
       }
     }
 
-    const basicIntent = hallalNiyyaAsasiyya(msg.text, this.namatWasfa);
+    const basicIntent = hallalNiyyaAsasiyya(msg.text, this.namatWasfa());
     await logger.akhbar("dispatcher", `${label} intent: type=${basicIntent.naw}, epic=${basicIntent.huwiyya ?? "none"}`);
 
     if (basicIntent.naw === "command") {

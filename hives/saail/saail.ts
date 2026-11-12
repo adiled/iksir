@@ -1,31 +1,14 @@
 import { baddaaQaidatBayanat, adkhalaHadath } from "../../db/db.ts";
 import { anshaaTelegramAmil } from "../../src/rasul/telegram.ts";
-import type { TasmimIksir } from "../../src/types.ts";
+import { Tasmim } from "../../src/config.ts";
 import { logger } from "../../src/logging/logger.ts";
-
-function tasmimBab(): TasmimIksir {
-  const ramzBot = process.env.TELEGRAM_BOT_TOKEN ?? "";
-  if (!ramzBot) throw new Error("TELEGRAM_BOT_TOKEN is required");
-  return {
-    isharat: {
-      telegram: {
-        mufattah: true,
-        ramzBot,
-        huwiyyatMuhadatha: process.env.TELEGRAM_CHAT_ID ?? "",
-        huwiyyatMajmuua: process.env.TELEGRAM_GROUP_ID,
-        huwiyyatMawduuIrsal: undefined,
-        proxy: process.env.TELEGRAM_PROXY ?? "",
-      },
-      ntfy: { mufattah: false, server: "", topic: "" },
-    },
-  } as TasmimIksir;
-}
 
 async function abwab(): Promise<void> {
   await logger.baddaa();
   await baddaaQaidatBayanat();
 
-  const tasmim = tasmimBab();
+  const tasmim = new Tasmim();
+  logger.ittabi(() => tasmim.mustawaAhdaq());
   const amil = anshaaTelegramAmil(tasmim);
 
   amil.onMessage(async (risala) => {
@@ -38,6 +21,10 @@ async function abwab(): Promise<void> {
     await logger.akhbar("saail", "wire callback forwarded", { id: istijaba.id });
   });
 
+  while (!amil.mumakkan()) {
+    await logger.haDHHir("saail", `No majlis yet: set khabath.majlis to telegram and the secret telegram.ramz (${tasmim.masar})`);
+    await new Promise((r) => setTimeout(r, 30_000));
+  }
 
   await amil.startPolling();
 }

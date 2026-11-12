@@ -8,8 +8,5 @@
   },
   "scripts": {
     "test": "node --test \"src/**/*.test.ts\" \"tests/*.test.ts\""
-  },
-  "dependencies": {
-    "thrum": "file:../hum/thrum-clients/ts"
   }
 }

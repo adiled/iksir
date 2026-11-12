@@ -1,15 +1,16 @@
 /**
  * iksir init — Interactive onboarding wizard
  *
- * Walks through each integration step by step, tahaqqaqs credentials
- * live, auto-detects what it can, and writes config files.
+ * Walks al-Kimyawī through the majlis (Telegram), the khabath roster, and
+ * the nest; proves what it can live; then sets each answer into iksir.json
+ * and the secret into asrar. It sets only what it asked — whatever else the
+ * files hold stands.
  */
 
-import { join } from "node:path";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-const exists = async (path: string): Promise<boolean> => existsSync(path);
 import { humCli } from "thrum";
+import { Tasmim } from "./config.ts";
 import { createInterface } from "node:readline/promises";
+import { Writable } from "node:stream";
 
 const DIM = "\x1b[2m";
 const RESET = "\x1b[0m";
@@ -32,48 +33,59 @@ function heading(step: number, total: number, title: string) {
   console.log(`  ${DIM}${"─".repeat(50)}${RESET}`);
 }
 
-async function prompt(label: string, defaultValue = ""): Promise<string> {
-  const suffix = defaultValue ? ` ${dim(`[${defaultValue}]`)}` : "";
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
+let qari: ReturnType<typeof createInterface> | null = null;
+let maktum = false;
+const tabur: string[] = [];
+let muntazir: ((satr: string) => void) | null = null;
+
+const sitar = new Writable({
+  write(chunk: Buffer, _enc: string, cb: () => void) {
+    const nass = chunk.toString();
+    process.stdout.write(maktum && !nass.startsWith("\x1b") ? nass.replace(/[^\r\n]/g, "*") : nass);
+    cb();
+  },
+});
+
+function majlis(): ReturnType<typeof createInterface> {
+  if (qari) return qari;
+  qari = createInterface({ input: process.stdin, output: sitar, terminal: process.stdin.isTTY === true, prompt: "" });
+  qari.on("line", (satr) => {
+    const m = muntazir;
+    muntazir = null;
+    if (m) m(satr); else tabur.push(satr);
+  });
+  qari.on("close", () => {
+    qari = null;
+    const m = muntazir;
+    muntazir = null;
+    if (m) m("");
+  });
+  return qari;
+}
+
+export async function isal(nass: string, khiyarat?: { maktum?: boolean }): Promise<string> {
+  majlis();
+  process.stdout.write(nass);
+  maktum = khiyarat?.maktum === true;
   try {
-    return (await rl.question(`  ${label}${suffix}: `)).trim() || defaultValue;
+    if (tabur.length) return tabur.shift()!;
+    return await new Promise((hal) => { muntazir = hal; });
   } finally {
-    rl.close();
+    maktum = false;
   }
 }
 
+export function aghliqMajlis(): void {
+  qari?.close();
+}
+
+async function prompt(label: string, defaultValue = ""): Promise<string> {
+  const suffix = defaultValue ? ` ${dim(`[${defaultValue}]`)}` : "";
+  return (await isal(`  ${label}${suffix}: `)).trim() || defaultValue;
+}
+
 async function promptSecret(label: string): Promise<string> {
-  process.stdout.write(`  ${label}: `);
-  const raw = process.stdin.isTTY;
-  if (raw) process.stdin.setRawMode(true);
-  const chars: string[] = [];
-  try {
-    for await (const chunk of process.stdin) {
-      for (const c of chunk.toString()) {
-        if (c === "\r" || c === "\n") {
-          console.log("");
-          return chars.join("");
-        }
-        if (c === "\u0003") {
-          console.log("");
-          process.exit(1);
-        }
-        if (c === "\u007f" || c === "\b") {
-          if (chars.length > 0) {
-            chars.pop();
-            process.stdout.write("\b \b");
-          }
-          continue;
-        }
-        chars.push(c);
-        process.stdout.write("*");
-      }
-    }
-    return chars.join("");
-  } finally {
-    if (raw) process.stdin.setRawMode(false);
-    process.stdin.pause();
-  }
+  return (await isal(`  ${label}: `, { maktum: true })).trim();
 }
 
 async function confirm(label: string, defaultYes = true): Promise<boolean> {
@@ -104,9 +116,9 @@ interface InitState {
   telegramDispatchTopicId: string;
   skippedTelegram: boolean;
   sabiqaWasfa: string;
-  khabath: string;
+  kur: string[];
+  sijillat: string[];
   namudhaj: string;
-  warsha: string;
 }
 
 const TOTAL_STEPS = 4;
@@ -127,7 +139,7 @@ async function akhirTahdith(token: string, yaqbal: (m: NonNullable<Update["messa
 }
 
 async function stepTelegram(state: InitState): Promise<void> {
-  heading(1, TOTAL_STEPS, "Telegram");
+  heading(1, TOTAL_STEPS, "The Majlis — Telegram");
   console.log("");
   console.log(`  Iksir speaks to you through a Telegram bot you own: Dispatch in one`);
   console.log(`  topic of a forum group, and a topic of its own for every murshid.`);
@@ -135,7 +147,7 @@ async function stepTelegram(state: InitState): Promise<void> {
 
   if (!await confirm("Set up Telegram?")) {
     state.skippedTelegram = true;
-    warn("Skipped. Iksir will have no voice until TELEGRAM_* are set in .env");
+    warn(`Skipped. Iksir has no voice until: iksir secret set telegram.ramz; iksir config set khabath.majlis telegram`);
     return;
   }
 
@@ -195,31 +207,34 @@ async function stepTelegram(state: InitState): Promise<void> {
   }
 }
 
-async function stepWasfat(state: InitState): Promise<void> {
-  heading(2, TOTAL_STEPS, "The Register");
+function qaima(nass: string): string[] {
+  return nass.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+async function stepKhabath(state: InitState): Promise<void> {
+  heading(2, TOTAL_STEPS, "The Roster — Khabath");
   console.log("");
-  console.log(`  The waṣfāt live in Sijill al-Waṣfāt, iksir's own register. Your tickets may`);
-  console.log(`  also live outside, in a khabath — name it and the khuddam will know where to`);
-  console.log(`  look when you say "issue 9": github, linear, or whatever your host CLI or`);
-  console.log(`  web2 calls it. Blank means there is none.`);
+  console.log(`  The waṣfāt live in Sijill al-Waṣfāt, iksir's own register. Everything outside`);
+  console.log(`  is khabath, named by role, as your host CLI or web2 calls it; several, joined`);
+  console.log(`  by commas. Every waṣfa draws its own from these.`);
   console.log("");
 
-  state.khabath = await prompt("Khabath (outer tracker)", "github");
-  if (state.khabath) ok(`Khabath: ${bold(state.khabath)}`);
+  state.kur = qaima(await prompt("Kūr — the forge where jawhar is decanted", "github"));
+  if (state.kur.length) ok(`Kūr: ${bold(state.kur.join(", "))}`);
+  state.sijillat = qaima(await prompt("Sijillāt — outer trackers your tickets live in", "github"));
+  if (state.sijillat.length) ok(`Sijillāt: ${bold(state.sijillat.join(", "))}`);
   state.sabiqaWasfa = await prompt("Mark that minted waṣfa names carry", "W");
   ok(`Waṣfāt iksir mints are named ${bold(`${state.sabiqaWasfa}-1`)}, ${state.sabiqaWasfa}-2, …`);
 }
 
 async function stepNest(state: InitState): Promise<void> {
-  heading(3, TOTAL_STEPS, "The Nest and the Workshop");
+  heading(3, TOTAL_STEPS, "The Nest");
   console.log("");
   console.log(`  Iksir runs no models. It nestles at a ${bold("humd")} as five bees and prompts`);
   console.log(`  whatever nurse you have kindled there. The ${bold("bash")} hive lends the murshidūn`);
-  console.log(`  their hands in the workshop — the repository they work on.`);
+  console.log(`  their hands.`);
   console.log("");
 
-  state.warsha = await prompt("Workshop (the repository's path)", process.cwd());
-  ok(`Workshop: ${bold(state.warsha)}`);
   state.namudhaj = await prompt("Model to name on each prompt (blank = let the nest decide)", "");
 
   const miqbas = humCli();
@@ -245,46 +260,21 @@ async function stepFinalize(state: InitState): Promise<void> {
   console.log("");
 
   const here = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
-  const home = process.env.HOME ?? ".";
-  const configDir = process.env.IKSIR_CONFIG_DIR ??
-    join(process.env.XDG_CONFIG_HOME ?? join(home, ".config"), "iksir");
+  const tasmim = new Tasmim();
 
-  const envPath = join(here, ".env");
-  const configPath = join(configDir, "iksir.json");
-
-  const envLines: string[] = ["# Written by iksir init", ""];
   if (state.telegramBotToken) {
-    envLines.push(`TELEGRAM_BOT_TOKEN=${state.telegramBotToken}`);
-    envLines.push(`TELEGRAM_CHAT_ID=${state.telegramChatId}`);
-    if (state.telegramGroupId) envLines.push(`TELEGRAM_GROUP_ID=${state.telegramGroupId}`);
-    if (state.telegramDispatchTopicId) envLines.push(`TELEGRAM_DISPATCH_TOPIC_ID=${state.telegramDispatchTopicId}`);
+    tasmim.dhabbitSirr("telegram.ramz", state.telegramBotToken);
+    tasmim.dhabbit("khabath.majlis", ["telegram"]);
+    tasmim.dhabbit("khabath.telegram.muhadatha", state.telegramChatId);
+    if (state.telegramGroupId) tasmim.dhabbit("khabath.telegram.majmuua", state.telegramGroupId);
+    if (state.telegramDispatchTopicId) tasmim.dhabbit("khabath.telegram.mawduuIrsal", Number(state.telegramDispatchTopicId));
+    ok(`Secret kept (0600): ${dim("telegram.ramz")}`);
   }
-  envLines.push(`IKSIR_REPO_PATH=${state.warsha}`);
-  envLines.push("");
-
-  const config: Record<string, unknown> = { $schema: join(here, "iksir.schema.json") };
-  const wasfat: Record<string, string> = {};
-  if (state.khabath) wasfat.khabath = state.khabath;
-  if (state.sabiqaWasfa && state.sabiqaWasfa !== "W") wasfat.sabiqa = state.sabiqaWasfa;
-  if (Object.keys(wasfat).length) config.wasfat = wasfat;
-  if (state.namudhaj) config.hum = { namudhaj: state.namudhaj };
-
-  const envContent = envLines.join("\n") + "\n";
-  if (await exists(envPath) && readFileSync(envPath, "utf-8").includes("TELEGRAM_BOT_TOKEN")) {
-    if (await confirm("  .env already has credentials. Overwrite?", false)) {
-      writeFileSync(envPath, envContent);
-      ok(`.env written: ${dim(envPath)}`);
-    } else {
-      warn(`.env preserved: ${dim(envPath)}`);
-    }
-  } else {
-    writeFileSync(envPath, envContent);
-    ok(`.env written: ${dim(envPath)}`);
-  }
-
-  mkdirSync(configDir, { recursive: true });
-  writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n");
-  ok(`Config written: ${dim(configPath)}`);
+  tasmim.dhabbit("khabath.kur", state.kur);
+  tasmim.dhabbit("khabath.sijillat", state.sijillat);
+  if (state.sabiqaWasfa && state.sabiqaWasfa !== "W") tasmim.dhabbit("wasfat.sabiqa", state.sabiqaWasfa);
+  if (state.namudhaj) tasmim.dhabbit("hum.namudhaj", state.namudhaj);
+  ok(`Config set: ${dim(tasmim.masar)} ${dim("— only what was asked; the rest stands")}`);
 
   console.log("");
   console.log(`  ${DIM}${"─".repeat(50)}${RESET}`);
@@ -293,8 +283,10 @@ async function stepFinalize(state: InitState): Promise<void> {
   console.log("");
   console.log(`      ${cyan(`hum hive ${here} install`)}`);
   console.log("");
-  console.log(`  Then speak in the Dispatch topic.`);
+  console.log(`  Then speak in the Dispatch topic. Change anything later with`);
+  console.log(`  ${cyan("iksir config set")} or ${cyan("iksir secret set")} — the daemon reads it on its next act.`);
   console.log("");
+  aghliqMajlis();
 }
 
 export async function runInit(): Promise<void> {
@@ -309,13 +301,13 @@ export async function runInit(): Promise<void> {
     telegramDispatchTopicId: "",
     skippedTelegram: false,
     sabiqaWasfa: "W",
-    khabath: "",
+    kur: [],
+    sijillat: [],
     namudhaj: "",
-    warsha: process.cwd(),
   };
 
   await stepTelegram(state);
-  await stepWasfat(state);
+  await stepKhabath(state);
   await stepNest(state);
   await stepFinalize(state);
 }

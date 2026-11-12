@@ -43,45 +43,8 @@ test("generateBranchName: epic identifier is lowercased", () => {
   );
 });
 
-test("generateBranchName: chore uses IKSIR_GIT_USER prefix", () => {
-  const prev = process.env.IKSIR_GIT_USER;
-  process.env.IKSIR_GIT_USER = "testuser";
-  try {
-    assertEquals(
-      wallidIsmFar("TEAM-300", "chore"),
-      "testuser/TEAM-300",
-    );
-  } finally {
-    if (prev) process.env.IKSIR_GIT_USER = prev;
-    else delete process.env.IKSIR_GIT_USER;
-  }
-});
-
-test("generateBranchName: chore defaults to dev/ prefix", () => {
-  const prev = process.env.IKSIR_GIT_USER;
-  delete process.env.IKSIR_GIT_USER;
-  try {
-    assertEquals(
-      wallidIsmFar("TEAM-300", "chore"),
-      "dev/TEAM-300",
-    );
-  } finally {
-    if (prev) process.env.IKSIR_GIT_USER = prev;
-  }
-});
-
-test("generateBranchName: chore preserves identifier case", () => {
-  const prev = process.env.IKSIR_GIT_USER;
-  process.env.IKSIR_GIT_USER = "testuser";
-  try {
-    assertEquals(
-      wallidIsmFar("team-400", "chore"),
-      "testuser/team-400",
-    );
-  } finally {
-    if (prev) process.env.IKSIR_GIT_USER = prev;
-    else delete process.env.IKSIR_GIT_USER;
-  }
+test("generateBranchName: a lone wasfa's vessel is wasfa/<id>", () => {
+  assertEquals(wallidIsmFar("TEAM-300", "chore"), "wasfa/team-300");
 });
 
 test("generateBranchName: sandbox with explicit slug", () => {

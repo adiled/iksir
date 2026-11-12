@@ -67,46 +67,30 @@ export class TelegramMessenger implements Rasul {
     return this.#telegram.mumakkan();
   }
 
-  async send(channel: QanatRisala, text: string): Promise<void> {
-    if (!this.mumakkan()) return;
-
-    if (channel === "dispatch") {
-      await this.#telegram.sendToDispatch(text);
-      return;
-    }
-
-    if (channel === "kimyawi") {
-      await this.#telegram.arsalaRisala(text);
-      return;
-    }
-
-    const topicId = this.#resolveMurshidTopic(channel.murshid);
-    if (topicId !== null) {
-      await this.#telegram.arsalaIlaMurshidTopic(topicId, text);
-    } else {
-      await this.#telegram.sendToDispatch(`[${channel.murshid}] ${text}`);
-    }
+  async send(channel: QanatRisala, text: string): Promise<boolean> {
+    return this.#arsala(channel, text, undefined);
   }
 
-  async arsalaMunassaq(channel: QanatRisala, text: string): Promise<void> {
-    if (!this.mumakkan()) return;
+  async arsalaMunassaq(channel: QanatRisala, text: string): Promise<boolean> {
+    return this.#arsala(channel, text, "Markdown");
+  }
+
+  async #arsala(channel: QanatRisala, text: string, parseMode: "Markdown" | undefined): Promise<boolean> {
+    if (!this.mumakkan()) return false;
 
     if (channel === "dispatch") {
-      await this.#telegram.sendToDispatch(text, { parseMode: "Markdown" });
-      return;
+      return (await this.#telegram.sendToDispatch(text, { parseMode })) !== null;
     }
 
     if (channel === "kimyawi") {
-      await this.#telegram.arsalaRisala(text, { parseMode: "Markdown" });
-      return;
+      return (await this.#telegram.arsalaRisala(text, { parseMode })) !== null;
     }
 
     const topicId = this.#resolveMurshidTopic(channel.murshid);
-    if (topicId !== null) {
-      await this.#telegram.arsalaIlaMurshidTopic(topicId, text, { parseMode: "Markdown" });
-    } else {
-      await this.#telegram.sendToDispatch(`[${channel.murshid}] ${text}`, { parseMode: "Markdown" });
-    }
+    const raqm = topicId !== null
+      ? await this.#telegram.arsalaIlaMurshidTopic(topicId, text, { parseMode })
+      : await this.#telegram.sendToDispatch(`[${channel.murshid}] ${text}`, { parseMode });
+    return raqm !== null;
   }
 
   async arsalaSualBiKhiyarat(

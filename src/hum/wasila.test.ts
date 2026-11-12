@@ -2,7 +2,8 @@ import { test, assertEquals, assertExists } from "../ikhtibar.ts";
 import type { Tone } from "thrum";
 import { KHUDDAM, Wasila, khadimMin, type NahlaHum } from "./wasila.ts";
 import { AlatAlIksir } from "../alat/alat-al-iksir.ts";
-import { withTestDb } from "../test-helpers.ts";
+import { withTestDb, makeConfig } from "../test-helpers.ts";
+import type { Tasmim } from "../config.ts";
 
 class NahlaWahm implements NahlaHum {
   id: string;
@@ -37,14 +38,14 @@ async function intazir(f: () => boolean): Promise<void> {
   assertEquals(f(), true);
 }
 
-function qim(warsha?: string) {
+function qim(tasmim?: Tasmim) {
   const nuhul = new Map<string, NahlaWahm>();
   const sanaaNahla = (khadim: string) => {
     const n = nuhul.get(khadim) ?? new NahlaWahm(khadim);
     nuhul.set(khadim, n);
     return n;
   };
-  const wasila = new Wasila({ sijill: new AlatAlIksir().sijill, warsha, sanaaNahla });
+  const wasila = new Wasila({ sijill: new AlatAlIksir().sijill, sanaaNahla, tasmim });
   return { nahla: nuhul.get("murshid") ?? sanaaNahla("murshid"), nuhul, wasila };
 }
 
@@ -58,16 +59,6 @@ test("forager: a prompt carries the mun_* tools and fences nothing else", async 
   assertEquals(hathth.sid, jalsa.id);
   assertEquals((hathth.tools as Array<{ name: string }>).some((t) => t.name === "mun_fasl"), true);
   assertEquals(hathth.allowedTools, undefined);
-  wasila.qaf();
-});
-
-test("forager: blooms build in the workshop on this humd", async () => {
-  const { nahla, wasila } = qim("/srv/warsha");
-  await wasila.ittasil();
-  const jalsa = (await wasila.khalaqaJalsa("iksir-murshid", "t"))!;
-  await wasila.sendPromptAsync(jalsa.id, "salam");
-  const hathth = nahla.mursal.find((t) => t.chi === "prompt") as Tone<"prompt">;
-  assertEquals(hathth.cwd, "hum:///srv/warsha");
   wasila.qaf();
 });
 
@@ -174,5 +165,18 @@ test("forager: dismissing a jalsa sends cleanup and stops following", async () =
   const jalsa = (await wasila.khalaqaJalsa("iksir-murshid", "t"))!;
   await wasila.mahaqaJalsa(jalsa.id);
   assertEquals(nahla.mursal.some((t) => t.chi === "cleanup" && t.sid === jalsa.id), true);
+  wasila.qaf();
+});
+
+test("forager: a ruqya is rendered per prompt — the roster's words, overridden by the wasfa's own", async () => {
+  const { nuhul, wasila } = qim(makeConfig({ khabath: { majlis: ["telegram"], kur: ["github", "gitlab"], sijillat: ["linear"] } }));
+  await wasila.ittasil();
+  const jalsa = (await wasila.khalaqaJalsa("iksir-sayrafi", "t"))!;
+  await wasila.sendPromptAsync(jalsa.id, "salam", { agent: "iksir-sayrafi" });
+  await wasila.sendPromptAsync(jalsa.id, "salam", { agent: "iksir-sayrafi", kalimat: { kur: "gitlab" } });
+  const [awwal, thani] = nuhul.get("sayrafi")!.mursal.filter((t) => t.chi === "prompt") as Array<Tone<"prompt">>;
+  assertEquals(awwal.systemPrompt?.includes("kūr is **github, gitlab**"), true);
+  assertEquals(thani.systemPrompt?.includes("kūr is **gitlab**"), true);
+  assertEquals(thani.systemPrompt?.includes("{{"), false);
   wasila.qaf();
 });

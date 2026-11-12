@@ -2,52 +2,119 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://github.com/adiled/iksir/iksir.schema.json",
   "title": "iksir.json",
-  "description": "Al-Kimyawi's configuration, at $XDG_CONFIG_HOME/iksir/iksir.json. Secrets never live here; they ride .env.",
+  "description": "Al-Kimyawī's settings, at $XDG_CONFIG_HOME/iksir/iksir.json, read again the moment they change. Secrets never live here; they live beside it in `asrar` (iksir secret set).",
   "type": "object",
   "properties": {
-    "$schema": { "type": "string" },
+    "$schema": {
+      "type": "string"
+    },
+    "khabath": {
+      "type": "object",
+      "description": "Everything outside the Sijill, by role. Each role is a list of khabath names as your host CLI or web2 calls them; every waṣfa draws its own three from these and may narrow them, never widen.",
+      "properties": {
+        "majlis": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Where al-Kimyawī speaks. iksir has hands for: telegram."
+        },
+        "kur": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The forges where jawhar is decanted and inscribed: github, gitlab, …"
+        },
+        "sijillat": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The outer trackers tickets come from and are reflected back to: github, linear, …"
+        },
+        "telegram": {
+          "type": "object",
+          "description": "Telegram's particulars. The bot token is the secret telegram.ramz.",
+          "properties": {
+            "muhadatha": {
+              "type": "string",
+              "description": "Al-Kimyawī's direct chat id."
+            },
+            "majmuua": {
+              "type": "string",
+              "description": "The forum group (the hall) id, if any."
+            },
+            "mawduuIrsal": {
+              "type": "integer",
+              "description": "The Dispatch topic id in the hall."
+            },
+            "proxy": {
+              "type": "string",
+              "description": "A SOCKS5 proxy, socks5://host:port; DNS goes through it too."
+            }
+          },
+          "additionalProperties": false
+        },
+        "ntfy": {
+          "type": "object",
+          "description": "Push nudges. Set topic to turn it on.",
+          "properties": {
+            "server": {
+              "type": "string",
+              "description": "Default https://ntfy.sh."
+            },
+            "topic": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": {
+        "type": "object",
+        "description": "Any other khabath's particulars, by its name."
+      }
+    },
     "wasfat": {
       "type": "object",
       "description": "Sijill al-Wasfat, iksir's own register of formulae.",
       "properties": {
         "sabiqa": {
           "type": "string",
-          "description": "The mark minted wasfa names carry: W gives W-1, W-2, … Default W."
+          "description": "The mark minted waṣfa names carry: W gives W-1, W-2, … Default W."
         },
         "namatWasfa": {
           "type": "string",
-          "description": "A regex that recognises a wasfa name in al-Kimyawi's words, when the default (PREFIX-123) does not fit."
-        },
-        "khabath": {
-          "type": "string",
-          "description": "The outer tracker al-Kimyawi's tickets live in, as a host CLI or web2 names it: github, linear, … The khuddam fetch from it and inscribe into the Sijill; iksir itself never speaks to it."
+          "description": "A regex that recognises a waṣfa name in al-Kimyawī's words, when the default (PREFIX-123) does not fit."
         }
       },
       "additionalProperties": false
     },
     "hum": {
       "type": "object",
-      "description": "The nest iksir nestles at. The socket is discovered; only the model is named here.",
+      "description": "The nest iksir nestles at. Nothing to find; only the model to name.",
       "properties": {
         "namudhaj": {
           "type": "string",
-          "description": "Model id named on every prompt; humd routes to a nurse advertising it. IKSIR_HUM_MODEL in .env overrides. Omit to let the nest decide."
+          "description": "Model id named on every prompt; humd routes to a nurse advertising it. Omit to let the nest decide."
         }
       },
       "additionalProperties": false
     },
-    "isharat": {
+    "ahdaq": {
       "type": "object",
-      "description": "Signals beyond Telegram. Telegram itself is configured by TELEGRAM_* in .env.",
+      "description": "The scrolls of observation.",
       "properties": {
-        "ntfy": {
-          "type": "object",
-          "properties": {
-            "mufattah": { "type": "boolean", "description": "Send ntfy pushes." },
-            "server": { "type": "string", "description": "ntfy server. Default https://ntfy.sh." },
-            "topic": { "type": "string", "description": "ntfy topic." }
-          },
-          "additionalProperties": false
+        "mustawa": {
+          "type": "string",
+          "enum": [
+            "debug",
+            "info",
+            "warn",
+            "error"
+          ],
+          "description": "Log threshold. Default info."
         }
       },
       "additionalProperties": false

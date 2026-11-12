@@ -10,10 +10,9 @@
  * What crumbles is khabath — dross, sent back to the murshid
  * with a terse word of guidance.
  *
- * The Mumayyiz carries two scrolls — the tamyiz incantation for
- * isharat. These are loaded
- * from the prompts/ archive, with sacred fallbacks inscribed here
- * in case the scrolls are absent.
+ * The Mumayyiz reads the Ta'lim (AGENTS.md beside iksir.json) and the
+ * tamyiz incantation from prompts/, with a fallback inscribed here in
+ * case the scroll is absent.
  */
 
 import { nazzifJson } from "../utils/strings.ts";
@@ -22,14 +21,14 @@ import { join } from "node:path";
 import { readFileSync } from "node:fs";
 import type { Wasila } from "../hum/wasila.ts";
 import type { TaqyimTaaliq } from "../types.ts";
+import { masarAlTasmim } from "../config.ts";
 
 function masarWakala(): string {
-  return process.env.IKSIR_AGENTS_MD_PATH ??
-    join(process.env.HOME ?? ".", ".config", "iksir", "AGENTS.md");
+  return join(masarAlTasmim(), "AGENTS.md");
 }
 
-function masarAlMakhzan(): string {
-  return process.env.IKSIR_REPO_PATH ?? ".";
+function masarAlRuqan(): string {
+  return new URL("../../prompts/", import.meta.url).pathname;
 }
 
 let muhtawaWakala: string | null = null;
@@ -46,18 +45,13 @@ async function hammalWakala(): Promise<string | null> {
   }
 }
 
-function masarQalib(envVar: string, defaultFilename: string): string {
-  return process.env[envVar] ?? join(masarAlMakhzan(), "prompts", defaultFilename);
-}
-
 async function hammalQalib(
-  envVar: string,
   defaultFilename: string,
   cached: string | null,
   fallback: string,
 ): Promise<string> {
   if (cached) return cached;
-  const path = masarQalib(envVar, defaultFilename);
+  const path = join(masarAlRuqan(), defaultFilename);
   try {
     const content = readFileSync(path, "utf-8");
     await logger.akhbar("mumayyiz", `اللفافة حُمّلت — ${path}`);
@@ -123,7 +117,6 @@ export async function mayyazaTanbih(
   }
 
   qalibTanbih = await hammalQalib(
-    "IKSIR_MAYYAZA_TANBIH_PROMPT",
     "mayyaza-tanbih.md",
     qalibTanbih,
     QALID_IHTIYATI_TANBIH,

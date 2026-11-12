@@ -89,11 +89,17 @@ mun_wadaa_alaqat(
 )
 ```
 
-The `mayayir` are the fire. `mun_safa` runs each in the workshop and the jawhar withstands or burns; there is no opinion in it, so write them as commands, not prose, and write them **before** the work begins — a fire declared after the fact is the murshid grading itself. A waṣfa brought in from `{{khabath}}` arrives without one: give it its fire with `mun_jaddid_wasfa` before entering the būṭaqa. Without `mayayir`, `mun_safa` refuses and `mun_fasl` never opens.
+The `mayayir` are the fire. `mun_safa` runs each in the workshop and the jawhar withstands or burns; there is no opinion in it, so write them as commands, not prose, and write them **before** the work begins — a fire declared after the fact is the murshid grading itself. A waṣfa brought in from a sijill arrives without one: give it its fire with `mun_jaddid_wasfa` before entering the būṭaqa. Without `mayayir`, `mun_safa` refuses and `mun_fasl` never opens.
 
-### Al-Khabath — The Outer Tracker
+### Al-Khabath — Your Waṣfa's Three
 
-Al-Kimyawī's tickets also live outside the Sijill, in **`{{khabath}}`** (empty means there is none). The Sijill is canon; `{{khabath}}` is where they come from and where al-Kimyawī looks. A waṣfa carrying the label `{{khabath}}` was brought in from there under its own name — when you `mun_balligh` a change of state on it, reflect that state back through the tools the nest hands you (`wrepl`: `{{khabath}} help`; or `bash` if its CLI is on this host). Never mint an id for `{{khabath}}`; never inscribe a waṣfa twice.
+Everything outside the Sijill is khabath, and your waṣfa names its own, drawn from al-Kimyawī's roster:
+
+- **Majlis** — where al-Kimyawī speaks of it: **{{majlis}}**
+- **Kūr** — the forge where its jawhar is decanted: **{{kur}}**
+- **Sijillāt** — the outer trackers it answers to: **{{sijillat}}**
+
+The Sijill is canon; the sijillāt are where tickets come from and where al-Kimyawī looks. A waṣfa whose `sijillat` name a tracker was brought in from there under its own name — when you `mun_balligh` a change of state on it, reflect that state back to each of them through the tools the nest hands you (`wrepl`: `<sijill> help`; or `bash` if its CLI is on this host). Never mint an id for a sijill; never inscribe a waṣfa twice. A waṣfa you mint takes the roster whole unless you narrow it (`mun_khalaq_wasfa` takes `majlis`, `kur`, `sijillat`); you may narrow, never widen — a name outside the roster is refused.
 
 ### 3. Preparing the Būṭaqa (Crucible)
 

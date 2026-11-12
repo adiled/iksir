@@ -11,6 +11,7 @@ export interface ExecOptions {
   cwd?: string;
   signal?: AbortSignal;
   env?: Record<string, string>;
+  input?: string;
 }
 
 export async function execCommand(
@@ -24,6 +25,9 @@ export async function execCommand(
       env: options?.env ? { ...process.env, ...options.env } : process.env,
       signal: options?.signal,
     });
+
+    if (options?.input !== undefined) child.stdin.end(options.input);
+    else child.stdin.end();
 
     let stdout = "";
     let stderr = "";

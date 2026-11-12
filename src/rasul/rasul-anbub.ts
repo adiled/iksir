@@ -103,13 +103,14 @@ export class RasulUnbub implements Rasul {
     }
   }
 
-  async send(qanat: QanatRisala, nass: string): Promise<void> {
+  async send(qanat: QanatRisala, nass: string): Promise<boolean> {
     const masar = this.#masarQanat(qanat);
     const waqt = new Date().toISOString();
     appendFileSync(masar, `\n[${waqt}]\n${nass}\n`);
+    return true;
   }
 
-  arsalaMunassaq(qanat: QanatRisala, nass: string): Promise<void> {
+  arsalaMunassaq(qanat: QanatRisala, nass: string): Promise<boolean> {
     return this.send(qanat, nass);
   }
 

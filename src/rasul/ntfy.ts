@@ -6,7 +6,8 @@
  */
 
 import { logger } from "../logging/logger.ts";
-import type { TasmimIksir, Ishara, FiilIshara, AwwaliyyatIshara } from "../types.ts";
+import type { Ishara, FiilIshara, AwwaliyyatIshara } from "../types.ts";
+import type { Tasmim } from "../config.ts";
 
 const PRIORITY_MAP: Record<AwwaliyyatIshara, number> = {
   min: 1,
@@ -28,14 +29,22 @@ const CATEGORY_TAGS: Record<string, string[]> = {
 };
 
 export class NtfyClient {
-  private server: string;
-  private topic: string;
-  private enabled: boolean;
+  #tasmim: Tasmim;
 
-  constructor(config: TasmimIksir) {
-    this.server = config.isharat.ntfy.server;
-    this.topic = config.isharat.ntfy.topic;
-    this.enabled = config.isharat.ntfy.mufattah;
+  constructor(tasmim: Tasmim) {
+    this.#tasmim = tasmim;
+  }
+
+  private get server(): string {
+    return this.#tasmim.ntfy()?.server ?? "";
+  }
+
+  private get topic(): string {
+    return this.#tasmim.ntfy()?.topic ?? "";
+  }
+
+  private get enabled(): boolean {
+    return this.#tasmim.ntfy() !== null;
   }
 
   mumakkan(): boolean {
@@ -192,6 +201,6 @@ export class NtfyClient {
   }
 }
 
-export function anshaaNtfyAmil(config: TasmimIksir): NtfyClient {
-  return new NtfyClient(config);
+export function anshaaNtfyAmil(tasmim: Tasmim): NtfyClient {
+  return new NtfyClient(tasmim);
 }

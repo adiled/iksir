@@ -5,14 +5,11 @@
 /graveyard
 /backlog
 
-# Secrets
+# Secrets never ride the repo; iksir keeps none here (they live in ~/.config/iksir/asrar).
+# A .env left over from before is dead to iksir, and stays dead to git.
 .env
-.env.local
-.env.*.local
 *.pem
 *.key
-credentials.json
-secrets.yaml
 
 # Logs
 logs/

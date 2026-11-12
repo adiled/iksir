@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Install this hive on a humd: build it and keep its two processes running.
-# The daemon enters one bee per khadim when it starts; saail enters none.
+# Install this hive on a humd: build it, carry an old .env into the config
+# files, and keep its two processes running under orchd. The daemon enters
+# one bee per khadim when it starts; saail enters none.
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -9,14 +10,24 @@ state="${XDG_STATE_HOME:-$HOME/.local/state}/hum/hives/$hive"
 orchd="$(command -v orchd || echo "$HOME/.local/bin/orchd")"
 mkdir -p "$state"
 
+hum_min="0.35.0"
+hum_cur="$(hum --version 2>/dev/null | sed -n 's/.*\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/p' | head -1)"
+if [ -z "$hum_cur" ] || ! printf '%s\n%s\n' "$hum_min" "$hum_cur" | sort -V -C; then
+  echo "iksir needs hum ≥ $hum_min (found ${hum_cur:-none}): cd ~/hum && git pull && ./install" >&2
+  exit 1
+fi
+
 "$here/build"
+
+export NODE="$(command -v node)"
+"$NODE" "$here/src/hijra.ts" "$here/.env"
 
 args=(--arg "HUM_SRC=$here")
 while read -r name; do
   if [ -n "${!name:-}" ]; then args+=(--arg "$name=${!name}"); fi
 done < <(sed -n 's/^ARG \([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p' "$here/Orchfile" | grep -vx -e HUM_SRC -e HUM_HIVE)
 
-run() { "$orchd" --project-dir "$here" --namespace "hum-$hive" --user --state-dir "$state/orch" "${args[@]}" "$@"; }
+run() { "$orchd" --project-dir "$here" --grove "hum-$hive" --user --state-dir "$state/orch" "${args[@]}" "$@"; }
 run fell >/dev/null 2>&1 || true
 run grow iksir
 run grow saail
