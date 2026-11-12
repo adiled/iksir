@@ -23,7 +23,7 @@ function jalsa(overrides?: Partial<JalsatMurshid>): JalsatMurshid {
     huwiyya: "LUGHA-1",
     unwan: "A tongue of two sounds",
     naw: "chore",
-    far: "dev/LUGHA-1",
+    far: "wasfa/lugha-1",
     hala: "fail",
     unshiaFi: "2026-08-24T20:50:16.385Z",
     akhirRisalaFi: "2026-08-24T20:50:16.385Z",
@@ -59,7 +59,7 @@ test("recording one vessel does not restamp the others", async () => {
     k.istawradaHala({
       murshidun: [
         jalsa(),
-        jalsa({ id: "iksir-LUGHA-2-bbb-1", huwiyya: "LUGHA-2", far: "dev/LUGHA-2" }),
+        jalsa({ id: "iksir-LUGHA-2-bbb-1", huwiyya: "LUGHA-2", far: "wasfa/lugha-2" }),
       ],
     });
     await k.hafizaHala();

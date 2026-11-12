@@ -37,7 +37,7 @@ async function mashhad(faila: string | null) {
     huwiyya: "LUGHA-2",
     unwan: "Contemplation",
     naw: "chore",
-    far: "dev/LUGHA-2",
+    far: "wasfa/lugha-2",
     hala: "fail",
     unshiaFi: "2026-08-24T21:07:58.250Z",
     akhirRisalaFi: "2026-08-24T21:07:58.250Z",

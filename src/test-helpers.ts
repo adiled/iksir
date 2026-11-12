@@ -28,8 +28,6 @@ export async function withTestDb(fn: () => Promise<void> | void): Promise<void> 
 
 export async function withTestRepo(fn: () => Promise<void> | void): Promise<void> {
   const tempDir = mkdtempSync(join(tmpdir(), "iksir-repo-test-"));
-  const prevRepo = process.env.IKSIR_REPO_PATH;
-  process.env.IKSIR_REPO_PATH = tempDir;
   process.env.IKSIR_STATE_DIR = tempDir;
   try {
     await execCommand("git", ["init"], { cwd: tempDir });
@@ -39,8 +37,6 @@ export async function withTestRepo(fn: () => Promise<void> | void): Promise<void
   } finally {
     aghlaaqQaidatBayanat();
     delete process.env.IKSIR_STATE_DIR;
-    if (prevRepo) process.env.IKSIR_REPO_PATH = prevRepo;
-    else delete process.env.IKSIR_REPO_PATH;
     rmSync(tempDir, { recursive: true, force: true });
   }
 }
@@ -321,10 +317,12 @@ export function mockMessenger(overrides?: {
 
     async send(channel, text) {
       calls.send.push({ channel, text });
+      return true;
     },
 
     async arsalaMunassaq(channel, text) {
       calls.arsalaMunassaq.push({ channel, text });
+      return true;
     },
 
     async khalaqaQanatMurshid(identifier, title) {
@@ -397,12 +395,6 @@ export function seedSession(overrides?: Partial<JalsatMurshid>): void {
   });
 }
 
-export async function writeTempFile(content: string, prefix = "iksir-fixture-"): Promise<string> {
-  const tdir = mkdtempSync(join(tmpdir(), prefix));
-  const path = join(tdir, "fixture");
-  writeFileSync(path, content);
-  return path;
-}
 
 import type { NiyyaMuhallala } from "./khuddam/arraf.ts";
 
@@ -434,28 +426,10 @@ export function mockArraf(): MockArraf {
   };
 }
 
-import type { TasmimIksir } from "./types.ts";
+import { Tasmim } from "./config.ts";
 
-export function makeConfig(overrides?: Partial<TasmimIksir>): TasmimIksir {
-  return {
-    hum: {},
-    wasfat: {},
-    isharat: {
-      telegram: {
-        mufattah: false,
-        ramzBot: "",
-        huwiyyatMuhadatha: "",
-        huwiyyatMajmuua: undefined,
-        huwiyyatMawduuIrsal: undefined,
-        proxy: undefined,
-      },
-      ntfy: {
-        mufattah: false,
-        server: "",
-        topic: "",
-      },
-    },
-    ...overrides,
-  } as TasmimIksir;
+export function makeConfig(kham?: Record<string, unknown>): Tasmim {
+  const dir = mkdtempSync(join(tmpdir(), "iksir-tasmim-"));
+  writeFileSync(join(dir, "iksir.json"), JSON.stringify(kham ?? { khabath: { majlis: [], kur: ["github"], sijillat: ["github"] } }));
+  return new Tasmim(dir);
 }
-

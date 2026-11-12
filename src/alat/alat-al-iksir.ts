@@ -179,6 +179,21 @@ export class AlatAlIksir {
               description:
                 "Maʿāyīr al-ṣafāʾ — the fire mun_safa puts the jawhar to: each a command run in the workshop, withstood when it exits 0. Declared before the work begins.",
             },
+            majlis: {
+              type: "array",
+              items: { type: "string" },
+              description: "Where al-Kimyawī speaks of it — one or more of the majlis in the roster. Left out, the roster whole.",
+            },
+            kur: {
+              type: "array",
+              items: { type: "string" },
+              description: "The forge where its jawhar is decanted — one or more of the kur in the roster. Left out, the roster whole.",
+            },
+            sijillat: {
+              type: "array",
+              items: { type: "string" },
+              description: "The outer trackers it answers to — one or more of the sijillat in the roster. A ticket brought in from one names that one.",
+            },
           },
           required: ["huwiyyatMurshid", "title"],
         },
@@ -213,6 +228,21 @@ export class AlatAlIksir {
                   type: "array",
                   items: { type: "string" },
                   description: "Maʿāyīr al-ṣafāʾ — commands run in the workshop; exit 0 withstands. Replaces the fire whole.",
+                },
+                majlis: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "Where al-Kimyawī speaks of it — one or more of the majlis in the roster. Left out, the roster whole.",
+                },
+                kur: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "The forge where its jawhar is decanted — one or more of the kur in the roster. Left out, the roster whole.",
+                },
+                sijillat: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "The outer trackers it answers to — one or more of the sijillat in the roster. A ticket brought in from one names that one.",
                 },
               },
               description: "Fields to update",
@@ -636,6 +666,9 @@ judged — it is set before al-Kimyawī having already survived its fire.`,
       wasamat: args.labels as string[] | undefined,
       huwiyyatAb: args.parentId as string | undefined,
       mayayir: args.mayayir as string[] | undefined,
+      majlis: args.majlis as string[] | undefined,
+      kur: args.kur as string[] | undefined,
+      sijillat: args.sijillat as string[] | undefined,
     };
 
     this.#hawwilLiKhadim(call);
@@ -661,6 +694,9 @@ Daemon will create the ticket and return the ticket ID.`;
         taqdir: tahdith.estimate as number | undefined,
         hala: tahdith.status as string | undefined,
         mayayir: tahdith.mayayir as string[] | undefined,
+        majlis: tahdith.majlis as string[] | undefined,
+        kur: tahdith.kur as string[] | undefined,
+        sijillat: tahdith.sijillat as string[] | undefined,
       },
     };
 
@@ -717,6 +753,7 @@ Relations control execution order: blocked tickets wait for blockers to complete
     if (wasfa.qadr) ajzaa.push(`**Measure:** ${wasfa.qadr}`);
     if (wasfa.wasm?.length) ajzaa.push(`**Marks:** ${wasfa.wasm.join(", ")}`);
     if (wasfa.ab) ajzaa.push(`**Under:** ${wasfa.ab}`);
+    ajzaa.push(`**Majlis:** ${wasfa.majlis?.join(", ") ?? "the roster"} · **Kūr:** ${wasfa.kur?.join(", ") ?? "the roster"} · **Sijillāt:** ${wasfa.sijillat?.join(", ") ?? "the roster"}`);
     ajzaa.push("");
 
     if (wasfa.matn) ajzaa.push("## Statement", wasfa.matn, "");

@@ -2,11 +2,21 @@ import { Bee, Chi, PetalKind, PulseKind, Role, humCli, type Tone } from "thrum";
 import { readFileSync } from "node:fs";
 import { join as joinMasar } from "node:path";
 import type { JalsatHum, HadathThrum, HadathThehum, RisalaMurshid, SijillAlat } from "../types.ts";
+import type { Tasmim } from "../config.ts";
+import { kalimatKhabath } from "../wasfa/khabath.ts";
 import { DEFAULT_TIMEOUT_MS } from "../constants.ts";
 import { logger } from "../logging/logger.ts";
 import { VERSION } from "../version.ts";
 
 const ASAS = "iksir";
+
+export interface KhiyaratHathth {
+  model?: { providerID: string; modelID: string };
+  agent?: string;
+  system?: string;
+  adawat?: string[];
+  kalimat?: Record<string, string>;
+}
 export const KHUDDAM = ["munadi", "arraf", "murshid", "mumayyiz", "sayrafi"] as const;
 const LISAN = "munadi";
 
@@ -45,15 +55,11 @@ export class Wasila {
   #hawadith: HadathThrum[] = [];
   #sijill: SijillAlat | null = null;
   #mirata: Array<(h: HadathThehum) => void> = [];
-  #namudhaj?: string;
-  #warsha?: string;
+  #tasmim: Tasmim | null;
   #ruqan = new Map<string, string>();
-  #mutaghayyirat: Record<string, string>;
 
-  constructor(tasmim?: { namudhaj?: string; warsha?: string; mutaghayyirat?: Record<string, string>; sijill?: SijillAlat; sanaaNahla?: (khadim: string) => NahlaHum }) {
-    this.#namudhaj = tasmim?.namudhaj;
-    this.#warsha = tasmim?.warsha;
-    this.#mutaghayyirat = tasmim?.mutaghayyirat ?? {};
+  constructor(tasmim?: { tasmim?: Tasmim; sijill?: SijillAlat; sanaaNahla?: (khadim: string) => NahlaHum }) {
+    this.#tasmim = tasmim?.tasmim ?? null;
     this.#sijill = tasmim?.sijill ?? null;
     this.#sanaa = tasmim?.sanaaNahla ?? ((khadim) => new Bee({
       hive: ASAS,
@@ -194,17 +200,28 @@ export class Wasila {
     return wasJalsa;
   }
 
-  #ruqya(ism: string): string | undefined {
+  #qalibRuqya(ism: string): string {
     const mahfuz = this.#ruqan.get(ism);
-    if (mahfuz !== undefined) return mahfuz || undefined;
+    if (mahfuz !== undefined) return mahfuz;
     const maskan = new URL("../../prompts/", import.meta.url).pathname;
     let nass = "";
     try {
-      nass = readFileSync(joinMasar(maskan, `${ism}.md`), "utf-8").replace(/\{\{(\w+)\}\}/g, (_, k) => this.#mutaghayyirat[k] ?? "");
+      nass = readFileSync(joinMasar(maskan, `${ism}.md`), "utf-8");
     } catch {
       void logger.haDHHir("wasila", `No ruqya found for ${ism}; prompting without one`);
     }
     this.#ruqan.set(ism, nass);
+    return nass;
+  }
+
+  kalimat(khassa?: Record<string, string>): Record<string, string> {
+    const roster = this.#tasmim?.khabath();
+    return { ...(roster ? kalimatKhabath(roster) : {}), ...(khassa ?? {}) };
+  }
+
+  #ruqya(ism: string, khassa?: Record<string, string>): string | undefined {
+    const kalimat = this.kalimat(khassa);
+    const nass = this.#qalibRuqya(ism).replace(/\{\{(\w+)\}\}/g, (_, k) => kalimat[k] ?? "");
     return nass || undefined;
   }
 
@@ -234,12 +251,11 @@ export class Wasila {
     });
   }
 
-  #hathth(sid: string, prompt: string, options?: { model?: { providerID: string; modelID: string }; agent?: string; system?: string; cwd?: string; adawat?: string[] }): Tone<"prompt"> {
+  #hathth(sid: string, prompt: string, options?: KhiyaratHathth): Tone<"prompt"> {
     const jalsa = this.#jalasat.get(sid);
-    const namudhaj = options?.model?.modelID ?? this.#namudhaj;
-    const nizam = options?.system ?? (options?.agent ? this.#ruqya(options.agent) : undefined);
+    const namudhaj = options?.model?.modelID ?? this.#tasmim?.namudhaj();
+    const nizam = options?.system ?? (options?.agent ? this.#ruqya(options.agent, options.kalimat) : undefined);
     const adawat = (this.#sijill?.adawat() ?? []).filter((a) => !options?.adawat || options.adawat.includes(a.name));
-    const cwd = options?.cwd ?? (this.#warsha ? `hum:///${this.#warsha.replace(/^\/+/, "")}` : undefined);
     return {
       chi: Chi.prompt,
       sid,
@@ -247,7 +263,6 @@ export class Wasila {
       ...(namudhaj ? { modelId: namudhaj } : {}),
       ...(nizam ? { systemPrompt: nizam } : {}),
       ...(jalsa?.nestId ? { resume: jalsa.nestId } : {}),
-      ...(cwd ? { cwd } : {}),
       ...(adawat.length > 0 ? { tools: adawat } : {}),
     };
   }
@@ -255,7 +270,7 @@ export class Wasila {
   async sendPrompt(
     sid: string,
     prompt: string,
-    options?: { model?: { providerID: string; modelID: string }; agent?: string; system?: string; cwd?: string; adawat?: string[]; timeoutMs?: number },
+    options?: KhiyaratHathth & { timeoutMs?: number },
   ): Promise<JawabDawr> {
     const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     const nahl = this.#nahlJalsa(sid);
@@ -288,7 +303,7 @@ export class Wasila {
   async sendPromptAsync(
     sid: string,
     prompt: string,
-    options?: { model?: { providerID: string; modelID: string }; agent?: string; system?: string; cwd?: string; adawat?: string[] },
+    options?: KhiyaratHathth,
   ): Promise<boolean> {
     const nahl = this.#nahlJalsa(sid);
     if (!nahl.muttasil) return false;

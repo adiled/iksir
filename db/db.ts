@@ -140,10 +140,17 @@ function tatbiqSchema(d: Database): void {
       ab TEXT,
       qadr REAL,
       mayayir TEXT,
+      majlis TEXT,
+      kur TEXT,
+      sijillat TEXT,
       unshia_fi TEXT NOT NULL,
       jaddad_fi TEXT NOT NULL
     )
   `);
+  for (const amud of ["majlis", "kur", "sijillat"]) {
+    const mawjud = (d.prepare("PRAGMA table_info(wasfat)").all() as Array<{ name: string }>).some((c) => c.name === amud);
+    if (!mawjud) d.exec(`ALTER TABLE wasfat ADD COLUMN ${amud} TEXT`);
+  }
 
   d.exec(`
     CREATE TABLE IF NOT EXISTS alaqat_wasfat (

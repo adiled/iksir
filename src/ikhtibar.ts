@@ -27,3 +27,13 @@ export function assert(x: unknown, msg?: string): asserts x {
   if (msg === undefined) nodeAssert.ok(x);
   else nodeAssert.ok(x, msg);
 }
+
+export function assertThrows<E extends Error>(fn: () => unknown, naw?: new (...wusut: never[]) => E): E {
+  try {
+    fn();
+  } catch (khata) {
+    if (naw && !(khata instanceof naw)) throw khata;
+    return khata as E;
+  }
+  throw new nodeAssert.AssertionError({ message: "expected a throw, got none" });
+}

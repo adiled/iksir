@@ -26,7 +26,7 @@ import {
   jalabaMatalebMuallaq,
 } from "../../db/db.ts";
 import type {
-  TasmimIksir,
+  ThulathiKhabath,
   MunToolCall,
   NidaKhalqWasfa,
   NidaTajdidWasfa,
@@ -40,12 +40,14 @@ import type {
   NidaFasl,
 } from "../types.ts";
 import { mayyazaTanbih } from "./mumayyiz.ts";
+import type { Tasmim } from "../config.ts";
+import { ikhtar, KhabathGharib } from "../wasfa/khabath.ts";
 import type { MudirJalasat } from "./katib.ts";
 import type { Munadi } from "./munadi.ts";
 import type { Sayrafi } from "./sayrafi.ts";
 
 interface MunaffidhDeps {
-  tasmim: TasmimIksir;
+  tasmim: Tasmim;
   wasfat: SijillWasfat;
   rasul: RasulKharij;
   ntfy: NtfyClient;
@@ -55,7 +57,7 @@ interface MunaffidhDeps {
 }
 
 export class Munaffidh {
-  readonly #config: TasmimIksir;
+  readonly #tasmim: Tasmim;
   #wasfat: SijillWasfat;
   #messenger: RasulKharij;
   #ntfy: NtfyClient;
@@ -67,7 +69,7 @@ export class Munaffidh {
   #mutahakkimIlgha: AbortController | null = null;
 
   constructor(deps: MunaffidhDeps) {
-    this.#config = deps.tasmim;
+    this.#tasmim = deps.tasmim;
     this.#wasfat = deps.wasfat;
     this.#messenger = deps.rasul;
     this.#ntfy = deps.ntfy;
@@ -78,10 +80,6 @@ export class Munaffidh {
 
   wadaaMunadi(iksir: Munadi): void {
     this.#iksir = iksir;
-  }
-
-  get tasmim(): TasmimIksir {
-    return this.#config;
   }
 
   async hammalaHala(): Promise<void> {
@@ -203,6 +201,13 @@ export class Munaffidh {
   }
 
   async #aalajaKhalqWasfa(call: NidaKhalqWasfa): Promise<string> {
+    let thulathi: ThulathiKhabath;
+    try {
+      thulathi = ikhtar(this.#tasmim.khabath(), { majlis: call.majlis, kur: call.kur, sijillat: call.sijillat });
+    } catch (khata) {
+      if (khata instanceof KhabathGharib) return `Not inscribed: ${khata.message}.`;
+      throw khata;
+    }
     const wasfa = await this.#wasfat.khalaq({
       huwiyya: call.huwiyya,
       unwan: call.unwan,
@@ -212,6 +217,7 @@ export class Munaffidh {
       wasm: call.wasamat,
       ab: call.huwiyyatAb,
       mayayir: call.mayayir,
+      ...thulathi,
     });
 
     return `Wasfa inscribed.
@@ -220,6 +226,7 @@ export class Munaffidh {
 **Says:** ${wasfa.unwan}
 **Condition:** ${wasfa.hala ?? "khaam"}
 **Fire:** ${wasfa.mayayir?.length ? `${wasfa.mayayir.length} maʿāyīr` : "none declared — mun_safa cannot assay it until mun_jaddid_wasfa gives it one"}
+**Majlis:** ${thulathi.majlis.join(", ") || "none"} · **Kūr:** ${thulathi.kur.join(", ") || "none"} · **Sijillāt:** ${thulathi.sijillat.join(", ") || "none"}
 
 Bind it to others with mun_wadaa_alaqat.`;
   }
@@ -236,6 +243,18 @@ Bind it to others with mun_wadaa_alaqat.`;
     if (call.updates.taqdir) taghyir.qadr = call.updates.taqdir;
     if (call.updates.hala) taghyir.hala = call.updates.hala;
     if (call.updates.mayayir) taghyir.mayayir = call.updates.mayayir;
+    if (call.updates.majlis || call.updates.kur || call.updates.sijillat) {
+      try {
+        Object.assign(taghyir, ikhtar(this.#tasmim.khabath(), {
+          majlis: call.updates.majlis,
+          kur: call.updates.kur,
+          sijillat: call.updates.sijillat,
+        }, issue));
+      } catch (khata) {
+        if (khata instanceof KhabathGharib) return `Not altered: ${khata.message}.`;
+        throw khata;
+      }
+    }
 
     await this.#wasfat.jaddid(issue.huwiyya, taghyir);
 
@@ -328,10 +347,18 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
     }
 
     try {
-      await this.#messenger.arsalaMunassaq(
+      const wasala = await this.#messenger.arsalaMunassaq(
         { murshid: call.huwiyyatMurshid },
         call.risala,
       );
+
+      if (!wasala) {
+        await logger.sajjalKhata("tool-executor", "Reply did not reach al-Kimyawi", {
+          huwiyyatMurshid: call.huwiyyatMurshid,
+          messagePreview: call.risala.slice(0, 100),
+        });
+        return `Your words did not reach al-Kimyawī — the messenger refused them. Nothing was delivered; say it again.`;
+      }
 
       await logger.akhbar("tool-executor", "Reply sent to al-Kimyawi", {
         huwiyyatMurshid: call.huwiyyatMurshid,

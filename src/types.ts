@@ -5,35 +5,46 @@
  */
 
 export interface TasmimIksir {
-  isharat: TasmimIsharat;
+  khabath: TasmimKhabath;
   wasfat: TasmimWasfat;
   hum: TasmimHum;
+  ahdaq: TasmimAhdaq;
 }
 
-export interface TasmimIsharat {
-  ntfy: TasmimNtfy;
-  telegram: TasmimTelegram;
+export interface TasmimKhabath {
+  majlis: string[];
+  kur: string[];
+  sijillat: string[];
+  telegram?: TasmimTelegram;
+  ntfy?: TasmimNtfy;
+  [khabath: string]: unknown;
+}
+
+export interface ThulathiKhabath {
+  majlis: string[];
+  kur: string[];
+  sijillat: string[];
 }
 
 export interface TasmimNtfy {
-  mufattah: boolean;
-  topic: string;
-  server: string;
+  topic?: string;
+  server?: string;
 }
 
 export interface TasmimTelegram {
-  mufattah: boolean;
-  ramzBot: string;
-  huwiyyatMuhadatha: string;
-  huwiyyatMajmuua?: string;
-  huwiyyatMawduuIrsal?: number;
+  muhadatha?: string;
+  majmuua?: string;
+  mawduuIrsal?: number;
   proxy?: string;
 }
 
 export interface TasmimWasfat {
   sabiqa?: string;
   namatWasfa?: string;
-  khabath?: string;
+}
+
+export interface TasmimAhdaq {
+  mustawa?: MustawaSijill;
 }
 
 export type NawKiyan = "wasfa" | "malhamat" | "majhul";
@@ -68,18 +79,6 @@ export interface FiilIshara {
   label: string;
   action: string;
   url?: string;
-}
-
-export interface TaaliqMuraja {
-  id: string;
-  huwiyyatWasfa: string;
-  author: string;
-  body: string;
-  path?: string;
-  line?: number;
-  createdAt: Date;
-  isAlKimyawi: boolean;
-  assessment: TaqyimTaaliq;
 }
 
 export interface TaqyimTaaliq {
@@ -143,6 +142,9 @@ export interface NidaKhalqWasfa {
   wasamat?: string[];
   huwiyyatAb?: string;
   mayayir?: string[];
+  majlis?: string[];
+  kur?: string[];
+  sijillat?: string[];
 }
 
 export interface NidaTajdidWasfa {
@@ -155,6 +157,9 @@ export interface NidaTajdidWasfa {
     taqdir?: number;
     hala?: string;
     mayayir?: string[];
+    majlis?: string[];
+    kur?: string[];
+    sijillat?: string[];
   };
 }
 
@@ -335,9 +340,9 @@ export type QanatRisala =
 export interface RasulKharij {
   mumakkan(): boolean;
 
-  send(channel: QanatRisala, text: string): Promise<void>;
+  send(channel: QanatRisala, text: string): Promise<boolean>;
 
-  arsalaMunassaq(channel: QanatRisala, text: string): Promise<void>;
+  arsalaMunassaq(channel: QanatRisala, text: string): Promise<boolean>;
 
   khalaqaQanatMurshid(identifier: string, title: string): Promise<string | null>;
 

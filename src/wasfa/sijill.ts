@@ -14,6 +14,9 @@ interface SafWasfa {
   ab: string | null;
   qadr: number | null;
   mayayir: string | null;
+  majlis: string | null;
+  kur: string | null;
+  sijillat: string | null;
 }
 
 function minSaf(saf: SafWasfa): Wasfa {
@@ -26,16 +29,19 @@ function minSaf(saf: SafWasfa): Wasfa {
     ab: saf.ab ?? undefined,
     qadr: saf.qadr ?? undefined,
     mayayir: saf.mayayir ? JSON.parse(saf.mayayir) : undefined,
+    majlis: saf.majlis ? JSON.parse(saf.majlis) : undefined,
+    kur: saf.kur ? JSON.parse(saf.kur) : undefined,
+    sijillat: saf.sijillat ? JSON.parse(saf.sijillat) : undefined,
   };
 }
 
-const AMUDA = "huwiyya, unwan, matn, hala, wasm, ab, qadr, mayayir";
+const AMUDA = "huwiyya, unwan, matn, hala, wasm, ab, qadr, mayayir, majlis, kur, sijillat";
 
 export class SijillWasfatMahalli implements SijillWasfat {
-  #sabiqa: string;
+  #sabiqa: () => string | undefined;
 
-  constructor(sabiqa = "W") {
-    this.#sabiqa = sabiqa;
+  constructor(sabiqa: string | (() => string | undefined) = "W") {
+    this.#sabiqa = typeof sabiqa === "function" ? sabiqa : () => sabiqa;
   }
 
   iqra(huwiyya: string): Promise<Wasfa | null> {
@@ -70,7 +76,7 @@ export class SijillWasfatMahalli implements SijillWasfat {
     const saf = jalabSijill()
       .prepare("SELECT COUNT(*) AS adad FROM wasfat")
       .get() as { adad: number };
-    return `${this.#sabiqa}-${saf.adad + 1}`;
+    return `${this.#sabiqa() || "W"}-${saf.adad + 1}`;
   }
 
   khalaq(wasfa: Omit<Wasfa, "huwiyya"> & { huwiyya?: string }): Promise<Wasfa> {
@@ -78,8 +84,8 @@ export class SijillWasfatMahalli implements SijillWasfat {
     const alan = new Date().toISOString();
     jalabSijill()
       .prepare(
-        `INSERT INTO wasfat (huwiyya, unwan, matn, hala, wasm, ab, qadr, mayayir, unshia_fi, jaddad_fi)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO wasfat (huwiyya, unwan, matn, hala, wasm, ab, qadr, mayayir, majlis, kur, sijillat, unshia_fi, jaddad_fi)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         huwiyya,
@@ -90,6 +96,9 @@ export class SijillWasfatMahalli implements SijillWasfat {
         wasfa.ab ?? null,
         wasfa.qadr ?? null,
         wasfa.mayayir ? JSON.stringify(wasfa.mayayir) : null,
+        wasfa.majlis ? JSON.stringify(wasfa.majlis) : null,
+        wasfa.kur ? JSON.stringify(wasfa.kur) : null,
+        wasfa.sijillat ? JSON.stringify(wasfa.sijillat) : null,
         alan,
         alan,
       );
@@ -106,7 +115,7 @@ export class SijillWasfatMahalli implements SijillWasfat {
     const baad: Wasfa = { ...qaim, ...taghyir, huwiyya };
     jalabSijill()
       .prepare(
-        `UPDATE wasfat SET unwan = ?, matn = ?, hala = ?, wasm = ?, ab = ?, qadr = ?, mayayir = ?, jaddad_fi = ?
+        `UPDATE wasfat SET unwan = ?, matn = ?, hala = ?, wasm = ?, ab = ?, qadr = ?, mayayir = ?, majlis = ?, kur = ?, sijillat = ?, jaddad_fi = ?
          WHERE huwiyya = ?`,
       )
       .run(
@@ -117,6 +126,9 @@ export class SijillWasfatMahalli implements SijillWasfat {
         baad.ab ?? null,
         baad.qadr ?? null,
         baad.mayayir ? JSON.stringify(baad.mayayir) : null,
+        baad.majlis ? JSON.stringify(baad.majlis) : null,
+        baad.kur ? JSON.stringify(baad.kur) : null,
+        baad.sijillat ? JSON.stringify(baad.sijillat) : null,
         new Date().toISOString(),
         huwiyya,
       );
@@ -148,6 +160,6 @@ export class SijillWasfatMahalli implements SijillWasfat {
   }
 }
 
-export function anshaaSijillWasfat(sabiqa?: string): SijillWasfatMahalli {
+export function anshaaSijillWasfat(sabiqa?: string | (() => string | undefined)): SijillWasfatMahalli {
   return new SijillWasfatMahalli(sabiqa);
 }

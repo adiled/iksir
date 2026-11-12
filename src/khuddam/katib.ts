@@ -10,7 +10,7 @@
  *
  * Katib also names the furū (branches) according to the sacred convention:
  *   malhamat:  epic/{huwiyya}-{kunya}
- *   khadma:    {ismMustakhdim}/{huwiyya}
+ *   wasfa:     wasfa/{huwiyya}
  *   warsha:    sandbox/{kunya}
  *
  * No vessel exists that Katib has not inscribed.
@@ -25,16 +25,14 @@ import {
   haddathaAwAdkhalaQanat,
   jalabaQararatSijill,
 } from "../../db/db.ts";
+import type { Tasmim } from "../config.ts";
+import type { SijillWasfat } from "../wasfa/sijill-wasfat.ts";
+import { kalimatKhabath, thulathiMin } from "../wasfa/khabath.ts";
 import type {
-  TasmimIksir,
   JalsatMurshid,
   NawMurshid,
   RasulKharij,
 } from "../types.ts";
-
-function ismMustakhdimGit(): string {
-  return process.env.IKSIR_GIT_USER ?? "dev";
-}
 
 export function wallidIsmFar(
   identifier: string,
@@ -43,7 +41,7 @@ export function wallidIsmFar(
   title?: string,
 ): string {
   if (type === "chore") {
-    return `${ismMustakhdimGit()}/${identifier}`;
+    return `wasfa/${identifier.toLowerCase()}`;
   }
   if (type === "sandbox") {
     const name = slug ?? identifier.replace(/^SANDBOX-/i, "").toLowerCase();
@@ -56,28 +54,32 @@ export function wallidIsmFar(
 }
 
 interface TasmimMudirJalasat {
-  tasmim: TasmimIksir;
+  tasmim: Tasmim;
   amil: Wasila;
   rasul: RasulKharij;
+  wasfat?: SijillWasfat;
 }
 
 export class MudirJalasat {
-  #config: TasmimIksir;
+  #tasmim: Tasmim;
   #amil: Wasila;
   #messenger: RasulKharij;
+  #wasfat: SijillWasfat | null;
 
   #murshidSessions: Map<string, JalsatMurshid> = new Map();
 
   #murshidFaailId: string | null = null;
 
   constructor(deps: TasmimMudirJalasat) {
-    this.#config = deps.tasmim;
+    this.#tasmim = deps.tasmim;
     this.#amil = deps.amil;
     this.#messenger = deps.rasul;
+    this.#wasfat = deps.wasfat ?? null;
   }
 
-  get tasmim(): TasmimIksir {
-    return this.#config;
+  async kalimatWasfa(huwiyya: string): Promise<Record<string, string>> {
+    const wasfa = await this.#wasfat?.iqra(huwiyya);
+    return kalimatKhabath(thulathiMin(wasfa ?? {}, this.#tasmim.khabath()));
   }
 
   async wajadaAwKhalaqa(
@@ -280,6 +282,7 @@ Awaiting direction from al-Kimyawi...`;
 
     await this.#amil.sendPromptAsync(session.id, prompt, {
       agent: "iksir-murshid",
+      kalimat: await this.kalimatWasfa(session.huwiyya),
     });
   }
 

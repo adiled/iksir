@@ -7,9 +7,11 @@ if [ ! -d ../hum/thrum-clients/ts ]; then
   echo "  git clone --depth 1 https://github.com/adiled/hum $(cd .. && pwd)/hum" >&2
   exit 1
 fi
-[ -e node_modules/thrum ] || npm install --silent --ignore-scripts
+mkdir -p node_modules
+ln -sfn ../../hum/thrum-clients/ts node_modules/thrum
 node --check src/main.ts
 node --check src/cli.ts
 node --check src/hum/wasila.ts
 node --check hives/saail/saail.ts
-npm test --silent
+node --check src/hijra.ts
+node --test "src/**/*.test.ts" "tests/*.test.ts"

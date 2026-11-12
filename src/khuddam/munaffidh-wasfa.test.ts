@@ -71,3 +71,34 @@ test("an alteration speaks the instrument's own words and lands", async () => {
     assertEquals(wasfa?.mayayir, ["npm test"]);
   });
 });
+
+test("a wasfa takes the roster whole, or narrows it; it never widens it", async () => {
+  await withTestDb(async () => {
+    const { wasfat, alat, munaffidh } = mashhad();
+
+    await alat.sijill.naffidh("mun_khalaq_wasfa", { huwiyyatMurshid: "dispatch", huwiyya: "GH-1", title: "whole" });
+    await alat.sijill.naffidh("mun_khalaq_wasfa", { huwiyyatMurshid: "dispatch", huwiyya: "ENG-2", title: "narrowed", sijillat: ["github"] });
+    await alat.sijill.naffidh("mun_khalaq_wasfa", { huwiyyatMurshid: "dispatch", huwiyya: "X-3", title: "widened", kur: ["linear-server"] });
+    await munaffidh.aalajAhdath();
+
+    assertEquals((await wasfat.iqra("GH-1"))?.kur, ["github"]);
+    assertEquals((await wasfat.iqra("GH-1"))?.sijillat, ["github"]);
+    assertEquals((await wasfat.iqra("ENG-2"))?.sijillat, ["github"]);
+    assertEquals(await wasfat.iqra("X-3"), null);
+  });
+});
+
+test("an alteration of the three is held to the roster too", async () => {
+  await withTestDb(async () => {
+    const { wasfat, alat, munaffidh } = mashhad();
+    await wasfat.khalaq({ huwiyya: "GH-5", unwan: "x", kur: ["github"], majlis: [], sijillat: ["github"] });
+
+    await alat.sijill.naffidh("mun_jaddid_wasfa", { huwiyyatMurshid: "GH-5", huwiyyatWasfa: "GH-5", updates: { kur: ["gitlab"] } });
+    await munaffidh.aalajAhdath();
+    assertEquals((await wasfat.iqra("GH-5"))?.kur, ["github"]);
+
+    await alat.sijill.naffidh("mun_jaddid_wasfa", { huwiyyatMurshid: "GH-5", huwiyyatWasfa: "GH-5", updates: { sijillat: [] } });
+    await munaffidh.aalajAhdath();
+    assertEquals((await wasfat.iqra("GH-5"))?.sijillat, []);
+  });
+});

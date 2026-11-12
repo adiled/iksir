@@ -4,14 +4,15 @@
  * Send messages and receive commands via Telegram Bot API.
  * Supports inline keyboards, message formatting, and polling.
  *
- * Supports optional SOCKS5 proxy via TELEGRAM_PROXY env var.
- * Example: TELEGRAM_PROXY=socks5://localhost:1080
+ * Reads al-Tasmīm at the moment of every call: the bot token from the
+ * secrets (telegram.ramz), the chat, hall, Dispatch topic and SOCKS5 proxy
+ * from khabath.telegram. Change them on disk and the next call uses them.
  */
 
 import { logger } from "../logging/logger.ts";
 import { execCommand } from "../utils/exec.ts";
 import { escapeMarkdown, escapeMarkdownV2 } from "../utils/strings.ts";
-import type { TasmimIksir, Ishara, TaaliqMuraja } from "../types.ts";
+import type { Tasmim } from "../config.ts";
 import { PROTOCOL_SOCKS5, TELEGRAM_API_BASE } from "../constants.ts";
 
 async function proxyFetch(
@@ -30,8 +31,9 @@ async function proxyFetch(
   const args = [
     "--silent",
     "--show-error",
-    "--socks5", proxy.replace(PROTOCOL_SOCKS5, ""),
+    "--socks5-hostname", proxy.replace(PROTOCOL_SOCKS5, ""),
     "-X", method,
+    "--config", "-",
   ];
 
   if (headers) {
@@ -45,10 +47,10 @@ async function proxyFetch(
   }
 
   args.push("-i");
-  args.push(url);
 
   const result = await execCommand("curl", args, {
     signal: options?.signal as AbortSignal | undefined,
+    input: `url = ${JSON.stringify(url)}\n`,
   });
 
   if (result.code !== 0) {
@@ -143,13 +145,7 @@ type MessageHandler = (message: TelegramMessage) => Promise<void>;
 type CallbackHandler = (query: TelegramCallbackQuery) => Promise<void>;
 
 export class TelegramClient {
-  private botToken: string;
-  private chatId: string;
-  private groupId: string | undefined;
-  private dispatchTopicId: number | undefined;
-  private enabled: boolean;
-  private baseUrl: string;
-  private proxy: string;
+  #tasmim: Tasmim;
   private pollingOffset = 0;
   private isPolling = false;
   private pollAbortController: AbortController | null = null;
@@ -157,14 +153,37 @@ export class TelegramClient {
   private messageHandlers: MessageHandler[] = [];
   private callbackHandlers: CallbackHandler[] = [];
 
-  constructor(config: TasmimIksir) {
-    this.botToken = config.isharat.telegram.ramzBot;
-    this.chatId = config.isharat.telegram.huwiyyatMuhadatha;
-    this.groupId = config.isharat.telegram.huwiyyatMajmuua;
-    this.dispatchTopicId = config.isharat.telegram.huwiyyatMawduuIrsal;
-    this.enabled = config.isharat.telegram.mufattah;
-    this.proxy = config.isharat.telegram.proxy ?? "";
-    this.baseUrl = `${TELEGRAM_API_BASE}/bot${this.botToken}`;
+  constructor(tasmim: Tasmim) {
+    this.#tasmim = tasmim;
+  }
+
+  private get botToken(): string {
+    return this.#tasmim.sirr("telegram.ramz") ?? "";
+  }
+
+  private get chatId(): string {
+    return this.#tasmim.khabath().telegram?.muhadatha ?? "";
+  }
+
+  private get groupId(): string | undefined {
+    return this.#tasmim.khabath().telegram?.majmuua || undefined;
+  }
+
+  private get dispatchTopicId(): number | undefined {
+    const m = this.#tasmim.khabath().telegram?.mawduuIrsal;
+    return m === undefined || m === null ? undefined : Number(m);
+  }
+
+  private get proxy(): string {
+    return this.#tasmim.khabath().telegram?.proxy ?? "";
+  }
+
+  private get enabled(): boolean {
+    return this.#tasmim.khabath().majlis.includes("telegram") && this.botToken !== "";
+  }
+
+  private get baseUrl(): string {
+    return `${TELEGRAM_API_BASE}/bot${this.botToken}`;
   }
 
   getGroupId(): string | undefined {
@@ -261,6 +280,11 @@ export class TelegramClient {
         return data.result.message_id;
       }
 
+      if (options?.parseMode && /parse entities|can't parse/i.test(String(data.description))) {
+        await logger.haDHHir("telegram", "Markdown refused, saying it plain", { error: data.description });
+        return this.arsalaRisala(text, { ...options, parseMode: undefined });
+      }
+
       await logger.sajjalKhata("telegram", "Failed to send message", { error: data.description });
       await logger.sajjalIshara("telegram", "message", targetChatId, text.slice(0, 50), false);
       return null;
@@ -271,31 +295,6 @@ export class TelegramClient {
     }
   }
 
-  async arsalaRisalaWithFallback(
-    text: string,
-    options?: {
-      keyboard?: InlineKeyboardMarkup;
-      disableNotification?: boolean;
-      topicId?: number;
-      chatId?: string;
-    }
-  ): Promise<number | null> {
-    const result = await this.arsalaRisala(text, {
-      ...options,
-      parseMode: "Markdown",
-    });
-
-    if (result !== null) {
-      return result;
-    }
-
-    await logger.haDHHir("telegram", "Markdown failed, retrying as plain text");
-    return this.arsalaRisala(text, {
-      ...options,
-      parseMode: undefined,
-    });
-  }
-
   async sendToDispatch(
     text: string,
     options?: {
@@ -304,10 +303,10 @@ export class TelegramClient {
     }
   ): Promise<number | null> {
     if (!this.isGroupMode()) {
-      return this.arsalaRisalaWithFallback(text, options);
+      return this.arsalaRisala(text, options);
     }
 
-    return this.arsalaRisalaWithFallback(text, {
+    return this.arsalaRisala(text, {
       ...options,
       chatId: this.groupId,
       topicId: this.dispatchTopicId,
@@ -382,107 +381,6 @@ export class TelegramClient {
     }
   }
 
-  async closeForumTopic(topicId: number): Promise<boolean> {
-    if (!this.enabled || !this.groupId) return false;
-
-    try {
-      const response = await proxyFetch(`${this.baseUrl}/closeForumTopic`, this.proxy, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: this.groupId,
-          message_thread_id: topicId,
-        }),
-      });
-
-      const data = await response.json();
-      if (data.ok) {
-        await logger.akhbar("telegram", `Closed forum topic: ${topicId}`);
-      }
-      return data.ok === true;
-    } catch {
-      return false;
-    }
-  }
-
-  async reopenForumTopic(topicId: number): Promise<boolean> {
-    if (!this.enabled || !this.groupId) return false;
-
-    try {
-      const response = await proxyFetch(`${this.baseUrl}/reopenForumTopic`, this.proxy, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: this.groupId,
-          message_thread_id: topicId,
-        }),
-      });
-
-      const data = await response.json();
-      return data.ok === true;
-    } catch {
-      return false;
-    }
-  }
-
-  async deleteForumTopic(topicId: number): Promise<boolean> {
-    if (!this.enabled || !this.groupId) return false;
-
-    try {
-      const response = await proxyFetch(`${this.baseUrl}/deleteForumTopic`, this.proxy, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: this.groupId,
-          message_thread_id: topicId,
-        }),
-      });
-
-      const data = await response.json();
-      if (data.ok) {
-        await logger.akhbar("telegram", `Deleted forum topic: ${topicId}`);
-      }
-      return data.ok === true;
-    } catch {
-      return false;
-    }
-  }
-
-  async editForumTopic(
-    topicId: number,
-    options: {
-      name?: string;
-      iconCustomEmojiId?: string;
-    }
-  ): Promise<boolean> {
-    if (!this.enabled || !this.groupId) return false;
-
-    const body: Record<string, unknown> = {
-      chat_id: this.groupId,
-      message_thread_id: topicId,
-    };
-
-    if (options.name) {
-      body.name = options.name.slice(0, 128);
-    }
-    if (options.iconCustomEmojiId) {
-      body.icon_custom_emoji_id = options.iconCustomEmojiId;
-    }
-
-    try {
-      const response = await proxyFetch(`${this.baseUrl}/editForumTopic`, this.proxy, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      const data = await response.json();
-      return data.ok === true;
-    } catch {
-      return false;
-    }
-  }
-
   jalabRisalaTopicId(message: TelegramMessage): number | undefined {
     return message.message_thread_id;
   }
@@ -507,163 +405,6 @@ export class TelegramClient {
     } catch {
       return false;
     }
-  }
-
-  async editMessage(messageId: number, text: string, keyboard?: InlineKeyboardMarkup): Promise<boolean> {
-    if (!this.enabled) return false;
-
-    const body: Record<string, unknown> = {
-      chat_id: this.chatId,
-      message_id: messageId,
-      text,
-    };
-
-    if (keyboard) {
-      body.reply_markup = keyboard;
-    }
-
-    try {
-      const response = await proxyFetch(`${this.baseUrl}/editMessageText`, this.proxy, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      const data = await response.json();
-      return data.ok === true;
-    } catch {
-      return false;
-    }
-  }
-
-  async sendNotification(notification: Ishara): Promise<number | null> {
-    const emoji = this.getCategoryEmoji(notification.sinf);
-    const text = `${emoji} *${notification.unwan}*\n\n${notification.matn}`;
-
-    const keyboard = notification.afaal
-      ? this.buildKeyboard(notification.afaal.map((a) => ({ text: a.label, callback_data: a.action })))
-      : undefined;
-
-    return this.arsalaRisala(text, {
-      parseMode: "Markdown",
-      keyboard,
-      disableNotification: notification.awwaliyya === "min" || notification.awwaliyya === "low",
-    });
-  }
-
-  private getCategoryEmoji(category: string): string {
-    const emojis: Record<string, string> = {
-      blocker: "🚫",
-      decision: "🤔",
-      progress: "📊",
-      jawhar_mafsul: "✅",
-      taaliqat: "💬",
-      external_change: "⚠️",
-      quiet_hours_exit: "☀️",
-    };
-    return emojis[category] ?? "📢";
-  }
-
-  private buildKeyboard(buttons: Array<{ text: string; callback_data?: string; url?: string }>): InlineKeyboardMarkup {
-    const rows: InlineKeyboardButton[][] = [];
-    for (let i = 0; i < buttons.length; i += 2) {
-      rows.push(buttons.slice(i, i + 2));
-    }
-    return { inline_keyboard: rows };
-  }
-
-  async sendProjectStarted(
-    projectId: string,
-    title: string,
-    epicBranch: string,
-    tickets: Array<{ id: string; title: string; estimate: number | null }>
-  ): Promise<number | null> {
-    const ticketList = tickets.map((t) => `  ${t.id}: ${t.title} (${t.estimate ?? "?"} pts)`).join("\n");
-    const totalPoints = tickets.reduce((sum, t) => sum + (t.estimate ?? 0), 0);
-
-    const text = `📋 *Project Started: ${projectId}*
-
-${title}
-
-Epic branch: \`${epicBranch}\`
-
-Ticket breakdown:
-${ticketList}
-
-Total: ${totalPoints} story points
-
-Beginning work...`;
-
-    return this.arsalaRisala(text, { parseMode: "Markdown" });
-  }
-
-  async sendProgress(
-    projectId: string,
-    completed: Array<{ id: string; hala?: string }>,
-    inProgress: Array<{ id: string; progress: number }>,
-    pending: string[]
-  ): Promise<number | null> {
-    const completedList =
-      completed.length > 0
-        ? completed.map((t) => `  ✓ ${t.id}${t.hala ? ` (${t.hala})` : ""}`).join("\n")
-        : "  (none)";
-
-    const inProgressList =
-      inProgress.length > 0
-        ? inProgress.map((t) => `  → ${t.id} (${t.progress}%)`).join("\n")
-        : "  (none)";
-
-    const pendingList = pending.length > 0 ? pending.map((id) => `  ○ ${id}`).join("\n") : "  (none)";
-
-    const total = completed.length + inProgress.length + pending.length;
-    const percent = total > 0 ? Math.round((completed.length / total) * 100) : 0;
-
-    const text = `📊 *Progress: ${projectId}*
-
-Completed:
-${completedList}
-
-In Progress:
-${inProgressList}
-
-Pending:
-${pendingList}
-
-Overall: ${percent}% complete`;
-
-    return this.arsalaRisala(text, { parseMode: "Markdown" });
-  }
-
-  async sendTaaliqMurajas(
-    huwiyyatWasfa: string,
-    comments: TaaliqMuraja[],
-  ): Promise<number | null> {
-    const byAuthor = new Map<string, TaaliqMuraja[]>();
-    for (const comment of comments) {
-      const existing = byAuthor.get(comment.author) ?? [];
-      existing.push(comment);
-      byAuthor.set(comment.author, existing);
-    }
-
-    let text = `💬 *Said upon ${huwiyyatWasfa}*\n\n`;
-
-    for (const [author, authorComments] of byAuthor) {
-      text += `@${author} (${authorComments.length} comment${authorComments.length > 1 ? "s" : ""}):\n\n`;
-
-      for (let i = 0; i < authorComments.length; i++) {
-        const c = authorComments[i];
-        const location = c.path ? `Line ${c.line ?? "?"} in ${c.path}` : "General";
-        const bodyPreview = c.body.length > 100 ? c.body.slice(0, 100) + "..." : c.body;
-
-        text += `${i + 1}. ${location}:\n`;
-        text += `   "${bodyPreview}"\n`;
-        text += `   → Assessment: ${c.assessment.intent}\n\n`;
-      }
-    }
-
-    text += "Awaiting your direction.";
-
-    return this.arsalaRisala(text, { parseMode: "Markdown" });
   }
 
   onMessage(handler: MessageHandler): void {
@@ -774,7 +515,7 @@ Overall: ${percent}% complete`;
   }
 }
 
-export function anshaaTelegramAmil(config: TasmimIksir): TelegramClient {
-  return new TelegramClient(config);
+export function anshaaTelegramAmil(tasmim: Tasmim): TelegramClient {
+  return new TelegramClient(tasmim);
 }
 

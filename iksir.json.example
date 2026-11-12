@@ -1,7 +1,20 @@
 {
   "$schema": "https://github.com/adiled/iksir/iksir.schema.json",
-  "wasfat": {
-    "khabath": "github"
+  "khabath": {
+    "majlis": [
+      "telegram"
+    ],
+    "kur": [
+      "github"
+    ],
+    "sijillat": [
+      "github"
+    ],
+    "telegram": {
+      "muhadatha": "123456789",
+      "majmuua": "-1001234567890",
+      "mawduuIrsal": 2
+    }
   },
   "hum": {
     "namudhaj": "claude-opus-5-5"

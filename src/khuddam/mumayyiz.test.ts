@@ -11,15 +11,20 @@
  */
 
 import { test, assertEquals } from "../ikhtibar.ts";
-import { mockWasila, writeTempFile } from "../test-helpers.ts";
+import { mockWasila } from "../test-helpers.ts";
 import { mayyazaTanbih } from "./mumayyiz.ts";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 let fixtureFile: string | null = null;
 
 async function ensureFixture(): Promise<void> {
   if (fixtureFile) return;
-  fixtureFile = await writeTempFile("# Test AGENTS.md\nGuidelines for testing.", "agents-md-");
-  process.env.IKSIR_AGENTS_MD_PATH = fixtureFile;
+  const dir = mkdtempSync(join(tmpdir(), "iksir-talim-"));
+  fixtureFile = join(dir, "AGENTS.md");
+  writeFileSync(fixtureFile, "# Test AGENTS.md\nGuidelines for testing.");
+  process.env.IKSIR_CONFIG_DIR = dir;
 }
 
 test("mayyazaTanbih: DHAHAB response parsed correctly", async () => {

@@ -1,13 +1,14 @@
 /**
  * Sijill al-Waṣfāt (سجل الوصفات) — The Register of Formulae
  *
- * A waṣfa is work to be done. It has a name, a statement of itself, and a
- * condition. That is the whole of it.
+ * A waṣfa is work to be done. It has a name, a statement of itself, a
+ * condition, and its three khabath — where it is spoken of (majlis), where
+ * its jawhar is decanted (kur), and which outer trackers it answers to
+ * (sijillat) — each drawn from al-Kimyawī's roster.
  *
  * The waṣfāt live here.
  */
 
-/** A formula: work stated, and its condition. */
 export interface Wasfa {
   huwiyya: string;
   unwan: string;
@@ -17,6 +18,9 @@ export interface Wasfa {
   ab?: string;
   qadr?: number;
   mayayir?: string[];
+  majlis?: string[];
+  kur?: string[];
+  sijillat?: string[];
 }
 
 export interface AlaqatWasfa {

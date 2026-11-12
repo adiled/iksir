@@ -8,9 +8,8 @@
 import { mkdirSync, appendFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-function masarSijillAhdaq(): string {
-  return process.env.IKSIR_LOG_DIR ||
-    join(process.env.XDG_STATE_HOME || join(process.env.HOME || "/root", ".local", "state"), "iksir");
+export function masarSijillAhdaq(): string {
+  return join(process.env.XDG_STATE_HOME || join(process.env.HOME || "/root", ".local", "state"), "iksir");
 }
 
 const LOG_FILES = {
@@ -24,7 +23,7 @@ type MilafSijill = keyof typeof LOG_FILES;
 
 class Musjil {
   private tahyiad = false;
-  private logLevel: MustawaSijill = "info";
+  private mustawaMin: () => MustawaSijill | undefined = () => undefined;
 
   private readonly levelPriority: Record<MustawaSijill, number> = {
     debug: 0,
@@ -37,15 +36,16 @@ class Musjil {
     if (this.tahyiad) return;
     mkdirSync(masarSijillAhdaq(), { recursive: true });
     this.tahyiad = true;
+  }
 
-    const level = process.env.IKSIR_LOG_LEVEL as MustawaSijill | undefined;
-    if (level && this.levelPriority[level] !== undefined) {
-      this.logLevel = level;
-    }
+  ittabi(mustawa: () => MustawaSijill | undefined): void {
+    this.mustawaMin = mustawa;
   }
 
   private yajibuTasjil(level: MustawaSijill): boolean {
-    return this.levelPriority[level] >= this.levelPriority[this.logLevel];
+    const hadd = this.mustawaMin();
+    const asas = hadd && this.levelPriority[hadd] !== undefined ? hadd : "info";
+    return this.levelPriority[level] >= this.levelPriority[asas];
   }
 
   private nassiqWaqt(date: Date): string {

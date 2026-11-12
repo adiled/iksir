@@ -12,7 +12,7 @@ function mashhad() {
   const amil = mockWasila();
   const rasul = mockMessenger();
   const katib = new MudirJalasat({ tasmim: makeConfig(), amil: amil as never, rasul });
-  const sayrafi = new Sayrafi(amil as never);
+  const sayrafi = new Sayrafi(amil as never, makeConfig());
   const munaffidh = new Munaffidh({
     tasmim: makeConfig(),
     wasfat,
