@@ -40,6 +40,7 @@ export const KHUDDAM = ["munadi", "murshid", "mumayyiz", "sayrafi", "raqib"] as 
 const HADD_ATHAR = 60;
 const HADD_AZHAR = 40;
 const HADD_NASS_BATALA = 8000;
+const MUHLA_DAWR_MS = 60 * 60 * 1000;
 const LISAN = "munadi";
 
 type JawabDawr = { success: boolean; response?: string; error?: string };
@@ -75,7 +76,10 @@ export class Wasila {
   #adwarAkhira = new Map<string, { zaman: number; usage?: unknown; khata?: string }>();
   #athar = new Map<string, string[]>();
   #azhar = new Map<string, Zahra[]>();
+  #zahraJariya = new Map<string, Zahra>();
+  #maftuh = new Map<string, { tamm: Promise<void>; hal: () => void }>();
   #tabur = new Map<string, Promise<unknown>>();
+  #muntazirun = new Map<string, number>();
   #sidMumayyiz: string | null = null;
   #batalatMuallaqa = new Map<string, { ism?: string; nass: string }>();
   #asmas = 0;
@@ -117,7 +121,10 @@ export class Wasila {
     nahl.nahla.onAstray(() => {
       nahl.muttasil = false;
       for (const [sid, k] of this.#khadimJalsa) {
-        if (k === khadim) this.#inthaDawr(sid, { success: false, error: "humd went away mid-bloom" });
+        if (k === khadim) {
+          this.#inthaDawr(sid, { success: false, error: "humd went away mid-bloom" });
+          this.#ughliqaDawr(sid);
+        }
       }
     });
     nahl.nahla.onAdvisory((a) => void logger.haDHHir("wasila", `${khadim}: ${a.code}: ${a.message}`));
@@ -242,6 +249,9 @@ export class Wasila {
     this.#athar.delete(sid);
     this.#azhar.delete(sid);
     this.#tabur.delete(sid);
+    this.#muntazirun.delete(sid);
+    this.#zahraJariya.delete(sid);
+    this.#ughliqaDawr(sid);
     if (this.#sidMumayyiz === sid) this.#sidMumayyiz = null;
     try { mahaqaAzhar(sid); } catch { void 0; }
     this.#inthaDawr(sid, { success: false, error: "session dismissed" });
@@ -292,6 +302,7 @@ export class Wasila {
           if (t.kind === PulseKind.cellDied || t.kind === PulseKind.cellEvicted) {
             const j = this.#jalasat.get(sid);
             if (j) j.nestId = undefined;
+            this.#ughliqaDawr(sid);
           }
           return this.nasharHadath("pulse", t as unknown as Record<string, unknown>);
         }
@@ -312,7 +323,8 @@ export class Wasila {
       .filter((a) => (!a.khass || a.khass === khadim) && (!options?.adawat || options.adawat.includes(a.name)))
       .map(({ khass: _khass, ...a }) => a);
     const sabiqa = this.#azhar.get(sid) ?? [];
-    this.#azhar.set(sid, [...sabiqa, { content: [{ kind: PetalKind.text, text: prompt }], grew: [] }].slice(-HADD_AZHAR));
+    this.#zahraJariya.set(sid, { content: [{ kind: PetalKind.text, text: prompt }], grew: [] });
+    this.#iftahDawr(sid);
     return {
       chi: Chi.prompt,
       sid,
@@ -332,13 +344,55 @@ export class Wasila {
     prompt: string,
     options?: KhiyaratHathth & { timeoutMs?: number },
   ): Promise<JawabDawr> {
-    const sabiq = this.#tabur.get(sid);
-    const hadha = sabiq ? sabiq.then(() => this.#haththWaIntazir(sid, prompt, options)) : this.#haththWaIntazir(sid, prompt, options);
-    const dhayl: Promise<void> = hadha.then(() => undefined, () => undefined).then(() => {
-      if (this.#tabur.get(sid) === dhayl) this.#tabur.delete(sid);
-    });
+    return this.#biDawrihi(sid, () => this.#haththWaIntazir(sid, prompt, options));
+  }
+
+  #biDawrihi<T>(sid: string, fn: () => Promise<T>): Promise<T> {
+    const yantazir = this.#maftuh.has(sid) || (this.#muntazirun.get(sid) ?? 0) > 0;
+    let hadha: Promise<T>;
+    if (yantazir) {
+      this.#muntazirun.set(sid, (this.#muntazirun.get(sid) ?? 0) + 1);
+      hadha = (this.#tabur.get(sid) ?? Promise.resolve()).then(() => {
+        this.#muntazirun.set(sid, (this.#muntazirun.get(sid) ?? 1) - 1);
+        return fn();
+      });
+    } else {
+      hadha = fn();
+    }
+    const dhayl: Promise<void> = hadha
+      .then(() => undefined, () => undefined)
+      .then(() => this.#intazirDawr(sid))
+      .then(() => {
+        if (this.#tabur.get(sid) === dhayl) this.#tabur.delete(sid);
+      });
     this.#tabur.set(sid, dhayl);
     return hadha;
+  }
+
+  #intazirDawr(sid: string): Promise<void> {
+    const maftuh = this.#maftuh.get(sid);
+    if (!maftuh) return Promise.resolve();
+    return Promise.race([
+      maftuh.tamm,
+      new Promise<void>((hal) => {
+        const muqqit = setTimeout(hal, MUHLA_DAWR_MS);
+        muqqit.unref?.();
+      }),
+    ]);
+  }
+
+  #iftahDawr(sid: string): void {
+    this.#ughliqaDawr(sid);
+    let hal: () => void = () => {};
+    const tamm = new Promise<void>((r) => { hal = r; });
+    this.#maftuh.set(sid, { tamm, hal });
+  }
+
+  #ughliqaDawr(sid: string): void {
+    const maftuh = this.#maftuh.get(sid);
+    if (!maftuh) return;
+    this.#maftuh.delete(sid);
+    maftuh.hal();
   }
 
   async #haththWaIntazir(
@@ -379,8 +433,11 @@ export class Wasila {
   ): Promise<boolean> {
     const nahl = this.#nahlJalsa(sid);
     if (!nahl.muttasil) return false;
-    nahl.nahla.send(this.#hathth(sid, prompt, options));
-    await logger.akhbar("wasila", `${nahl.khadim}: sent async prompt to session ${sid}`);
+    void this.#biDawrihi(sid, async () => {
+      if (!nahl.muttasil) return;
+      nahl.nahla.send(this.#hathth(sid, prompt, options));
+      await logger.akhbar("wasila", `${nahl.khadim}: sent async prompt to session ${sid}`);
+    });
     return true;
   }
 
@@ -567,9 +624,7 @@ export class Wasila {
   }
 
   #numu(sid: string, batala: Batala): void {
-    const azhar = this.#azhar.get(sid);
-    const akhira = azhar?.[azhar.length - 1];
-    if (akhira) akhira.grew.push(batala);
+    this.#zahraJariya.get(sid)?.grew.push(batala);
   }
 
   #hallSap(sap: string): unknown {
@@ -587,11 +642,15 @@ export class Wasila {
     if (t.chi === Chi.wilt && wilt.reason === "error") {
       void logger.haDHHir("wasila", `the cell of ${sid} died mid-bloom (exit ${wilt.exitCode ?? "?"}); a crowded nest evicts this way, and the next prompt grows on from the graft`);
     }
-    const azhar = this.#azhar.get(sid);
-    if (azhar?.length) {
-      try { adkhalaZahra(sid, azhar.length - 1, azhar[azhar.length - 1] as unknown as Record<string, unknown>); } catch { void 0; }
-    }
     const khata = t.chi === Chi.error;
+    const jariya = this.#zahraJariya.get(sid);
+    this.#zahraJariya.delete(sid);
+    if (jariya && !khata) {
+      const azhar = [...(this.#azhar.get(sid) ?? []), jariya].slice(-HADD_AZHAR);
+      this.#azhar.set(sid, azhar);
+      try { adkhalaZahra(sid, azhar.length - 1, jariya as unknown as Record<string, unknown>); } catch { void 0; }
+    }
+    this.#ughliqaDawr(sid);
     const dawr = this.#adwar.get(sid);
 
     this.#adwarAkhira.set(sid, {
