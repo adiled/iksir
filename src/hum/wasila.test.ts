@@ -1,39 +1,9 @@
 import { test, assertEquals, assertExists } from "../ikhtibar.ts";
 import type { Tone } from "thrum";
-import { KHUDDAM, Wasila, khadimMin, type NahlaHum } from "./wasila.ts";
+import { KHUDDAM, Wasila, khadimMin } from "./wasila.ts";
 import { AlatAlIksir } from "../alat/alat-al-iksir.ts";
-import { withTestDb, makeConfig } from "../test-helpers.ts";
+import { withTestDb, makeConfig, NahlaWahm } from "../test-helpers.ts";
 import type { Tasmim } from "../config.ts";
-
-class NahlaWahm implements NahlaHum {
-  id: string;
-  constructor(khadim = "wahm") { this.id = `bee_${khadim}`; }
-  mursal: Tone[] = [];
-  #byChi = new Map<string, (t: any) => unknown>();
-  #bySid = new Map<string, (t: Tone) => unknown>();
-  #nestled: Array<() => unknown> = [];
-  on(chi: string, fn: (t: any) => unknown) { this.#byChi.set(chi, fn); return this; }
-  onSid(sid: string, fn: (t: Tone) => unknown) { this.#bySid.set(sid, fn); return this; }
-  offSid(sid: string) { this.#bySid.delete(sid); return this; }
-  onAny() { return this; }
-  onNestled(fn: () => unknown) { this.#nestled.push(fn); return this; }
-  #astray: Array<() => unknown> = [];
-  onAstray(fn: () => unknown) { this.#astray.push(fn); return this; }
-  dhalla() { for (const fn of this.#astray) fn(); }
-  tanaffas() { this.sawt({ chi: "breath", sigils: {}, protoVersion: "0.8.0", models: [{ id: "claude-opus-5-5", hive: "claude-cli" }], tools: [{ name: "wasfa_iqra" }] }); }
-  onAdvisory() { return this; }
-  #badaa = false;
-  async start() {
-    if (this.#badaa) throw new Error("this bee has already started");
-    this.#badaa = true;
-    for (const fn of this.#nestled) fn();
-    this.tanaffas();
-  }
-  send(t: Tone) { this.mursal.push(t); }
-  async close() {}
-  sawt(t: Tone) { ((t.sid && this.#bySid.get(t.sid)) ?? this.#byChi.get(t.chi))?.(t); }
-  nataij() { return this.mursal.filter((t) => t.chi === "tendril-result") as Array<Tone<"tendril-result">>; }
-}
 
 async function intazir(f: () => boolean): Promise<void> {
   const azal = Date.now() + 3000;
@@ -175,6 +145,7 @@ test("forager: a ruqya is rendered per prompt — the roster's words, overridden
   await wasila.ittasil();
   const jalsa = (await wasila.khalaqaJalsa("iksir-sayrafi", "t"))!;
   await wasila.sendPromptAsync(jalsa.id, "salam", { agent: "iksir-sayrafi" });
+  nuhul.get("sayrafi")!.wilt(jalsa.id);
   await wasila.sendPromptAsync(jalsa.id, "salam", { agent: "iksir-sayrafi", kalimat: { kur: "gitlab" } });
   const [awwal, thani] = nuhul.get("sayrafi")!.mursal.filter((t) => t.chi === "prompt") as Array<Tone<"prompt">>;
   assertEquals(awwal.systemPrompt?.includes("kūr is **github, gitlab**"), true);
@@ -268,6 +239,8 @@ test("forager: each prompt carries the blooms before it as a graft, with what gr
   assertEquals(graft[0].grew[1].name, "bash");
   assertEquals(graft[0].grew[1].args, { command: "ls" });
   assertEquals(graft[0].grew[2].result, "a b");
+  assertEquals(wasila.azhar(sid).length, 1);
+  nahla.wilt(sid);
   assertEquals(wasila.azhar(sid).length, 2);
   wasila.qaf();
 });
@@ -313,5 +286,46 @@ test("forager: two prompts on one sid go one after the other, never two blooms a
   bee.sawt({ chi: "unfurl", sid: jalsa.id, petal: 1, kind: "text", closed: true });
   bee.sawt({ chi: "wilt", sid: jalsa.id, reason: "done" });
   assertEquals((await thani).response, "B");
+  wasila.qaf();
+});
+
+test("forager: async prompts on one sid wait for the open turn; a cell-died pulse frees the queue", async () => {
+  const { nahla, wasila } = qim();
+  await wasila.ittasil();
+  const jalsa = (await wasila.khalaqaJalsa("GH-11", "t"))!;
+  const sid = jalsa.id;
+  const prompts = () => nahla.mursal.filter((t) => t.chi === "prompt") as Tone<"prompt">[];
+  assertEquals(await wasila.sendPromptAsync(sid, "one"), true);
+  assertEquals(await wasila.sendPromptAsync(sid, "two"), true);
+  assertEquals(await wasila.sendPromptAsync(sid, "three"), true);
+  assertEquals(prompts().map((t) => t.text), ["one"]);
+  nahla.sawt({ chi: "unfurl", sid, petal: 1, kind: "text", text: "A" });
+  nahla.sawt({ chi: "unfurl", sid, petal: 1, kind: "text", closed: true });
+  nahla.sawt({ chi: "wilt", sid, reason: "done" });
+  await intazir(() => prompts().length === 2);
+  assertEquals(prompts()[1].text, "two");
+  assertEquals((prompts()[1].graft as unknown[]).length, 1);
+  nahla.sawt({ chi: "pulse", sid, kind: "cell-died" });
+  await intazir(() => prompts().length === 3);
+  assertEquals(prompts()[2].text, "three");
+  assertEquals((prompts()[2].graft as unknown[]).length, 1);
+  wasila.qaf();
+});
+
+test("forager: the graft holds finished turns only; a bloom that broke off is not in it", async () => {
+  const { nahla, wasila } = qim();
+  await wasila.ittasil();
+  const jalsa = (await wasila.khalaqaJalsa("GH-12", "t"))!;
+  const sid = jalsa.id;
+  const prompts = () => nahla.mursal.filter((t) => t.chi === "prompt") as Tone<"prompt">[];
+  await wasila.sendPromptAsync(sid, "one");
+  assertEquals(wasila.azhar(sid).length, 0);
+  nahla.sawt({ chi: "error", sid, message: "rate limited" });
+  await wasila.sendPromptAsync(sid, "two");
+  await intazir(() => prompts().length === 2);
+  assertEquals(prompts()[1].graft, undefined);
+  assertEquals(wasila.azhar(sid).length, 0);
+  nahla.sawt({ chi: "wilt", sid, reason: "done" });
+  assertEquals(wasila.azhar(sid).length, 1);
   wasila.qaf();
 });

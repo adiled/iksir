@@ -12,6 +12,53 @@ import { join } from "node:path";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { execCommand } from "./utils/exec.ts";
 import type { RasulKharij, QanatRisala, JalsatMurshid, } from "./types.ts";
+import type { Tone } from "thrum";
+import type { NahlaHum } from "./hum/wasila.ts";
+
+export class NahlaWahm implements NahlaHum {
+  id: string;
+  constructor(khadim = "wahm") { this.id = `bee_${khadim}`; }
+  mursal: Tone[] = [];
+  #byChi = new Map<string, (t: any) => unknown>();
+  #bySid = new Map<string, (t: Tone) => unknown>();
+  #nestled: Array<() => unknown> = [];
+  #astray: Array<() => unknown> = [];
+  on(chi: string, fn: (t: any) => unknown) { this.#byChi.set(chi, fn); return this; }
+  onSid(sid: string, fn: (t: Tone) => unknown) { this.#bySid.set(sid, fn); return this; }
+  offSid(sid: string) { this.#bySid.delete(sid); return this; }
+  onAny() { return this; }
+  onNestled(fn: () => unknown) { this.#nestled.push(fn); return this; }
+  onAstray(fn: () => unknown) { this.#astray.push(fn); return this; }
+  onAdvisory() { return this; }
+  dhalla() { for (const fn of this.#astray) fn(); }
+  tanaffas() { this.sawt({ chi: "breath", sigils: {}, protoVersion: "0.8.0", models: [{ id: "claude-opus-5-5", hive: "claude-cli" }], tools: [{ name: "wasfa_iqra" }] }); }
+  #badaa = false;
+  async start() {
+    if (this.#badaa) throw new Error("this bee has already started");
+    this.#badaa = true;
+    for (const fn of this.#nestled) fn();
+    this.tanaffas();
+  }
+  send(t: Tone) { this.mursal.push(t); }
+  async close() {}
+  sawt(t: Tone) { ((t.sid && this.#bySid.get(t.sid)) ?? this.#byChi.get(t.chi))?.(t); }
+  nataij() { return this.mursal.filter((t) => t.chi === "tendril-result") as Array<Tone<"tendril-result">>; }
+  wilt(sid: string, nass = "ok") {
+    this.sawt({ chi: "unfurl", sid, petal: 1, kind: "text", text: nass });
+    this.sawt({ chi: "unfurl", sid, petal: 1, kind: "text", closed: true });
+    this.sawt({ chi: "wilt", sid, reason: "done" });
+  }
+}
+
+export function khaliyya(): { nuhul: Map<string, NahlaWahm>; sanaaNahla: (khadim: string) => NahlaWahm } {
+  const nuhul = new Map<string, NahlaWahm>();
+  const sanaaNahla = (khadim: string) => {
+    const n = nuhul.get(khadim) ?? new NahlaWahm(khadim);
+    nuhul.set(khadim, n);
+    return n;
+  };
+  return { nuhul, sanaaNahla };
+}
 
 export async function withTestDb(fn: () => Promise<void> | void): Promise<void> {
   const tempDir = mkdtempSync(join(tmpdir(), "iksir-test-"));

@@ -24,6 +24,8 @@ import {
   jalabaKullJalasat,
   haddathaAwAdkhalaQanat,
   jalabaQararatSijill,
+  mahaqaQanat,
+  mahaqaJalsaSijill,
 } from "../../db/db.ts";
 import type { Tasmim } from "../config.ts";
 import type { SijillWasfat } from "../wasfa/sijill-wasfat.ts";
@@ -85,7 +87,8 @@ export class MudirJalasat {
   async wajadaAwKhalaqa(
     identifier: string,
     title: string,
-    type: "epic" | "chore" | "sandbox" = "epic"
+    type: "epic" | "chore" | "sandbox" = "epic",
+    zaid?: string,
   ): Promise<{ session: JalsatMurshid; jadida: boolean; mustarjaa: boolean; faailSabiq: string | null } | null> {
     const faailSabiq = this.#murshidFaailId;
 
@@ -129,7 +132,7 @@ export class MudirJalasat {
 
     await this.takkadMinQanat(session);
 
-    await this.#arsalaTasisMurshid(session);
+    await this.#arsalaTasisMurshid(session, zaid);
 
     this.#ushhidaJalsa("khalaqa", session);
     return { session, jadida: true, mustarjaa: false, faailSabiq };
@@ -166,14 +169,7 @@ export class MudirJalasat {
 
       await this.#messenger.send(
         { murshid: session.huwiyya },
-        `Murshid session started for ${session.huwiyya}.\n\nAll messages for this epic will appear here.`,
-      );
-
-      await this.#amil.sendPromptAsync(
-        session.id,
-        `SYSTEM: Your messaging channel is now active. ` +
-        `All mun_radd and mun_balligh messages will appear there. ` +
-        `Al-Kimyawi is listening. If you have pending status updates or responses, please send them now using mun_radd.`,
+        `The murshid of ${session.huwiyya} speaks here.`,
       );
     }
   }
@@ -256,34 +252,36 @@ Do NOT output text directly - Al-Kimyawi cannot see your text output, only mun_r
 </system-reminder>`;
   }
 
-  async #arsalaTasisMurshid(session: JalsatMurshid): Promise<void> {
-    const prompt = session.naw === "epic" 
-      ? `# Epic Assignment
+  async #arsalaTasisMurshid(session: JalsatMurshid, zaid?: string): Promise<void> {
+    const tariq = session.naw === "epic"
+      ? "Read it with `mun_iqra_wasfa`, learn what the matter is before you touch it, then draft your khuṭṭa; the pieces of the work go to ṣāniʿs with `mun_istasnaa`."
+      : session.naw === "chore"
+      ? "A standalone task; no sub-waṣfāt. Read it with `mun_iqra_wasfa`, then work the matter in your vessel. When done, call for the fire with `mun_safa`; when it stands, `mun_fasl`."
+      : "Freeform work: no waṣfa, no PR demanded. Brainstorm, prototype, experiment. When it should become waṣfāt, tell al-Kimyawī.";
+    const prompt = `You are set to work on **${session.huwiyya}** — ${session.unwan}.
 
-## Epic Details
-- **ID**: ${session.huwiyya}
-- **Title**: ${session.unwan}
+Vessel: \`${session.far}\` — raise it in the workshop from the codex's foundation if it does not yet stand.
+You hold the flame; the matter is yours. Al-Kimyawī listens in your own topic: \`mun_radd\` lands there, \`mun_balligh\` goes through the mumayyiz first.
 
-Read it with \`mun_iqra_wasfa\` and begin planning.
-
-Awaiting direction from al-Kimyawi...`
-      : `# Chore Assignment
-
-## Chore Details
-- **ID**: ${session.huwiyya}
-- **Title**: ${session.unwan}
-
-This is a standalone task (chore), not an epic. No sub-waṣfāt needed.
-
-Read the waṣfa with \`mun_iqra_wasfa\`, then work the matter in your vessel.
-When done, call for the fire with \`mun_safa\`; when it stands, \`mun_fasl\`.
-
-Awaiting direction from al-Kimyawi...`;
+${tariq}${zaid ? `\n\n${zaid}` : ""}`;
 
     await this.#amil.sendPromptAsync(session.id, prompt, {
       agent: "iksir-murshid",
       kalimat: await this.kalimatWasfa(session.huwiyya),
     });
+  }
+
+  async sarrih(huwiyya: string): Promise<JalsatMurshid | null> {
+    const session = this.#murshidSessions.get(huwiyya);
+    if (!session) return null;
+    this.#murshidSessions.delete(huwiyya);
+    if (this.#murshidFaailId === huwiyya) this.#murshidFaailId = null;
+    for (const muqaddim of Object.keys(session.channels)) mahaqaQanat(huwiyya, muqaddim);
+    mahaqaJalsaSijill(session.id);
+    await this.#amil.mahaqaJalsa(session.id);
+    await this.hafizaHala();
+    await logger.akhbar("session-manager", `Dismissed the murshid of ${huwiyya}`, { sid: session.id, far: session.far });
+    return session;
   }
 
   wajadaMurshidBiHuwiyyatJalsa(sessionId: string): JalsatMurshid | null {

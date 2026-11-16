@@ -210,6 +210,23 @@ export class Munadi {
 
     sijill.sajjil(
       {
+        name: "mun_sarrih",
+        khass,
+        description: "Dismiss a murshid: its vessel in the workshop stands as it is, its topic remains, but iksir forgets it — session, memory, channel — and the flame if it held it. Only on al-Kimyawī's word.",
+        inputSchema: { type: "object", properties: { huwiyya: { type: "string", description: "The murshid's waṣfa" } }, required: ["huwiyya"] },
+      },
+      async (args) => {
+        const huwiyya = String(args.huwiyya).toUpperCase();
+        const kanaFaail = this.huwiyyaFaaila === huwiyya;
+        const jalsa = await this.mudirJalasat.sarrih(huwiyya);
+        if (!jalsa) return `No murshid labours on ${huwiyya}.`;
+        if (kanaFaail) this.wadaaJalsaFaila(null);
+        return `The murshid of ${huwiyya} is dismissed. Its vessel \`${jalsa.far}\` stands in the workshop as it was; its topic remains.${kanaFaail ? " The flame is with no one." : ""}`;
+      },
+    );
+
+    sijill.sajjil(
+      {
         name: "mun_man_yaamal",
         khass,
         description: "Who labours: every murshid, its waṣfa, its condition, its vessel, and who holds the flame.",
@@ -246,8 +263,7 @@ export class Munadi {
   async #istadi(huwiyya?: string, warsha?: string): Promise<string> {
     if (warsha) {
       const ism = warsha.toLowerCase().replace(/[^a-z0-9_-]/g, "-");
-      const natija = await this.#khalaqaWaFailaMurshid(`SANDBOX-${ism}`, `Sandbox: ${ism}`, "sandbox",
-        `A sandbox is open for you: **${ism}**, vessel \`sandbox/${ism}\`. Freeform work — no waṣfa, no PR demanded. Brainstorm, prototype, experiment. When it should become waṣfāt, tell al-Kimyawī.`);
+      const natija = await this.#khalaqaWaFailaMurshid(`SANDBOX-${ism}`, `Sandbox: ${ism}`, "sandbox");
       return natija.khata ?? natija.radd ?? "";
     }
     if (!huwiyya) return "Name a waṣfa, or a sandbox.";
@@ -275,22 +291,17 @@ export class Munadi {
   }
 
   async faaalLiWasfa(huwiyya: string, unwan: string, siyaqZaid?: string): Promise<NatijaIrsal> {
-    const zaid = siyaqZaid ? `\n\n${siyaqZaid}` : "";
-    return this.#khalaqaWaFailaMurshid(huwiyya, unwan, "epic",
-      `You are set to work on **${huwiyya}** — ${unwan}.${zaid}\n\nRead it with \`mun_iqra_wasfa\`, learn what the matter is before you touch it,\nthen draft your khuṭṭa.`);
+    return this.#khalaqaWaFailaMurshid(huwiyya, unwan, "epic", siyaqZaid);
   }
 
-  async #khalaqaWaFailaMurshid(huwiyya: string, unwan: string, naw: NawMurshid, tasis: string): Promise<NatijaIrsal> {
+  async #khalaqaWaFailaMurshid(huwiyya: string, unwan: string, naw: NawMurshid, zaid?: string): Promise<NatijaIrsal> {
     await logger.akhbar("munadi", `Summoning a murshid for ${huwiyya}`, { naw, unwan });
-    const natija = await this.mudirJalasat.wajadaAwKhalaqa(huwiyya, unwan, naw);
+    const natija = await this.mudirJalasat.wajadaAwKhalaqa(huwiyya, unwan, naw, zaid);
     if (!natija) return { tuulija: true, khata: `The nest would not open a vessel for ${huwiyya}.` };
 
     const { session, jadida, mustarjaa, faailSabiq } = natija;
-    const tahwil = await this.#naffadhaTahwil(huwiyya, session, faailSabiq);
+    const tahwil = await this.#naffadhaTahwil(huwiyya, session, faailSabiq, jadida);
     if (tahwil.khata) return tahwil;
-
-    if (jadida) await this.mudirJalasat.arsalaIlaMurshid(tasis);
-    else if (mustarjaa) await this.mudirJalasat.arsalaIlaMurshid(`Resuming. You were at work on: ${unwan}`);
 
     const fil = jadida ? "summoned" : mustarjaa ? "woken" : "already at work";
     const tahwilNass = faailSabiq && faailSabiq !== huwiyya ? ` The flame passed from ${faailSabiq}.` : "";
@@ -318,10 +329,10 @@ export class Munadi {
       return;
     }
     await logger.akhbar("munadi", `Restoring the flame to ${huwiyya}`);
-    await this.#naffadhaTahwil(huwiyya, jalsa, null);
+    await this.#naffadhaTahwil(huwiyya, jalsa, null, true);
   }
 
-  async #naffadhaTahwil(huwiyya: string, jalsa: JalsatMurshid, sabiq: string | null): Promise<NatijaIrsal> {
+  async #naffadhaTahwil(huwiyya: string, jalsa: JalsatMurshid, sabiq: string | null, samit = false): Promise<NatijaIrsal> {
     if (sabiq === huwiyya) {
       this.wadaaJalsaFaila(huwiyya);
       return { tuulija: true };
@@ -330,12 +341,9 @@ export class Munadi {
     await logger.akhbar("munadi", `The flame passes: ${sabiq ?? "no one"} → ${huwiyya}`);
 
     if (jalsaSabiqa) {
-      await this.mudirJalasat.arsalaIlaMurshidById(jalsaSabiqa.huwiyya,
-        `🛑 INTERRUPT: the flame passes to ${huwiyya}.\n\nStop all operations now. Do not touch the matter further. Do not invoke any more sanis.\n\nYou will be told when you are idle.`);
-      await new Promise((r) => setTimeout(r, 500));
       await this.mudirJalasat.jaddadaḤalatMurshid(sabiq!, "sakin");
       await this.mudirJalasat.arsalaIlaMurshidById(jalsaSabiqa.huwiyya,
-        `You are now IDLE.\n\nVessel: ${jalsaSabiqa.far} (still yours; no one else enters it)\n\nWhispers will still reach you. Use \`mun_talab_tahakkum\` when you have actionable work.`);
+        `🛑 The flame passes to ${huwiyya}. Stop now; do not touch the matter further; summon no more ṣāniʿs.\n\nYou are idle. Vessel: ${jalsaSabiqa.far} (still yours; no one else enters it). Whispers will still reach you; use \`mun_talab_tahakkum\` when you have actionable work.`);
     }
 
     try {
@@ -348,8 +356,10 @@ export class Munadi {
       return { tuulija: true, khata: `Could not hand the flame to ${huwiyya}: ${khata}` };
     }
 
-    await this.mudirJalasat.arsalaIlaMurshidById(huwiyya,
-      `✅ You hold the flame.\n\nVessel: ${jalsa.far} — raise it in the workshop if it is not yet there\nBefore you: ${sabiq ?? "no one"}\n\nThe matter is yours.`).catch(() => {});
+    if (!samit) {
+      await this.mudirJalasat.arsalaIlaMurshidById(huwiyya,
+        `✅ You hold the flame${sabiq ? ` again; before you, ${sabiq}` : ""}. Vessel: ${jalsa.far} — raise it in the workshop if it is not yet there. The matter is yours.`).catch(() => {});
+    }
 
     if (jalsaSabiqa) await this.rasul.arsalaMunassaq("dispatch", `The flame passes from ${sabiq} to **${huwiyya}**.`).catch(() => {});
     return { tuulija: true };

@@ -567,3 +567,7 @@ export function jalabaAzhar(sid: string): Array<Record<string, unknown>> {
 export function mahaqaAzhar(sid: string): void {
   jalabSijill().prepare("DELETE FROM azhar WHERE sid = ?").run(sid);
 }
+
+export function mahaqaJalsaSijill(id: string): void {
+  jalabSijill().prepare("DELETE FROM jalasat WHERE id = ?").run(id);
+}
