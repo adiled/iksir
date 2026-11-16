@@ -37,7 +37,7 @@ test("the fire is lit by the sayrafi in a session of its own, carrying the decla
     await munaffidh.aalajAhdath();
 
     assertEquals(amil._calls.khalaqaJalsa.at(-1)?.huwiyyatWasfa, "iksir-sayrafi");
-    const bath = amil._calls.sendPromptAsync.at(-1)!;
+    const bath = amil._calls.sendPrompt.at(-1)!;
     assertStringIncludes(bath.prompt, "- `npm test`");
     assertStringIncludes(bath.prompt, "- `./build`");
     assertEquals((await wasfat.iqra("GH-9"))?.hala, "backlog");
@@ -85,7 +85,7 @@ test("faṣl is refused before the fire, and after it the sayrafi sets the jawha
     await alat.sijill.naffidh("mun_fasl", { huwiyyatMurshid: "GH-9", huwiyyatWasfa: "GH-9", title: "hive/apple-fm", body: "the jawhar" });
     await munaffidh.aalajAhdath();
     assertEquals(amil._calls.khalaqaJalsa.at(-1)?.huwiyyatWasfa, "iksir-sayrafi");
-    assertStringIncludes(amil._calls.sendPromptAsync.at(-1)!.prompt, "Title: hive/apple-fm");
+    assertStringIncludes(amil._calls.sendPrompt.at(-1)!.prompt, "Title: hive/apple-fm");
 
     await alat.sijill.naffidh("mun_shahada", { huwiyyatWasfa: "GH-9", naw: "fasl", rabit: "https://github.com/adiled/hum/pull/71", huwiyya: "71" });
     await munaffidh.aalajAhdath();

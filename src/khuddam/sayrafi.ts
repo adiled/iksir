@@ -17,11 +17,12 @@ import { logger } from "../logging/logger.ts";
 
 const RUQYA = "iksir-sayrafi";
 const ADAWAT = ["mun_shahada"];
+const MUHLA_MS = 30 * 60 * 1000;
 
 export class Sayrafi {
   #amil: Wasila;
   #tasmim: Tasmim;
-  #jalasat = new Map<string, string>();
+  #sid: string | null = null;
 
   constructor(amil: Wasila, tasmim: Tasmim) {
     this.#amil = amil;
@@ -73,21 +74,18 @@ export class Sayrafi {
       : `The ṣayrafī is not nestled; nothing enters the codex.`;
   }
 
-  async intaha(huwiyya: string): Promise<void> {
-    const sid = this.#jalasat.get(huwiyya);
-    if (!sid) return;
-    this.#jalasat.delete(huwiyya);
-    await this.#amil.mahaqaJalsa(sid);
-  }
-
   async #bath(wasfa: Wasfa, wajib: string, nass: string): Promise<boolean> {
-    await this.intaha(wasfa.huwiyya);
-    const jalsa = await this.#amil.khalaqaJalsa(`iksir-sayrafi`, `Ṣayrafī ${wasfa.huwiyya}`);
-    if (!jalsa) return false;
-    this.#jalasat.set(wasfa.huwiyya, jalsa.id);
+    if (!this.#sid) {
+      const jalsa = await this.#amil.khalaqaJalsa("iksir-sayrafi", "Ṣayrafī");
+      if (!jalsa) return false;
+      this.#sid = jalsa.id;
+    }
     const kalimat = kalimatKhabath(thulathiMin(wasfa, this.#tasmim.khabath()));
-    const buitha = await this.#amil.sendPromptAsync(jalsa.id, nass, { agent: RUQYA, adawat: ADAWAT, kalimat });
-    await logger.akhbar("sayrafi", `${wajib} ${wasfa.huwiyya}`, { sid: jalsa.id, buitha });
-    return buitha;
+    const sid = this.#sid;
+    void this.#amil
+      .sendPrompt(sid, nass, { agent: RUQYA, adawat: ADAWAT, kalimat, timeoutMs: MUHLA_MS })
+      .then((jawab) => logger.akhbar("sayrafi", `${wajib} ${wasfa.huwiyya} ended`, { sid, najah: jawab.success, khata: jawab.error }));
+    await logger.akhbar("sayrafi", `${wajib} ${wasfa.huwiyya}`, { sid });
+    return true;
   }
 }

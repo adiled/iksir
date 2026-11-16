@@ -73,6 +73,7 @@ export class Raqib {
   #wasfat?: SijillWasfat;
 
   #sihhJalasat: Map<string, HalatSihhJalsa> = new Map();
+  #sidQadi: string | null = null;
   #muwaqqitNaqra: ReturnType<typeof setInterval> | null = null;
 
   constructor(deps: RaqibDeps) {
@@ -268,10 +269,13 @@ export class Raqib {
     if (athar.length < AQALL_ATHAR) return null;
 
     const wasfa = await this.#wasfat?.iqra(jalsa.huwiyya);
-    const qadi = await this.#amil.khalaqaJalsa("iksir-raqib", `Raqīb ${jalsa.huwiyya}`);
-    if (!qadi) return null;
+    if (!this.#sidQadi) {
+      const qadi = await this.#amil.khalaqaJalsa("iksir-raqib", "Raqīb");
+      if (!qadi) return null;
+      this.#sidQadi = qadi.id;
+    }
     try {
-      const jawab = await this.#amil.sendPrompt(qadi.id, "Rule on this trail.", {
+      const jawab = await this.#amil.sendPrompt(this.#sidQadi, `Rule on the trail of ${jalsa.huwiyya}.`, {
         agent: "iksir-raqib",
         adawat: [],
         harara: 0,
@@ -294,8 +298,6 @@ export class Raqib {
     } catch (khata) {
       await logger.haDHHir("raqib", `The verdict on ${jalsa.huwiyya} could not be read`, { error: String(khata) });
       return null;
-    } finally {
-      await this.#amil.mahaqaJalsa(qadi.id);
     }
   }
 
