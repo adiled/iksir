@@ -271,3 +271,47 @@ test("forager: each prompt carries the blooms before it as a graft, with what gr
   assertEquals(wasila.azhar(sid).length, 2);
   wasila.qaf();
 });
+
+test("forager: a cell that dies or is evicted is no longer resumed by handle; the next prompt grows from the graft", async () => {
+  const { nahla, wasila } = qim();
+  await wasila.ittasil();
+  const jalsa = (await wasila.khalaqaJalsa("GH-4", "t"))!;
+  await wasila.sendPromptAsync(jalsa.id, "a");
+  nahla.sawt({ chi: "pulse", sid: jalsa.id, kind: "cell-ready", cell: "cell-4" });
+  assertEquals(wasila.huwiyyatUsh(jalsa.id), "cell-4");
+  assertEquals(wasila.khalaya(), 1);
+  nahla.sawt({ chi: "wilt", sid: jalsa.id, reason: "error", exitCode: 137 });
+  nahla.sawt({ chi: "pulse", sid: jalsa.id, kind: "cell-died" });
+  assertEquals(wasila.huwiyyatUsh(jalsa.id), undefined);
+  assertEquals(wasila.khalaya(), 0);
+  await wasila.sendPromptAsync(jalsa.id, "b");
+  const thani = nahla.mursal.filter((t) => t.chi === "prompt")[1] as Tone<"prompt">;
+  assertEquals(thani.resume, undefined);
+  assertEquals((thani.graft as unknown[]).length, 1);
+  wasila.qaf();
+});
+
+test("forager: two prompts on one sid go one after the other, never two blooms at once", async () => {
+  const { nuhul, wasila } = qim();
+  await wasila.ittasil();
+  const jalsa = (await wasila.khalaqaJalsa("iksir-mumayyiz", "t"))!;
+  const bee = nuhul.get("mumayyiz")!;
+  const prompts = () => bee.mursal.filter((t) => t.chi === "prompt") as Tone<"prompt">[];
+  const awwal = wasila.sendPrompt(jalsa.id, "one", { timeoutMs: 2000 });
+  const thani = wasila.sendPrompt(jalsa.id, "two", { timeoutMs: 2000 });
+  await new Promise((r) => setTimeout(r, 10));
+  assertEquals(prompts().length, 1);
+  assertEquals(prompts()[0].text, "one");
+  bee.sawt({ chi: "unfurl", sid: jalsa.id, petal: 1, kind: "text", text: "A" });
+  bee.sawt({ chi: "unfurl", sid: jalsa.id, petal: 1, kind: "text", closed: true });
+  bee.sawt({ chi: "wilt", sid: jalsa.id, reason: "done" });
+  assertEquals((await awwal).response, "A");
+  await new Promise((r) => setTimeout(r, 10));
+  assertEquals(prompts().length, 2);
+  assertEquals(prompts()[1].text, "two");
+  bee.sawt({ chi: "unfurl", sid: jalsa.id, petal: 1, kind: "text", text: "B" });
+  bee.sawt({ chi: "unfurl", sid: jalsa.id, petal: 1, kind: "text", closed: true });
+  bee.sawt({ chi: "wilt", sid: jalsa.id, reason: "done" });
+  assertEquals((await thani).response, "B");
+  wasila.qaf();
+});

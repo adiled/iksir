@@ -30,14 +30,19 @@ test("sani: a murshid summons a craftsman; the report comes back into its vessel
     assertEquals(alat.sijill.adawat().find((a) => a.name === "mun_istasnaa")?.khass, "murshid");
 
     await intazir(() => amil._calls.sendPromptAsync.length === 1);
-    assertEquals(amil._calls.khalaqaJalsa[0].huwiyyatWasfa, "W-3");
+    assertEquals(amil._calls.khalaqaJalsa[0].huwiyyatWasfa, "W-3-sani");
     assertEquals(amil._calls.sendPrompt[0].prompt, "## Waṣfa: W-3\n\nfix the redirect");
     assertEquals((amil._calls.sendPrompt[0].options as { agent: string; adawat: string[] }).agent, "iksir-sani");
     assertEquals((amil._calls.sendPrompt[0].options as { adawat: string[] }).adawat, []);
     assertEquals(amil._calls.sendPromptAsync[0].sessionId, JALSA.id);
     assertStringIncludes(amil._calls.sendPromptAsync[0].prompt, "## Ṣāniʿ returned — ## Waṣfa: W-3");
     assertStringIncludes(amil._calls.sendPromptAsync[0].prompt, "redirect fixed; tests pass");
-    await intazir(() => amil._sessions.size === 1);
+    assertEquals(amil._sessions.size, 2);
+
+    await alat.sijill.naffidh("mun_istasnaa", { huwiyyatMurshid: "W-3", task: "second piece" });
+    await intazir(() => amil._calls.sendPromptAsync.length === 2);
+    assertEquals(amil._calls.khalaqaJalsa.length, 1);
+    assertEquals(amil._calls.sendPrompt[1].sessionId, amil._calls.sendPrompt[0].sessionId);
 
     assertStringIncludes(await alat.sijill.naffidh("mun_istasnaa", { huwiyyatMurshid: "W-9", task: "x" }), "No murshid labours on W-9");
   });

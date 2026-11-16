@@ -72,6 +72,7 @@ export interface MockWasila {
   _sessions: Map<string, MockJalsatHum>;
   _athar: Record<string, string[]>;
   athar(sid: string): string[];
+  khalaya(): number;
 }
 
 export function mockWasila(overrides?: {
@@ -100,6 +101,10 @@ export function mockWasila(overrides?: {
 
     athar(sid) {
       return athar[sid] ?? [];
+    },
+
+    khalaya() {
+      return sessions.size;
     },
 
     async mayyaza(prompt: string) {

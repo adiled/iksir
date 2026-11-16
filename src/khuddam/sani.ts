@@ -6,8 +6,10 @@
  * ṣāniʿ — on the murshid bee, with the ṣāniʿ's ruqya and no instruments —
  * then carries whatever the ṣāniʿ said last back into the murshid's vessel
  * as "Ṣāniʿ returned". The murshid is answered at once that the ṣāniʿ is
- * sent, and works on, or waits. Several may labour at once. The ṣāniʿ's
- * bloom has a trail like any other, so al-Raqīb sees it too.
+ * sent, and works on, or waits. One ṣāniʿ labours in a vessel at a time —
+ * two craftsmen in one vessel collide — so tasks take their turn on one
+ * cell per murshid; iksir holds four cells and two more per murshid.
+ * The ṣāniʿ's bloom has a trail like any other, so al-Raqīb sees it too.
  */
 
 import type { AlatAlIksir } from "../alat/alat-al-iksir.ts";
@@ -21,6 +23,7 @@ const MUHLA_MS = 60 * 60 * 1000;
 
 export function sajjilIstisnaa(alat: AlatAlIksir, amil: Wasila, katib: MudirJalasat): void {
   let adad = 0;
+  const sudud = new Map<string, string>();
   alat.sijill.sajjil(
     {
       name: "mun_istasnaa",
@@ -41,11 +44,16 @@ export function sajjilIstisnaa(alat: AlatAlIksir, amil: Wasila, katib: MudirJala
       const task = String(args.task);
       if (!katib.jalabMurshid(huwiyya)) return `No murshid labours on ${huwiyya}; a ṣāniʿ needs a vessel to work in.`;
       const raqm = ++adad;
-      const jalsa = await amil.khalaqaJalsa(huwiyya, `Ṣāniʿ ${raqm} for ${huwiyya}`);
-      if (!jalsa) return "The nest would not open a bloom for the ṣāniʿ.";
-      await logger.akhbar("sani", `Ṣāniʿ ${raqm} sent for ${huwiyya}`, { sid: jalsa.id });
+      let sid = sudud.get(huwiyya);
+      if (!sid) {
+        const jalsa = await amil.khalaqaJalsa(`${huwiyya}-sani`, `Ṣāniʿ for ${huwiyya}`);
+        if (!jalsa) return "The nest would not open a bloom for the ṣāniʿ.";
+        sid = jalsa.id;
+        sudud.set(huwiyya, sid);
+      }
+      await logger.akhbar("sani", `Ṣāniʿ ${raqm} sent for ${huwiyya}`, { sid });
       void amil
-        .sendPrompt(jalsa.id, task, { agent: RUQYA, adawat: [], timeoutMs: MUHLA_MS })
+        .sendPrompt(sid, task, { agent: RUQYA, adawat: [], timeoutMs: MUHLA_MS })
         .then(async (jawab) => {
           const taqrir = jawab.success && jawab.response ? jawab.response : `The ṣāniʿ did not return: ${jawab.error ?? "no word"}.`;
           await katib.arsalaIlaMurshidById(huwiyya, `## Ṣāniʿ returned — ${truncate(task.split("\n")[0], 80)}\n\n${taqrir}`);
@@ -55,8 +63,8 @@ export function sajjilIstisnaa(alat: AlatAlIksir, amil: Wasila, katib: MudirJala
           await logger.sajjalKhata("sani", `Ṣāniʿ ${raqm} was lost`, { error: String(khata) });
           await katib.arsalaIlaMurshidById(huwiyya, `## Ṣāniʿ returned — ${truncate(task.split("\n")[0], 80)}\n\nThe ṣāniʿ was lost: ${String(khata)}`);
         })
-        .finally(() => void amil.mahaqaJalsa(jalsa.id));
-      return `Ṣāniʿ ${raqm} is sent for: ${truncate(task.split("\n")[0], 80)}. You will be told when it returns; carry on with what does not wait on it.`;
+        ;
+      return `Ṣāniʿ ${raqm} is sent for: ${truncate(task.split("\n")[0], 80)}. One ṣāniʿ works in your vessel at a time; another task waits its turn. You will be told when it returns; carry on with what does not wait on it.`;
     },
   );
 }

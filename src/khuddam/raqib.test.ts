@@ -34,12 +34,13 @@ test("raqib: a trail going in circles earns a word in the vessel, and twice runn
     assertEquals(amil._calls.sendPromptAsync.length, 1);
     assertStringIncludes(amil._calls.sendPromptAsync[0].prompt, "Al-Raqīb watches: Read the failing assertion");
     assertEquals(rasul._calls.arsalaMunassaq.length, 0);
-    assertEquals(amil._sessions.size, 0);
+    assertEquals(amil._sessions.size, 1);
 
     amil._athar[JALSA.id] = [...DAIRA, "10:03:00 → bash {\"command\":\"npm test\"}"];
     assertEquals(await raqib.hakama(JALSA), null);
     raqib.wajadaAwKhalaqaHala(JALSA.id).akhirHukmFi = 0;
     assertEquals((await raqib.hakama(JALSA))?.hukm, "yadur");
+    assertEquals(amil._calls.khalaqaJalsa.length, 1);
     assertEquals(rasul._calls.arsalaMunassaq.length, 1);
     assertStringIncludes(rasul._calls.arsalaMunassaq[0].text, "going in circles");
   });

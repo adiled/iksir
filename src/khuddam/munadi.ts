@@ -126,6 +126,7 @@ export class Munadi {
       sutur.push("In focus: nothing yet");
     }
     const murshidun = this.mudirJalasat.wajadaJalasatMurshid();
+    sutur.push(`Cells iksir holds in the nest: ${this.amil.khalaya()} (a nurse holds 8 unless its hive config says more; a murshid takes one, its ṣāniʿ another)`);
     sutur.push(this.huwiyyaFaaila ? `The flame: ${this.huwiyyaFaaila}` : "The flame: no one holds it");
     if (murshidun.length === 0) sutur.push("Murshidūn: none labour");
     else for (const m of murshidun) sutur.push(`- ${m.huwiyya} — ${m.unwan} (${m.hala}${m.huwiyya === this.huwiyyaFaaila ? ", the flame" : ""}) in ${m.far}`);

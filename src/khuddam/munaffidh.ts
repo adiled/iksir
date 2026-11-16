@@ -461,7 +461,6 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
       : call.naw === "fasl"
       ? await this.#shahadatFasl(wasfa, call)
       : await this.#shahadatNaqsh(wasfa, call);
-    await this.#sayrafi.intaha(wasfa.huwiyya);
     return radd;
   }
 

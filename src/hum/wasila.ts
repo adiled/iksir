@@ -75,6 +75,8 @@ export class Wasila {
   #adwarAkhira = new Map<string, { zaman: number; usage?: unknown; khata?: string }>();
   #athar = new Map<string, string[]>();
   #azhar = new Map<string, Zahra[]>();
+  #tabur = new Map<string, Promise<unknown>>();
+  #sidMumayyiz: string | null = null;
   #batalatMuallaqa = new Map<string, { ism?: string; nass: string }>();
   #asmas = 0;
   #muntazir: Array<(h: HadathThrum) => void> = [];
@@ -145,6 +147,10 @@ export class Wasila {
 
   namadhij(): string[] {
     return [...this.#lisan().namadhij];
+  }
+
+  khalaya(): number {
+    return [...this.#jalasat.values()].filter((j) => j.nestId).length;
   }
 
   #nahlJalsa(sid: string): Nahl {
@@ -235,6 +241,8 @@ export class Wasila {
     this.#adwarAkhira.delete(sid);
     this.#athar.delete(sid);
     this.#azhar.delete(sid);
+    this.#tabur.delete(sid);
+    if (this.#sidMumayyiz === sid) this.#sidMumayyiz = null;
     try { mahaqaAzhar(sid); } catch { void 0; }
     this.#inthaDawr(sid, { success: false, error: "session dismissed" });
     return wasJalsa;
@@ -281,6 +289,10 @@ export class Wasila {
             const j = this.#jalasat.get(sid);
             if (j) j.nestId = t.cell;
           }
+          if (t.kind === PulseKind.cellDied || t.kind === PulseKind.cellEvicted) {
+            const j = this.#jalasat.get(sid);
+            if (j) j.nestId = undefined;
+          }
           return this.nasharHadath("pulse", t as unknown as Record<string, unknown>);
         }
         case Chi.tendrilReach:
@@ -320,14 +332,26 @@ export class Wasila {
     prompt: string,
     options?: KhiyaratHathth & { timeoutMs?: number },
   ): Promise<JawabDawr> {
+    const sabiq = this.#tabur.get(sid);
+    const hadha = sabiq ? sabiq.then(() => this.#haththWaIntazir(sid, prompt, options)) : this.#haththWaIntazir(sid, prompt, options);
+    const dhayl: Promise<void> = hadha.then(() => undefined, () => undefined).then(() => {
+      if (this.#tabur.get(sid) === dhayl) this.#tabur.delete(sid);
+    });
+    this.#tabur.set(sid, dhayl);
+    return hadha;
+  }
+
+  async #haththWaIntazir(
+    sid: string,
+    prompt: string,
+    options?: KhiyaratHathth & { timeoutMs?: number },
+  ): Promise<JawabDawr> {
     const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     const nahl = this.#nahlJalsa(sid);
     if (!nahl.muttasil) {
       return { success: false, error: `${nahl.khadim} is not nestled` };
     }
     const muntazar = new Promise<JawabDawr>((hal) => {
-      const sabbq = this.#adwar.get(sid);
-      sabbq?.hal({ success: false, error: "stale prompt superseded" });
       this.#adwar.set(sid, { qataa: [], hal, zaman: Date.now() });
     });
     const tone = this.#hathth(sid, prompt, options);
@@ -440,15 +464,12 @@ export class Wasila {
   }
 
   async mayyaza(prompt: string): Promise<JawabDawr> {
-    const jalsa = await this.khalaqaJalsa(`${ASAS}-mumayyiz`, "Iksir Tamyiz");
-    if (!jalsa) {
-      return { success: false, error: "failed to create mumayyiz session" };
+    if (!this.#sidMumayyiz) {
+      const jalsa = await this.khalaqaJalsa(`${ASAS}-mumayyiz`, "Iksir Tamyiz");
+      if (!jalsa) return { success: false, error: "failed to create mumayyiz session" };
+      this.#sidMumayyiz = jalsa.id;
     }
-    try {
-      return await this.sendPrompt(jalsa.id, prompt, { harara: 0, badhra: 7 });
-    } finally {
-      await this.mahaqaJalsa(jalsa.id);
-    }
+    return this.sendPrompt(this.#sidMumayyiz, prompt, { harara: 0, badhra: 7 });
   }
 
   async *subscribeToEvents(signal?: AbortSignal): AsyncGenerator<HadathThrum> {
@@ -562,6 +583,10 @@ export class Wasila {
   #ikmalDawr(t: Tone<"wilt"> | Tone<"error">): void {
     const sid = t.sid as string;
     for (const miftah of [...this.#batalatMuallaqa.keys()]) if (miftah.startsWith(`${sid}:`)) this.#khatamBatala(sid, miftah);
+    const wilt = t as unknown as { reason?: string; exitCode?: number };
+    if (t.chi === Chi.wilt && wilt.reason === "error") {
+      void logger.haDHHir("wasila", `the cell of ${sid} died mid-bloom (exit ${wilt.exitCode ?? "?"}); a crowded nest evicts this way, and the next prompt grows on from the graft`);
+    }
     const azhar = this.#azhar.get(sid);
     if (azhar?.length) {
       try { adkhalaZahra(sid, azhar.length - 1, azhar[azhar.length - 1] as unknown as Record<string, unknown>); } catch { void 0; }
