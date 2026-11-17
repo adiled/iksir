@@ -1,5 +1,5 @@
 /**
- * Mumayyiz (مميّز) — The Discerner
+ * Al-Mumayyiz (المميّز)
  *
  * Not all that arrives at al-Kimyawi's door is worthy of his gaze.
  * The Mumayyiz stands at the threshold, examines each offering —

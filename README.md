@@ -107,11 +107,11 @@ Iksīr (إكسير - The Elixir)
   |    |- Raqib      رقيب   - watches every vessel: the stuck, the bloated, the one going in circles
   |    '- Saail      سائل   - carries your words within
   |
-  '- Murshidun (مرشدون - The Guides)
+  '- Murshidūn (مرشدون)
        Summoned per waṣfa, many, but only one at the flame. Each dwells in its
        own inā', and perishes when the work is done.
        |
-       '- Sani (صانع - The Craftsman)
+       '- Ṣāniʿ (صانع)
             Summoned by a Murshid for one waṣfa. Inscribes the runūz.
   |
 Buwtaqa (بوتقة - The Crucible)

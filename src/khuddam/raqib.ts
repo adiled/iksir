@@ -1,5 +1,5 @@
 /**
- * Al-Raqīb (الرقيب) — the Watcher
+ * Al-Raqīb (الرقيب)
  *
  * One of the Khuddām, and a bee of his own. Once a minute he looks at every
  * vessel in which a murshid dwells. Two ailments he sees by counting:

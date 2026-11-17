@@ -1,5 +1,5 @@
 /**
- * Al-Ṣayrafī (الصيرفي) — The Assayer
+ * Al-Ṣayrafī (الصيرفي)
  *
  * The one who tests coin. A murshid declares its fire and raises its jawhar;
  * the ṣayrafī puts the matter to the fire and sets the jawhar down — with

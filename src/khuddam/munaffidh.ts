@@ -1,5 +1,5 @@
 /**
- * Munaffidh (منفذ) — The Executor
+ * Al-Munaffidh (المنفّذ)
  *
  * One of the sacred Khuddām (خدّام) of Iksīr.
  *

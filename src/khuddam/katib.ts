@@ -1,5 +1,5 @@
 /**
- * Katib (كاتب) — The Scribe
+ * Al-Kātib (الكاتب)
  *
  * One of the sacred Khuddām (خدّام) of Iksīr.
  *
