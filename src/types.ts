@@ -344,6 +344,8 @@ export interface RasulKharij {
 
   khalaqaQanatMurshid(identifier: string, title: string): Promise<string | null>;
 
+  aghliqQanatMurshid(identifier: string): Promise<boolean>;
+
   yamlikQanatMurshid(identifier: string): boolean;
 
   hammalQanawatLilJalsa(identifier: string): Record<string, string>;

@@ -87,6 +87,7 @@ export class Munadi {
   }
 
   hawiyyaFaila(): string | null {
+    if (this.huwiyyaFaaila && !this.mudirJalasat.jalabMurshid(this.huwiyyaFaaila)) this.wadaaJalsaFaila(null);
     return this.huwiyyaFaaila;
   }
 
@@ -128,7 +129,8 @@ export class Munadi {
     }
     const murshidun = this.mudirJalasat.wajadaJalasatMurshid();
     sutur.push(`Cells iksir holds in the nest: ${this.amil.khalaya()} (a nurse holds 8 unless its hive config says more; a murshid takes one, its ṣāniʿ another)`);
-    sutur.push(this.huwiyyaFaaila ? `The flame: ${this.huwiyyaFaaila}` : "The flame: no one holds it");
+    const faail = this.hawiyyaFaila();
+    sutur.push(faail ? `The flame: ${faail}` : "The flame: no one holds it");
     if (murshidun.length === 0) sutur.push("Murshidūn: none labour");
     else for (const m of murshidun) sutur.push(`- ${m.huwiyya} — ${m.unwan} (${m.hala}${m.huwiyya === this.huwiyyaFaaila ? ", the flame" : ""}) in ${m.far} · ${this.#halDawr(m.id)}`);
     return sutur.join("\n");
@@ -227,7 +229,7 @@ export class Munadi {
       {
         name: "mun_sarrih",
         khass,
-        description: "Dismiss a murshid: its vessel in the workshop stands as it is, its topic remains, but iksir forgets it — session, memory, channel — and the flame if it held it. Only on al-Kimyawī's word.",
+        description: "Dismiss a murshid, when its work is over or al-Kimyawī says so: iksir forgets it — session, memory, channel — seals its topic, and lets go of the flame if it held it. Its vessel in the workshop stands as it is.",
         inputSchema: { type: "object", properties: { huwiyya: { type: "string", description: "The murshid's waṣfa" } }, required: ["huwiyya"] },
       },
       async (args) => {
@@ -236,7 +238,7 @@ export class Munadi {
         const jalsa = await this.mudirJalasat.sarrih(huwiyya);
         if (!jalsa) return `No murshid labours on ${huwiyya}.`;
         if (kanaFaail) this.wadaaJalsaFaila(null);
-        return `The murshid of ${huwiyya} is dismissed. Its vessel \`${jalsa.far}\` stands in the workshop as it was; its topic remains.${kanaFaail ? " The flame is with no one." : ""}`;
+        return `The murshid of ${huwiyya} is dismissed and its topic sealed. Its vessel \`${jalsa.far}\` stands in the workshop as it was.${kanaFaail ? " The flame is with no one." : ""}`;
       },
     );
 

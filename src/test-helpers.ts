@@ -289,8 +289,10 @@ export interface MockTelegramClient {
     name: string,
     options?: { iconColor?: number },
   ): Promise<{ message_thread_id: number; name: string } | null>;
+  closeForumTopic(topicId: number): Promise<boolean>;
 
   _calls: {
+    closeForumTopic: number[];
     sendToDispatch: Array<{ text: string; options?: { parseMode?: string; keyboard?: unknown } }>;
     arsalaRisala: Array<{ text: string; options?: { parseMode?: string; keyboard?: unknown; topicId?: number; chatId?: string } }>;
     arsalaIlaMurshidTopic: Array<{ topicId: number; text: string; options?: { parseMode?: string; keyboard?: unknown } }>;
@@ -311,6 +313,7 @@ export function mockTelegramClient(overrides?: {
     arsalaRisala: [],
     arsalaIlaMurshidTopic: [],
     createForumTopic: [],
+    closeForumTopic: [],
   };
 
   return {
@@ -347,6 +350,11 @@ export function mockTelegramClient(overrides?: {
       if (overrides?.createForumTopic) return overrides.createForumTopic(name, options);
       return { message_thread_id: 42, name };
     },
+
+    async closeForumTopic(topicId) {
+      calls.closeForumTopic.push(topicId);
+      return true;
+    },
   };
 }
 
@@ -355,6 +363,7 @@ export interface MockMessenger extends RasulKharij {
     send: Array<{ channel: QanatRisala; text: string }>;
     arsalaMunassaq: Array<{ channel: QanatRisala; text: string }>;
     khalaqaQanatMurshid: Array<{ identifier: string; title: string }>;
+    aghliqQanatMurshid: string[];
     yamlikQanatMurshid: string[];
     hammalQanawatLilJalsa: string[];
     hallJalsaBilQanat: Array<{ provider: string; channelId: string }>;
@@ -372,6 +381,7 @@ export function mockMessenger(overrides?: {
     send: [],
     arsalaMunassaq: [],
     khalaqaQanatMurshid: [],
+    aghliqQanatMurshid: [],
     yamlikQanatMurshid: [],
     hammalQanawatLilJalsa: [],
     hallJalsaBilQanat: [],
@@ -398,6 +408,11 @@ export function mockMessenger(overrides?: {
       calls.khalaqaQanatMurshid.push({ identifier, title });
       if (overrides?.khalaqaQanatMurshid) return overrides.khalaqaQanatMurshid(identifier, title);
       return "42";
+    },
+
+    async aghliqQanatMurshid(identifier) {
+      calls.aghliqQanatMurshid.push(identifier);
+      return true;
     },
 
     yamlikQanatMurshid(identifier) {

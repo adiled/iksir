@@ -33,6 +33,7 @@ import {
   statSync,
   appendFileSync,
   createReadStream,
+  existsSync,
 } from "node:fs";
 import { execFileSync } from "node:child_process";
 import type { ReadStream } from "node:fs";
@@ -119,6 +120,14 @@ export class RasulUnbub implements Rasul {
     this.#qanawat.set(huwiyya, huwiyya);
     haddathaAwAdkhalaQanat(huwiyya, MUQADDIM, huwiyya);
     return huwiyya;
+  }
+
+  async aghliqQanatMurshid(huwiyya: string): Promise<boolean> {
+    const masar = join(this.masarFam, huwiyya);
+    if (!existsSync(masar)) return false;
+    appendFileSync(masar, `\n— sealed; its work is over —\n`);
+    this.#qanawat.delete(huwiyya);
+    return true;
   }
 
   yamlikQanatMurshid(huwiyya: string): boolean {

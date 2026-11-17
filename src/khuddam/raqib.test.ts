@@ -81,3 +81,29 @@ test("raqib: a murshid truly blocked is carried to al-Kimyawī in its topic and 
     assertStringIncludes(rasul._calls.arsalaMunassaq[1].text, "needs al-Kimyawī — needs the Stripe test key");
   });
 });
+
+test("raqib: a murshid whose waṣfa is manqush, or gone, is a leftover — dismissed, its topic sealed, Dispatch told", async () => {
+  await withTestDb(async () => {
+    const { anshaaSijillWasfat } = await import("../wasfa/sijill.ts");
+    const wasfat = anshaaSijillWasfat("W");
+    await wasfat.khalaq({ huwiyya: "W-7", unwan: "x", hala: "manqush" });
+    const amil = mockWasila();
+    const rasul = mockMessenger();
+    const katib = new MudirJalasat({ tasmim: makeConfig(), amil: amil as never, rasul });
+    katib.istawradaHala({ murshidun: [JALSA, { ...JALSA, id: "iksir-w8", huwiyya: "W-8" }], murshidFaail: JALSA.huwiyya });
+    const raqib = new Raqib({ amil: amil as never, rasul, mudirJalasat: katib, wasfat });
+
+    assertEquals(await raqib.tarika(JALSA), true);
+    assertEquals(katib.jalabMurshid("W-7"), null);
+    assertEquals(rasul._calls.aghliqQanatMurshid, ["W-7"]);
+    assertStringIncludes(rasul._calls.arsalaMunassaq.at(-1)!.text, "W-7: its waṣfa is manqush; its murshid is dismissed and its topic sealed.");
+
+    assertEquals(await raqib.tarika({ ...JALSA, id: "iksir-w8", huwiyya: "W-8" }), true);
+    assertStringIncludes(rasul._calls.arsalaMunassaq.at(-1)!.text, "gone from the Sijill");
+
+    await wasfat.khalaq({ huwiyya: "W-9", unwan: "y", hala: "backlog" });
+    katib.istawradaHala({ murshidun: [{ ...JALSA, id: "iksir-w9", huwiyya: "W-9" }] });
+    assertEquals(await raqib.tarika({ ...JALSA, id: "iksir-w9", huwiyya: "W-9" }), false);
+    assertEquals(await raqib.tarika({ ...JALSA, id: "iksir-s", huwiyya: "SANDBOX-x", naw: "sandbox" }), false);
+  });
+});

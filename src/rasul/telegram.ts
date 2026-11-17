@@ -381,6 +381,27 @@ export class TelegramClient {
     }
   }
 
+  async closeForumTopic(topicId: number): Promise<boolean> {
+    if (!this.enabled || !this.groupId) return false;
+    try {
+      const response = await proxyFetch(`${this.baseUrl}/closeForumTopic`, this.proxy, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: this.groupId, message_thread_id: topicId }),
+      });
+      const data = await response.json();
+      if (data.ok) {
+        await logger.akhbar("telegram", `Closed forum topic ${topicId}`);
+        return true;
+      }
+      await logger.sajjalKhata("telegram", "Failed to close forum topic", { topicId, error: data.description });
+      return false;
+    } catch (error) {
+      await logger.sajjalKhata("telegram", "Network error closing forum topic", { topicId, error: String(error) });
+      return false;
+    }
+  }
+
   jalabRisalaTopicId(message: TelegramMessage): number | undefined {
     return message.message_thread_id;
   }

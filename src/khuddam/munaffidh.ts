@@ -501,7 +501,7 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
       `**${wasfa.huwiyya}** — ${wasfa.unwan}\n\n` +
         `It withstood its fire and has been decanted.\n\n` +
         `It stands at: ${call.rabit}\n\n` +
-        `Inscribe it with \`/naqsh ${wasfa.huwiyya}\`, or say what you will of it.`,
+        `Say the word at the majlis and al-Munādī sets it into the codex; or say what you will of it.`,
     );
     const risala = `Decanted. ${call.huwiyya ?? wasfa.huwiyya} stands before al-Kimyawī at ${call.rabit}.\n\n` +
       `Naqsh is not yours to perform.`;
@@ -518,8 +518,11 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
 
     await this.#wasfat.jaddid(wasfa.huwiyya, { hala: "manqush" });
     const risala = `${wasfa.huwiyya} is inscribed${call.rabit ? ` (${call.rabit})` : ""}. It is canon now.`;
-    await this.#messenger.arsalaMunassaq("dispatch", risala);
-    await this.#ablighMurshid(wasfa.huwiyya, `## Naqsh: ${wasfa.huwiyya}\n\n${risala}`);
+    await this.#ablighMurshid(wasfa.huwiyya, `## Naqsh: ${wasfa.huwiyya}\n\n${risala}\n\nYour work is over; this vessel is sealed.`);
+    const kanaFaail = this.#iksir?.hawiyyaFaila() === wasfa.huwiyya;
+    const musarrah = await this.#sessionManager.sarrih(wasfa.huwiyya);
+    if (musarrah && kanaFaail) this.#iksir?.wadaaJalsaFaila(null);
+    await this.#messenger.arsalaMunassaq("dispatch", `${risala}${musarrah ? " Its murshid is dismissed and its topic sealed." : ""}`);
     return risala;
   }
 

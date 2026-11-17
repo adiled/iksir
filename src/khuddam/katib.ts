@@ -24,7 +24,7 @@ import {
   jalabaKullJalasat,
   haddathaAwAdkhalaQanat,
   jalabaQararatSijill,
-  mahaqaQanat,
+  mahaqaQanawatJalsa,
   mahaqaJalsaSijill,
 } from "../../db/db.ts";
 import type { Tasmim } from "../config.ts";
@@ -165,7 +165,7 @@ export class MudirJalasat {
     );
 
     if (channelId) {
-      session.channels["telegram"] = channelId;
+      session.channels = this.#messenger.hammalQanawatLilJalsa(session.huwiyya);
       await this.hafizaHala();
 
       await this.#messenger.send(
@@ -303,8 +303,9 @@ ${tariq}${zaid ? `\n\n${zaid}` : ""}`;
     if (!session) return null;
     this.#murshidSessions.delete(huwiyya);
     if (this.#murshidFaailId === huwiyya) this.#murshidFaailId = null;
-    for (const muqaddim of Object.keys(session.channels)) mahaqaQanat(huwiyya, muqaddim);
-    mahaqaJalsaSijill(session.id);
+    await this.#messenger.aghliqQanatMurshid(huwiyya).catch(() => false);
+    mahaqaQanawatJalsa(huwiyya);
+    mahaqaJalsaSijill(session.id, huwiyya);
     await this.#amil.mahaqaJalsa(session.id);
     await this.hafizaHala();
     await logger.akhbar("session-manager", `Dismissed the murshid of ${huwiyya}`, { sid: session.id, far: session.far });

@@ -1,0 +1,2 @@
+SERVICE wahm
+RUN /usr/bin/true

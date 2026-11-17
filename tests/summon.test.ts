@@ -92,7 +92,7 @@ test("summon: passing the flame is one prompt to each side", async () => {
 
 test("summon: dismissing a murshid forgets its session, channel, memory and nest sid together", async () => {
   await withTestRepo(async () => {
-    const { alat, katib, munadi, murshid } = await mashhad();
+    const { alat, katib, munadi, murshid, telegram } = await mashhad();
     await munadi.faaalLiWasfa("TEAM-7", "Diwan");
     const sid = katib.jalabMurshid("TEAM-7")!.id;
     murshid.wilt(sid);
@@ -108,6 +108,8 @@ test("summon: dismissing a murshid forgets its session, channel, memory and nest
     assertEquals(Object.keys(jalabaQanatsForSession("TEAM-7")).length, 0);
     assertEquals(jalabaAzhar(sid).length, 0);
     assertEquals(murshid.mursal.some((t) => t.chi === "cleanup" && t.sid === sid), true);
+    assertEquals(telegram._calls.closeForumTopic, [42]);
+    assertEquals(telegram._calls.arsalaIlaMurshidTopic.at(-1)?.text, "This vessel is sealed; its work is over.");
     assertEquals(await alat.sijill.naffidh("mun_sarrih", { huwiyya: "TEAM-7" }), "No murshid labours on TEAM-7.");
   });
 });
