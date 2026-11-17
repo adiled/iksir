@@ -120,6 +120,16 @@ export class TelegramMessenger implements Rasul {
     return channelId;
   }
 
+  async aghliqQanatMurshid(identifier: string): Promise<boolean> {
+    const channelId = this.#sessionChannels.get(identifier)?.[MUQADDIM] ?? jalabaQanat(identifier, MUQADDIM);
+    if (!channelId) return false;
+    await this.#telegram.arsalaIlaMurshidTopic(Number(channelId), "This vessel is sealed; its work is over.");
+    const ughliqa = await this.#telegram.closeForumTopic(Number(channelId));
+    this.#sessionChannels.delete(identifier);
+    this.#channelCache.delete(`${MUQADDIM}:${channelId}`);
+    return ughliqa;
+  }
+
   yamlikQanatMurshid(identifier: string): boolean {
     const cached = this.#sessionChannels.get(identifier);
     if (cached && cached[MUQADDIM]) return true;

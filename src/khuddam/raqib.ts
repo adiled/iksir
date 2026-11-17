@@ -1,5 +1,5 @@
 /**
- * Al-Raqīb (الرقيب) — the Watcher
+ * Al-Raqīb (الرقيب)
  *
  * One of the Khuddām, and a bee of his own. Once a minute he looks at every
  * vessel in which a murshid dwells. Two ailments he sees by counting:
@@ -18,6 +18,11 @@
  *                running al-Kimyawī hears of it
  *   yahid      — strayed from the waṣfa; a word is put in the vessel
  *   yastaghith — blocked on something only al-Kimyawī can give; he is told
+ *
+ * And a fourth, by looking: al-Tarika, the leftover — a murshid whose waṣfa
+ * is manqush or done, or whose waṣfa is gone from the Sijill, is dismissed
+ * and its topic sealed, at boot and on every minute. The end of work puts
+ * its things away without a word.
  *
  * Al-Raqīb does not heal. He watches, speaks once, and when he must, cuts.
  */
@@ -120,6 +125,7 @@ export class Raqib {
       const murshidun = this.#sessionManager.wajadaJalasatMurshid();
 
       for (const orch of murshidun) {
+        if (await this.tarika(orch)) continue;
         const status = statuses[orch.id];
         if (!status) continue;
 
@@ -257,6 +263,18 @@ export class Raqib {
       state.adadQablaDamj = counts.total;
       state.ublighaAnDamjAqim = false;
     }
+  }
+
+  async tarika(jalsa: JalsatMurshid): Promise<boolean> {
+    if (!this.#wasfat || jalsa.naw === "sandbox") return false;
+    const wasfa = await this.#wasfat.iqra(jalsa.huwiyya);
+    const intaha = !wasfa || wasfa.hala === "manqush" || wasfa.hala === "done";
+    if (!intaha) return false;
+    const sabab = wasfa ? `its waṣfa is ${wasfa.hala}` : "its waṣfa is gone from the Sijill";
+    await logger.akhbar("raqib", `${jalsa.huwiyya} is a leftover: ${sabab}; dismissing`);
+    await this.#sessionManager.sarrih(jalsa.huwiyya);
+    await this.#messenger.arsalaMunassaq("dispatch", `${jalsa.huwiyya}: ${sabab}; its murshid is dismissed and its topic sealed.`);
+    return true;
   }
 
   async hakama(jalsa: JalsatMurshid): Promise<Hukm | null> {

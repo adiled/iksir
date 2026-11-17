@@ -112,7 +112,7 @@ test("smoke: mun_ablagh_murshid carries words into a murshid's vessel", async ()
     await dispatcher.faaalLiWasfa("TEAM-7", "Diwan");
     const qabl = amil._calls.sendPromptAsync.length;
 
-    assertEquals(await alat.sijill.naffidh("mun_ablagh_murshid", { huwiyya: "TEAM-7", kalimat: "make it longer" }), "Told TEAM-7.");
+    assertStringIncludes(await alat.sijill.naffidh("mun_ablagh_murshid", { huwiyya: "TEAM-7", kalimat: "make it longer" }), "Sent to TEAM-7");
     assertEquals(amil._calls.sendPromptAsync.length, qabl + 1);
     assertStringIncludes(amil._calls.sendPromptAsync[qabl].prompt, "make it longer");
     assertStringIncludes(await alat.sijill.naffidh("mun_ablagh_murshid", { huwiyya: "TEAM-8", kalimat: "x" }), "No murshid labours on TEAM-8");
@@ -172,5 +172,24 @@ test("smoke: vessels survive a restart, carrying their nestId", async () => {
     assertEquals(restored.id, lit.id);
     assertEquals(restored.far, lit.far);
     assertEquals(second.amil.huwiyyatUsh(lit.id), "nest-handle-9001");
+  });
+});
+
+test("smoke: a herald that takes too long is stopped and says so; no second session answers the same word", async () => {
+  await withTestRepo(async () => {
+    const config = makeConfig();
+    const amil = mockWasila({ sendPrompt: async () => ({ success: false, error: "Error: prompt timed out after 150000ms" }) });
+    const messenger = new TelegramMessenger(mockTelegramClient() as never);
+    const wasfat = anshaaSijillWasfat("W");
+    const alat = new AlatAlIksir(wasfat, config);
+    const katib = new MudirJalasat({ tasmim: config, amil: amil as never, rasul: messenger, wasfat });
+    const munadi = new Munadi({ mudirJalasat: katib, rasul: messenger, amil: amil as never, alat, wasfat });
+
+    const result = await munadi.aalajRisalaIrsal({ source: "telegram", text: "anything" });
+
+    assertStringIncludes(result.radd!, "I took too long and stopped myself");
+    assertEquals(amil._calls.khalaqaJalsa.length, 1);
+    assertEquals(amil._calls.sendPrompt.length, 1);
+    assertEquals(amil._calls.abortSession, [amil._calls.khalaqaJalsa[0] && amil._calls.sendPrompt[0].sessionId]);
   });
 });

@@ -1,5 +1,5 @@
 /**
- * Al-Ṣāniʿ (الصانع) — the Craftsman, summoned by instrument.
+ * Al-Ṣāniʿ (الصانع), summoned by instrument.
  *
  * A murshid does not inscribe runūz with its own hands; it calls
  * mun_istasnaa with a task, and iksir opens a bloom of its own for the

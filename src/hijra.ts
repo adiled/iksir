@@ -1,7 +1,7 @@
 /**
  * Al-Hijra (الهجرة) — the one move from the old shape to this one.
  *
- * Before 2.0 iksir read Telegram and the model from a .env beside its
+ * Before 1.2 iksir read Telegram and the model from a .env beside its
  * source and named one khabath at wasfat.khabath. `install` runs this on
  * every install: what the old places hold and the new ones lack is carried
  * over — the token to asrar, the rest to iksir.json — and each move is said

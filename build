@@ -13,5 +13,11 @@ node --check src/main.ts
 node --check src/cli.ts
 node --check src/hum/wasila.ts
 node --check hives/saail/saail.ts
+node --check hives/wahm/wahm.ts
 node --check src/hijra.ts
 node --test "src/**/*.test.ts" "tests/*.test.ts"
+if command -v humd >/dev/null && command -v hum >/dev/null; then
+  node --test tests/imtihan/imtihan.test.ts
+else
+  echo "imtihan: no humd on this host; iksir was not examined against a nest" >&2
+fi

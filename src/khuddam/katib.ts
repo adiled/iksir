@@ -1,5 +1,5 @@
 /**
- * Katib (كاتب) — The Scribe
+ * Al-Kātib (الكاتب)
  *
  * One of the sacred Khuddām (خدّام) of Iksīr.
  *
@@ -24,7 +24,7 @@ import {
   jalabaKullJalasat,
   haddathaAwAdkhalaQanat,
   jalabaQararatSijill,
-  mahaqaQanat,
+  mahaqaQanawatJalsa,
   mahaqaJalsaSijill,
 } from "../../db/db.ts";
 import type { Tasmim } from "../config.ts";
@@ -71,6 +71,7 @@ export class MudirJalasat {
   #murshidSessions: Map<string, JalsatMurshid> = new Map();
 
   #murshidFaailId: string | null = null;
+  #inkisarat = new Map<string, number>();
 
   constructor(deps: TasmimMudirJalasat) {
     this.#tasmim = deps.tasmim;
@@ -164,7 +165,7 @@ export class MudirJalasat {
     );
 
     if (channelId) {
-      session.channels["telegram"] = channelId;
+      session.channels = this.#messenger.hammalQanawatLilJalsa(session.huwiyya);
       await this.hafizaHala();
 
       await this.#messenger.send(
@@ -271,13 +272,40 @@ ${tariq}${zaid ? `\n\n${zaid}` : ""}`;
     });
   }
 
+  async ablighInkisar(sid: string, sabab: string): Promise<void> {
+    const session = this.wajadaMurshidBiHuwiyyatJalsa(sid);
+    if (!session) return;
+    const adad = (this.#inkisarat.get(sid) ?? 0) + 1;
+    this.#inkisarat.set(sid, adad);
+    const marra = adad === 1 ? "" : ` — ${adad} turns in a row`;
+    await logger.haDHHir("session-manager", `The turn of ${session.huwiyya} broke off${marra}`, { sid, sabab });
+    await this.#messenger.send({ murshid: session.huwiyya }, `The murshid's turn broke off${marra}: ${sabab}`);
+    await this.#messenger.send("dispatch", `${session.huwiyya}: the murshid's turn broke off${marra} — ${sabab}`);
+  }
+
+  ablighSalama(sid: string): void {
+    this.#inkisarat.delete(sid);
+  }
+
+  async aalajHadathThrum(hadath: { type: string; properties: Record<string, unknown> }): Promise<void> {
+    const sid = (hadath.properties.sid ?? hadath.properties.sessionID) as string | undefined;
+    if (!sid) return;
+    if (hadath.type === "session.compacted") return this.aalajaDamj(sid);
+    if (hadath.type === "wilt") return this.ablighSalama(sid);
+    if (hadath.type === "error") {
+      const { message, code } = hadath.properties as { message?: string; code?: string };
+      return this.ablighInkisar(sid, [code, message].filter(Boolean).join(": ") || "no word");
+    }
+  }
+
   async sarrih(huwiyya: string): Promise<JalsatMurshid | null> {
     const session = this.#murshidSessions.get(huwiyya);
     if (!session) return null;
     this.#murshidSessions.delete(huwiyya);
     if (this.#murshidFaailId === huwiyya) this.#murshidFaailId = null;
-    for (const muqaddim of Object.keys(session.channels)) mahaqaQanat(huwiyya, muqaddim);
-    mahaqaJalsaSijill(session.id);
+    await this.#messenger.aghliqQanatMurshid(huwiyya).catch(() => false);
+    mahaqaQanawatJalsa(huwiyya);
+    mahaqaJalsaSijill(session.id, huwiyya);
     await this.#amil.mahaqaJalsa(session.id);
     await this.hafizaHala();
     await logger.akhbar("session-manager", `Dismissed the murshid of ${huwiyya}`, { sid: session.id, far: session.far });

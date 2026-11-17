@@ -1,125 +1,69 @@
-/**
- * Tests for src/khuddam/mumayyiz.ts
- *
- * Tests mayyazaTanbih() with mock AmilHum.
- * AGENTS.md is loaded from a temp fixture file.
- *
- * Key behaviors tested:
- * - Correct parsing of LLM JSON responses
- * - Fail-open on errors (dhahab:true / DHAHAB)
- * - "pick recommended" / "pick first" shortcut resolution
- */
+import { test, assertEquals, assertStringIncludes } from "../ikhtibar.ts";
+import { AlatAlIksir } from "../alat/alat-al-iksir.ts";
+import { MudirJalasat } from "./katib.ts";
+import { Mumayyiz } from "./mumayyiz.ts";
+import { makeConfig, mockWasila, mockMessenger, withTestDb } from "../test-helpers.ts";
+import type { JalsatMurshid } from "../types.ts";
 
-import { test, assertEquals } from "../ikhtibar.ts";
-import { mockWasila } from "../test-helpers.ts";
-import { mayyazaTanbih } from "./mumayyiz.ts";
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+const JALSA: JalsatMurshid = {
+  id: "iksir-w3", huwiyya: "W-3", unwan: "the login redirect", naw: "chore", far: "wasfa/w-3",
+  hala: "fail", unshiaFi: "2026-11-12T00:00:00.000Z", akhirRisalaFi: "2026-11-12T00:00:00.000Z", channels: {},
+};
 
-let fixtureFile: string | null = null;
-
-async function ensureFixture(): Promise<void> {
-  if (fixtureFile) return;
-  const dir = mkdtempSync(join(tmpdir(), "iksir-talim-"));
-  fixtureFile = join(dir, "AGENTS.md");
-  writeFileSync(fixtureFile, "# Test AGENTS.md\nGuidelines for testing.");
-  process.env.IKSIR_CONFIG_DIR = dir;
+function mashhad(hukm: string | null) {
+  const amil = mockWasila({ sendPrompt: async () => (hukm === null ? { success: false, error: "cold" } : { success: true, response: hukm }) });
+  const rasul = mockMessenger();
+  const katib = new MudirJalasat({ tasmim: makeConfig(), amil: amil as never, rasul });
+  katib.istawradaHala({ murshidun: [JALSA], murshidFaail: "W-3" });
+  const alat = new AlatAlIksir();
+  new Mumayyiz({ amil: amil as never, tasmim: makeConfig(), rasul, mudirJalasat: katib }).sajjil(alat);
+  return { amil, rasul, alat };
 }
 
-test("mayyazaTanbih: DHAHAB response parsed correctly", async () => {
-  await ensureFixture();
-  const oc = mockWasila({
-    mayyaza: async () => ({
-      success: true,
-      response: '{"tamyiz":"DHAHAB","reason":"architecture question","rejection":null}',
-    }),
-  });
+test("mumayyiz: a reply goes up as what was asked, and the murshid hears the house back as the grasp", async () => {
+  await withTestDb(async () => {
+    const { amil, rasul, alat } = mashhad('{"nass":"PR #71 is up.","radd":"Carried. The tests you ask about are the waṣfa\'s own maʿāyīr; run them."}');
+    amil._athar; 
+    const grasp = await alat.sijill.naffidh("mun_radd", { huwiyyatMurshid: "W-3", message: "So after a long night... PR #71 is up. Also which tests should I run?" });
 
-  const result = await mayyazaTanbih(oc as never, "Is this a good API boundary?");
-  assertEquals(result.dhahab, true);
-  assertEquals(result.sabab, "architecture question");
-  assertEquals(result.radd, null);
+    assertEquals(rasul._calls.arsalaMunassaq, [{ channel: { murshid: "W-3" }, text: "PR #71 is up." }]);
+    assertStringIncludes(grasp, "Carried. The tests you ask about");
+    assertStringIncludes(grasp, "Reached al-Kimyawī:\nPR #71 is up.");
+    const hathth = amil._calls.sendPrompt[0];
+    assertEquals(hathth.prompt, "So after a long night... PR #71 is up. Also which tests should I run?");
+    const khiyarat = hathth.options as { agent: string; graft: unknown[]; kalimat: { huwiyya: string; talim: string } };
+    assertEquals(khiyarat.agent, "iksir-mumayyiz");
+    assertEquals(Array.isArray(khiyarat.graft), true);
+    assertEquals(khiyarat.kalimat.huwiyya, "W-3");
+    assertEquals(amil._calls.khalaqaJalsa[0].huwiyyatWasfa, "iksir-mumayyiz");
+  });
 });
 
-test("mayyazaTanbih: KHABATH response parsed correctly", async () => {
-  await ensureFixture();
-  const oc = mockWasila({
-    mayyaza: async () => ({
-      success: true,
-      response: '{"tamyiz":"KHABATH","reason":"debugging","rejection":"Check the logs first."}',
-    }),
+test("mumayyiz: a notice that is the house's to answer goes nowhere up; the murshid gets the answer", async () => {
+  await withTestDb(async () => {
+    const { rasul, alat } = mashhad('{"nass":"","radd":"The precedent is in the diary: use the existing session store."}');
+    const grasp = await alat.sijill.naffidh("mun_balligh", { huwiyyatMurshid: "W-3", message: "Should I use pattern X or Y?", awwaliyya: "default" });
+    assertEquals(rasul._calls.arsalaMunassaq.length, 0);
+    assertEquals(grasp, "The precedent is in the diary: use the existing session store.");
   });
-
-  const result = await mayyazaTanbih(oc as never, "This test is failing");
-  assertEquals(result.dhahab, false);
-  assertEquals(result.sabab, "debugging");
-  assertEquals(result.radd, "Check the logs first.");
 });
 
-test("mayyazaTanbih: malformed JSON -> fail-open dhahab", async () => {
-  await ensureFixture();
-  const oc = mockWasila({
-    mayyaza: async () => ({
-      success: true,
-      response: "this is not json at all",
-    }),
+test("mumayyiz: a cold cupel, or a ruling that is not JSON, sends the word up as it was and says so", async () => {
+  await withTestDb(async () => {
+    for (const hukm of [null, "I think it is fine"]) {
+      const { rasul, alat } = mashhad(hukm);
+      const grasp = await alat.sijill.naffidh("mun_radd", { huwiyyatMurshid: "W-3", message: "as it was" });
+      assertEquals(rasul._calls.arsalaMunassaq.at(-1)?.text, "as it was");
+      assertStringIncludes(grasp, "The cupel was cold");
+    }
   });
-
-  const result = await mayyazaTanbih(oc as never, "Some message");
-  assertEquals(result.dhahab, true);
-  assertEquals(result.sabab, "خطأ في التمييز");
 });
 
-test("mayyazaTanbih: LLM returns success:false -> fail-open", async () => {
-  await ensureFixture();
-  const oc = mockWasila({
-    mayyaza: async () => ({ success: false, error: "rate limited" }),
+test("mumayyiz: the instruments are the murshid's, and they take their time", async () => {
+  await withTestDb(async () => {
+    const { alat } = mashhad(null);
+    const radd = alat.sijill.adawat().find((a) => a.name === "mun_radd")!;
+    assertEquals(radd.khass, "murshid");
+    assertEquals((radd.muhla ?? 0) > 150_000, true);
   });
-
-  const result = await mayyazaTanbih(oc as never, "Some message");
-  assertEquals(result.dhahab, true);
-  assertEquals(result.sabab, "فشل التمييز");
-});
-
-test("mayyazaTanbih: LLM throws -> fail-open", async () => {
-  await ensureFixture();
-  const oc = mockWasila({
-    mayyaza: async () => {
-      throw new Error("network error");
-    },
-  });
-
-  const result = await mayyazaTanbih(oc as never, "Some message");
-  assertEquals(result.dhahab, true);
-  assertEquals(result.sabab, "خطأ في التمييز");
-});
-
-test("mayyazaTanbih: missing fields get defaults", async () => {
-  await ensureFixture();
-  const oc = mockWasila({
-    mayyaza: async () => ({
-      success: true,
-      response: '{"tamyiz":"DHAHAB"}',
-    }),
-  });
-
-  const result = await mayyazaTanbih(oc as never, "Some message");
-  assertEquals(result.dhahab, true);
-  assertEquals(result.sabab, "Unknown");
-  assertEquals(result.radd, null);
-});
-
-test("mayyazaTanbih: KHABATH missing rejection gets default", async () => {
-  await ensureFixture();
-  const oc = mockWasila({
-    mayyaza: async () => ({
-      success: true,
-      response: '{"tamyiz":"KHABATH","reason":"trivial"}',
-    }),
-  });
-
-  const result = await mayyazaTanbih(oc as never, "Some message");
-  assertEquals(result.dhahab, false);
-  assertEquals(result.radd, "Handle this autonomously.");
 });

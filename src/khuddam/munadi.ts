@@ -1,5 +1,5 @@
 /**
- * Al-Munādī (المنادي) — the Herald at the Gate
+ * Al-Munādī (المنادي)
  *
  * One of the Khuddām. Every word spoken in Dispatch is his to hear and his to
  * answer, in his own voice: each message goes into his one session on the
@@ -55,6 +55,7 @@ interface MunadiDeps {
 
 const JALSAT_MAJLIS = "iksir-munadi";
 const UMR_TARKIZ_MS = 30 * 60 * 1000;
+const MUHLAT_QAWL_MS = 150_000;
 const NAMAT_ISM = /^[A-Z]+-[A-Za-z0-9_-]+$/i;
 
 export class Munadi {
@@ -86,6 +87,7 @@ export class Munadi {
   }
 
   hawiyyaFaila(): string | null {
+    if (this.huwiyyaFaaila && !this.mudirJalasat.jalabMurshid(this.huwiyyaFaaila)) this.wadaaJalsaFaila(null);
     return this.huwiyyaFaaila;
   }
 
@@ -127,10 +129,19 @@ export class Munadi {
     }
     const murshidun = this.mudirJalasat.wajadaJalasatMurshid();
     sutur.push(`Cells iksir holds in the nest: ${this.amil.khalaya()} (a nurse holds 8 unless its hive config says more; a murshid takes one, its ṣāniʿ another)`);
-    sutur.push(this.huwiyyaFaaila ? `The flame: ${this.huwiyyaFaaila}` : "The flame: no one holds it");
+    const faail = this.hawiyyaFaila();
+    sutur.push(faail ? `The flame: ${faail}` : "The flame: no one holds it");
     if (murshidun.length === 0) sutur.push("Murshidūn: none labour");
-    else for (const m of murshidun) sutur.push(`- ${m.huwiyya} — ${m.unwan} (${m.hala}${m.huwiyya === this.huwiyyaFaaila ? ", the flame" : ""}) in ${m.far}`);
+    else for (const m of murshidun) sutur.push(`- ${m.huwiyya} — ${m.unwan} (${m.hala}${m.huwiyya === this.huwiyyaFaaila ? ", the flame" : ""}) in ${m.far} · ${this.#halDawr(m.id)}`);
     return sutur.join("\n");
+  }
+
+  #halDawr(sid: string): string {
+    const dawr = this.amil.akhirDawr(sid);
+    const waqt = dawr.zaman ? new Date(dawr.zaman).toISOString().slice(11, 16) : null;
+    if (dawr.maftuh) return "a turn is open now";
+    if (!waqt) return "no turn yet";
+    return dawr.khata ? `last turn broke off at ${waqt}: ${dawr.khata}` : `last turn whole at ${waqt}`;
   }
 
   async #qul(nass: string): Promise<string | null> {
@@ -140,8 +151,14 @@ export class Munadi {
         if (!jalsa) return null;
         this.#sidMajlis = jalsa.id;
       }
-      const jawab = await this.amil.sendPrompt(this.#sidMajlis, nass, { agent: "iksir-munadi", timeoutMs: 120_000 });
+      const sid = this.#sidMajlis;
+      const jawab = await this.amil.sendPrompt(sid, nass, { agent: "iksir-munadi", timeoutMs: MUHLAT_QAWL_MS });
       if (jawab.success && jawab.response) return jawab.response;
+      if (jawab.error?.includes("timed out")) {
+        await this.amil.abortSession(sid);
+        await logger.haDHHir("munadi", "Took too long to answer; the turn was stopped");
+        return "I took too long and stopped myself; say it again.";
+      }
       this.#sidMajlis = null;
     }
     return null;
@@ -154,7 +171,7 @@ export class Munadi {
     sijill.sajjil(
       {
         name: "mun_arrif",
-        khass,
+        khass: [khass, "mumayyiz"],
         description: "Divine the waṣfa behind words: search the Sijill by name or by what it says. Use it before saying nothing exists.",
         inputSchema: { type: "object", properties: { kalimat: { type: "string", description: "A name (W-13, GH-9) or words from the title or statement" } }, required: ["kalimat"] },
       },
@@ -204,7 +221,7 @@ export class Munadi {
       async (args) => {
         const huwiyya = String(args.huwiyya);
         const wasal = await this.mudirJalasat.arsalaIlaMurshidById(huwiyya, `Al-Kimyawī says:\n\n${String(args.kalimat)}`);
-        return wasal ? `Told ${huwiyya}.` : `No murshid labours on ${huwiyya}.`;
+        return wasal ? `Sent to ${huwiyya}; its answer, when it comes, lands in its topic.` : `No murshid labours on ${huwiyya}.`;
       },
     );
 
@@ -212,7 +229,7 @@ export class Munadi {
       {
         name: "mun_sarrih",
         khass,
-        description: "Dismiss a murshid: its vessel in the workshop stands as it is, its topic remains, but iksir forgets it — session, memory, channel — and the flame if it held it. Only on al-Kimyawī's word.",
+        description: "Dismiss a murshid, when its work is over or al-Kimyawī says so: iksir forgets it — session, memory, channel — seals its topic, and lets go of the flame if it held it. Its vessel in the workshop stands as it is.",
         inputSchema: { type: "object", properties: { huwiyya: { type: "string", description: "The murshid's waṣfa" } }, required: ["huwiyya"] },
       },
       async (args) => {
@@ -221,14 +238,14 @@ export class Munadi {
         const jalsa = await this.mudirJalasat.sarrih(huwiyya);
         if (!jalsa) return `No murshid labours on ${huwiyya}.`;
         if (kanaFaail) this.wadaaJalsaFaila(null);
-        return `The murshid of ${huwiyya} is dismissed. Its vessel \`${jalsa.far}\` stands in the workshop as it was; its topic remains.${kanaFaail ? " The flame is with no one." : ""}`;
+        return `The murshid of ${huwiyya} is dismissed and its topic sealed. Its vessel \`${jalsa.far}\` stands in the workshop as it was.${kanaFaail ? " The flame is with no one." : ""}`;
       },
     );
 
     sijill.sajjil(
       {
         name: "mun_man_yaamal",
-        khass,
+        khass: [khass, "mumayyiz"],
         description: "Who labours: every murshid, its waṣfa, its condition, its vessel, and who holds the flame.",
         inputSchema: { type: "object", properties: {} },
       },
@@ -305,7 +322,7 @@ export class Munadi {
 
     const fil = jadida ? "summoned" : mustarjaa ? "woken" : "already at work";
     const tahwilNass = faailSabiq && faailSabiq !== huwiyya ? ` The flame passed from ${faailSabiq}.` : "";
-    return { tuulija: true, radd: `Murshid ${fil} for ${huwiyya} — ${unwan}; vessel \`${session.far}\`; the flame is its own.${tahwilNass}` };
+    return { tuulija: true, radd: `Murshid ${fil} for ${huwiyya} — ${unwan}; vessel \`${session.far}\`; the flame is its own; its opening is sent, and nothing is done until it speaks in its topic.${tahwilNass}` };
   }
 
   async hawwil(huwiyya: string): Promise<NatijaIrsal> {

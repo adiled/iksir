@@ -109,3 +109,13 @@ test("tasmim: a daemon with no majlis says so", () => {
     assertEquals(tahaqqaq(tasmim.now())[0].includes("majlis"), true);
   });
 });
+
+test("tasmim: the Taʿlīm beside iksir.json is read live, and its absence is said", () => {
+  fiDar((dir, tasmim) => {
+    assertEquals(tasmim.talim(), "(al-Kimyawī has written no Taʿlīm yet.)");
+    writeFileSync(join(dir, "AGENTS.md"), "# My house\nSpeak to me in three lines.\n");
+    assertEquals(tasmim.talim(), "# My house\nSpeak to me in three lines.");
+    baadHin(dir, "AGENTS.md", "Two lines.");
+    assertEquals(tasmim.talim(), "Two lines.");
+  });
+});

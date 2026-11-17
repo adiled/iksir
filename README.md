@@ -64,7 +64,7 @@ Every waṣfa carries its own three, drawn from the roster: al-Munādī marks an
 **The workshop** is the host. There is no enclosure: the `bash` hive lends the murshidūn the builder's whole reach, their shell opens at home, and the waṣfa, the issue it came from, and your Ta'lim tell them where the furnace stands. Lend a host you mean to lend.
 
 ```bash
-hum hive "$PWD" install       # again, after a pull: rebuilds and regrows; a .env from before 2.0 is carried into iksir.json and asrar, and removed
+hum hive "$PWD" install       # again, after a pull: rebuilds and regrows; a .env from before 1.2 is carried into iksir.json and asrar, and removed
 node src/cli.ts check         # nestle and report what answers
 hum bee --list                # the five bees, nestled
 tail -f ~/.local/state/hum/hives/iksir/orch/logs/iksir.log   # saail.log beside it
@@ -107,11 +107,11 @@ Iksīr (إكسير - The Elixir)
   |    |- Raqib      رقيب   - watches every vessel: the stuck, the bloated, the one going in circles
   |    '- Saail      سائل   - carries your words within
   |
-  '- Murshidun (مرشدون - The Guides)
+  '- Murshidūn (مرشدون)
        Summoned per waṣfa, many, but only one at the flame. Each dwells in its
        own inā', and perishes when the work is done.
        |
-       '- Sani (صانع - The Craftsman)
+       '- Ṣāniʿ (صانع)
             Summoned by a Murshid for one waṣfa. Inscribes the runūz.
   |
 Buwtaqa (بوتقة - The Crucible)
@@ -135,7 +135,7 @@ The **Ālāt al-Iksīr** (آلات الإكسير - instruments of the Elixir) a
 
 Iksīr provides the workshop, but the recipes are yours:
 
-- **Ta'lim** (تعليم): `~/.config/iksir/AGENTS.md` — what your alchemists must know of your materials and methods
+- **Taʿlīm** (تعليم): `~/.config/iksir/AGENTS.md` — what you want every khadim to know: your materials, your methods, how you want to be spoken to. Read live, rendered into every ruqya, and the measure al-Mumayyiz refines every word by
 - **Ruqya** (رقية): the incantations in `prompts/` — Munādī, Murshid, Sani, Ṣayrafī, the mumayyiz
 - **Khabath** (خبث): the roster — your halls, your forges, your trackers
 - **Namūdhaj** (نموذج): the model you name, and the nurse that answers to it
