@@ -135,7 +135,7 @@ The **Ālāt al-Iksīr** (آلات الإكسير - instruments of the Elixir) a
 
 Iksīr provides the workshop, but the recipes are yours:
 
-- **Ta'lim** (تعليم): `~/.config/iksir/AGENTS.md` — what your alchemists must know of your materials and methods
+- **Taʿlīm** (تعليم): `~/.config/iksir/AGENTS.md` — what you want every khadim to know: your materials, your methods, how you want to be spoken to. Read live, rendered into every ruqya, and the measure al-Mumayyiz refines every word by
 - **Ruqya** (رقية): the incantations in `prompts/` — Munādī, Murshid, Sani, Ṣayrafī, the mumayyiz
 - **Khabath** (خبث): the roster — your halls, your forges, your trackers
 - **Namūdhaj** (نموذج): the model you name, and the nurse that answers to it

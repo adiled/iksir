@@ -78,13 +78,6 @@ export interface FiilIshara {
   url?: string;
 }
 
-export interface TaqyimTaaliq {
-  isCommand: boolean;
-  intent: "command" | "suggestion" | "question" | "praise" | "concern" | "neutral";
-  confidence: number;
-  reasoning: string;
-}
-
 export type MustawaSijill = "debug" | "info" | "warn" | "error";
 
 export interface MudkhalSijill {

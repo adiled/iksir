@@ -279,7 +279,7 @@ export class Wasila {
 
   kalimat(khassa?: Record<string, string>): Record<string, string> {
     const roster = this.#tasmim?.khabath();
-    return { ...(roster ? kalimatKhabath(roster) : {}), ...(khassa ?? {}) };
+    return { ...(roster ? kalimatKhabath(roster) : {}), talim: this.#tasmim?.talim() ?? "", ...(khassa ?? {}) };
   }
 
   #ruqya(ism: string, khassa?: Record<string, string>): string | undefined {

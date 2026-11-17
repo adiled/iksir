@@ -1,125 +1,35 @@
-/**
- * Tests for src/khuddam/mumayyiz.ts
- *
- * Tests mayyazaTanbih() with mock AmilHum.
- * AGENTS.md is loaded from a temp fixture file.
- *
- * Key behaviors tested:
- * - Correct parsing of LLM JSON responses
- * - Fail-open on errors (dhahab:true / DHAHAB)
- * - "pick recommended" / "pick first" shortcut resolution
- */
-
 import { test, assertEquals } from "../ikhtibar.ts";
 import { mockWasila } from "../test-helpers.ts";
-import { mayyazaTanbih } from "./mumayyiz.ts";
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { mayyazaTanbih, saffaRadd } from "./mumayyiz.ts";
 
-let fixtureFile: string | null = null;
+const TALIM = "Speak to me in three lines.";
+const amilBi = (response: string | null) => mockWasila({ mayyaza: async () => (response === null ? { success: false, error: "cold" } : { success: true, response }) });
 
-async function ensureFixture(): Promise<void> {
-  if (fixtureFile) return;
-  const dir = mkdtempSync(join(tmpdir(), "iksir-talim-"));
-  fixtureFile = join(dir, "AGENTS.md");
-  writeFileSync(fixtureFile, "# Test AGENTS.md\nGuidelines for testing.");
-  process.env.IKSIR_CONFIG_DIR = dir;
-}
-
-test("mayyazaTanbih: DHAHAB response parsed correctly", async () => {
-  await ensureFixture();
-  const oc = mockWasila({
-    mayyaza: async () => ({
-      success: true,
-      response: '{"tamyiz":"DHAHAB","reason":"architecture question","rejection":null}',
-    }),
-  });
-
-  const result = await mayyazaTanbih(oc as never, "Is this a good API boundary?");
-  assertEquals(result.dhahab, true);
-  assertEquals(result.sabab, "architecture question");
-  assertEquals(result.radd, null);
+test("mumayyiz: a notice ruled dhahab goes on, refined; the Taʿlīm is before the cupel", async () => {
+  const amil = amilBi('{"tamyiz":"DHAHAB","reason":"architecture question","rejection":null,"nass":"Is the API boundary here?"}');
+  const hukm = await mayyazaTanbih(amil as never, "Well, so, I was wondering, is this a good API boundary?", TALIM);
+  assertEquals(hukm, { dhahab: true, sabab: "architecture question", radd: null, nass: "Is the API boundary here?" });
+  assertEquals(amil._calls.mayyaza[0].includes(TALIM), true);
+  assertEquals(amil._calls.mayyaza[0].includes("is this a good API boundary?"), true);
 });
 
-test("mayyazaTanbih: KHABATH response parsed correctly", async () => {
-  await ensureFixture();
-  const oc = mockWasila({
-    mayyaza: async () => ({
-      success: true,
-      response: '{"tamyiz":"KHABATH","reason":"debugging","rejection":"Check the logs first."}',
-    }),
-  });
-
-  const result = await mayyazaTanbih(oc as never, "This test is failing");
-  assertEquals(result.dhahab, false);
-  assertEquals(result.sabab, "debugging");
-  assertEquals(result.radd, "Check the logs first.");
+test("mumayyiz: a notice ruled khabath goes back with a word; a missing word gets the house's", async () => {
+  const hukm = await mayyazaTanbih(amilBi('{"tamyiz":"KHABATH","reason":"debugging","rejection":"Read the failing assertion."}') as never, "This test is failing", TALIM);
+  assertEquals(hukm.dhahab, false);
+  assertEquals(hukm.radd, "Read the failing assertion.");
+  assertEquals((await mayyazaTanbih(amilBi('{"tamyiz":"KHABATH","reason":"trivial"}') as never, "x", TALIM)).radd, "Handle this autonomously.");
 });
 
-test("mayyazaTanbih: malformed JSON -> fail-open dhahab", async () => {
-  await ensureFixture();
-  const oc = mockWasila({
-    mayyaza: async () => ({
-      success: true,
-      response: "this is not json at all",
-    }),
-  });
-
-  const result = await mayyazaTanbih(oc as never, "Some message");
-  assertEquals(result.dhahab, true);
-  assertEquals(result.sabab, "خطأ في التمييز");
+test("mumayyiz: a cold cupel, or a verdict that is not JSON, lets the word pass as it was", async () => {
+  for (const amil of [amilBi(null), amilBi("this is not json"), amilBi('{"tamyiz":"DHAHAB"}')]) {
+    const hukm = await mayyazaTanbih(amil as never, "the word", TALIM);
+    assertEquals(hukm.dhahab, true);
+    assertEquals(hukm.nass, "the word");
+  }
 });
 
-test("mayyazaTanbih: LLM returns success:false -> fail-open", async () => {
-  await ensureFixture();
-  const oc = mockWasila({
-    mayyaza: async () => ({ success: false, error: "rate limited" }),
-  });
-
-  const result = await mayyazaTanbih(oc as never, "Some message");
-  assertEquals(result.dhahab, true);
-  assertEquals(result.sabab, "فشل التمييز");
-});
-
-test("mayyazaTanbih: LLM throws -> fail-open", async () => {
-  await ensureFixture();
-  const oc = mockWasila({
-    mayyaza: async () => {
-      throw new Error("network error");
-    },
-  });
-
-  const result = await mayyazaTanbih(oc as never, "Some message");
-  assertEquals(result.dhahab, true);
-  assertEquals(result.sabab, "خطأ في التمييز");
-});
-
-test("mayyazaTanbih: missing fields get defaults", async () => {
-  await ensureFixture();
-  const oc = mockWasila({
-    mayyaza: async () => ({
-      success: true,
-      response: '{"tamyiz":"DHAHAB"}',
-    }),
-  });
-
-  const result = await mayyazaTanbih(oc as never, "Some message");
-  assertEquals(result.dhahab, true);
-  assertEquals(result.sabab, "Unknown");
-  assertEquals(result.radd, null);
-});
-
-test("mayyazaTanbih: KHABATH missing rejection gets default", async () => {
-  await ensureFixture();
-  const oc = mockWasila({
-    mayyaza: async () => ({
-      success: true,
-      response: '{"tamyiz":"KHABATH","reason":"trivial"}',
-    }),
-  });
-
-  const result = await mayyazaTanbih(oc as never, "Some message");
-  assertEquals(result.dhahab, false);
-  assertEquals(result.radd, "Handle this autonomously.");
+test("mumayyiz: a reply is refined to its gleam, and passes whole when the cupel is cold", async () => {
+  assertEquals(await saffaRadd(amilBi('{"nass":"Done; PR #71 is up."}') as never, "So after a long investigation ... PR #71 is up, as you can see", TALIM), "Done; PR #71 is up.");
+  assertEquals(await saffaRadd(amilBi(null) as never, "as it was", TALIM), "as it was");
+  assertEquals(await saffaRadd(amilBi('{"nass":"   "}') as never, "as it was", TALIM), "as it was");
 });

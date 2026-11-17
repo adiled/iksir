@@ -6,6 +6,7 @@
  *   iksir.json   settings — the khabath roster and each khabath's particulars,
  *                the register's mark, the model, the log threshold
  *   asrar        secrets — name=value, 0600; today only telegram.ramz
+ *   AGENTS.md    the Taʿlīm — what al-Kimyawī wants every khadim to know
  *
  * Nothing else is read from the environment. Both files are read again the
  * moment they change: every consumer asks `now()` or `sirr()` at the moment
@@ -25,6 +26,8 @@ import { DEFAULT_NTFY_SERVER } from "./constants.ts";
 
 const MILAF_TASMIM = "iksir.json";
 const MILAF_ASRAR = "asrar";
+const MILAF_TALIM = "AGENTS.md";
+const LA_TALIM = "(al-Kimyawī has written no Taʿlīm yet.)";
 
 export function masarAlTasmim(): string {
   if (process.env.IKSIR_CONFIG_DIR) return process.env.IKSIR_CONFIG_DIR;
@@ -149,12 +152,14 @@ class Milaf<T> {
 export class Tasmim {
   #tasmim: Milaf<TasmimIksir>;
   #asrar: Milaf<Map<string, string>>;
+  #talim: Milaf<string>;
   #dir: string;
 
   constructor(dir = masarAlTasmim()) {
     this.#dir = dir;
     this.#tasmim = new Milaf(join(dir, MILAF_TASMIM), (nass) => sawwa(JSON.parse(nass)), tasmimAsasi);
     this.#asrar = new Milaf(join(dir, MILAF_ASRAR), iqraAsrar, () => new Map());
+    this.#talim = new Milaf(join(dir, MILAF_TALIM), (nass) => nass.trim() || LA_TALIM, () => LA_TALIM);
   }
 
   get masar(): string {
@@ -171,6 +176,10 @@ export class Tasmim {
 
   sirr(ism: string): string | undefined {
     return this.#asrar.now().get(ism);
+  }
+
+  talim(): string {
+    return this.#talim.now();
   }
 
   asmaAsrar(): string[] {

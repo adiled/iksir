@@ -36,7 +36,7 @@ import type {
   NidaShahada,
   NidaFasl,
 } from "../types.ts";
-import { mayyazaTanbih } from "./mumayyiz.ts";
+import { mayyazaTanbih, saffaRadd } from "./mumayyiz.ts";
 import type { Tasmim } from "../config.ts";
 import type { MudirJalasat } from "./katib.ts";
 import type { Munadi } from "./munadi.ts";
@@ -210,7 +210,7 @@ ${call.mahjoubBi?.length ? `**Blocked by:** ${call.mahjoubBi.join(", ")}` : ""}`
   }
 
   async aalajTanbih(call: NidaTabligh): Promise<string> {
-    const tamyiz = await mayyazaTanbih(this.#amil, call.risala);
+    const tamyiz = await mayyazaTanbih(this.#amil, call.risala, this.#tasmim.talim());
 
     if (!tamyiz.dhahab) {
       await logger.akhbar("tool-executor", "Ishara rejected as khabath", {
@@ -236,7 +236,7 @@ Reason: ${tamyiz.sabab}`;
       try {
         await this.#messenger.send(
           { murshid: call.huwiyyatMurshid },
-          call.risala,
+          tamyiz.nass,
         );
         sent.push("messenger");
       } catch (err) {
@@ -250,7 +250,7 @@ Reason: ${tamyiz.sabab}`;
       const success = await this.#ntfy.send({
         sinf: "decision",
         unwan: "Murshid Message",
-        matn: call.risala,
+        matn: tamyiz.nass,
         awwaliyya: call.awwaliyya,
       });
       if (success) {
@@ -274,9 +274,10 @@ Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." 
     }
 
     try {
+      const nass = await saffaRadd(this.#amil, call.risala, this.#tasmim.talim());
       const wasala = await this.#messenger.arsalaMunassaq(
         { murshid: call.huwiyyatMurshid },
-        call.risala,
+        nass,
       );
 
       if (!wasala) {
