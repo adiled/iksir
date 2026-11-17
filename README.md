@@ -64,7 +64,7 @@ Every waṣfa carries its own three, drawn from the roster: al-Munādī marks an
 **The workshop** is the host. There is no enclosure: the `bash` hive lends the murshidūn the builder's whole reach, their shell opens at home, and the waṣfa, the issue it came from, and your Ta'lim tell them where the furnace stands. Lend a host you mean to lend.
 
 ```bash
-hum hive "$PWD" install       # again, after a pull: rebuilds and regrows; a .env from before 2.0 is carried into iksir.json and asrar, and removed
+hum hive "$PWD" install       # again, after a pull: rebuilds and regrows; a .env from before 1.2 is carried into iksir.json and asrar, and removed
 node src/cli.ts check         # nestle and report what answers
 hum bee --list                # the five bees, nestled
 tail -f ~/.local/state/hum/hives/iksir/orch/logs/iksir.log   # saail.log beside it
