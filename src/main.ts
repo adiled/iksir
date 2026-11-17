@@ -15,7 +15,6 @@
  * Options:
  *   --help          Show help
  *   --version       Show version
- *   --check         Check configuration and connectivity
  */
 
 import { logger } from "./logging/logger.ts";
@@ -57,84 +56,6 @@ interface SiyaqKhadim {
   munadi: ReturnType<typeof istadaaMunadi>;
   raqib: ReturnType<typeof istadaaRaqib>;
   mutahakkimIlgha: AbortController;
-}
-
-async function tahaqqaqIttisaal(ctx: SiyaqKhadim): Promise<boolean> {
-  let allGood = true;
-
-  console.log("\nChecking connectivity...\n");
-
-  process.stdout.write("  Nest (thrum)... ");
-  const nestled = await ctx.amil.isHealthy();
-  if (nestled) {
-    const version = await ctx.amil.getVersion();
-    console.log(`✓ (thrum v${version ?? "?"})`);
-  } else {
-    console.log("✗ (humd not reachable)");
-    allGood = false;
-  }
-
-  if (ctx.rasul.mumakkan()) {
-    process.stdout.write("  Messenger... ");
-    const messengerValid = await ctx.rasul.tahaqqaq();
-    if (messengerValid) {
-      console.log("✓");
-    } else {
-      console.log("✗ (validation failed)");
-      allGood = false;
-    }
-  } else {
-    console.log("  Messenger... (disabled)");
-  }
-
-  const ntfy = ctx.tasmim.ntfy();
-  if (ntfy) {
-    process.stdout.write("  ntfy server... ");
-    try {
-      const response = await fetch(ntfy.server);
-      if (response.ok) {
-        console.log("✓");
-      } else {
-        console.log(`✗ (status ${response.status})`);
-        allGood = false;
-      }
-    } catch {
-      console.log("✗ (not reachable)");
-      allGood = false;
-    }
-  } else {
-    console.log("  ntfy server... (disabled)");
-  }
-
-  console.log("");
-  return allGood;
-}
-
-async function naffadhFahs(ctx: SiyaqKhadim): Promise<void> {
-  console.log(`\nIksir v${VERSION} - Configuration Check\n`);
-  console.log(`Config file: ${ctx.tasmim.masar}`);
-
-  const kh = ctx.tasmim.khabath();
-  console.log("\nConfiguration:");
-  console.log(`  Bee hid: ${ctx.amil.huwiyya}`);
-  const namudhaj = ctx.tasmim.namudhaj();
-  const namadhij = ctx.amil.namadhij();
-  const hukmNamudhaj = !namudhaj ? "" : namadhij.length === 0 ? " (the nest names no models)" : namadhij.includes(namudhaj) ? " ✓ advertised by the nest" : ` ✗ not advertised; the nest has ${namadhij.join(", ")}`;
-  console.log(`  Model: ${namudhaj ?? "(the nest decides)"}${hukmNamudhaj}`);
-  console.log(`  Majlis: ${kh.majlis.join(", ") || "(none)"}`);
-  console.log(`  Kūr: ${kh.kur.join(", ") || "(none)"}`);
-  console.log(`  Sijillāt: ${kh.sijillat.join(", ") || "(none)"}`);
-  console.log(`  Secrets: ${ctx.tasmim.asmaAsrar().join(", ") || "(none)"}`);
-  for (const shakwa of tahaqqaq(ctx.tasmim.now())) console.log(`  ! ${shakwa}`);
-
-  const allGood = await tahaqqaqIttisaal(ctx);
-
-  if (allGood) {
-    console.log("All checks passed! ✓\n");
-  } else {
-    console.log("Some checks failed. Review the configuration.\n");
-    process.exit(1);
-  }
 }
 
 async function addaIsharat(ctx: SiyaqKhadim): Promise<void> {
@@ -345,7 +266,7 @@ async function aalajRisalaKhassa(ctx: SiyaqKhadim): Promise<void> {
   await ctx.rasul.send("kimyawi", response);
 }
 
-export async function abda(opts: { check?: boolean } = {}): Promise<void> {
+export async function abda(): Promise<void> {
   await logger.baddaa();
 
   const tasmim = new Tasmim();
@@ -428,19 +349,12 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     mutahakkimIlgha: abortController,
   };
 
-  if (opts.check) {
-    await naffadhFahs(ctx);
-    amil.qaf();
-    aghlaaqQaidatBayanat();
-    process.exit(0);
-  }
 
   await awqadKhadim(ctx);
 }
 
 if (import.meta.main) {
-  const check = process.argv.slice(2).includes("--check");
-  abda({ check }).catch(async (error) => {
+  abda().catch(async (error) => {
     await logger.sajjalKhata("main", "Fatal error", { error: String(error) });
     console.error("Fatal error:", error);
     process.exit(1);

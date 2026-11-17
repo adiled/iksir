@@ -65,7 +65,7 @@ Every waṣfa carries its own three, drawn from the roster: al-Munādī marks an
 
 ```bash
 hum hive "$PWD" install       # again, after a pull: rebuilds and regrows; a .env from before 1.2 is carried into iksir.json and asrar, and removed
-node src/cli.ts check         # nestle and report what answers
+node src/cli.ts check         # ask hum and the majlis what answers; it enters as nobody, so the running iksir is not disturbed
 hum bee --list                # the five bees, nestled
 tail -f ~/.local/state/hum/hives/iksir/orch/logs/iksir.log   # saail.log beside it
 ```
