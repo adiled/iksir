@@ -171,7 +171,7 @@ export class Munadi {
     sijill.sajjil(
       {
         name: "mun_arrif",
-        khass,
+        khass: [khass, "mumayyiz"],
         description: "Divine the waṣfa behind words: search the Sijill by name or by what it says. Use it before saying nothing exists.",
         inputSchema: { type: "object", properties: { kalimat: { type: "string", description: "A name (W-13, GH-9) or words from the title or statement" } }, required: ["kalimat"] },
       },
@@ -245,7 +245,7 @@ export class Munadi {
     sijill.sajjil(
       {
         name: "mun_man_yaamal",
-        khass,
+        khass: [khass, "mumayyiz"],
         description: "Who labours: every murshid, its waṣfa, its condition, its vessel, and who holds the flame.",
         inputSchema: { type: "object", properties: {} },
       },

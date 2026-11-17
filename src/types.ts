@@ -268,7 +268,8 @@ export type MunToolCall =
 
 export interface TaarifAla {
   name: string;
-  khass?: string;
+  khass?: string | string[];
+  muhla?: number;
   description: string;
   inputSchema: {
     type: "object";

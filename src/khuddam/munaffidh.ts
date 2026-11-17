@@ -15,7 +15,6 @@
 
 import type { RasulKharij } from "../types.ts";
 import type { SijillWasfat, Wasfa } from "../wasfa/sijill-wasfat.ts";
-import { NtfyClient } from "../rasul/ntfy.ts";
 import { Wasila } from "../hum/wasila.ts";
 import { logger } from "../logging/logger.ts";
 import { 
@@ -28,15 +27,12 @@ import {
 import type {
   MunToolCall,
   NidaWadaaAlaqat,
-  NidaTabligh,
-  NidaRadd,
   NidaTanazal,
   NidaTalabTahakkum,
   NidaSafa,
   NidaShahada,
   NidaFasl,
 } from "../types.ts";
-import { mayyazaTanbih, saffaRadd } from "./mumayyiz.ts";
 import type { Tasmim } from "../config.ts";
 import type { MudirJalasat } from "./katib.ts";
 import type { Munadi } from "./munadi.ts";
@@ -46,7 +42,6 @@ interface MunaffidhDeps {
   tasmim: Tasmim;
   wasfat: SijillWasfat;
   rasul: RasulKharij;
-  ntfy: NtfyClient;
   mudirJalasat: MudirJalasat;
   amil: Wasila;
   sayrafi: Sayrafi;
@@ -56,7 +51,6 @@ export class Munaffidh {
   readonly #tasmim: Tasmim;
   #wasfat: SijillWasfat;
   #messenger: RasulKharij;
-  #ntfy: NtfyClient;
   #sessionManager: MudirJalasat;
   #amil: Wasila;
   #sayrafi: Sayrafi;
@@ -68,7 +62,6 @@ export class Munaffidh {
     this.#tasmim = deps.tasmim;
     this.#wasfat = deps.wasfat;
     this.#messenger = deps.rasul;
-    this.#ntfy = deps.ntfy;
     this.#sessionManager = deps.mudirJalasat;
     this.#amil = deps.amil;
     this.#sayrafi = deps.sayrafi;
@@ -141,12 +134,6 @@ export class Munaffidh {
           result = await this.aalajAlaqat(event);
           break;
 
-        case "mun_balligh":
-          result = await this.aalajTanbih(event);
-          break;
-        case "mun_radd":
-          result = await this.aalajRadd(event);
-          break;
         case "mun_sajjal_qarar":
           return;
         case "mun_shahada":
@@ -207,99 +194,6 @@ export class Munaffidh {
 
 ${call.yahjub?.length ? `**Blocks:** ${call.yahjub.join(", ")}` : ""}
 ${call.mahjoubBi?.length ? `**Blocked by:** ${call.mahjoubBi.join(", ")}` : ""}`;
-  }
-
-  async aalajTanbih(call: NidaTabligh): Promise<string> {
-    const tamyiz = await mayyazaTanbih(this.#amil, call.risala, this.#tasmim.talim());
-
-    if (!tamyiz.dhahab) {
-      await logger.akhbar("tool-executor", "Ishara rejected as khabath", {
-        reason: tamyiz.sabab,
-        messagePreview: call.risala.slice(0, 100),
-      });
-
-      return `REJECTED: ${tamyiz.radd}
-
-Your message was not forwarded to al-Kimyawi. This appears to be within your autonomy.
-
-Reason: ${tamyiz.sabab}`;
-    }
-
-    await logger.akhbar("tool-executor", "Ishara approved", {
-      reason: tamyiz.sabab,
-      messagePreview: call.risala.slice(0, 100),
-    });
-
-    const sent: string[] = [];
-
-    if (this.#messenger.mumakkan()) {
-      try {
-        await this.#messenger.send(
-          { murshid: call.huwiyyatMurshid },
-          tamyiz.nass,
-        );
-        sent.push("messenger");
-      } catch (err) {
-        await logger.sajjalKhata("tool-executor", "Failed to send notification via messenger", {
-          error: String(err),
-        });
-      }
-    }
-
-    if (this.#ntfy.mumakkan()) {
-      const success = await this.#ntfy.send({
-        sinf: "decision",
-        unwan: "Murshid Message",
-        matn: tamyiz.nass,
-        awwaliyya: call.awwaliyya,
-      });
-      if (success) {
-        sent.push("ntfy");
-      }
-    }
-
-    if (sent.length === 0) {
-      return "Warning: No notification channels are enabled. Message not delivered.";
-    }
-
-    return `Ishara sent to al-Kimyawi via: ${sent.join(", ")}
-
-Awwaliyya: ${call.awwaliyya}
-Message preview: ${call.risala.slice(0, 100)}${call.risala.length > 100 ? "..." : ""}`;
-  }
-
-  async aalajRadd(call: NidaRadd): Promise<string> {
-    if (!this.#messenger.mumakkan()) {
-      return "Warning: Messenger not enabled. Reply not delivered.";
-    }
-
-    try {
-      const nass = await saffaRadd(this.#amil, call.risala, this.#tasmim.talim());
-      const wasala = await this.#messenger.arsalaMunassaq(
-        { murshid: call.huwiyyatMurshid },
-        nass,
-      );
-
-      if (!wasala) {
-        await logger.sajjalKhata("tool-executor", "Reply did not reach al-Kimyawi", {
-          huwiyyatMurshid: call.huwiyyatMurshid,
-          messagePreview: call.risala.slice(0, 100),
-        });
-        return `Your words did not reach al-Kimyawī — the messenger refused them. Nothing was delivered; say it again.`;
-      }
-
-      await logger.akhbar("tool-executor", "Reply sent to al-Kimyawi", {
-        huwiyyatMurshid: call.huwiyyatMurshid,
-        messagePreview: call.risala.slice(0, 100),
-      });
-      return `Reply sent to al-Kimyawi (${call.huwiyyatMurshid}).`;
-    } catch (err) {
-      await logger.sajjalKhata("tool-executor", "Failed to send reply to al-Kimyawi", {
-        huwiyyatMurshid: call.huwiyyatMurshid,
-        error: String(err),
-      });
-      return "Failed to send reply to al-Kimyawi.";
-    }
   }
 
   async aalajTanazul(call: NidaTanazal): Promise<string> {

@@ -96,7 +96,6 @@ interface MockJalsatHum {
 }
 
 export interface MockWasila {
-  mayyaza(prompt: string): Promise<{ success: boolean; response?: string; error?: string }>;
   sendPromptAsync(sessionId: string, prompt: string, options?: unknown): Promise<boolean>;
   sendPrompt(
     sessionId: string,
@@ -111,7 +110,6 @@ export interface MockWasila {
   _reportNestId(sessionId: string, nestId: string): void;
 
   _calls: {
-    mayyaza: string[];
     sendPromptAsync: Array<{ sessionId: string; prompt: string }>;
     sendPrompt: Array<{ sessionId: string; prompt: string; options?: unknown }>;
     khalaqaJalsa: Array<{ huwiyyatWasfa: string; title: string }>;
@@ -121,17 +119,16 @@ export interface MockWasila {
   _athar: Record<string, string[]>;
   athar(sid: string): string[];
   khalaya(): number;
+  azhar(sid: string): unknown[];
   akhirDawr(sid: string): { maftuh: boolean; zaman: number | null; khata?: string };
 }
 
 export function mockWasila(overrides?: {
-  mayyaza?: (prompt: string) => Promise<{ success: boolean; response?: string; error?: string }>;
   sendPromptAsync?: (sessionId: string, prompt: string) => Promise<boolean>;
   sendPrompt?: (sessionId: string, prompt: string) => Promise<{ success: boolean; response?: string; error?: string }>;
   khalaqaJalsa?: (huwiyyatWasfa: string, title: string) => Promise<MockJalsatHum | null>;
 }): MockWasila {
   const calls: MockWasila["_calls"] = {
-    mayyaza: [],
     sendPromptAsync: [],
     sendPrompt: [],
     khalaqaJalsa: [],
@@ -157,14 +154,12 @@ export function mockWasila(overrides?: {
       return sessions.size;
     },
 
-    akhirDawr(_sid) {
-      return { maftuh: false, zaman: null };
+    azhar(_sid) {
+      return [];
     },
 
-    async mayyaza(prompt: string) {
-      calls.mayyaza.push(prompt);
-      if (overrides?.mayyaza) return overrides.mayyaza(prompt);
-      return { success: true, response: '{"tamyiz":"DHAHAB","reason":"test","rejection":null}' };
+    akhirDawr(_sid) {
+      return { maftuh: false, zaman: null };
     },
 
     async sendPromptAsync(sessionId, prompt) {

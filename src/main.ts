@@ -39,6 +39,7 @@ import { istadaaMunaffidh } from "./khuddam/munaffidh.ts";
 import { istadaaMunadi } from "./khuddam/munadi.ts";
 import { Sayrafi } from "./khuddam/sayrafi.ts";
 import { sajjilIstisnaa } from "./khuddam/sani.ts";
+import { Mumayyiz } from "./khuddam/mumayyiz.ts";
 import { VERSION } from "./version.ts";
 import { istadaaRaqib } from "./khuddam/raqib.ts";
 import type { Rasul, RisalaDakhila } from "./types.ts";
@@ -374,6 +375,7 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   const sessionManager = istadaaKatib({ tasmim, amil, rasul: messenger, wasfat });
   await sessionManager.hammalaHala();
   sajjilIstisnaa(alat, amil, sessionManager);
+  new Mumayyiz({ amil, tasmim, rasul: messenger, mudirJalasat: sessionManager, ntfy }).sajjil(alat);
   sayrafi.indaInkisar(async (wasfa, khata) => {
     await sessionManager.arsalaIlaMurshidById(wasfa.huwiyya, `## Al-Ṣayrafī could not finish — ${khata}\n\nNo shahāda will come for this; call again when the cause is mended.`);
     await messenger.send("dispatch", `${wasfa.huwiyya}: al-Ṣayrafī's duty broke off — ${khata}`);
@@ -383,7 +385,6 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
     tasmim,
     wasfat,
     rasul: messenger,
-    ntfy,
     mudirJalasat: sessionManager,
     amil,
     sayrafi,

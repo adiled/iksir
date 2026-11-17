@@ -20,6 +20,7 @@ export interface KhiyaratHathth {
   kalimat?: Record<string, string>;
   harara?: number;
   badhra?: number;
+  graft?: Zahra[];
 }
 
 export interface Batala {
@@ -80,7 +81,7 @@ export class Wasila {
   #maftuh = new Map<string, { tamm: Promise<void>; hal: () => void }>();
   #tabur = new Map<string, Promise<unknown>>();
   #muntazirun = new Map<string, number>();
-  #sidMumayyiz: string | null = null;
+  #bilaDhakira = new Set<string>();
   #batalatMuallaqa = new Map<string, { ism?: string; nass: string }>();
   #asmas = 0;
   #muntazir: Array<(h: HadathThrum) => void> = [];
@@ -257,7 +258,7 @@ export class Wasila {
     this.#muntazirun.delete(sid);
     this.#zahraJariya.delete(sid);
     this.#ughliqaDawr(sid);
-    if (this.#sidMumayyiz === sid) this.#sidMumayyiz = null;
+    this.#bilaDhakira.delete(sid);
     try { mahaqaAzhar(sid); } catch { void 0; }
     this.#inthaDawr(sid, { success: false, error: "session dismissed" });
     return wasJalsa;
@@ -324,10 +325,13 @@ export class Wasila {
     const namudhaj = options?.model?.modelID ?? this.#tasmim?.namudhaj();
     const nizam = options?.system ?? (options?.agent ? this.#ruqya(options.agent, options.kalimat) : undefined);
     const khadim = this.#nahlJalsa(sid).khadim;
+    const lahu = (a: { khass?: string | string[] }) => !a.khass || (Array.isArray(a.khass) ? a.khass.includes(khadim) : a.khass === khadim);
     const adawat = (this.#sijill?.adawat() ?? [])
-      .filter((a) => (!a.khass || a.khass === khadim) && (!options?.adawat || options.adawat.includes(a.name)))
-      .map(({ khass: _khass, ...a }) => a);
-    const sabiqa = this.#azhar.get(sid) ?? [];
+      .filter((a) => lahu(a) && (!options?.adawat || options.adawat.includes(a.name)))
+      .map(({ khass: _khass, muhla: _muhla, ...a }) => a);
+    const sabiqa = options?.graft ?? this.#azhar.get(sid) ?? [];
+    if (options?.graft) this.#bilaDhakira.add(sid);
+    else this.#bilaDhakira.delete(sid);
     this.#zahraJariya.set(sid, { content: [{ kind: PetalKind.text, text: prompt }], grew: [] });
     this.#iftahDawr(sid);
     return {
@@ -525,15 +529,6 @@ export class Wasila {
     return true;
   }
 
-  async mayyaza(prompt: string): Promise<JawabDawr> {
-    if (!this.#sidMumayyiz) {
-      const jalsa = await this.khalaqaJalsa(`${ASAS}-mumayyiz`, "Iksir Tamyiz");
-      if (!jalsa) return { success: false, error: "failed to create mumayyiz session" };
-      this.#sidMumayyiz = jalsa.id;
-    }
-    return this.sendPrompt(this.#sidMumayyiz, prompt, { harara: 0, badhra: 7 });
-  }
-
   async *subscribeToEvents(signal?: AbortSignal): AsyncGenerator<HadathThrum> {
     while (!signal?.aborted) {
       const hadath = this.#hawadith.shift();
@@ -577,8 +572,9 @@ export class Wasila {
         return { ok: false, q: String((kh as Error)?.message ?? kh) };
       }
     })();
+    const muhla = this.#sijill.adawat().find((a) => a.name === t.name)?.muhla ?? DEFAULT_TIMEOUT_MS;
     const ajal = new Promise<{ ok: boolean; q: string }>((hal) => {
-      const muqqit = setTimeout(() => hal({ ok: false, q: "tool timed out" }), DEFAULT_TIMEOUT_MS);
+      const muqqit = setTimeout(() => hal({ ok: false, q: "tool timed out" }), muhla);
       muqqit.unref?.();
     });
     const hasm = await Promise.race([tanfidh, ajal]);
@@ -650,7 +646,7 @@ export class Wasila {
     const khata = t.chi === Chi.error;
     const jariya = this.#zahraJariya.get(sid);
     this.#zahraJariya.delete(sid);
-    if (jariya && !khata) {
+    if (jariya && !khata && !this.#bilaDhakira.has(sid)) {
       const azhar = [...(this.#azhar.get(sid) ?? []), jariya].slice(-HADD_AZHAR);
       this.#azhar.set(sid, azhar);
       try { adkhalaZahra(sid, azhar.length - 1, jariya as unknown as Record<string, unknown>); } catch { void 0; }

@@ -56,6 +56,8 @@ test("imtihan: a summons opens one vessel with one opening prompt; the murshid's
 
 test("imtihan: words to a murshid go one turn at a time", async () => {
   const sid = maqam.sijill<{ id: string }>("SELECT id FROM jalasat WHERE huwiyya = 'W-1'")[0].id;
+  const adad = (bidaya: string) => maqam.wahm().filter((s) => s.startsWith(bidaya)).length;
+  await maqam.intazir(() => adad(`wilt ${sid}`) === adad(`prompt ${sid}`), 20_000, "the murshid's open turn to wilt");
   const qabl = maqam.wahm().length;
   maqam.qul("@W-1 sleep 1200; say slow");
   maqam.qul("@W-1 say fast");

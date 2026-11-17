@@ -329,3 +329,24 @@ test("forager: the graft holds finished turns only; a bloom that broke off is no
   assertEquals(wasila.azhar(sid).length, 1);
   wasila.qaf();
 });
+
+test("khuddam: an instrument khass to several khuddām reaches each of them; a graft given from outside is used once and not remembered", async () => {
+  const { nuhul, wasila } = qim();
+  const alat = new AlatAlIksir();
+  alat.sijill.sajjil({ name: "mun_mushtarak", khass: ["munadi", "mumayyiz"], description: "theirs", inputSchema: { type: "object", properties: {} } }, () => "ok");
+  const w = new Wasila({ sijill: alat.sijill, sanaaNahla: (k) => { const n = nuhul.get(k) ?? new NahlaWahm(k); nuhul.set(k, n); return n; } });
+  await w.ittasil();
+  const kupel = (await w.khalaqaJalsa("iksir-mumayyiz", "t"))!;
+  const murshid = (await w.khalaqaJalsa("GH-1", "t"))!;
+  await w.sendPromptAsync(kupel.id, "a", { graft: [{ content: [{ kind: "text", text: "lived" }], grew: [] }] });
+  await w.sendPromptAsync(murshid.id, "b");
+  const liKupel = nuhul.get("mumayyiz")!.mursal.find((t) => t.chi === "prompt") as Tone<"prompt">;
+  const liMurshid = nuhul.get("murshid")!.mursal.find((t) => t.chi === "prompt") as Tone<"prompt">;
+  assertEquals((liKupel.tools as Array<{ name: string }>).some((t) => t.name === "mun_mushtarak"), true);
+  assertEquals((liMurshid.tools as Array<{ name: string }>).some((t) => t.name === "mun_mushtarak"), false);
+  assertEquals((liKupel.graft as Array<{ content: Array<{ text?: string }> }>)[0].content[0].text, "lived");
+  nuhul.get("mumayyiz")!.wilt(kupel.id);
+  assertEquals(w.azhar(kupel.id).length, 0);
+  w.qaf();
+  void wasila;
+});

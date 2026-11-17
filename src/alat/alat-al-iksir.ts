@@ -22,9 +22,7 @@ import type {
   NidaKhalqWasfa,
   NidaSafa,
   NidaShahada,
-  NidaRadd,
   NidaSajjalQarar,
-  NidaTabligh,
   NidaTajdidWasfa,
   NidaTalabTahakkum,
   NidaTanazal,
@@ -321,71 +319,6 @@ it has begun.`,
         },
       },
       (args) => this.#aalajaQiraaatWasfa(args),
-    );
-
-    this.#sijillAlat.sajjil(
-      {
-        name: "mun_balligh",
-        description:
-          "Send a notification to al-Kimyawi. Use for blockers, decisions needed, and milestones.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            huwiyyatMurshid: {
-              type: "string",
-              description:
-                "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator). Required for routing.",
-            },
-            message: {
-              type: "string",
-              description: "Message content",
-            },
-            awwaliyya: {
-              type: "string",
-              enum: ["min", "low", "default", "high", "urgent"],
-              description: "Ishara awwaliyya",
-            },
-            actions: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  label: { type: "string" },
-                  action: { type: "string" },
-                },
-                required: ["label", "action"],
-              },
-              description: "Action buttons for the notification",
-            },
-          },
-          required: ["huwiyyatMurshid", "message", "awwaliyya"],
-        },
-      },
-      (args) => this.#aalijTabligh(args),
-    );
-
-    this.#sijillAlat.sajjil(
-      {
-        name: "mun_radd",
-        description:
-          "Send a conversational response to al-Kimyawi. Use this when al-Kimyawi asks a question (not a command). Questions seek information; commands direct action.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            huwiyyatMurshid: {
-              type: "string",
-              description:
-                "Your murshid ID (e.g., TEAM-100, SANDBOX-pos-simulator). Required for routing.",
-            },
-            message: {
-              type: "string",
-              description: "The response text (supports markdown lists)",
-            },
-          },
-          required: ["huwiyyatMurshid", "message"],
-        },
-      },
-      (args) => this.#aalijRadd(args),
     );
 
     this.#sijillAlat.sajjil(
@@ -768,43 +701,6 @@ Relations order the work: a blocked waṣfa waits for its blockers.`;
     ajzaa.push("## Working", `**State:** ${hala ? hala.status : "not begun"}`);
 
     return ajzaa.join("\n");
-  }
-
-  async #aalijTabligh(args: Record<string, unknown>): Promise<string> {
-    const call: NidaTabligh = {
-      tool: "mun_balligh",
-      huwiyyatMurshid: args.huwiyyatMurshid as string,
-      risala: args.message as string,
-      awwaliyya: args.awwaliyya as NidaTabligh["awwaliyya"],
-      afaal: args.actions as NidaTabligh["afaal"],
-    };
-
-    this.#hawwilLiKhadim(call);
-
-    const actionsText = call.afaal?.length
-      ? `\nActions: ${call.afaal.map((a) => a.label).join(", ")}`
-      : "";
-
-    return `Ishara sent to al-Kimyawi.
-
-Awwaliyya: ${call.awwaliyya}
-Message: ${call.risala}${actionsText}
-
-Al-Kimyawi will receive this via Telegram/ntfy.`;
-  }
-
-  async #aalijRadd(args: Record<string, unknown>): Promise<string> {
-    const call: NidaRadd = {
-      tool: "mun_radd",
-      huwiyyatMurshid: args.huwiyyatMurshid as string,
-      risala: args.message as string,
-    };
-
-    this.#hawwilLiKhadim(call);
-
-    return `Response sent to al-Kimyawi.
-
-${call.risala}`;
   }
 
   async #aalijTasjilQarar(args: Record<string, unknown>): Promise<string> {

@@ -200,7 +200,7 @@ Query when taking over work or facing familiar patterns.
 
 ## Communication — Al-Tawāṣul
 
-Every word you send al-Kimyawī passes through al-Mumayyiz, the cupel. A notice (`mun_balligh`) is judged: a blocker only a human can lift, a milestone, a boundary of architecture, the timing of a disclosure — these go on; progress, debugging and questions the matter answers come back to you with a word. A reply (`mun_radd`) always goes on, refined to its gleam. Write to be refined: the ask first, names and numbers exact, a few lines. A question from al-Kimyawī seeks understanding; answer it, and leave the matter as it stands until he says otherwise.
+Speak as you will. `mun_radd` answers a word of al-Kimyawī's; `mun_balligh` tells him something unasked. Both are reaches, and their grasp is the house's answer: al-Mumayyiz, who has lived your work, carries al-Kimyawī what is his and answers you the rest — from the Taʿlīm, the Sijill, the diary. Read the grasp; it is the house speaking to you. A question from al-Kimyawī seeks understanding; answer it, and leave the matter as it stands until he says otherwise.
 
 ---
 

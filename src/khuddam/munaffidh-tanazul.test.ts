@@ -50,7 +50,6 @@ async function mashhad(faila: string | null) {
     tasmim: makeConfig(),
     wasfat: undefined as never,
     rasul: mockMessenger(),
-    ntfy: undefined as never,
     mudirJalasat: katib,
     amil: mockWasila() as never,
     sayrafi: undefined as never,

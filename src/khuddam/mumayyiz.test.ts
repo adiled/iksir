@@ -1,35 +1,69 @@
-import { test, assertEquals } from "../ikhtibar.ts";
-import { mockWasila } from "../test-helpers.ts";
-import { mayyazaTanbih, saffaRadd } from "./mumayyiz.ts";
+import { test, assertEquals, assertStringIncludes } from "../ikhtibar.ts";
+import { AlatAlIksir } from "../alat/alat-al-iksir.ts";
+import { MudirJalasat } from "./katib.ts";
+import { Mumayyiz } from "./mumayyiz.ts";
+import { makeConfig, mockWasila, mockMessenger, withTestDb } from "../test-helpers.ts";
+import type { JalsatMurshid } from "../types.ts";
 
-const TALIM = "Speak to me in three lines.";
-const amilBi = (response: string | null) => mockWasila({ mayyaza: async () => (response === null ? { success: false, error: "cold" } : { success: true, response }) });
+const JALSA: JalsatMurshid = {
+  id: "iksir-w3", huwiyya: "W-3", unwan: "the login redirect", naw: "chore", far: "wasfa/w-3",
+  hala: "fail", unshiaFi: "2026-11-12T00:00:00.000Z", akhirRisalaFi: "2026-11-12T00:00:00.000Z", channels: {},
+};
 
-test("mumayyiz: a notice ruled dhahab goes on, refined; the Taʿlīm is before the cupel", async () => {
-  const amil = amilBi('{"tamyiz":"DHAHAB","reason":"architecture question","rejection":null,"nass":"Is the API boundary here?"}');
-  const hukm = await mayyazaTanbih(amil as never, "Well, so, I was wondering, is this a good API boundary?", TALIM);
-  assertEquals(hukm, { dhahab: true, sabab: "architecture question", radd: null, nass: "Is the API boundary here?" });
-  assertEquals(amil._calls.mayyaza[0].includes(TALIM), true);
-  assertEquals(amil._calls.mayyaza[0].includes("is this a good API boundary?"), true);
+function mashhad(hukm: string | null) {
+  const amil = mockWasila({ sendPrompt: async () => (hukm === null ? { success: false, error: "cold" } : { success: true, response: hukm }) });
+  const rasul = mockMessenger();
+  const katib = new MudirJalasat({ tasmim: makeConfig(), amil: amil as never, rasul });
+  katib.istawradaHala({ murshidun: [JALSA], murshidFaail: "W-3" });
+  const alat = new AlatAlIksir();
+  new Mumayyiz({ amil: amil as never, tasmim: makeConfig(), rasul, mudirJalasat: katib }).sajjil(alat);
+  return { amil, rasul, alat };
+}
+
+test("mumayyiz: a reply goes up as what was asked, and the murshid hears the house back as the grasp", async () => {
+  await withTestDb(async () => {
+    const { amil, rasul, alat } = mashhad('{"nass":"PR #71 is up.","radd":"Carried. The tests you ask about are the waṣfa\'s own maʿāyīr; run them."}');
+    amil._athar; 
+    const grasp = await alat.sijill.naffidh("mun_radd", { huwiyyatMurshid: "W-3", message: "So after a long night... PR #71 is up. Also which tests should I run?" });
+
+    assertEquals(rasul._calls.arsalaMunassaq, [{ channel: { murshid: "W-3" }, text: "PR #71 is up." }]);
+    assertStringIncludes(grasp, "Carried. The tests you ask about");
+    assertStringIncludes(grasp, "Reached al-Kimyawī:\nPR #71 is up.");
+    const hathth = amil._calls.sendPrompt[0];
+    assertEquals(hathth.prompt, "So after a long night... PR #71 is up. Also which tests should I run?");
+    const khiyarat = hathth.options as { agent: string; graft: unknown[]; kalimat: { huwiyya: string; talim: string } };
+    assertEquals(khiyarat.agent, "iksir-mumayyiz");
+    assertEquals(Array.isArray(khiyarat.graft), true);
+    assertEquals(khiyarat.kalimat.huwiyya, "W-3");
+    assertEquals(amil._calls.khalaqaJalsa[0].huwiyyatWasfa, "iksir-mumayyiz");
+  });
 });
 
-test("mumayyiz: a notice ruled khabath goes back with a word; a missing word gets the house's", async () => {
-  const hukm = await mayyazaTanbih(amilBi('{"tamyiz":"KHABATH","reason":"debugging","rejection":"Read the failing assertion."}') as never, "This test is failing", TALIM);
-  assertEquals(hukm.dhahab, false);
-  assertEquals(hukm.radd, "Read the failing assertion.");
-  assertEquals((await mayyazaTanbih(amilBi('{"tamyiz":"KHABATH","reason":"trivial"}') as never, "x", TALIM)).radd, "Handle this autonomously.");
+test("mumayyiz: a notice that is the house's to answer goes nowhere up; the murshid gets the answer", async () => {
+  await withTestDb(async () => {
+    const { rasul, alat } = mashhad('{"nass":"","radd":"The precedent is in the diary: use the existing session store."}');
+    const grasp = await alat.sijill.naffidh("mun_balligh", { huwiyyatMurshid: "W-3", message: "Should I use pattern X or Y?", awwaliyya: "default" });
+    assertEquals(rasul._calls.arsalaMunassaq.length, 0);
+    assertEquals(grasp, "The precedent is in the diary: use the existing session store.");
+  });
 });
 
-test("mumayyiz: a cold cupel, or a verdict that is not JSON, lets the word pass as it was", async () => {
-  for (const amil of [amilBi(null), amilBi("this is not json"), amilBi('{"tamyiz":"DHAHAB"}')]) {
-    const hukm = await mayyazaTanbih(amil as never, "the word", TALIM);
-    assertEquals(hukm.dhahab, true);
-    assertEquals(hukm.nass, "the word");
-  }
+test("mumayyiz: a cold cupel, or a ruling that is not JSON, sends the word up as it was and says so", async () => {
+  await withTestDb(async () => {
+    for (const hukm of [null, "I think it is fine"]) {
+      const { rasul, alat } = mashhad(hukm);
+      const grasp = await alat.sijill.naffidh("mun_radd", { huwiyyatMurshid: "W-3", message: "as it was" });
+      assertEquals(rasul._calls.arsalaMunassaq.at(-1)?.text, "as it was");
+      assertStringIncludes(grasp, "The cupel was cold");
+    }
+  });
 });
 
-test("mumayyiz: a reply is refined to its gleam, and passes whole when the cupel is cold", async () => {
-  assertEquals(await saffaRadd(amilBi('{"nass":"Done; PR #71 is up."}') as never, "So after a long investigation ... PR #71 is up, as you can see", TALIM), "Done; PR #71 is up.");
-  assertEquals(await saffaRadd(amilBi(null) as never, "as it was", TALIM), "as it was");
-  assertEquals(await saffaRadd(amilBi('{"nass":"   "}') as never, "as it was", TALIM), "as it was");
+test("mumayyiz: the instruments are the murshid's, and they take their time", async () => {
+  await withTestDb(async () => {
+    const { alat } = mashhad(null);
+    const radd = alat.sijill.adawat().find((a) => a.name === "mun_radd")!;
+    assertEquals(radd.khass, "murshid");
+    assertEquals((radd.muhla ?? 0) > 150_000, true);
+  });
 });

@@ -17,7 +17,6 @@ function mashhad() {
     tasmim: makeConfig(),
     wasfat,
     rasul,
-    ntfy: undefined as never,
     mudirJalasat: katib,
     amil: amil as never,
     sayrafi,
