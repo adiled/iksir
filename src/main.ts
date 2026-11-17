@@ -179,27 +179,9 @@ async function ishtarakAhdath(ctx: SiyaqKhadim): Promise<void> {
       for await (const event of ctx.amil.subscribeToEvents(ctx.mutahakkimIlgha.signal)) {
         backoffMs = INITIAL_BACKOFF_MS;
 
-        if (event.type === "session.compacted") {
-          const sessionId = (event.properties as { sessionID?: string })?.sessionID;
-          if (sessionId) {
-            ctx.mudirJalasat.aalajaDamj(sessionId).catch(async (e) =>
-              await logger.sajjalKhata("ahdath", "Failed to handle curation event", {
-                sessionId,
-                error: String(e),
-              })
-            );
-          }
-        } else if (event.type === "error") {
-          const { sid, message, code } = event.properties as { sid?: string; message?: string; code?: string };
-          if (sid) {
-            ctx.mudirJalasat.ablighInkisar(sid, [code, message].filter(Boolean).join(": ") || "no word").catch(async (e) =>
-              await logger.sajjalKhata("ahdath", "Could not announce a broken turn", { sid, error: String(e) })
-            );
-          }
-        } else if (event.type === "wilt") {
-          const { sid } = event.properties as { sid?: string };
-          if (sid) ctx.mudirJalasat.ablighSalama(sid);
-        }
+        ctx.mudirJalasat.aalajHadathThrum(event).catch(async (e) =>
+          await logger.sajjalKhata("ahdath", `Could not act on ${event.type}`, { error: String(e) })
+        );
       }
     } catch (error) {
       if (ctx.mutahakkimIlgha.signal.aborted) {

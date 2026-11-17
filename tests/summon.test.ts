@@ -114,13 +114,13 @@ test("summon: dismissing a murshid forgets its session, channel, memory and nest
 
 test("summon: a turn that breaks off is announced in the topic and in Dispatch, and the ledger says so", async () => {
   await withTestRepo(async () => {
-    const { katib, munadi, murshid, telegram, nuhul } = await mashhad();
+    const { amil, katib, munadi, murshid, telegram, nuhul } = await mashhad();
     await munadi.faaalLiWasfa("TEAM-3", "Qasr");
     const sid = katib.jalabMurshid("TEAM-3")!.id;
 
     murshid.sawt({ chi: "error", sid, message: "rate limited", code: "upstream" });
-    await katib.ablighInkisar(sid, "upstream: rate limited");
-    await katib.ablighInkisar(sid, "upstream: rate limited");
+    await katib.aalajHadathThrum((await amil.subscribeToEvents().next()).value);
+    await katib.aalajHadathThrum({ type: "error", properties: { sid, message: "rate limited", code: "upstream" } });
 
     const fiTopic = telegram._calls.arsalaIlaMurshidTopic.filter((c) => c.text.includes("turn broke off"));
     assertEquals(fiTopic.length, 2);
@@ -136,5 +136,9 @@ test("summon: a turn that breaks off is announced in the topic and in Dispatch, 
     assertStringIncludes(hathth.text!, "rate limited");
     majlis.wilt(hathth.sid as string, "It broke off twice; I have told it nothing more.");
     assertEquals((await radd).radd, "It broke off twice; I have told it nothing more.");
+
+    await katib.aalajHadathThrum({ type: "wilt", properties: { sid } });
+    await katib.aalajHadathThrum({ type: "error", properties: { sid, message: "again" } });
+    assertStringIncludes(telegram._calls.arsalaIlaMurshidTopic.at(-1)!.text, "The murshid's turn broke off: again");
   });
 });

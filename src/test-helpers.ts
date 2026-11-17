@@ -115,6 +115,7 @@ export interface MockWasila {
     sendPromptAsync: Array<{ sessionId: string; prompt: string }>;
     sendPrompt: Array<{ sessionId: string; prompt: string; options?: unknown }>;
     khalaqaJalsa: Array<{ huwiyyatWasfa: string; title: string }>;
+    abortSession: string[];
   };
   _sessions: Map<string, MockJalsatHum>;
   _athar: Record<string, string[]>;
@@ -134,6 +135,7 @@ export function mockWasila(overrides?: {
     sendPromptAsync: [],
     sendPrompt: [],
     khalaqaJalsa: [],
+    abortSession: [],
   };
 
   const sessions = new Map<string, MockJalsatHum>();
@@ -225,7 +227,8 @@ export function mockWasila(overrides?: {
       return sessions.delete(sessionId);
     },
 
-    async abortSession(_sessionId) {
+    async abortSession(sessionId) {
+      calls.abortSession.push(sessionId);
       return true;
     },
 

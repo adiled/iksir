@@ -174,3 +174,22 @@ test("smoke: vessels survive a restart, carrying their nestId", async () => {
     assertEquals(second.amil.huwiyyatUsh(lit.id), "nest-handle-9001");
   });
 });
+
+test("smoke: a herald that takes too long is stopped and says so; no second session answers the same word", async () => {
+  await withTestRepo(async () => {
+    const config = makeConfig();
+    const amil = mockWasila({ sendPrompt: async () => ({ success: false, error: "Error: prompt timed out after 150000ms" }) });
+    const messenger = new TelegramMessenger(mockTelegramClient() as never);
+    const wasfat = anshaaSijillWasfat("W");
+    const alat = new AlatAlIksir(wasfat, config);
+    const katib = new MudirJalasat({ tasmim: config, amil: amil as never, rasul: messenger, wasfat });
+    const munadi = new Munadi({ mudirJalasat: katib, rasul: messenger, amil: amil as never, alat, wasfat });
+
+    const result = await munadi.aalajRisalaIrsal({ source: "telegram", text: "anything" });
+
+    assertStringIncludes(result.radd!, "I took too long and stopped myself");
+    assertEquals(amil._calls.khalaqaJalsa.length, 1);
+    assertEquals(amil._calls.sendPrompt.length, 1);
+    assertEquals(amil._calls.abortSession, [amil._calls.khalaqaJalsa[0] && amil._calls.sendPrompt[0].sessionId]);
+  });
+});

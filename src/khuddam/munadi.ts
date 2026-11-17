@@ -1,5 +1,5 @@
 /**
- * Al-Munādī (المنادي) — the Herald at the Gate
+ * Al-Munādī (المنادي) — the Caller at the Gate
  *
  * One of the Khuddām. Every word spoken in Dispatch is his to hear and his to
  * answer, in his own voice: each message goes into his one session on the

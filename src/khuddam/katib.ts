@@ -287,6 +287,17 @@ ${tariq}${zaid ? `\n\n${zaid}` : ""}`;
     this.#inkisarat.delete(sid);
   }
 
+  async aalajHadathThrum(hadath: { type: string; properties: Record<string, unknown> }): Promise<void> {
+    const sid = (hadath.properties.sid ?? hadath.properties.sessionID) as string | undefined;
+    if (!sid) return;
+    if (hadath.type === "session.compacted") return this.aalajaDamj(sid);
+    if (hadath.type === "wilt") return this.ablighSalama(sid);
+    if (hadath.type === "error") {
+      const { message, code } = hadath.properties as { message?: string; code?: string };
+      return this.ablighInkisar(sid, [code, message].filter(Boolean).join(": ") || "no word");
+    }
+  }
+
   async sarrih(huwiyya: string): Promise<JalsatMurshid | null> {
     const session = this.#murshidSessions.get(huwiyya);
     if (!session) return null;

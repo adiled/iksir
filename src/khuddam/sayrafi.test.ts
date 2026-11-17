@@ -106,3 +106,18 @@ test("a testimony of khata leaves the register as it was", async () => {
     assertStringIncludes(rasul._calls.arsalaMunassaq.at(-1)!.text, "would not take");
   });
 });
+
+test("a duty the sayrafi could not finish reaches whoever waits on it", async () => {
+  await withTestDb(async () => {
+    const amil = mockWasila({ sendPrompt: async () => ({ success: false, error: "prompt timed out after 1800000ms" }) });
+    const sayrafi = new Sayrafi(amil as never, makeConfig());
+    const inkisarat: Array<[string, string]> = [];
+    sayrafi.indaInkisar(async (wasfa, khata) => { inkisarat.push([wasfa.huwiyya, khata]); });
+
+    const radd = await sayrafi.assa({ huwiyya: "GH-9", unwan: "t", mayayir: ["npm test"] }, "wasfa/gh-9");
+    assertStringIncludes(radd, "with the ṣayrafī");
+    const azal = Date.now() + 2000;
+    while (inkisarat.length === 0 && Date.now() < azal) await new Promise((r) => setTimeout(r, 10));
+    assertEquals(inkisarat, [["GH-9", "safa: prompt timed out after 1800000ms"]]);
+  });
+});
