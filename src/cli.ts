@@ -2,7 +2,7 @@
  * iksir — the summoning rod.
  *
  *   iksir init                        walk al-Kimyawī through the majlis, the roster, the nest
- *   iksir check                       nestle, and say what answers
+ *   iksir check                       ask hum and the majlis what answers; enters as nobody
  *   iksir config                      print the configuration as the daemon sees it now
  *   iksir config get <path>           one value, as JSON
  *   iksir config set <path> <value>   write it; the daemon reads it on its next act
@@ -20,14 +20,14 @@
 import { VERSION } from "./version.ts";
 import { Tasmim, masarMilafAlAsrar, qimaMinKalima, tahaqqaq } from "./config.ts";
 import { runInit, isal, aghliqMajlis } from "./init.ts";
-import { abda } from "./main.ts";
+import { fahs } from "./fahs.ts";
 
 const HELP = `
 iksir v${VERSION}
 
 Usage:
   iksir init                        Interactive onboarding: the majlis, the roster, the nest
-  iksir check                       Nestle at the humd, report what answers
+  iksir check                       Ask hum and the majlis what answers; enters as nobody
   iksir config                      Print the configuration, resolved
   iksir config get <path>           One value, as JSON   (khabath.kur, hum.namudhaj, …)
   iksir config set <path> <value>   Write it; the daemon reads it on its next act
@@ -107,7 +107,7 @@ switch (amr ?? "help") {
     await runInit();
     break;
   case "check":
-    await abda({ check: true });
+    process.exit((await fahs()) ? 0 : 1);
     break;
   case "config":
     await cmdConfig();
