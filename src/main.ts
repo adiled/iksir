@@ -189,6 +189,16 @@ async function ishtarakAhdath(ctx: SiyaqKhadim): Promise<void> {
               })
             );
           }
+        } else if (event.type === "error") {
+          const { sid, message, code } = event.properties as { sid?: string; message?: string; code?: string };
+          if (sid) {
+            ctx.mudirJalasat.ablighInkisar(sid, [code, message].filter(Boolean).join(": ") || "no word").catch(async (e) =>
+              await logger.sajjalKhata("ahdath", "Could not announce a broken turn", { sid, error: String(e) })
+            );
+          }
+        } else if (event.type === "wilt") {
+          const { sid } = event.properties as { sid?: string };
+          if (sid) ctx.mudirJalasat.ablighSalama(sid);
         }
       }
     } catch (error) {
@@ -382,6 +392,10 @@ export async function abda(opts: { check?: boolean } = {}): Promise<void> {
   const sessionManager = istadaaKatib({ tasmim, amil, rasul: messenger, wasfat });
   await sessionManager.hammalaHala();
   sajjilIstisnaa(alat, amil, sessionManager);
+  sayrafi.indaInkisar(async (wasfa, khata) => {
+    await sessionManager.arsalaIlaMurshidById(wasfa.huwiyya, `## Al-Ṣayrafī could not finish — ${khata}\n\nNo shahāda will come for this; call again when the cause is mended.`);
+    await messenger.send("dispatch", `${wasfa.huwiyya}: al-Ṣayrafī's duty broke off — ${khata}`);
+  });
 
   const ipcProcessor = istadaaMunaffidh({
     tasmim,

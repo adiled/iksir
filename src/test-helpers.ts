@@ -120,6 +120,7 @@ export interface MockWasila {
   _athar: Record<string, string[]>;
   athar(sid: string): string[];
   khalaya(): number;
+  akhirDawr(sid: string): { maftuh: boolean; zaman: number | null; khata?: string };
 }
 
 export function mockWasila(overrides?: {
@@ -152,6 +153,10 @@ export function mockWasila(overrides?: {
 
     khalaya() {
       return sessions.size;
+    },
+
+    akhirDawr(_sid) {
+      return { maftuh: false, zaman: null };
     },
 
     async mayyaza(prompt: string) {

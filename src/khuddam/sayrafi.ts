@@ -23,10 +23,15 @@ export class Sayrafi {
   #amil: Wasila;
   #tasmim: Tasmim;
   #sid: string | null = null;
+  #indaInkisar: ((wasfa: Wasfa, khata: string) => Promise<void>) | null = null;
 
   constructor(amil: Wasila, tasmim: Tasmim) {
     this.#amil = amil;
     this.#tasmim = tasmim;
+  }
+
+  indaInkisar(fn: (wasfa: Wasfa, khata: string) => Promise<void>): void {
+    this.#indaInkisar = fn;
   }
 
   async assa(wasfa: Wasfa, far?: string): Promise<string> {
@@ -84,7 +89,10 @@ export class Sayrafi {
     const sid = this.#sid;
     void this.#amil
       .sendPrompt(sid, nass, { agent: RUQYA, adawat: ADAWAT, kalimat, timeoutMs: MUHLA_MS })
-      .then((jawab) => logger.akhbar("sayrafi", `${wajib} ${wasfa.huwiyya} ended`, { sid, najah: jawab.success, khata: jawab.error }));
+      .then(async (jawab) => {
+        await logger.akhbar("sayrafi", `${wajib} ${wasfa.huwiyya} ended`, { sid, najah: jawab.success, khata: jawab.error });
+        if (!jawab.success && this.#indaInkisar) await this.#indaInkisar(wasfa, `${wajib}: ${jawab.error ?? "no word"}`);
+      });
     await logger.akhbar("sayrafi", `${wajib} ${wasfa.huwiyya}`, { sid });
     return true;
   }

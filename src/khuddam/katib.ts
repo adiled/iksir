@@ -71,6 +71,7 @@ export class MudirJalasat {
   #murshidSessions: Map<string, JalsatMurshid> = new Map();
 
   #murshidFaailId: string | null = null;
+  #inkisarat = new Map<string, number>();
 
   constructor(deps: TasmimMudirJalasat) {
     this.#tasmim = deps.tasmim;
@@ -269,6 +270,21 @@ ${tariq}${zaid ? `\n\n${zaid}` : ""}`;
       agent: "iksir-murshid",
       kalimat: await this.kalimatWasfa(session.huwiyya),
     });
+  }
+
+  async ablighInkisar(sid: string, sabab: string): Promise<void> {
+    const session = this.wajadaMurshidBiHuwiyyatJalsa(sid);
+    if (!session) return;
+    const adad = (this.#inkisarat.get(sid) ?? 0) + 1;
+    this.#inkisarat.set(sid, adad);
+    const marra = adad === 1 ? "" : ` — ${adad} turns in a row`;
+    await logger.haDHHir("session-manager", `The turn of ${session.huwiyya} broke off${marra}`, { sid, sabab });
+    await this.#messenger.send({ murshid: session.huwiyya }, `The murshid's turn broke off${marra}: ${sabab}`);
+    await this.#messenger.send("dispatch", `${session.huwiyya}: the murshid's turn broke off${marra} — ${sabab}`);
+  }
+
+  ablighSalama(sid: string): void {
+    this.#inkisarat.delete(sid);
   }
 
   async sarrih(huwiyya: string): Promise<JalsatMurshid | null> {

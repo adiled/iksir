@@ -27,12 +27,13 @@ async function mashhad() {
   const alat = new AlatAlIksir(wasfat, config);
   const amil = new Wasila({ tasmim: config, sijill: alat.sijill, sanaaNahla });
   await amil.ittasil();
-  const messenger = new TelegramMessenger(mockTelegramClient() as never);
+  const telegram = mockTelegramClient();
+  const messenger = new TelegramMessenger(telegram as never);
   const katib = new MudirJalasat({ tasmim: config, amil, rasul: messenger, wasfat });
   const munadi = new Munadi({ mudirJalasat: katib, rasul: messenger, amil, alat, wasfat });
   const murshid = nuhul.get("murshid")!;
   const prompts = (sid?: string) => murshid.mursal.filter((t) => t.chi === "prompt" && (!sid || t.sid === sid)) as Tone<"prompt">[];
-  return { amil, alat, katib, munadi, murshid, prompts };
+  return { amil, alat, katib, munadi, murshid, prompts, telegram, nuhul };
 }
 
 test("summon: a fresh murshid gets one opening prompt, and the next word waits for its wilt", async () => {
@@ -108,5 +109,32 @@ test("summon: dismissing a murshid forgets its session, channel, memory and nest
     assertEquals(jalabaAzhar(sid).length, 0);
     assertEquals(murshid.mursal.some((t) => t.chi === "cleanup" && t.sid === sid), true);
     assertEquals(await alat.sijill.naffidh("mun_sarrih", { huwiyya: "TEAM-7" }), "No murshid labours on TEAM-7.");
+  });
+});
+
+test("summon: a turn that breaks off is announced in the topic and in Dispatch, and the ledger says so", async () => {
+  await withTestRepo(async () => {
+    const { katib, munadi, murshid, telegram, nuhul } = await mashhad();
+    await munadi.faaalLiWasfa("TEAM-3", "Qasr");
+    const sid = katib.jalabMurshid("TEAM-3")!.id;
+
+    murshid.sawt({ chi: "error", sid, message: "rate limited", code: "upstream" });
+    await katib.ablighInkisar(sid, "upstream: rate limited");
+    await katib.ablighInkisar(sid, "upstream: rate limited");
+
+    const fiTopic = telegram._calls.arsalaIlaMurshidTopic.filter((c) => c.text.includes("turn broke off"));
+    assertEquals(fiTopic.length, 2);
+    assertStringIncludes(fiTopic[1].text, "2 turns in a row: upstream: rate limited");
+    assertEquals(telegram._calls.sendToDispatch.some((c) => c.text.includes("TEAM-3: the murshid's turn broke off")), true);
+
+    const majlis = nuhul.get("munadi")!;
+    const radd = munadi.aalajRisalaIrsal({ source: "telegram", text: "how is TEAM-3" });
+    await intazir(() => majlis.mursal.some((t) => t.chi === "prompt"));
+    const hathth = majlis.mursal.find((t) => t.chi === "prompt") as Tone<"prompt">;
+    assertStringIncludes(hathth.text!, "TEAM-3 — Qasr (fail, the flame)");
+    assertStringIncludes(hathth.text!, "last turn broke off at");
+    assertStringIncludes(hathth.text!, "rate limited");
+    majlis.wilt(hathth.sid as string, "It broke off twice; I have told it nothing more.");
+    assertEquals((await radd).radd, "It broke off twice; I have told it nothing more.");
   });
 });

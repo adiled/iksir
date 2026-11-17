@@ -112,7 +112,7 @@ test("smoke: mun_ablagh_murshid carries words into a murshid's vessel", async ()
     await dispatcher.faaalLiWasfa("TEAM-7", "Diwan");
     const qabl = amil._calls.sendPromptAsync.length;
 
-    assertEquals(await alat.sijill.naffidh("mun_ablagh_murshid", { huwiyya: "TEAM-7", kalimat: "make it longer" }), "Told TEAM-7.");
+    assertStringIncludes(await alat.sijill.naffidh("mun_ablagh_murshid", { huwiyya: "TEAM-7", kalimat: "make it longer" }), "Sent to TEAM-7");
     assertEquals(amil._calls.sendPromptAsync.length, qabl + 1);
     assertStringIncludes(amil._calls.sendPromptAsync[qabl].prompt, "make it longer");
     assertStringIncludes(await alat.sijill.naffidh("mun_ablagh_murshid", { huwiyya: "TEAM-8", kalimat: "x" }), "No murshid labours on TEAM-8");

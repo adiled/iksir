@@ -156,6 +156,11 @@ export class Wasila {
     return [...this.#lisan().namadhij];
   }
 
+  akhirDawr(sid: string): { maftuh: boolean; zaman: number | null; khata?: string } {
+    const akhir = this.#adwarAkhira.get(sid);
+    return { maftuh: this.#maftuh.has(sid), zaman: akhir?.zaman ?? null, khata: akhir?.khata };
+  }
+
   khalaya(): number {
     return [...this.#jalasat.values()].filter((j) => j.nestId).length;
   }
@@ -640,7 +645,7 @@ export class Wasila {
     for (const miftah of [...this.#batalatMuallaqa.keys()]) if (miftah.startsWith(`${sid}:`)) this.#khatamBatala(sid, miftah);
     const wilt = t as unknown as { reason?: string; exitCode?: number };
     if (t.chi === Chi.wilt && wilt.reason === "error") {
-      void logger.haDHHir("wasila", `the cell of ${sid} died mid-bloom (exit ${wilt.exitCode ?? "?"}); a crowded nest evicts this way, and the next prompt grows on from the graft`);
+      void logger.haDHHir("wasila", `the bloom of ${sid} ended without wilting (exit ${wilt.exitCode ?? "?"})`);
     }
     const khata = t.chi === Chi.error;
     const jariya = this.#zahraJariya.get(sid);
